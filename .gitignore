@@ -24,3 +24,4 @@ scripts/worker.ts
 # a stale cache can hide real type errors from `tsc --noEmit`)
 *.tsbuildinfo
 
+.github/workflows/
