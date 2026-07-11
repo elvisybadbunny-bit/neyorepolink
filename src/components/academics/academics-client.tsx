@@ -4187,6 +4187,7 @@ function ExamAutoGeneratorTab({ canManage, schoolLevelActivation }: { canManage:
     notes: schoolLevelActivation?.isSeniorSchool ? 'Use richer subject paper structures where configured.' : schoolLevelActivation?.isJuniorSchool ? 'Use subject-selection-aware setup where needed.' : '',
     autoGenerateInvigilators: true,
     excludeSaturday: false,
+    groupStreamsByLevel: true,
     periods: schoolLevelActivation?.isSeniorSchool ? [
       { label: 'Morning 1', startTime: '08:00', endTime: '10:00' },
       { label: 'Morning 2', startTime: '10:30', endTime: '12:30' },
@@ -4373,7 +4374,11 @@ function ExamAutoGeneratorTab({ canManage, schoolLevelActivation }: { canManage:
               <input type="checkbox" checked={form.excludeSaturday} onChange={(e) => setForm((p) => ({ ...p, excludeSaturday: e.target.checked }))} className="h-4 w-4 rounded border-navy-300 text-green-600 focus:ring-green-500" />
               Don&apos;t use Saturday for this exam sitting (Sunday is never used)
             </label>
-            <p className="text-xs text-navy-400">Combined classes taught a subject together (Timetable Engine combinations) automatically sit that paper together, at the same date and period, instead of separately.</p>
+            <label className="flex items-center gap-2 text-sm text-navy-600 dark:text-navy-300">
+              <input type="checkbox" checked={form.groupStreamsByLevel} onChange={(e) => setForm((p) => ({ ...p, groupStreamsByLevel: e.target.checked }))} className="h-4 w-4 rounded border-navy-300 text-green-600 focus:ring-green-500" />
+              Sit streams of the same level together (e.g. Form 2 East + Form 2 West sit Maths at the same time)
+            </label>
+            <p className="text-xs text-navy-400">Combined classes taught a subject together (Timetable Engine combinations) automatically sit that paper together, at the same date and period, instead of separately. When the option above is on, streams of the same level selected for this run that are not already in a teaching combination also sit shared papers together — turn it off if this school genuinely needs every stream sat fully independently.</p>
             <div className="grid gap-2 sm:grid-cols-2">
               <Button variant="secondary" onClick={previewGenerator} disabled={!canManage || saving}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />} Preview Timetable

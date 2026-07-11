@@ -26,6 +26,20 @@ type GeneratorInput = {
   // day for others — excludeSaturday lets a school opt out of using it for
   // exams without having to manually avoid picking those dates.
   excludeSaturday?: boolean;
+  // Z.6 — real STREAM_GROUP auto-targeting (closing the last open L.7 item:
+  // "class-group targeting is still open"). When multiple streams of the
+  // SAME level are selected for this exam run and they share the exact
+  // same real subject/paper (e.g. Form 2 East + Form 2 West both sitting
+  // "Mathematics Paper 1"), real Kenyan schools overwhelmingly sit that
+  // paper for the WHOLE LEVEL at the same real date/period — never
+  // independently, since staggering the same paper across streams risks
+  // real exam-leakage/logistics problems. Defaults to true (matching real
+  // common practice); a school can turn it off per-run if they genuinely
+  // want every stream sat fully independently (e.g. very different
+  // capacity/venue constraints per stream). A real CombinationGroup
+  // (an actual shared TEACHING group) always takes priority over a
+  // same-level grouping when both would apply to the same class/subject.
+  groupStreamsByLevel?: boolean;
 };
 
 type PaperTemplate = {
@@ -147,13 +161,52 @@ async function buildGenerationPlan(user: SessionUser, input: GeneratorInput) {
       for (const cid of memberIds) comboByClassSubject.set(`${cid}::${g.subjectId}`, memberIds);
     }
 
-    const papersToPlace: Array<{ classId: string; subjectId: string; paperConfigId: string | null; paperName: string; comboClassIds?: string[] }> = [];
+    // Z.6 — real STREAM_GROUP auto-grouping: within THIS exam run's own
+    // selected classes, group every class sharing the exact same real
+    // level (e.g. "Form 2") so a subject/paper they all genuinely need
+    // together sits as one real combined sitting, unless a real
+    // CombinationGroup already claims that class+subject pair (a real
+    // teaching combination always wins — it's the school's own explicit,
+    // deliberate choice, not an inferred one).
+    const groupStreamsByLevel = input.groupStreamsByLevel !== false; // default ON
+    const levelSiblingsByClass = new Map<string, string[]>(); // classId -> every OTHER selected class sharing its level
+    if (groupStreamsByLevel) {
+      const byLevel = new Map<string, string[]>();
+      for (const c of classes) {
+        const key = String(c.level ?? '');
+        if (!key) continue;
+        byLevel.set(key, [...(byLevel.get(key) ?? []), c.id]);
+      }
+      for (const [, ids] of byLevel) {
+        if (ids.length < 2) continue; // only one real class at this level in this run — nothing to group
+        for (const id of ids) levelSiblingsByClass.set(id, ids);
+      }
+    }
+
+    const papersToPlace: Array<{ classId: string; subjectId: string; paperConfigId: string | null; paperName: string; comboClassIds?: string[]; groupedByLevel?: boolean }> = [];
     const comboHandled = new Set<string>(); // "subjectId::paperName::sortedComboKey" already queued once
+    const levelGroupHandled = new Set<string>(); // "level::subjectId::paperName" already queued once
     for (const need of subjectNeeds) {
       const specificConfigs = paperConfigs.filter((cfg) => cfg.subjectId === need.subjectId && cfg.classId === need.classId);
       const fallbackConfigs = paperConfigs.filter((cfg) => cfg.subjectId === need.subjectId && cfg.classId === null);
       const pickedConfigs = specificConfigs.length > 0 ? specificConfigs : fallbackConfigs;
       const comboMembers = comboByClassSubject.get(`${need.classId}::${need.subjectId}`);
+      // Real per-class subject needs (e.g. a specific teacher/lesson count)
+      // must genuinely agree across every sibling class before it is safe
+      // to sit them together — a class that doesn't share this real
+      // ClassSubjectNeed at all is simply not part of this level's group.
+      // A class already claimed by a real CombinationGroup for THIS exact
+      // subject must also be excluded here — otherwise a sibling stream
+      // NOT in that combination would wrongly re-include the combo's own
+      // members into a SECOND, duplicate exam sitting for a subject they
+      // are already correctly sitting under COMBINATION scope (a real bug
+      // caught by this feature's own regression test before shipping).
+      const rawLevelSiblings = comboMembers ? undefined : levelSiblingsByClass.get(need.classId);
+      const levelSiblingsWithNeed = rawLevelSiblings?.filter((cid) =>
+        !comboByClassSubject.has(`${cid}::${need.subjectId}`) &&
+        (cid === need.classId || subjectNeeds.some((n) => n.classId === cid && n.subjectId === need.subjectId))
+      );
+      const levelGroupMembers = levelSiblingsWithNeed && levelSiblingsWithNeed.length >= 2 ? levelSiblingsWithNeed : undefined;
 
       const paperNames = pickedConfigs.length > 0
         ? pickedConfigs.map((cfg) => ({ paperConfigId: cfg.id, paperName: normalizePaperName(cfg.name) }))
@@ -165,6 +218,11 @@ async function buildGenerationPlan(user: SessionUser, input: GeneratorInput) {
           if (comboHandled.has(comboKey)) continue; // this combination's paper is already queued once for all its members
           comboHandled.add(comboKey);
           papersToPlace.push({ classId: need.classId, subjectId: need.subjectId, paperConfigId: p.paperConfigId, paperName: p.paperName, comboClassIds: comboMembers });
+        } else if (levelGroupMembers) {
+          const levelKey = `${classMap.get(need.classId)?.level ?? ''}::${need.subjectId}::${p.paperName}`;
+          if (levelGroupHandled.has(levelKey)) continue; // this level's group already queued once for this paper
+          levelGroupHandled.add(levelKey);
+          papersToPlace.push({ classId: need.classId, subjectId: need.subjectId, paperConfigId: p.paperConfigId, paperName: p.paperName, comboClassIds: levelGroupMembers, groupedByLevel: true });
         } else {
           papersToPlace.push({ classId: need.classId, subjectId: need.subjectId, paperConfigId: p.paperConfigId, paperName: p.paperName });
         }
@@ -195,7 +253,9 @@ async function buildGenerationPlan(user: SessionUser, input: GeneratorInput) {
         const anyBlocked = sittingClassIds.some((cid) => blocked.has(`${cid}:${paper.subjectId}:${paper.paperName}:${date}:${period.startTime}`));
         if (anyOccupied || anyBlocked) continue;
         for (const cid of sittingClassIds) occupied.add(`${cid}:${date}:${period.startTime}`);
-        const venueLabel = paper.comboClassIds
+        const venueLabel = paper.groupedByLevel
+          ? `${classMap.get(paper.classId)?.level ?? 'Level'} (whole level, ${sittingClassIds.length} streams)`
+          : paper.comboClassIds
           ? `${sittingClassIds.map((cid) => classMap.get(cid)?.stream ? `${classMap.get(cid)?.level} ${classMap.get(cid)?.stream}` : classMap.get(cid)?.level).join(' + ')} (combined)`
           : classMap.get(paper.classId)?.stream ? `${classMap.get(paper.classId)?.level} ${classMap.get(paper.classId)?.stream} Room` : `${classMap.get(paper.classId)?.level} Room`;
         for (const cid of sittingClassIds) {
@@ -210,7 +270,7 @@ async function buildGenerationPlan(user: SessionUser, input: GeneratorInput) {
             startTime: period.startTime,
             endTime: period.endTime,
             venue: venueLabel,
-            targetScope: paper.comboClassIds ? 'COMBINATION' : 'CLASS',
+            targetScope: paper.groupedByLevel ? 'STREAM_GROUP' : paper.comboClassIds ? 'COMBINATION' : 'CLASS',
             targetJson: JSON.stringify(sittingClassIds),
             notes: input.notes || `Auto-generated from exam setup period ${period.label}`,
             createdById: user.id,

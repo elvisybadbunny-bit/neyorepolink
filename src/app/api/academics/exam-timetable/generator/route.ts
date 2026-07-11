@@ -20,6 +20,7 @@ const schema = z.object({
   notes: z.string().optional().nullable(),
   autoGenerateInvigilators: z.boolean().optional(),
   excludeSaturday: z.boolean().optional(),
+  groupStreamsByLevel: z.boolean().optional(),
 });
 
 function mapErr(e: unknown) {
