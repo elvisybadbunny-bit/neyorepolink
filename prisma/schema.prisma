@@ -1404,9 +1404,21 @@ model TimetableSlot {
   teacherId          String? // User
   dayOfWeek          Int // 1=Mon .. 5=Fri
   period             Int // 1..8
-  slotType           String            @default("ACADEMIC") // ACADEMIC | REMEDIAL | PREP | ACTIVITY
+  slotType           String            @default("ACADEMIC") // ACADEMIC | REMEDIAL | PREP | ACTIVITY | ELECTIVE_BLOCK
   weekRotation       String            @default("ALL") // ALL | WEEK_A | WEEK_B for alternating Saturdays
   venue              String? // classroom/lab/hall for venue printing
+
+  // AA.1 — when slotType = ELECTIVE_BLOCK, this real period genuinely has NO
+  // single subject/teacher for the class as a whole (different real
+  // students attend different real parallel lessons based on their own
+  // choices) — subjectId/teacherId stay null on THIS row by design, and the
+  // real per-subject breakdown (which teacher/room/subject a given
+  // student's choice maps to) lives in ElectiveBlockSlotSubject, looked up
+  // via electiveBlockSlotId. Kept as its own distinct slotType (not reusing
+  // ACADEMIC) so print/live renderers can render this real "whole level in
+  // an Options Block" cell differently from a normal single-subject cell.
+  electiveBlockSlotId String?
+  electiveBlockSlot   ElectiveBlockSlot? @relation(fields: [electiveBlockSlotId], references: [id], onDelete: SetNull)
 
   // T.12 — real, date-scoped substitute-coverage overlays proposed against
   // this real recurring slot (never mutates this row's own teacherId).
@@ -4968,7 +4980,8 @@ model ElectiveBlockSlot {
 
   sortOrder Int @default(0)
 
-  subjects ElectiveBlockSlotSubject[]
+  subjects      ElectiveBlockSlotSubject[]
+  timetableSlots TimetableSlot[]
 
   @@index([tenantId])
   @@index([blockId])
