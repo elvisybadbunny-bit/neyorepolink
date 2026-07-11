@@ -439,6 +439,7 @@ model Tenant {
   SchoolActivity               SchoolActivity[]
   MasterReportCard             MasterReportCard[]
   CombinationGroup             CombinationGroup[]
+  ElectiveBlock                ElectiveBlock[]
   TimetableConstraint          TimetableConstraint[]
   TeacherTimeOff               TeacherTimeOff[]
   TimetableGenerationJob       TimetableGenerationJob[]
@@ -4815,6 +4816,7 @@ model Venue {
 
   classSubjectNeeds ClassSubjectNeed[]
   combinationGroups CombinationGroup[]
+  electiveBlockSlotSubjects ElectiveBlockSlotSubject[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -4867,6 +4869,143 @@ model CombinationGroupClass {
   classId  String
 
   @@unique([groupId, classId])
+  @@index([tenantId])
+}
+
+// AA.1 — Elective/Options Block engine (founder-requested 2026-07-12, full
+// design in docs/TEACHER-ALLOCATION-AND-ELECTIVES-ENGINE-DESIGN.md Part 7).
+//
+// A real, school-defined group of subjects that a school's students choose
+// BETWEEN (mutually exclusive alternatives), which must therefore occupy
+// IDENTICAL real timetable slot(s) so every student in the block is doing
+// SOMETHING during that time, but which specific lesson/room/teacher they
+// attend depends on their own real subject choice. This is deliberately
+// NOT the same real concept as CombinationGroup (which merges classes into
+// ONE shared lesson with ONE shared teacher) — an ElectiveBlock instead
+// holds MULTIPLE real parallel lessons (each potentially its own
+// CombinationGroup if small cohorts are merged across streams) happening
+// at the same real time, one of which each real student attends.
+//
+// Real worked example (the founder's own high school): a "Humanities Pair"
+// block spanning 2 real weekly slots — Slot A = History+CRE running in
+// parallel; Slot B = History+Geography running in parallel (History
+// genuinely appears in only ONE of the block's slots, not every slot,
+// modeling a real 2nd History lesson happening opposite Geography instead
+// of opposite CRE). A student who chose Geography+Physics attends Geography
+// in Slot B, is genuinely FREE in Slot A (they take neither History nor
+// CRE), and Physics sits in its own separate non-block slot entirely.
+model ElectiveBlock {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name String // "Humanities Pair", "Technical & Applied", "STEM Electives"
+
+  // MULTI_SLOT = different subjects may appear in different slots (the
+  // Humanities Pair shape above) — schools set this up slot-by-slot.
+  // SINGLE_CHOICE = every slot lists the exact same subject set (the
+  // Technical & Applied "choose ONE of Business/Computer/Art/Agriculture/
+  // French" shape, where all 5 run in parallel in EVERY one of the block's
+  // slots) — a real, simpler special case of the same underlying model,
+  // kept as an explicit mode so the UI can offer a much faster one-step
+  // "pick your subjects, pick how many lessons/week" setup for schools in
+  // this simpler, overwhelmingly common shape, rather than making every
+  // school manually build each slot's subject list one at a time.
+  mode String @default("MULTI_SLOT") // MULTI_SLOT | SINGLE_CHOICE
+
+  // Real soft preference (not a hard rule — never causes unplaced lessons):
+  // prefer scheduling this block's slots immediately after a real
+  // break/short-break/lunch, since students are already moving between
+  // rooms for this block anyway. See design doc Part 8.
+  preferAfterBreak Boolean @default(false)
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  classes ElectiveBlockClass[]
+  slots   ElectiveBlockSlot[]
+
+  @@index([tenantId])
+}
+
+// Which real classes/streams this block applies to — mirrors the same
+// simple many-to-many shape as CombinationGroupClass. A block almost
+// always spans an entire level (e.g. all of Form 3, or all of Grade 11),
+// but is kept as an explicit list (not just "level") so a school can
+// exclude one real stream if it genuinely doesn't offer this block.
+model ElectiveBlockClass {
+  id       String        @id @default(cuid())
+  tenantId String
+  blockId  String
+  block    ElectiveBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  classId  String
+
+  @@unique([blockId, classId])
+  @@index([tenantId])
+}
+
+// One real distinct weekly timetable slot this block occupies (e.g. "Slot
+// A", "Slot B" in the Humanities Pair example). A block with slotsPerWeek=2
+// has exactly 2 real ElectiveBlockSlot rows. The solver places ALL of a
+// block's slots as one coordinated real placement unit (see the engine
+// changes below) so that, e.g., the same real History teacher's 2 weekly
+// History groups (one per slot) never clash with each other or with
+// anything else that teacher/room is doing.
+model ElectiveBlockSlot {
+  id       String        @id @default(cuid())
+  tenantId String
+  blockId  String
+  block    ElectiveBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  label String // "Slot A", "History/CRE", freeform school-facing label
+  // How many of this slot's real lessons should be a double (2 consecutive
+  // periods) rather than a single — mirrors ClassSubjectNeed.doubleCount's
+  // exact real meaning, applied per-slot since different slots of the same
+  // block may reasonably have different lengths (e.g. a lab-heavy elective
+  // slot as a double, a discussion-based one as a single).
+  isDouble Boolean @default(false)
+
+  sortOrder Int @default(0)
+
+  subjects ElectiveBlockSlotSubject[]
+
+  @@index([tenantId])
+  @@index([blockId])
+}
+
+// One real subject running in this specific slot, with its own real
+// teacher/venue — e.g. "History taught by Mr. Otieno" in Slot B, while
+// "Geography taught by Mrs. Wanjala" also runs in Slot B, in a different
+// real room, for the students who chose Geography instead of History.
+// comboClassIds (JSON array of real classId strings) lets a school merge
+// a small cohort's version of this subject across streams into one real
+// shared lesson (e.g. only 6 students across 3 streams chose CRE — merge
+// them into one real CRE lesson with one real shared teacher) — this
+// reuses the exact same real "shared teacher across multiple classes"
+// concept CombinationGroup already proves works in the live solver,
+// applied here at the level of one block-slot-subject instead of a
+// school-wide combination group.
+model ElectiveBlockSlotSubject {
+  id        String            @id @default(cuid())
+  tenantId  String
+  slotId    String
+  slot      ElectiveBlockSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  subjectId String
+  teacherId String?
+  venueId   String?
+  venue     Venue?            @relation(fields: [venueId], references: [id], onDelete: SetNull)
+
+  // JSON array of real classId strings genuinely offering this subject
+  // inside this slot — for MULTI_SLOT mode this is normally the block's
+  // full class list; for a merged small cohort it may be a subset spanning
+  // several real streams sharing one real lesson.
+  comboClassIdsJson String @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([slotId, subjectId])
   @@index([tenantId])
 }
 
