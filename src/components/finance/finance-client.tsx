@@ -1,0 +1,1251 @@
+"use client";
+
+/**
+ * B.7 Finance hub (Part 1): Overview (aging + collection) · Invoices ·
+ * Fee structures (+ batch invoicing). Payments tab links to A.6 payments page.
+ * All 4 UX states; KES formatting everywhere.
+ */
+import * as React from "react";
+import {
+  Wallet, Plus, AlertCircle, Loader2, X, Layers3, FileText, Banknote,
+  TrendingUp, Check, Search, Smartphone, Printer, Calendar, Fingerprint, Percent,
+  Users, ClipboardList, MessageSquareWarning,
+} from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatCard } from "@/components/ui/stat-card";
+import { TableContainer, Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
+import { useBiometricGate } from "@/components/auth/biometric-gate";
+import { queuedPost } from "@/lib/offline/queue";
+
+const kes = (n: number) => `KES ${n.toLocaleString("en-KE")}`;
+
+interface Structure { id: string; name: string; level: string; classId?: string | null; applyToAllLevels?: boolean; year: number; term: number; totalKes: number; items: { id: string; label: string; amountKes: number }[]; invoiceCount: number }
+interface InvoiceRow { id: string; invoiceNo: string; description: string; totalKes: number; paidKes: number; discountKes: number; balanceKes: number; status: string; dueDate: string; studentName: string; admissionNo: string; className: string | null; printCount: number }
+interface Aging { totalOutstanding: number; collectedKes: number; billedKes: number; collectionRate: number; buckets: { current: number; d30: number; d60: number; d90: number }; openCount: number }
+interface LeaderboardRow { classId: string; className: string; classTeacherName: string; learnerCount: number; billedKes: number; collectedKes: number; outstandingKes: number; collectionRate: number }
+
+const STATUS_TONE: Record<string, "green" | "amber" | "red"> = { PAID: "green", PARTIAL: "amber", UNPAID: "red" };
+
+export function FinanceClient({ canStructure, canInvoice, canRecord, canDiscount, canManageSiblingDiscount }: { canStructure: boolean; canInvoice: boolean; canRecord: boolean; canDiscount?: boolean; canManageSiblingDiscount?: boolean }) {
+  const [tab, setTab] = React.useState<"overview" | "invoices" | "structures" | "promises" | "cashReminders">("overview");
+  return (
+    <div className="space-y-5">
+      <div className="inline-flex flex-wrap rounded-full border border-navy-200 p-0.5 dark:border-navy-700">
+        {([["overview", "Overview"], ["invoices", "Invoices"], ["structures", "Fee structures"], ["promises", "Promises Calendar"], ...(canRecord ? [["cashReminders", "Cash & reminders"]] as const : [])] as const).map(([k, label]) => (
+          <button key={k} onClick={() => setTab(k)} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === k ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
+            {label}
+          </button>
+        ))}
+        <a href="/finance/payments" className="rounded-full px-4 py-1.5 text-sm font-medium text-navy-500">M-Pesa payments ↗</a>
+        <a href="/finance/activities" className="rounded-full px-4 py-1.5 text-sm font-medium text-navy-500">Trips &amp; activities ↗</a>
+      </div>
+      {tab === "overview" && <OverviewTab />}
+      {tab === "invoices" && <InvoicesTab canInvoice={canInvoice} canRecord={canRecord} canDiscount={!!canDiscount} />}
+      {tab === "structures" && <StructuresTab canStructure={canStructure} canInvoice={canInvoice} canManageSiblingDiscount={!!canManageSiblingDiscount} />}
+      {tab === "promises" && <PromisesTab />}
+      {tab === "cashReminders" && canRecord && <CashAndRemindersTab />}
+    </div>
+  );
+}
+
+// ---- Overview -------------------------------------------------------------------
+function OverviewTab() {
+  const { toast } = useToast();
+  const [aging, setAging] = React.useState<Aging | null>(null);
+  const [leaderboard, setLeaderboard] = React.useState<LeaderboardRow[]>([]);
+  const [reminding, setReminding] = React.useState(false);
+  const [digesting, setDigesting] = React.useState(false);
+  const [error, setError] = React.useState(false);
+  const load = React.useCallback(async () => {
+    setError(false);
+    try {
+      const [agingRes, leaderboardRes] = await Promise.all([
+        fetch("/api/finance/invoices?aging=1").then((r) => r.json()),
+        fetch("/api/finance/leaderboard").then((r) => r.json()).catch(() => ({ ok: false })),
+      ]);
+      if (agingRes.ok) setAging(agingRes.data); else setError(true);
+      if (leaderboardRes.ok) setLeaderboard(leaderboardRes.data.leaderboard ?? []);
+    } catch { setError(true); }
+  }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  async function sendReminders() {
+    setReminding(true);
+    try {
+      const res = await fetch("/api/finance/reminders", { method: "POST" });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Could not send reminders.");
+      toast({ title: `Fee reminders sent to ${json.data.families} families`, description: `${json.data.sentSms} SMS · ${json.data.sentInApp} in-app · ${kes(json.data.totalBalanceKes)} total balance`, tone: "success" });
+      load();
+    } catch (e) {
+      toast({ title: e instanceof Error ? e.message : "Could not send reminders.", tone: "error" });
+    } finally {
+      setReminding(false);
+    }
+  }
+
+  async function sendDigest(cadence: "daily" | "weekly") {
+    setDigesting(true);
+    try {
+      const res = await fetch("/api/finance/digest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cadence }) });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Could not send digest.");
+      toast({ title: `${cadence === "daily" ? "Daily" : "Weekly"} digest sent`, description: `${json.data.sentSms} SMS · ${json.data.sentInApp} in-app`, tone: "success" });
+    } catch (e) {
+      toast({ title: e instanceof Error ? e.message : "Could not send digest.", tone: "error" });
+    } finally {
+      setDigesting(false);
+    }
+  }
+
+  if (error) return <LoadError onRetry={load} />;
+  if (aging === null) return <div className="grid gap-3 sm:grid-cols-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div>;
+
+  const b = aging.buckets;
+  const maxBucket = Math.max(b.current, b.d30, b.d60, b.d90, 1);
+  const rows: [string, number, string][] = [
+    ["Not yet due", b.current, "bg-navy-300"],
+    ["1–30 days late", b.d30, "bg-amber-400"],
+    ["31–60 days late", b.d60, "bg-orange-500"],
+    ["Over 60 days late", b.d90, "bg-red-500"],
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard label="Outstanding fees" value={kes(aging.totalOutstanding)} icon={Wallet} tone="navy" />
+        <StatCard label="Collected (invoiced)" value={kes(aging.collectedKes)} icon={Banknote} tone="green" />
+        <StatCard label="Collection rate" value={`${aging.collectionRate}%`} icon={TrendingUp} tone={aging.collectionRate >= 70 ? "green" : "navy"} />
+      </div>
+      <Card>
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-black text-navy-900 dark:text-navy-50">One-tap fee reminders to all who owe</p>
+            <p className="text-xs text-navy-500 dark:text-navy-400">Smart SMS + parent in-app reminders include balance, M-Pesa account number and parent portal/Mzazi prompt.</p>
+          </div>
+          <Button onClick={sendReminders} disabled={reminding || aging.openCount === 0}>
+            {reminding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />} Send reminders now
+          </Button>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-black text-navy-900 dark:text-navy-50">Automated fee digest to bursar & principal</p>
+            <p className="text-xs text-navy-500 dark:text-navy-400">Daily/weekly summary: collected, outstanding, open invoices and top balances. Scheduled automatically; buttons let you send now.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => sendDigest("daily")} disabled={digesting}>{digesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />} Daily</Button>
+            <Button variant="secondary" onClick={() => sendDigest("weekly")} disabled={digesting}>{digesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />} Weekly</Button>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle>Fee collection leaderboard by class/stream</CardTitle></CardHeader>
+        <CardContent>
+          {leaderboard.length === 0 ? (
+            <p className="py-4 text-center text-sm text-navy-400">No class fee data yet.</p>
+          ) : (
+            <ul className="space-y-2.5">
+              {leaderboard.slice(0, 6).map((row, idx) => (
+                <li key={row.classId} className="rounded-2xl border border-navy-100 bg-white/70 p-3 dark:border-navy-800 dark:bg-navy-900/60">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-navy-900 dark:text-navy-50">#{idx + 1} {row.className}</p>
+                      <p className="text-[10px] text-navy-400">{row.classTeacherName} · {row.learnerCount} learner{row.learnerCount === 1 ? "" : "s"}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-black text-green-700 dark:text-green-400">{row.collectionRate}%</p>
+                      <p className="text-[10px] text-navy-400">{kes(row.collectedKes)} / {kes(row.billedKes)}</p>
+                    </div>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-navy-100 dark:bg-navy-800">
+                    <div className="h-full rounded-full bg-green-500" style={{ width: `${Math.min(100, row.collectionRate)}%` }} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle>Arrears aging — {aging.openCount} open invoice{aging.openCount === 1 ? "" : "s"}</CardTitle></CardHeader>
+        <CardContent>
+          {aging.totalOutstanding === 0 ? (
+            <p className="py-6 text-center text-sm text-navy-400">Nothing outstanding. 🎉</p>
+          ) : (
+            <ul className="space-y-2.5">
+              {rows.map(([label, amount, color]) => (
+                <li key={label}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="text-navy-700 dark:text-navy-200">{label}</span>
+                    <span className="font-medium text-navy-900 dark:text-navy-50">{kes(amount)}</span>
+                  </div>
+                  <div className="h-2.5 overflow-hidden rounded-full bg-navy-100 dark:bg-navy-800">
+                    <div className={`h-full rounded-full ${color}`} style={{ width: `${(amount / maxBucket) * 100}%` }} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ---- Invoices --------------------------------------------------------------------
+function InvoicesTab({ canInvoice, canRecord, canDiscount }: { canInvoice: boolean; canRecord: boolean; canDiscount: boolean }) {
+  const { toast } = useToast();
+  const [invoices, setInvoices] = React.useState<InvoiceRow[] | null>(null);
+  const [error, setError] = React.useState(false);
+  const [status, setStatus] = React.useState("");
+  const [q, setQ] = React.useState("");
+  const [manualOpen, setManualOpen] = React.useState(false);
+  const [payInvoice, setPayInvoice] = React.useState<InvoiceRow | null>(null);
+  const [stkInvoice, setStkInvoice] = React.useState<InvoiceRow | null>(null);
+  const [discountInvoice, setDiscountInvoice] = React.useState<InvoiceRow | null>(null);
+
+  const load = React.useCallback(async () => {
+    setError(false);
+    try {
+      const p = new URLSearchParams();
+      if (status) p.set("status", status);
+      if (q) p.set("q", q);
+      const res = await fetch(`/api/finance/invoices?${p}`);
+      const json = await res.json();
+      if (json.ok) setInvoices(json.data.invoices); else setError(true);
+    } catch { setError(true); }
+  }, [status, q]);
+  React.useEffect(() => { const t = setTimeout(load, q ? 250 : 0); return () => clearTimeout(t); }, [load, q]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-1 items-center gap-2 rounded-2xl border border-navy-200 bg-white px-3.5 py-2 dark:border-navy-700 dark:bg-navy-900">
+          <Search className="h-4 w-4 text-navy-400" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search invoice no, student, adm no…" className="w-full bg-transparent text-sm outline-none placeholder:text-navy-400 dark:text-navy-50" />
+        </div>
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-full border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900">
+          <option value="">All statuses</option>
+          <option value="UNPAID">Unpaid</option><option value="PARTIAL">Partial</option><option value="PAID">Paid</option>
+        </select>
+        {canInvoice && <Button onClick={() => setManualOpen(true)}><Plus className="h-4 w-4" /> Manual invoice</Button>}
+      </div>
+
+      {error ? <LoadError onRetry={load} /> : invoices === null ? (
+        <div className="space-y-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
+      ) : invoices.length === 0 ? (
+        <EmptyState icon={FileText} title="No invoices" description="Create a fee structure and batch-invoice a whole class level in one click, or raise a manual invoice." />
+      ) : (
+        <TableContainer>
+          <Table>
+            <THead><TR><TH>Invoice</TH><TH>Student</TH><TH align="right">Total</TH><TH align="right">Paid</TH><TH align="right">Balance</TH><TH>Due</TH><TH>Status</TH>{(canRecord || canDiscount) && <TH></TH>}</TR></THead>
+            <TBody>
+              {invoices.map((inv) => (
+                <TR key={inv.id}>
+                  <TD>
+                    <span className="font-mono text-xs">{inv.invoiceNo}</span>
+                    <span className="block text-[11px] text-navy-400">{inv.description}</span>
+                  </TD>
+                  <TD>
+                    <span className="font-medium">{inv.studentName}</span>
+                    <span className="block font-mono text-[10px] text-navy-400">{inv.admissionNo}{inv.className ? ` · ${inv.className}` : ""}</span>
+                  </TD>
+                  <TD align="right">{kes(inv.totalKes)}</TD>
+                  <TD align="right" className="text-green-700 dark:text-green-400">{kes(inv.paidKes)}</TD>
+                  <TD align="right" className={inv.balanceKes > 0 ? "font-semibold text-red-600" : "text-navy-300"}>{kes(inv.balanceKes)}</TD>
+                  <TD className="text-xs text-navy-400">{inv.dueDate}</TD>
+                  <TD>
+                    <Badge tone={STATUS_TONE[inv.status] ?? "amber"}>{inv.status.toLowerCase()}</Badge>
+                    {inv.printCount > 0 && <span className="ml-1 align-middle text-[10px] text-navy-400" title="Times printed">🖨 {inv.printCount}</span>}
+                  </TD>
+                  {(canRecord || canDiscount) && (
+                    <TD>
+                      <div className="flex flex-wrap gap-1">
+                        {canRecord && inv.balanceKes > 0 && (
+                          <>
+                            <Button size="sm" onClick={() => setStkInvoice(inv)}><Smartphone className="h-3.5 w-3.5" /> M-Pesa</Button>
+                            <Button size="sm" variant="secondary" onClick={() => setPayInvoice(inv)}><Banknote className="h-3.5 w-3.5" /> Cash</Button>
+                          </>
+                        )}
+                        {canDiscount && inv.balanceKes > 0 && (
+                          <Button size="sm" variant="secondary" onClick={() => setDiscountInvoice(inv)}><Percent className="h-3.5 w-3.5" /> Discount</Button>
+                        )}
+                        <a href={`/api/finance/invoices/${inv.id}/pdf`}>
+                          <Button size="sm" variant="ghost"><Printer className="h-3.5 w-3.5" /> Print</Button>
+                        </a>
+                      </div>
+                    </TD>
+                  )}
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {manualOpen && <ManualInvoiceDialog onClose={() => setManualOpen(false)} onDone={() => { setManualOpen(false); load(); toast({ title: "Invoice created", tone: "success" }); }} />}
+      {payInvoice && <PayDialog invoice={payInvoice} onClose={() => setPayInvoice(null)} onDone={() => { setPayInvoice(null); load(); toast({ title: "Payment recorded", tone: "success" }); }} />}
+      {stkInvoice && <StkDialog invoice={stkInvoice} onClose={() => setStkInvoice(null)} onDone={() => { setStkInvoice(null); load(); toast({ title: "STK push sent — parent's phone will prompt for the PIN", tone: "success" }); }} />}
+      {discountInvoice && <DiscountDialog invoice={discountInvoice} onClose={() => setDiscountInvoice(null)} onDone={() => { setDiscountInvoice(null); load(); toast({ title: "Discount applied", tone: "success" }); }} />}
+    </div>
+  );
+}
+
+function PayDialog({ invoice, onClose, onDone }: { invoice: InvoiceRow; onClose: () => void; onDone: () => void }) {
+  const { toast } = useToast();
+  const { requireBiometric } = useBiometricGate();
+  const [amount, setAmount] = React.useState(String(invoice.balanceKes));
+  const [saving, setSaving] = React.useState(false);
+  const [requiresBiometric, setRequiresBiometric] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch("/api/finance/security").then((r) => r.json()).then((j) => {
+      if (j.ok) setRequiresBiometric(j.data.requireBiometricForFinance);
+    }).catch(() => {});
+  }, []);
+
+  async function doSave(biometricTicket: string | null) {
+    setSaving(true);
+    try {
+      // Z.1 — real offline-safe recording: a plain cash/manual payment (no
+      // biometric verification required by this school) can be entered
+      // while offline and synced later — the real server-side idempotency
+      // key added to this PATCH endpoint prevents the same payment being
+      // double-applied on replay. A biometric-gated payment NEVER queues
+      // offline (the fingerprint/Face ID ticket itself needs a live
+      // connection to be issued and consumed).
+      if (!biometricTicket && !requiresBiometric) {
+        const result = await queuedPost(
+          `/api/finance/invoices?id=${invoice.id}`,
+          { amountKes: Number(amount) },
+          `Payment · ${invoice.invoiceNo} · KES ${amount}`
+        );
+        if (result.queued) { toast({ title: "Saved offline — will sync when you're back online", tone: "success" }); onDone(); return; }
+        if (result.ok) { onDone(); return; }
+        toast({ title: "Failed — check the amount and try again", tone: "error" });
+        return;
+      }
+      const res = await fetch(`/api/finance/invoices?id=${invoice.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amountKes: Number(amount), biometricTicket: biometricTicket ?? undefined }) });
+      const json = await res.json();
+      if (json.ok) onDone();
+      else toast({ title: json.error?.message || "Failed", tone: "error" });
+    } finally { setSaving(false); }
+  }
+
+  function submit() {
+    if (requiresBiometric) {
+      // R.3 — this school requires a fresh fingerprint/Face ID/passkey check
+      // before a cash/offline payment can be recorded here too — server-side
+      // enforced by applyPaymentToInvoice() itself, not just this popup.
+      requireBiometric(
+        `Record payment of KES ${amount || "0"} on ${invoice.invoiceNo}`,
+        (ticket) => doSave(ticket),
+        `offline_payment:${invoice.id}:${amount}`
+      );
+      return;
+    }
+    doSave(null);
+  }
+
+  return (
+    <Modal title={`Record payment — ${invoice.invoiceNo}`} onClose={onClose}>
+      <div className="space-y-3">
+        <p className="rounded-xl bg-warm-50 px-3 py-2 text-sm text-navy-600 dark:bg-navy-800 dark:text-navy-300">
+          {invoice.studentName} · balance <span className="font-semibold text-red-600">{kes(invoice.balanceKes)}</span>
+        </p>
+        {requiresBiometric && (
+          <p className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+            <Fingerprint className="h-4 w-4 shrink-0" /> This school requires a fingerprint/Face ID check before recording a payment.
+          </p>
+        )}
+        <div><Label>Amount received (KES)</Label><Input type="number" min={1} value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+        <p className="text-xs text-navy-400">Cash/offline entry. M-Pesa STK push arrives with Finance Part 2.</p>
+        <Button onClick={submit} disabled={saving || !amount || Number(amount) < 1} className="w-full">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : requiresBiometric ? <Fingerprint className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+          {requiresBiometric ? "Verify & record " : "Record "}{amount ? kes(Number(amount)) : ""}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+function StkDialog({ invoice, onClose, onDone }: { invoice: InvoiceRow; onClose: () => void; onDone: () => void }) {
+  const { toast } = useToast();
+  const [phone, setPhone] = React.useState("");
+  const [amount, setAmount] = React.useState(String(invoice.balanceKes));
+  const [saving, setSaving] = React.useState(false);
+  async function send() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/finance/invoices/${invoice.id}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "stk", phone, amountKes: Number(amount) }),
+      });
+      const json = await res.json();
+      if (json.ok) onDone();
+      else toast({ title: json.error?.message || "STK push failed", tone: "error" });
+    } finally { setSaving(false); }
+  }
+  return (
+    <Modal title={`M-Pesa STK — ${invoice.invoiceNo}`} onClose={onClose}>
+      <div className="space-y-3">
+        <p className="rounded-xl bg-warm-50 px-3 py-2 text-sm text-navy-600 dark:bg-navy-800 dark:text-navy-300">
+          {invoice.studentName} · balance <span className="font-semibold text-red-600">{kes(invoice.balanceKes)}</span>
+        </p>
+        <div><Label>Parent&apos;s M-Pesa phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="07XX XXX XXX" /></div>
+        <div><Label>Amount (KES)</Label><Input type="number" min={1} max={invoice.balanceKes} value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+        <p className="text-xs text-navy-400">The parent gets an M-Pesa prompt on their phone. When they enter their PIN, the invoice updates automatically and they receive a confirmation SMS.</p>
+        <Button onClick={send} disabled={saving || !phone || !amount} className="w-full">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />} Send STK push
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+function DiscountDialog({ invoice, onClose, onDone }: { invoice: InvoiceRow; onClose: () => void; onDone: () => void }) {
+  const { toast } = useToast();
+  const { requireBiometric } = useBiometricGate();
+  const [amount, setAmount] = React.useState("");
+  const [reason, setReason] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [requiresBiometric, setRequiresBiometric] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch("/api/finance/security").then((r) => r.json()).then((j) => {
+      if (j.ok) setRequiresBiometric(j.data.requireBiometricForFinance);
+    }).catch(() => {});
+  }, []);
+
+  async function doSave(biometricTicket: string | null) {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/finance/invoices/${invoice.id}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "discount", amountKes: Number(amount), reason, biometricTicket: biometricTicket ?? undefined }),
+      });
+      const json = await res.json();
+      if (json.ok) onDone();
+      else toast({ title: json.error?.message || "Could not apply discount", tone: "error" });
+    } finally { setSaving(false); }
+  }
+
+  function submit() {
+    if (requiresBiometric) {
+      // R.3 — a real, server-verified fingerprint/Face ID/passkey check is
+      // required before ANY discount/waiver is applied, when this school
+      // has opted in — enforced by applyDiscount() itself server-side.
+      requireBiometric(
+        `Apply KES ${amount || "0"} discount on ${invoice.invoiceNo}`,
+        (ticket) => doSave(ticket),
+        `fee_discount:${invoice.id}:${amount}`
+      );
+      return;
+    }
+    doSave(null);
+  }
+
+  return (
+    <Modal title={`Discount / waiver — ${invoice.invoiceNo}`} onClose={onClose}>
+      <div className="space-y-3">
+        <p className="rounded-xl bg-warm-50 px-3 py-2 text-sm text-navy-600 dark:bg-navy-800 dark:text-navy-300">
+          {invoice.studentName} · balance <span className="font-semibold text-red-600">{kes(invoice.balanceKes)}</span>
+        </p>
+        {requiresBiometric && (
+          <p className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+            <Fingerprint className="h-4 w-4 shrink-0" /> This school requires a fingerprint/Face ID check before applying a discount.
+          </p>
+        )}
+        <div><Label>Discount amount (KES)</Label><Input type="number" min={1} max={invoice.balanceKes} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 2000" /></div>
+        <div><Label>Reason (scholarship, bursary, hardship…)</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. CDF bursary — Term 2" /></div>
+        <p className="text-xs text-navy-400">This waives part of the fee — the invoice balance reduces immediately and is auditable.</p>
+        <Button onClick={submit} disabled={saving || !amount || Number(amount) < 1 || reason.trim().length < 3} className="w-full">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : requiresBiometric ? <Fingerprint className="h-4 w-4" /> : <Percent className="h-4 w-4" />}
+          {requiresBiometric ? "Verify & apply " : "Apply "}{amount ? kes(Number(amount)) : ""} discount
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+function ManualInvoiceDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { toast } = useToast();
+  const [q, setQ] = React.useState("");
+  const [hits, setHits] = React.useState<{ id: string; title: string; subtitle: string }[]>([]);
+  const [student, setStudent] = React.useState<{ id: string; title: string } | null>(null);
+  const [f, setF] = React.useState({ description: "", totalKes: "", dueDate: "", year: new Date().getFullYear(), term: 2 });
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    if (q.trim().length < 2) { setHits([]); return; }
+    const t = setTimeout(async () => {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      const json = await res.json();
+      if (json.ok) setHits(json.data.hits.filter((h: { type: string }) => h.type === "student"));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  async function save() {
+    if (!student) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/finance/invoices", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId: student.id, description: f.description, totalKes: Number(f.totalKes), dueDate: f.dueDate, year: f.year, term: f.term }),
+      });
+      const json = await res.json();
+      if (json.ok) onDone();
+      else toast({ title: json.error?.message || "Failed", tone: "error" });
+    } finally { setSaving(false); }
+  }
+
+  return (
+    <Modal title="Manual invoice" onClose={onClose}>
+      <div className="space-y-3">
+        {student ? (
+          <p className="flex items-center justify-between rounded-xl bg-warm-50 px-3 py-2 text-sm dark:bg-navy-800">
+            <span className="font-medium">{student.title}</span>
+            <button onClick={() => setStudent(null)} className="text-xs text-navy-400 underline">change</button>
+          </p>
+        ) : (
+          <div className="relative">
+            <Label>Student</Label>
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or adm no…" />
+            {hits.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full rounded-2xl border border-navy-100 bg-white p-1 shadow-card dark:border-navy-700 dark:bg-navy-900">
+                {hits.map((h) => (
+                  <button key={h.id} onClick={() => { setStudent({ id: h.id, title: h.title }); setHits([]); setQ(""); }} className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-navy-50 dark:hover:bg-navy-800">
+                    {h.title} <span className="text-xs text-navy-400">{h.subtitle}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        <div><Label>Description</Label><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="e.g. Damaged library book" /></div>
+        <div className="grid grid-cols-2 gap-2">
+          <div><Label>Amount (KES)</Label><Input type="number" min={1} value={f.totalKes} onChange={(e) => setF({ ...f, totalKes: e.target.value })} /></div>
+          <div><Label>Due date</Label><Input type="date" value={f.dueDate} onChange={(e) => setF({ ...f, dueDate: e.target.value })} /></div>
+        </div>
+        <Button onClick={save} disabled={saving || !student || f.description.length < 3 || !f.totalKes || !f.dueDate} className="w-full">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Create invoice
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+// ---- Structures ------------------------------------------------------------------
+/**
+ * R.8 (2026-07-04, founder request) — the school's own sibling-discount %.
+ * Replaces the old platform-wide flat-10% `enable_sibling_discount` switch:
+ * every school now sets its own number here (0 = off, default), and it
+ * takes effect BOTH in the one-tap "Apply X%" button on a child's Family
+ * card (G.12) AND automatically inside "Invoice the level" batch invoicing
+ * below, including for siblings whose parent has two separate guardian
+ * records that were never formally linked (matched by phone + name).
+ */
+function SiblingDiscountCard() {
+  const { toast } = useToast();
+  const [pct, setPct] = React.useState<number | null>(null);
+  const [draft, setDraft] = React.useState("");
+  const [error, setError] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    setError(false);
+    try {
+      const res = await fetch("/api/finance/sibling-discount");
+      const json = await res.json();
+      if (json.ok) { setPct(json.data.siblingDiscountPct); setDraft(String(json.data.siblingDiscountPct)); }
+      else setError(true);
+    } catch { setError(true); }
+  }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  async function save() {
+    const parsed = Number(draft);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 100) {
+      toast({ title: "Enter a whole number between 0 and 100.", tone: "error" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/finance/sibling-discount", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pct: parsed }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setPct(json.data.siblingDiscountPct);
+        toast({ title: parsed === 0 ? "Sibling discount turned off" : `Sibling discount set to ${parsed}%`, tone: "success" });
+      } else {
+        toast({ title: json.error?.message || "Could not save.", tone: "error" });
+      }
+    } catch {
+      toast({ title: "Network problem — try again.", tone: "error" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Sibling discount</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-sm text-navy-400">Could not load this setting.</p>
+          <Button variant="secondary" onClick={load} className="mt-2">Retry</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+  if (pct === null) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Sibling discount</CardTitle></CardHeader>
+        <CardContent><div className="h-16 animate-pulse rounded-xl bg-navy-100 dark:bg-navy-800" /></CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center gap-2"><Percent className="h-4.5 w-4.5" /> Sibling discount</CardTitle>
+        <Badge tone={pct > 0 ? "green" : "neutral"}>{pct > 0 ? `${pct}% on` : "Off"}</Badge>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-navy-600 dark:text-navy-300">
+          Set the % off a sibling&apos;s fee balance for families with 2 or more children at this school. 0% turns it off. This
+          number is used both for the one-tap &quot;Apply&quot; button on a child&apos;s Family card, and automatically whenever you
+          &quot;Invoice the level&quot; below.
+        </p>
+        <p className="text-xs text-navy-400">
+          Siblings are detected automatically — including when a parent has two separate guardian records (e.g. from two different
+          imports) that were never formally linked, as long as the phone number and name match.
+        </p>
+        <div className="flex items-center gap-2">
+          <div className="relative w-28">
+            <Input
+              type="number" min={0} max={100} value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              className="pr-7"
+            />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-navy-400">%</span>
+          </div>
+          <Button onClick={save} disabled={saving || draft === String(pct)}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Save
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---- T.10/T.11 — Cash confirmation queue + reminder settings + parent nudge
+
+interface CashReqRow { id: string; invoiceId: string; invoiceNo: string; studentName: string; admissionNo: string; amountKes: number; note: string | null; status: string; submittedByName: string; createdAt: string; decidedByName: string | null; decidedAt: string | null; rejectReason: string | null }
+
+function CashAndRemindersTab() {
+  return (
+    <div className="space-y-5">
+      <TeacherCashConfirmCard />
+      <FeeReminderScheduleCard />
+      <NeverLoggedInNudgeCard />
+      <SmsSpendAlertCard />
+    </div>
+  );
+}
+
+function TeacherCashConfirmCard() {
+  const { toast } = useToast();
+  const [allow, setAllow] = React.useState<boolean | null>(null);
+  const [requests, setRequests] = React.useState<CashReqRow[] | null>(null);
+  const [decidingId, setDecidingId] = React.useState<string | null>(null);
+  const [busy, setBusy] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    const [polRes, reqRes] = await Promise.all([
+      fetch("/api/finance/cash-payments?policy=1"),
+      fetch("/api/finance/cash-payments"),
+    ]);
+    const [polJson, reqJson] = await Promise.all([polRes.json(), reqRes.json()]);
+    if (polJson.ok) setAllow(polJson.data.allowTeacherCashPayments);
+    if (reqJson.ok) setRequests(reqJson.data.requests);
+  }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  async function togglePolicy() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/finance/cash-payments", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "setPolicy", allow: !allow }),
+      });
+      const json = await res.json();
+      if (json.ok) { setAllow(json.data.allowTeacherCashPayments); toast({ title: json.data.allowTeacherCashPayments ? "Teachers can now record pending cash" : "Teacher cash entries turned off", tone: "success" }); }
+    } finally { setBusy(false); }
+  }
+
+  async function decide(id: string, approve: boolean, rejectReason?: string) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/finance/cash-payments", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "decide", requestId: id, approve, rejectReason }),
+      });
+      const json = await res.json();
+      if (json.ok) { toast({ title: approve ? "Payment confirmed" : "Entry rejected", tone: "success" }); setDecidingId(null); load(); }
+      else toast({ title: json.error?.message || "Failed", tone: "error" });
+    } finally { setBusy(false); }
+  }
+
+  if (requests === null || allow === null) return <Skeleton className="h-24 rounded-2xl" />;
+
+  const pending = requests.filter((r) => r.status === "PENDING");
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center gap-2"><Banknote className="h-4.5 w-4.5" /> Teacher cash payments</CardTitle>
+        <Button size="sm" variant={allow ? "secondary" : "primary"} onClick={togglePolicy} disabled={busy}>{allow ? "Turn off" : "Turn on"}</Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-navy-600 dark:text-navy-300">When on, teachers can record cash they've received — it stays pending until you confirm the money genuinely reached the office.</p>
+        {pending.length === 0 ? (
+          <p className="text-xs text-navy-400">No pending teacher cash entries.</p>
+        ) : (
+          <div className="space-y-2">
+            {pending.map((r) => (
+              <div key={r.id} className="space-y-2 rounded-2xl border border-navy-100 p-3 dark:border-navy-800">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-navy-900 dark:text-navy-50">KES {r.amountKes.toLocaleString("en-KE")} — {r.studentName} ({r.invoiceNo})</p>
+                    <p className="text-xs text-navy-400">from {r.submittedByName}{r.note ? ` — "${r.note}"` : ""}</p>
+                  </div>
+                  <Badge tone="amber">pending</Badge>
+                </div>
+                {decidingId === r.id ? (
+                  <CashDecideRow onConfirm={() => decide(r.id, true)} onReject={(reason) => decide(r.id, false, reason)} onCancel={() => setDecidingId(null)} busy={busy} />
+                ) : (
+                  <Button size="sm" onClick={() => setDecidingId(r.id)}>Decide</Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CashDecideRow({ onConfirm, onReject, onCancel, busy }: { onConfirm: () => void; onReject: (reason: string) => void; onCancel: () => void; busy: boolean }) {
+  const [reason, setReason] = React.useState("");
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-xl bg-warm-50 p-2 dark:bg-navy-800">
+      <Button size="sm" onClick={onConfirm} disabled={busy}>Confirm — cash received</Button>
+      <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason if rejecting (required)" className="flex-1" />
+      <Button size="sm" variant="secondary" onClick={() => reason.trim().length >= 3 && onReject(reason)} disabled={busy || reason.trim().length < 3}>Reject</Button>
+      <Button size="sm" variant="ghost" onClick={onCancel}>Cancel</Button>
+    </div>
+  );
+}
+
+function FeeReminderScheduleCard() {
+  const { toast } = useToast();
+  const [grace, setGrace] = React.useState("");
+  const [dedupe, setDedupe] = React.useState("");
+  const [loaded, setLoaded] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    const res = await fetch("/api/finance/reminder-schedule");
+    const json = await res.json();
+    if (json.ok) { setGrace(String(json.data.feeReminderGraceDays)); setDedupe(String(json.data.feeReminderDedupeDays)); setLoaded(true); }
+  }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/finance/reminder-schedule", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feeReminderGraceDays: Number(grace), feeReminderDedupeDays: Number(dedupe) }),
+      });
+      const json = await res.json();
+      if (json.ok) toast({ title: "Reminder schedule saved", tone: "success" });
+      else toast({ title: json.error?.message || "Could not save", tone: "error" });
+    } finally { setSaving(false); }
+  }
+
+  if (!loaded) return <Skeleton className="h-24 rounded-2xl" />;
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="flex items-center gap-2"><ClipboardList className="h-4.5 w-4.5" /> Fee reminder schedule</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-navy-600 dark:text-navy-300">Choose how many days after the due date the first reminder fires, and how often it repeats while the invoice stays unpaid.</p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div><Label>Grace days before first reminder</Label><Input type="number" min={0} max={90} value={grace} onChange={(e) => setGrace(e.target.value)} className="w-28" /></div>
+          <div><Label>Repeat every (days)</Label><Input type="number" min={1} max={90} value={dedupe} onChange={(e) => setDedupe(e.target.value)} className="w-28" /></div>
+          <Button onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Save</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function NeverLoggedInNudgeCard() {
+  const { toast } = useToast();
+  const [data, setData] = React.useState<{ count: number; parents: { id: string; fullName: string; phone: string | null }[] } | null>(null);
+  const [sending, setSending] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    const res = await fetch("/api/finance/parent-nudge");
+    const json = await res.json();
+    if (json.ok) setData(json.data);
+  }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  async function send() {
+    setSending(true);
+    try {
+      const res = await fetch("/api/finance/parent-nudge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      const json = await res.json();
+      if (json.ok) { toast({ title: `${json.data.sent} nudge SMS sent`, tone: "success" }); load(); }
+      else toast({ title: json.error?.message || "Could not send", tone: "error" });
+    } finally { setSending(false); }
+  }
+
+  if (data === null) return <Skeleton className="h-24 rounded-2xl" />;
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-4.5 w-4.5" /> Parents who have never logged in</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-navy-600 dark:text-navy-300">{data.count} parent{data.count === 1 ? "" : "s"} with a phone number on file have never once logged into NEYO.</p>
+        <Button onClick={send} disabled={sending || data.count === 0}>
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Send a nudge SMS now
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SmsSpendAlertCard() {
+  const { toast } = useToast();
+  const [status, setStatus] = React.useState<{ thresholdKes: number | null; spentKes: number; periodKey: string; alreadyNotifiedThisPeriod: boolean } | null>(null);
+  const [threshold, setThreshold] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    const res = await fetch("/api/finance/sms-spend-alert");
+    const json = await res.json();
+    if (json.ok) { setStatus(json.data); setThreshold(json.data.thresholdKes !== null ? String(json.data.thresholdKes) : ""); }
+  }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const thresholdKes = threshold.trim() === "" ? null : Number(threshold);
+      const res = await fetch("/api/finance/sms-spend-alert", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ thresholdKes }),
+      });
+      const json = await res.json();
+      if (json.ok) { toast({ title: thresholdKes === null ? "SMS spend alert turned off" : "SMS spend alert saved", tone: "success" }); await load(); }
+      else toast({ title: json.error?.message || "Could not save", tone: "error" });
+    } finally { setSaving(false); }
+  }
+
+  if (status === null) return <Skeleton className="h-24 rounded-2xl" />;
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="flex items-center gap-2"><MessageSquareWarning className="h-4.5 w-4.5" /> SMS spend alert</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-navy-600 dark:text-navy-300">Choose a real KES amount — NEYO will notify you once this term if your school's own SMS spend crosses it. Leave blank to turn this off. You pay for your own SMS costs either way; this is just a heads-up.</p>
+        <p className="text-sm text-navy-500 dark:text-navy-400">Spent so far this term ({status.periodKey}): <span className="font-medium text-navy-900 dark:text-navy-50">{status.spentKes.toLocaleString("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: 0 })}</span></p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div><Label>Alert me at (KES)</Label><Input type="number" min={0} placeholder="e.g. 5000" value={threshold} onChange={(e) => setThreshold(e.target.value)} className="w-36" /></div>
+          <Button onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Save</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function StructuresTab({ canStructure, canInvoice, canManageSiblingDiscount }: { canStructure: boolean; canInvoice: boolean; canManageSiblingDiscount: boolean }) {
+  const { toast } = useToast();
+  const [structures, setStructures] = React.useState<Structure[] | null>(null);
+  const [error, setError] = React.useState(false);
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [batchFor, setBatchFor] = React.useState<Structure | null>(null);
+
+  const load = React.useCallback(async () => {
+    setError(false);
+    try {
+      const res = await fetch("/api/finance/structures");
+      const json = await res.json();
+      if (json.ok) setStructures(json.data.structures); else setError(true);
+    } catch { setError(true); }
+  }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  if (error) return <LoadError onRetry={load} />;
+  if (structures === null) return <div className="grid gap-3 sm:grid-cols-2">{[...Array(2)].map((_, i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}</div>;
+
+  return (
+    <div className="space-y-4">
+      {canManageSiblingDiscount && <SiblingDiscountCard />}
+      {canStructure && <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> New fee structure</Button>}
+      {structures.length === 0 ? (
+        <EmptyState icon={Layers3} title="No fee structures" description="Define what each class level pays per term (tuition, boarding, activity…), then invoice everyone in one click." />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {structures.map((s) => (
+            <Card key={s.id}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>{s.name}</span>
+                  <Badge tone={s.applyToAllLevels ? "green" : s.classId ? "blue" : "neutral"}>{s.applyToAllLevels ? "whole school" : s.classId ? "exact class" : kes(s.totalKes)}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <ul className="space-y-1">
+                  {s.items.map((i) => (
+                    <li key={i.id} className="flex items-center justify-between text-sm">
+                      <span className="text-navy-600 dark:text-navy-300">{i.label}</span>
+                      <span className="font-medium text-navy-900 dark:text-navy-50">{kes(i.amountKes)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center justify-between border-t border-navy-50 pt-3 dark:border-navy-800">
+                  <p className="text-xs text-navy-400">{s.invoiceCount} invoice{s.invoiceCount === 1 ? "" : "s"} issued</p>
+                  {canInvoice && (
+                    <Button size="sm" onClick={() => setBatchFor(s)}><FileText className="h-3.5 w-3.5" /> Invoice the level</Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+      {createOpen && <StructureDialog onClose={() => setCreateOpen(false)} onDone={() => { setCreateOpen(false); load(); toast({ title: "Fee structure saved", tone: "success" }); }} />}
+      {batchFor && <BatchDialog structure={batchFor} onClose={() => setBatchFor(null)} onDone={(msg) => { setBatchFor(null); load(); toast({ title: msg, tone: "success" }); }} />}
+    </div>
+  );
+}
+
+function StructureDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { toast } = useToast();
+  const [level, setLevel] = React.useState("");
+  const [year, setYear] = React.useState(new Date().getFullYear());
+  const [term, setTerm] = React.useState(2);
+  const [items, setItems] = React.useState<{ label: string; amountKes: string }[]>([{ label: "Tuition", amountKes: "" }]);
+  const [classId, setClassId] = React.useState("");
+  const [applyToAllLevels, setApplyToAllLevels] = React.useState(false);
+  const [classes, setClasses] = React.useState<{ id: string; name: string; level: string }[]>([]);
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch("/api/classes").then((r) => r.json()).then((j) => {
+      if (j.ok) setClasses(j.data.classes);
+    }).catch(() => {});
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/finance/structures", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: applyToAllLevels ? "ALL" : level,
+          classId: applyToAllLevels ? undefined : (classId || undefined),
+          applyToAllLevels,
+          year, term,
+          items: items.filter((i) => i.label && i.amountKes).map((i) => ({ label: i.label, amountKes: Number(i.amountKes) })),
+        }),
+      });
+      const json = await res.json();
+      if (json.ok) onDone();
+      else toast({ title: json.error?.message || "Failed", tone: "error" });
+    } finally { setSaving(false); }
+  }
+  const total = items.reduce((a, i) => a + (Number(i.amountKes) || 0), 0);
+
+  return (
+    <Modal title="New fee structure" onClose={onClose}>
+      <div className="space-y-3">
+        {/* T.7 — a real whole-school flat-fee shortcut, sitting alongside
+            (never replacing) the per-level/per-class override below. */}
+        <label className="flex items-start gap-2.5 rounded-2xl border border-navy-100 bg-warm-50/60 p-3 dark:border-navy-800 dark:bg-navy-900/40 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={applyToAllLevels}
+            onChange={(e) => { setApplyToAllLevels(e.target.checked); if (e.target.checked) setClassId(""); }}
+            className="mt-0.5 h-4 w-4 rounded border-navy-300 text-green-600 focus:ring-green-500"
+          />
+          <span>
+            <span className="block text-sm font-semibold text-navy-900 dark:text-navy-50">Apply to the whole school (every level)</span>
+            <span className="block text-[11px] text-navy-500 dark:text-navy-400">One flat fee for every class, instead of creating one structure per level. Turn this off if different classes pay different amounts.</span>
+          </span>
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="col-span-1">
+            <Label>Level</Label>
+            <Input value={applyToAllLevels ? "All levels" : level} disabled={applyToAllLevels} onChange={(e) => setLevel(e.target.value)} placeholder="Form 2" />
+          </div>
+          <div><Label>Year</Label><Input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} /></div>
+          <div>
+            <Label>Term</Label>
+            <select value={term} onChange={(e) => setTerm(Number(e.target.value))} className="mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
+              <option value={1}>1</option><option value={2}>2</option><option value={3}>3</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <Label>Exact class / stream override (optional)</Label>
+          <select value={classId} disabled={applyToAllLevels} onChange={(e) => {
+            const id = e.target.value;
+            setClassId(id);
+            const cls = classes.find((c) => c.id === id);
+            if (cls) setLevel(cls.level);
+          }} className="mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800 disabled:opacity-50">
+            <option value="">All streams at this level</option>
+            {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <p className="mt-1 text-[11px] text-navy-400">Use this when Form 2 East and Form 2 West pay different amounts.</p>
+        </div>
+        <Label>Fee items</Label>
+        {items.map((it, idx) => (
+          <div key={idx} className="flex gap-2">
+            <Input value={it.label} onChange={(e) => setItems((p) => p.map((x, i) => i === idx ? { ...x, label: e.target.value } : x))} placeholder="e.g. Boarding" />
+            <Input type="number" min={1} className="w-32" value={it.amountKes} onChange={(e) => setItems((p) => p.map((x, i) => i === idx ? { ...x, amountKes: e.target.value } : x))} placeholder="KES" />
+          </div>
+        ))}
+        <div className="flex items-center justify-between">
+          <button onClick={() => setItems((p) => [...p, { label: "", amountKes: "" }])} className="text-xs font-medium text-green-700 underline dark:text-green-400">+ Add item</button>
+          <p className="text-sm font-semibold text-navy-900 dark:text-navy-50">Total {kes(total)}</p>
+        </div>
+        <Button onClick={save} disabled={saving || (!applyToAllLevels && !level) || total < 1} className="w-full">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Save structure
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+function BatchDialog({ structure, onClose, onDone }: { structure: Structure; onClose: () => void; onDone: (msg: string) => void }) {
+  const { toast } = useToast();
+  const [dueDate, setDueDate] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  async function run() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/finance/structures", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ batch: true, structureId: structure.id, dueDate }),
+      });
+      const json = await res.json();
+      if (json.ok) onDone(`${json.data.created} invoices created (${json.data.skipped} already invoiced)`);
+      else toast({ title: json.error?.message || "Failed", tone: "error" });
+    } finally { setSaving(false); }
+  }
+  return (
+    <Modal title={structure.applyToAllLevels ? "Invoice the whole school" : `Invoice all of ${structure.level}`} onClose={onClose}>
+      <div className="space-y-3">
+        <p className="rounded-xl bg-warm-50 px-3 py-2 text-sm text-navy-600 dark:bg-navy-800 dark:text-navy-300">
+          {structure.applyToAllLevels
+            ? <>Every real active student in the whole school gets a <span className="font-semibold">{kes(structure.totalKes)}</span> invoice for {structure.name}. Students already invoiced are skipped.</>
+            : <>Every active {structure.name} student gets a <span className="font-semibold">{kes(structure.totalKes)}</span> invoice for {structure.name}. Students already invoiced are skipped.</>}
+        </p>
+        <div><Label>Due date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
+        <Button onClick={run} disabled={saving || !dueDate} className="w-full">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />} Generate invoices
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+interface PromiseItem {
+  id: string;
+  promiseDate: string;
+  amountKes: number;
+  status: string;
+  studentName: string;
+  admissionNo: string;
+  invoiceNo: string;
+  guardianName: string;
+  guardianPhone: string;
+  invoiceBalance: number;
+  planGroupId?: string | null;
+  installmentNo?: number | null;
+  reminderSentAt?: string | null;
+}
+
+function PromisesTab() {
+  const { toast } = useToast();
+  const [promises, setPromises] = React.useState<PromiseItem[] | null>(null);
+  const [error, setError] = React.useState(false);
+  const [planOpen, setPlanOpen] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    setError(false);
+    try {
+      const res = await fetch("/api/finance/promises");
+      const json = await res.json();
+      if (json.ok) setPromises(json.data.promises); else setError(true);
+    } catch { setError(true); }
+  }, []);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  if (error) return <LoadError onRetry={load} />;
+  if (promises === null) return <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>;
+
+  const PROMISE_TONE: Record<string, "amber" | "green" | "red"> = {
+    ACTIVE: "amber",
+    KEPT: "green",
+    BROKEN: "red",
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-green-600" />
+          Fee Promises Calendar Directory
+        </CardTitle>
+        <Button size="sm" onClick={() => setPlanOpen(true)}>Create installment plan</Button>
+      </CardHeader>
+      <CardContent>
+        {promises.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title="No payment promises yet"
+            description="Parents can commit to a future payment date directly from their portal."
+          />
+        ) : (
+          <TableContainer>
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Learner</TH>
+                  <TH>Invoice No</TH>
+                  <TH align="right">Promised Amount</TH>
+                  <TH>Commitment Date</TH>
+                  <TH>Parent / Contact</TH>
+                  <TH align="center">Status</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {promises.map((p) => (
+                  <TR key={p.id}>
+                    <TD>
+                      <div>
+                        <p className="font-semibold text-navy-900 dark:text-navy-50">{p.studentName}</p>
+                        <p className="text-xs text-navy-400 font-mono">{p.admissionNo}</p>
+                      </div>
+                    </TD>
+                    <TD>
+                      <div>
+                        <p className="font-medium text-navy-800 dark:text-navy-100">{p.invoiceNo}</p>
+                        <p className="text-xs text-navy-400">Balance: KES {p.invoiceBalance.toLocaleString("en-KE")}</p>
+                      </div>
+                    </TD>
+                    <TD align="right" className="font-semibold text-navy-900 dark:text-navy-50">
+                      KES {p.amountKes.toLocaleString("en-KE")}
+                    </TD>
+                    <TD className="font-mono text-navy-700 dark:text-navy-300">
+                      {p.promiseDate}
+                      {p.installmentNo && <span className="ml-1 text-[10px] text-navy-400">#{p.installmentNo}</span>}
+                    </TD>
+                    <TD>
+                      <div>
+                        <p className="font-medium text-navy-800 dark:text-navy-100">{p.guardianName}</p>
+                        <p className="text-xs text-navy-400">{p.guardianPhone}</p>
+                      </div>
+                    </TD>
+                    <TD align="center">
+                      <Badge tone={PROMISE_TONE[p.status] || "neutral"}>{p.status.toLowerCase()}</Badge>
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          </TableContainer>
+        )}
+      </CardContent>
+      {planOpen && <InstallmentPlanDialog onClose={() => setPlanOpen(false)} onDone={() => { setPlanOpen(false); load(); toast({ title: "Installment plan saved", tone: "success" }); }} />}
+    </Card>
+  );
+}
+
+function InstallmentPlanDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { toast } = useToast();
+  const [invoiceId, setInvoiceId] = React.useState("");
+  const [lines, setLines] = React.useState("2099-08-01,1000\n2099-09-01,1000");
+  const [saving, setSaving] = React.useState(false);
+  async function save() {
+    const installments = lines.split(/\n+/).map((line) => {
+      const [promiseDate, amountKes] = line.split(",").map((x) => x.trim());
+      return { promiseDate, amountKes: Number(amountKes) };
+    }).filter((x) => x.promiseDate && x.amountKes > 0);
+    setSaving(true);
+    try {
+      const res = await fetch("/api/finance/promises", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ invoiceId, installments }) });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Could not save plan.");
+      onDone();
+    } catch (e) {
+      toast({ title: e instanceof Error ? e.message : "Could not save plan.", tone: "error" });
+    } finally { setSaving(false); }
+  }
+  return (
+    <Modal title="Create parent installment plan" onClose={onClose}>
+      <div className="space-y-3">
+        <p className="text-xs text-navy-500">Enter the invoice ID and one installment per line as date,amount. Each due date gets an automatic reminder.</p>
+        <div><Label>Invoice ID</Label><Input value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} placeholder="Invoice database ID" /></div>
+        <div><Label>Installments</Label><textarea value={lines} onChange={(e) => setLines(e.target.value)} rows={5} className="w-full rounded-2xl border border-navy-200 bg-white p-3 text-xs font-mono dark:border-navy-700 dark:bg-navy-900" /></div>
+        <Button onClick={save} disabled={saving || !invoiceId || !lines.trim()} className="w-full">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />} Save plan</Button>
+      </div>
+    </Modal>
+  );
+}
+
+// ---- shared ---------------------------------------------------------------------------
+function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-start justify-between">
+          <h3 className="text-base font-semibold text-navy-900 dark:text-navy-50">{title}</h3>
+          <button onClick={onClose} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-4 w-4" /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+function LoadError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+      <AlertCircle className="h-4 w-4" /> Couldn&apos;t load. <button onClick={onRetry} className="font-medium underline">Retry</button>
+    </div>
+  );
+}

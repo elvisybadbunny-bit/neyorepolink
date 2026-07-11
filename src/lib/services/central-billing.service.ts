@@ -1,0 +1,273 @@
+import { db } from "@/lib/db";
+import { MockProvider } from "@/lib/payments/mock-provider";
+import { DarajaProvider } from "@/lib/payments/daraja-provider";
+import type { PaymentProvider, ProviderCredentials } from "@/lib/payments/provider";
+import { appBaseUrl } from "@/lib/notifications/email";
+import { getPlanFromCatalog } from "@/lib/services/pricing-catalog.service";
+import { readCompanySecret, secretStatus } from "@/lib/services/company-secret.service";
+import { DEFAULT_PLAN_KEY } from "@/lib/core/plans";
+import { pendingReferralDiscountKes, markReferralCreditsApplied, processReferralRewardsForPayment, promptReferralAfterPayment } from "@/lib/services/revenue-ops.service";
+import { newSignupDiscountKes, markFirstTermDiscountClaimed } from "@/lib/services/discount-campaign.service";
+import { influencerSignupDiscountKes, creditInfluencerCommission } from "@/lib/services/influencer-code.service";
+
+const TERM_DAYS = 120;
+const mock = new MockProvider();
+const daraja = new DarajaProvider();
+
+function addDays(d: Date, days: number) {
+  return new Date(d.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+async function secretOrEnv(key: string, envName: string) {
+  return (await readCompanySecret(key)) || process.env[envName] || "";
+}
+
+/**
+ * The central billing callback URL, WITH the shared webhook token appended —
+ * this is a security-critical URL: Daraja has no HMAC signing, and this
+ * callback activates a real school subscription, so it must always carry
+ * the same `DARAJA_WEBHOOK_TOKEN` the route itself verifies (matching the
+ * per-tenant `/api/payments/webhook/[slug]?t=...` pattern). Never build this
+ * URL without the token — a bare URL would either be rejected by the route
+ * (if a token is configured) or, worse, silently accepted by an
+ * unauthenticated route (the exact real gap found and fixed in this audit).
+ */
+function centralCallbackUrl(): string {
+  const token = process.env.DARAJA_WEBHOOK_TOKEN;
+  const base = `${appBaseUrl()}/api/billing/central-callback`;
+  return token ? `${base}?t=${encodeURIComponent(token)}` : base;
+}
+
+
+async function centralCreds(): Promise<ProviderCredentials | null> {
+  const shortcode = await secretOrEnv("central_daraja_shortcode", "NEYO_MPESA_SHORTCODE");
+  const environmentRaw = (await secretOrEnv("central_daraja_environment", "NEYO_MPESA_ENVIRONMENT")) || "sandbox";
+  const consumerKey = await secretOrEnv("central_daraja_consumer_key", "NEYO_DARAJA_CONSUMER_KEY");
+  const consumerSecret = await secretOrEnv("central_daraja_consumer_secret", "NEYO_DARAJA_CONSUMER_SECRET");
+  const passkey = await secretOrEnv("central_daraja_passkey", "NEYO_DARAJA_PASSKEY");
+  if (!shortcode || !consumerKey || !consumerSecret || !passkey) return null;
+  return {
+    shortcode,
+    environment: environmentRaw === "production" ? "production" : "sandbox",
+    consumerKey,
+    consumerSecret,
+    passkey,
+  };
+}
+
+async function centralGateway(): Promise<{ provider: PaymentProvider; creds: ProviderCredentials; live: boolean; source: "neyo_ops_vault" | "env" | "dev_mock" }> {
+  const creds = await centralCreds();
+  if (creds) {
+    const vaultConfigured = Boolean(await secretStatus("central_daraja_consumer_key"));
+    return { provider: daraja, creds, live: true, source: vaultConfigured ? "neyo_ops_vault" : "env" };
+  }
+  if (process.env.NODE_ENV !== "production") {
+    return { provider: mock, creds: { shortcode: "174379", environment: "sandbox", consumerKey: "mock", consumerSecret: "mock", passkey: "mock" }, live: false, source: "dev_mock" };
+  }
+  throw new Error("NEYO central Daraja credentials are not configured in NEYO Ops.");
+}
+
+export async function getCentralBillingGatewayStatus() {
+  const statuses = await Promise.all([
+    secretStatus("central_daraja_shortcode"),
+    secretStatus("central_daraja_environment"),
+    secretStatus("central_daraja_consumer_key"),
+    secretStatus("central_daraja_consumer_secret"),
+    secretStatus("central_daraja_passkey"),
+  ]);
+  const configured = statuses.filter(Boolean).length;
+  return {
+    provider: "CENTRAL_DARAJA",
+    configured,
+    required: 5,
+    liveReady: configured >= 4,
+    source: configured > 0 ? "neyo_ops_vault" : process.env.NEYO_DARAJA_CONSUMER_KEY ? "env" : "dev_mock",
+    callbackUrl: centralCallbackUrl(),
+    masked: statuses.map((s) => s?.masked || null),
+  };
+}
+
+export function centralAccountRef(slug: string) {
+  return `NEYO-${slug.toUpperCase()}`.slice(0, 20);
+}
+
+export async function subscriptionRenewalAmount(tenantId: string) {
+  const sub = await db.subscription.findUnique({ where: { tenantId } });
+  if (sub?.grandfatheredPrice && sub.grandfatheredPrice > 0) return sub.grandfatheredPrice;
+  const plan = await getPlanFromCatalog(sub?.planKey || DEFAULT_PLAN_KEY);
+  return plan?.pricePerTerm && plan.pricePerTerm > 0 ? plan.pricePerTerm : 15000;
+}
+
+async function ensureSubscriptionForCentralPayment(tenantId: string) {
+  const existing = await db.subscription.findUnique({ where: { tenantId } });
+  if (existing) return existing;
+  const plan = await getPlanFromCatalog(DEFAULT_PLAN_KEY);
+  return db.subscription.create({
+    data: {
+      tenantId,
+      planKey: plan?.key || DEFAULT_PLAN_KEY,
+      status: "GRACE",
+      grandfatheredPrice: plan?.pricePerTerm || 0,
+      currentPeriodEnd: new Date(),
+    },
+  });
+}
+
+export async function initiateCentralSubscriptionStk(input: { tenantId: string; phone: string }) {
+  const tenant = await db.tenant.findUnique({ where: { id: input.tenantId }, include: { subscription: true } });
+  if (!tenant) throw new Error("School tenant not found.");
+  const sub = await ensureSubscriptionForCentralPayment(tenant.id);
+  const fullAmount = await subscriptionRenewalAmount(tenant.id);
+
+  // M.1 — apply any earned, still-PENDING referral credit to reduce the REAL
+  // amount actually charged via M-Pesa STK (not a cosmetic number).
+  const { discountKes, creditIds } = await pendingReferralDiscountKes(tenant.id, fullAmount);
+
+  // T.2/T.6 — a real, ONE-TIME first-term discount, mutually exclusive
+  // with each other (a school used EITHER a campaign OR an influencer code
+  // at signup, never both — enforced by influencer-code.service.ts's own
+  // apply-time guard, so at most one of these two ever returns non-zero).
+  const campaignDiscount = await newSignupDiscountKes(tenant.id, fullAmount);
+  const influencerDiscount = await influencerSignupDiscountKes(tenant.id, fullAmount);
+
+  const chargeAmount = Math.max(fullAmount - discountKes - campaignDiscount.discountKes - influencerDiscount.discountKes, 0);
+
+  const accountRef = centralAccountRef(tenant.slug);
+  const periodStart = new Date();
+  const periodEnd = addDays(periodStart, TERM_DAYS);
+
+  const payment = await db.subscriptionPayment.create({
+    data: {
+      subscriptionId: sub.id,
+      tenantId: tenant.id,
+      amount: fullAmount,
+      referralDiscountKes: discountKes,
+      campaignDiscountKes: campaignDiscount.discountKes,
+      campaignId: campaignDiscount.campaignId,
+      influencerDiscountKes: influencerDiscount.discountKes,
+      influencerCodeId: influencerDiscount.influencerCodeId,
+      status: "PENDING",
+      method: "central_mpesa_stk",
+      phone: input.phone,
+      accountRef,
+      periodStart,
+      periodEnd,
+    },
+  });
+
+  const gateway = await centralGateway();
+  const result = await gateway.provider.stkPush(gateway.creds, {
+    amount: chargeAmount,
+    phone: input.phone,
+    accountRef,
+    description: `NEYO Subscription ${tenant.name}`.slice(0, 60),
+    callbackUrl: centralCallbackUrl(),
+  });
+  if (!result.ok || !result.checkoutRequestId) {
+    await db.subscriptionPayment.update({ where: { id: payment.id }, data: { status: "FAILED", resultDesc: result.message } });
+    throw new Error(result.message || "Could not start central subscription payment.");
+  }
+
+  const updated = await db.subscriptionPayment.update({ where: { id: payment.id }, data: { checkoutRequestId: result.checkoutRequestId } });
+  await db.auditLog.create({ data: { tenantId: tenant.id, actorName: "NEYO Billing", action: "billing.central_stk_started", entityType: "SubscriptionPayment", entityId: updated.id, metadata: JSON.stringify({ fullAmount, chargeAmount, referralDiscountKes: discountKes, referralCreditIds: creditIds, campaignDiscountKes: campaignDiscount.discountKes, campaignId: campaignDiscount.campaignId, influencerDiscountKes: influencerDiscount.discountKes, influencerCodeId: influencerDiscount.influencerCodeId, accountRef, checkoutRequestId: result.checkoutRequestId, centralized: true, provider: gateway.provider.key, source: gateway.source, live: gateway.live }) } });
+  return { payment: updated, checkoutRequestId: result.checkoutRequestId, amount: chargeAmount, fullAmount, referralDiscountKes: discountKes, campaignDiscountKes: campaignDiscount.discountKes, influencerDiscountKes: influencerDiscount.discountKes, accountRef };
+}
+
+
+async function activateSubscriptionFromPayment(paymentId: string, mpesaRef: string | null, raw: unknown, resultCode = "0", resultDesc = "Success") {
+  const payment = await db.subscriptionPayment.findUnique({ where: { id: paymentId }, include: { subscription: true } });
+  if (!payment) return { matched: false };
+  if (payment.status === "PAID") return { matched: true, status: "PAID", tenantId: payment.tenantId };
+
+  if (mpesaRef) {
+    const duplicate = await db.subscriptionPayment.findUnique({ where: { mpesaRef } });
+    if (duplicate && duplicate.id !== payment.id) throw new Error("This M-Pesa reference is already recorded.");
+  }
+
+  const now = new Date();
+  const periodEnd = addDays(now, TERM_DAYS);
+  await db.$transaction([
+    db.subscriptionPayment.update({ where: { id: payment.id }, data: { status: "PAID", paidAt: now, mpesaRef, resultCode, resultDesc, rawCallback: JSON.stringify(raw), periodStart: now, periodEnd } }),
+    db.subscription.update({ where: { id: payment.subscriptionId }, data: { status: "ACTIVE", currentPeriodStart: now, currentPeriodEnd: periodEnd, graceEndsAt: null } }),
+  ]);
+  await db.auditLog.create({ data: { tenantId: payment.tenantId, actorName: "NEYO Central M-Pesa", action: "billing.central_payment_reconnected", entityType: "SubscriptionPayment", entityId: payment.id, metadata: JSON.stringify({ mpesaRef, amount: payment.amount, centralized: true, reconnected: true }) } });
+
+  // M.1 — best-effort, never blocks activation: mark any referral credit that
+  // was used to discount THIS payment as APPLIED, and (separately) detect a
+  // brand-new qualifying referral conversion to issue fresh credits.
+  try {
+    if (payment.referralDiscountKes > 0) {
+      const usedCredits = await db.referralCredit.findMany({ where: { tenantId: payment.tenantId, status: "PENDING" }, orderBy: { createdAt: "asc" } });
+      let remaining = payment.referralDiscountKes;
+      const toApply: string[] = [];
+      for (const credit of usedCredits) {
+        if (remaining <= 0) break;
+        toApply.push(credit.id);
+        remaining -= Math.round(payment.amount * credit.discountPct);
+      }
+      if (toApply.length > 0) await markReferralCreditsApplied(toApply, payment.id, payment.referralDiscountKes);
+    }
+    await processReferralRewardsForPayment(payment.id);
+    // In-app nudge to refer another school, right after a real successful payment.
+    await promptReferralAfterPayment(payment.tenantId);
+  } catch {
+    // Referral crediting must never block a real subscription activation.
+  }
+
+  // T.2/T.6 — best-effort, never blocks activation: mark the real one-time
+  // first-term discount claimed, and (for an influencer-code school) credit
+  // the real one-time commission NEYO now owes.
+  try {
+    if (payment.campaignDiscountKes > 0 && payment.campaignId) {
+      await markFirstTermDiscountClaimed(payment.tenantId, payment.campaignId, payment.campaignDiscountKes);
+    } else if (payment.influencerDiscountKes > 0 && payment.influencerCodeId) {
+      await db.tenant.update({ where: { id: payment.tenantId }, data: { hasClaimedFirstTermDiscount: true, firstTermDiscountKes: payment.influencerDiscountKes } });
+      await creditInfluencerCommission(payment.tenantId);
+    }
+  } catch {
+    // A discount-tracking failure must never block a real subscription activation.
+  }
+
+  return { matched: true, status: "PAID", tenantId: payment.tenantId };
+}
+
+function parseCentralCallback(body: unknown) {
+  const b = body as any;
+  if (b?.Body?.stkCallback) return daraja.parseCallback(body);
+  return {
+    checkoutRequestId: b?.checkoutRequestId || b?.CheckoutRequestID || null,
+    status: (b?.success !== false && b?.ResultCode !== 1 && b?.resultCode !== "1" ? "PAID" : "FAILED") as "PAID" | "FAILED",
+    mpesaRef: b?.mpesaRef || b?.MpesaReceiptNumber || b?.TransID || `CENTRAL${Date.now()}`,
+    resultCode: String(b?.resultCode || b?.ResultCode || (b?.success === false ? "1" : "0")),
+    resultDesc: b?.resultDesc || b?.ResultDesc || (b?.success === false ? "Failed" : "Success"),
+  };
+}
+
+export async function handleCentralSubscriptionCallback(body: unknown) {
+  const parsed = parseCentralCallback(body);
+  if (parsed.status !== "PAID") {
+    if (parsed.checkoutRequestId) {
+      await db.subscriptionPayment.updateMany({ where: { checkoutRequestId: parsed.checkoutRequestId, status: "PENDING" }, data: { status: "FAILED", resultCode: parsed.resultCode, resultDesc: parsed.resultDesc, rawCallback: JSON.stringify(body) } });
+    }
+    return { matched: Boolean(parsed.checkoutRequestId), status: "FAILED" };
+  }
+
+  if (parsed.checkoutRequestId) {
+    const payment = await db.subscriptionPayment.findUnique({ where: { checkoutRequestId: parsed.checkoutRequestId } });
+    if (payment) return activateSubscriptionFromPayment(payment.id, parsed.mpesaRef, body, parsed.resultCode || "0", parsed.resultDesc || "Success");
+  }
+
+  const b = body as any;
+  const rawRef = String(b?.accountRef || b?.BillRefNumber || b?.AccountReference || "").trim().toUpperCase();
+  const slug = rawRef.replace(/^NEYO-/, "").toLowerCase();
+  if (!slug) return { matched: false };
+  const tenant = await db.tenant.findFirst({ where: { slug } });
+  if (!tenant) return { matched: false };
+  const sub = await ensureSubscriptionForCentralPayment(tenant.id);
+  const amount = Number(b?.amount || b?.TransAmount || (await subscriptionRenewalAmount(tenant.id)));
+  const now = new Date();
+  const existing = parsed.mpesaRef ? await db.subscriptionPayment.findUnique({ where: { mpesaRef: parsed.mpesaRef } }).catch(() => null) : null;
+  if (existing) return activateSubscriptionFromPayment(existing.id, parsed.mpesaRef, body, parsed.resultCode || "0", parsed.resultDesc || "Success");
+  const created = await db.subscriptionPayment.create({ data: { subscriptionId: sub.id, tenantId: tenant.id, amount, status: "PENDING", method: "central_mpesa_c2b", phone: b?.phone || b?.MSISDN || null, accountRef: centralAccountRef(tenant.slug), periodStart: now, periodEnd: addDays(now, TERM_DAYS) } });
+  return activateSubscriptionFromPayment(created.id, parsed.mpesaRef, body, parsed.resultCode || "0", parsed.resultDesc || "Success");
+}
