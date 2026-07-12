@@ -2949,7 +2949,13 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                         {block.slots.map((slot: any) => (
                           <p key={slot.id} className="text-[11px] text-navy-500 dark:text-navy-400">
                             <span className="font-semibold">{slot.label}{slot.isDouble ? " (double)" : ""}:</span>{" "}
-                            {slot.subjects.map((s: any) => subjects.find((sub: any) => sub.id === s.subjectId)?.name || "?").join(" / ")}
+                            {slot.subjects.map((s: any) => {
+                              const name = subjects.find((sub: any) => sub.id === s.subjectId)?.name || "?";
+                              // BB.1 — show the real auto-picked overflow venue when a school
+                              // left this subject's venue unset and NEYO picked one from the pool.
+                              const resolved = !s.venueId && s.resolvedVenueId ? venues.find((v: any) => v.id === s.resolvedVenueId) : null;
+                              return resolved ? `${name} (auto: ${resolved.name})` : name;
+                            }).join(" / ")}
                           </p>
                         ))}
                       </div>

@@ -292,7 +292,11 @@ export async function getTimetable(user: SessionUser, classId: string) {
         include: { subjects: true },
       });
       const allTeacherIds = [...new Set(blockSlots.flatMap((bs: any) => bs.subjects.map((s: any) => s.teacherId).filter(Boolean)))] as string[];
-      const allVenueIds = [...new Set(blockSlots.flatMap((bs: any) => bs.subjects.map((s: any) => s.venueId).filter(Boolean)))] as string[];
+      // BB.1 — a shown venue is either the school's own explicit pin
+      // (`venueId`) OR, when unset, the solver's own real auto-pick from
+      // the pool for a genuine overflow subject (`resolvedVenueId`) —
+      // both real venue references need resolving to a real name/code.
+      const allVenueIds = [...new Set(blockSlots.flatMap((bs: any) => bs.subjects.flatMap((s: any) => [s.venueId, s.resolvedVenueId]).filter(Boolean)))] as string[];
       const allSubjectIds = [...new Set(blockSlots.flatMap((bs: any) => bs.subjects.map((s: any) => s.subjectId)))] as string[];
       const [blockTeachers, blockVenues, blockSubjects] = await Promise.all([
         allTeacherIds.length ? tenantDb().user.findMany({ where: { id: { in: allTeacherIds } }, select: { id: true, fullName: true, timetableShortCode: true } }) : Promise.resolve([]),
@@ -310,7 +314,9 @@ export async function getTimetable(user: SessionUser, classId: string) {
             subjectName: subjectMap.get(s.subjectId)?.name ?? "?",
             subjectCode: subjectMap.get(s.subjectId)?.code ?? null,
             teacherShortCode: s.teacherId ? teacherCodeMap.get(s.teacherId) ?? null : null,
-            venue: s.venueId ? venueMap.get(s.venueId) ?? null : null,
+            // BB.1 — an explicit school pin always wins; otherwise show the
+            // solver's own real auto-picked overflow venue, if any.
+            venue: (s.venueId ? venueMap.get(s.venueId) : null) ?? (s.resolvedVenueId ? venueMap.get(s.resolvedVenueId) : null) ?? null,
           })),
         });
       }

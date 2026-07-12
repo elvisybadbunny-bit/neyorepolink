@@ -31,7 +31,7 @@ export async function listElectiveBlocks(user: SessionUser) {
       where: { active: true },
       include: {
         classes: true,
-        slots: { orderBy: { sortOrder: "asc" }, include: { subjects: true } },
+        slots: { orderBy: { sortOrder: "asc" }, include: { subjects: { orderBy: { createdAt: "asc" } } } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -51,6 +51,12 @@ export async function listElectiveBlocks(user: SessionUser) {
           subjectId: s.subjectId,
           teacherId: s.teacherId,
           venueId: s.venueId,
+          // BB.1 — the real venue the solver's own last run auto-picked
+          // from the pool for this subject, if the school left venueId
+          // unset and this genuinely was an overflow subject. Read-only
+          // from the UI's own perspective — a school changes this by
+          // pinning a real venueId instead, never by editing this field.
+          resolvedVenueId: s.resolvedVenueId,
           classIds: safeParse<string[]>(s.comboClassIdsJson, []),
         })),
       })),
@@ -149,7 +155,12 @@ export async function getElectiveBlocksForSolver(tenantId: string) {
       where: { active: true },
       include: {
         classes: true,
-        slots: { orderBy: { sortOrder: "asc" }, include: { subjects: true } },
+        // BB.1 — real, deterministic subject order (createdAt asc) is
+        // required so the solver's own "first N subjects = home
+        // classroom, remaining = genuine overflow" rule (N = the block's
+        // real member-class count) means the same real thing every single
+        // generation run, not whatever order SQLite happens to return.
+        slots: { orderBy: { sortOrder: "asc" }, include: { subjects: { orderBy: { createdAt: "asc" } } } },
       },
     });
     return blocks
@@ -164,6 +175,9 @@ export async function getElectiveBlocksForSolver(tenantId: string) {
           label: slot.label,
           isDouble: slot.isDouble,
           subjects: slot.subjects.map((s) => ({
+            // BB.1 — the solver needs this row's own real id to persist a
+            // real resolvedVenueId back onto it after auto-picking a venue.
+            id: s.id,
             subjectId: s.subjectId,
             teacherId: s.teacherId,
             venueId: s.venueId,

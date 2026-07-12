@@ -512,6 +512,14 @@ async function buildAndSolve(tenantId: string, jobId: string) {
   // correctly skip this exact slot as well.
   const electiveBlockWarnings: { classLabel: string; subjectCode: string; message: string }[] = [];
   const electiveBlockSlotRows: any[] = [];
+  // BB.1 — real venue-pool overflow auto-pick. `resolvedVenueUpdates`
+  // records, per real ElectiveBlockSlotSubject row id, which real venue
+  // (if any) this generation run genuinely picked from the pool for a
+  // slot-subject the school left unpinned — persisted back onto the DB
+  // row after generation (see the persist step below) so the print/live
+  // renderer can show it exactly like a school's own explicit pin,
+  // honestly cleared to null when no longer needed/available.
+  const resolvedVenueUpdates = new Map<string, string | null>();
   for (const block of electiveBlocks) {
     for (const slot of block.slots) {
       // Real candidate day/period search: the SAME real day+period must be
@@ -524,6 +532,28 @@ async function buildAndSolve(tenantId: string, jobId: string) {
       // ends up with a genuinely unplaced Options Block over a soft
       // cosmetic preference.
       const size = slot.isDouble ? 2 : 1;
+      // BB.1 — real "overflow" detection: a slot's first N parallel
+      // subjects (N = the block's own real member-class count, in a
+      // deterministic createdAt-ascending order guaranteed by
+      // getElectiveBlocksForSolver()) are assumed to use each member
+      // class's own home classroom exactly like an ordinary lesson with
+      // no venueId already does everywhere else in NEYO — no venue is
+      // ever printed/required for those. Any subject BEYOND that count is
+      // a genuine overflow subject that needs a real physical room
+      // somewhere else (the founder's own "5 subjects, 4 streams"
+      // example) — if the school has explicitly pinned a venueId for it,
+      // that pin is used and respected exactly as before; if left blank,
+      // the solver auto-picks a real spare venue from the tenant's pool,
+      // honouring `supportsSubjectIds` + real capacity + full
+      // clash-avoidance, identical to how an ordinary ClassSubjectNeed
+      // card already does via `venueCandidatesFor()`/`pickVenueFor()`.
+      const overflowCount = Math.max(0, slot.subjects.length - block.classIds.length);
+      const overflowSubjectIds = new Set(slot.subjects.slice(slot.subjects.length - overflowCount).map((s) => s.subjectId));
+      function venueCandidatesForSlotSubject(s: { subjectId: string; venueId: string | null }): string[] {
+        if (s.venueId) return [s.venueId]; // explicit pin always wins
+        if (!overflowSubjectIds.has(s.subjectId)) return []; // home-classroom subject — no real venue needed
+        return venueCandidatesFor(s.subjectId); // genuine overflow, unpinned — pool candidates
+      }
       const candidates: { day: number; periods: number[]; score: number }[] = [];
       for (const day of daysForCard(block.classIds)) {
         const maxP = maxPeriodsForCard(block.classIds, day);
@@ -544,12 +574,18 @@ async function buildAndSolve(tenantId: string, jobId: string) {
             !s.teacherId || periods.every((p) => !teacherGrid.has(`${s.teacherId}:${day}:${p}`))
           );
           if (!teachersFree) continue;
-          // Real venue availability, reusing the exact same capacity-aware
-          // check every other card in this engine already uses.
+          // Real venue availability: a PINNED venue is checked exactly as
+          // before; a genuine unpinned overflow subject needs AT LEAST ONE
+          // real pool candidate with spare capacity across every one of
+          // these periods, reusing the exact same capacity-aware logic
+          // every other card in this engine already uses.
           const venuesFree = slot.subjects.every((s) => {
-            if (!s.venueId) return true;
-            const cap = venueById.get(s.venueId)?.capacityPerPeriod ?? 1;
-            return periods.every((p) => (venueGrid.get(`${s.venueId}:${day}:${p}`) ?? 0) < cap);
+            const cands = venueCandidatesForSlotSubject(s);
+            if (cands.length === 0) return true; // no real venue required for this subject
+            return cands.some((vid) => {
+              const cap = venueById.get(vid)?.capacityPerPeriod ?? 1;
+              return periods.every((p) => (venueGrid.get(`${vid}:${day}:${p}`) ?? 0) < cap);
+            });
           });
           if (!venuesFree) continue;
 
@@ -583,9 +619,31 @@ async function buildAndSolve(tenantId: string, jobId: string) {
       for (const s of slot.subjects) {
         if (s.teacherId) for (const p of chosen.periods) teacherGrid.set(`${s.teacherId}:${chosen.day}:${p}`, s.classIds.join(","));
         if (s.venueId) {
+          // A school's own explicit pin — booked exactly as before.
           for (const p of chosen.periods) {
             venueGrid.set(`${s.venueId}:${chosen.day}:${p}`, (venueGrid.get(`${s.venueId}:${chosen.day}:${p}`) ?? 0) + 1);
           }
+          if (s.id) resolvedVenueUpdates.set(s.id, null); // an explicit pin means no auto-pick is needed/stored
+        } else if (overflowSubjectIds.has(s.subjectId)) {
+          // BB.1 — a genuine unpinned overflow subject: pick the first real
+          // pool candidate with spare capacity across every chosen period,
+          // reserve it, and remember the pick so it can be persisted onto
+          // the real ElectiveBlockSlotSubject row after generation.
+          const cands = venueCandidatesFor(s.subjectId);
+          const picked = cands.find((vid) => {
+            const cap = venueById.get(vid)?.capacityPerPeriod ?? 1;
+            return chosen.periods.every((p) => (venueGrid.get(`${vid}:${chosen.day}:${p}`) ?? 0) < cap);
+          }) ?? null;
+          if (picked) {
+            for (const p of chosen.periods) {
+              venueGrid.set(`${picked}:${chosen.day}:${p}`, (venueGrid.get(`${picked}:${chosen.day}:${p}`) ?? 0) + 1);
+            }
+          }
+          if (s.id) resolvedVenueUpdates.set(s.id, picked);
+        } else if (s.id) {
+          // A home-classroom subject (not overflow, not pinned) — no real
+          // venue is needed; honestly clear any stale prior auto-pick.
+          resolvedVenueUpdates.set(s.id, null);
         }
       }
       // Real, IMPORTANT modeling decision: `TimetableSlot` is uniquely keyed
@@ -1191,6 +1249,17 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     // ids only; subjectId/teacherId are intentionally null on these rows).
     const safeBlockRows = electiveBlockSlotRows.filter((row) => validClassIds.has(row.classId));
     if (safeBlockRows.length > 0) await tdb.timetableSlot.createMany({ data: safeBlockRows });
+    // BB.1 — persist every real venue-overflow auto-pick (or honest clear)
+    // this generation run computed, back onto the real
+    // ElectiveBlockSlotSubject row it belongs to. Never touches a school's
+    // own explicit `venueId` pin — only the separate `resolvedVenueId`
+    // field, so a school's manual choice is never silently overwritten.
+    for (const [slotSubjectId, resolvedVenueId] of resolvedVenueUpdates.entries()) {
+      await tdb.electiveBlockSlotSubject.update({
+        where: { id: slotSubjectId },
+        data: { resolvedVenueId },
+      }).catch(() => {}); // a slot-subject deleted mid-run (rare) is safely skipped, never a hard failure
+    }
   });
 
   return { slotsPlaced: slotRows.length + electiveBlockSlotRows.length, unplaced, warnings, fullySolved };
