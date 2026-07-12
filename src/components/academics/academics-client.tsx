@@ -3293,6 +3293,22 @@ function TeacherAllocationImportModal({ onClose, onDone }: { onClose: () => void
             <p className="font-bold text-navy-800 dark:text-navy-100">Accepted columns</p>
             <p className="mt-1 font-mono text-navy-600 dark:text-navy-300">Teacher Name · Subject · Class/Stream · Lessons Per Week · Doubles</p>
             <p className="mt-2 text-navy-500 dark:text-navy-400">Headers are auto-mapped. Class names must match this school's real class names exactly (e.g. "Form 2 East"). Nothing is created until you preview and confirm.</p>
+            {/* BB.6 — a teacher who teaches several real subjects and/or
+                several real classes doesn't need a special combined-cell
+                format: just add one more real row for each subject/class
+                they teach, using the SAME real teacher name spelled
+                exactly the same way each time. NEYO automatically links
+                every one of those rows to the SAME real teacher record —
+                it never creates a duplicate teacher just because their
+                name appears more than once. */}
+            <div className="mt-3 rounded-xl border border-teal-200/70 bg-white/70 p-3 dark:border-teal-900/30 dark:bg-navy-950/30">
+              <p className="font-bold text-navy-800 dark:text-navy-100">A teacher who teaches more than one subject or class?</p>
+              <p className="mt-1 text-navy-500 dark:text-navy-400">Just add one more row for each subject/class they teach — using their name spelled exactly the same way every time. NEYO automatically links every row to the same real teacher; it never creates a duplicate.</p>
+              <p className="mt-2 font-mono text-navy-600 dark:text-navy-300">
+                Wanjiru Consolata, Mathematics, Form 2 East, 5<br />
+                Wanjiru Consolata, Physics, Form 3 West, 6
+              </p>
+            </div>
           </div>
 
           {!result && !preview && (
