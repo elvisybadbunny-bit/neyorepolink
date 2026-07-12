@@ -22,8 +22,43 @@ function parseJson<T>(value: string | null | undefined, fallback: T): T {
   try { return value ? JSON.parse(value) as T : fallback; } catch { return fallback; }
 }
 
-function classLabel(c: { level: string; stream: string | null }) {
+export function classLabel(c: { level: string; stream: string | null }) {
   return [c.level, c.stream].filter(Boolean).join(" ");
+}
+
+/**
+ * BB.4 — the real, pure subject-combination-grouping algorithm, extracted
+ * unchanged from runAutoGroupingPreview() below so BB.4's own "Allocate
+ * Class" wizard can preview the SAME real algorithm against a set of
+ * PROPOSED (not-yet-created) classes for a brand-new intake with zero real
+ * classes yet — without ever duplicating the algorithm itself. Every
+ * existing caller of runAutoGroupingPreview() is completely unaffected;
+ * this is a pure extraction, not a behaviour change (the exact same
+ * round-robin-by-largest-group logic, byte-for-byte).
+ */
+export function groupStudentsBySubjectCombination<
+  TStudent extends { id: string; classId: string | null },
+  TClass extends { id: string }
+>(students: TStudent[], selectionMap: Map<string, string[]>, classes: TClass[]): Map<string, string> {
+  const bySubjectSet = new Map<string, TStudent[]>();
+  for (const student of students) {
+    const selected = [...(selectionMap.get(student.id) ?? [])].sort();
+    const key = selected.join("|") || "NO_SELECTION";
+    const arr = bySubjectSet.get(key) ?? [];
+    arr.push(student);
+    bySubjectSet.set(key, arr);
+  }
+
+  const assignments = new Map<string, string>();
+  const orderedClasses = [...classes];
+  for (const [, members] of [...bySubjectSet.entries()].sort((a, b) => b[1].length - a[1].length)) {
+    members.forEach((student, index) => {
+      const target = orderedClasses[index % orderedClasses.length];
+      assignments.set(student.id, target.id);
+    });
+    orderedClasses.push(orderedClasses.shift()!);
+  }
+  return assignments;
 }
 
 export async function listAutoGroupingSetup(user: SessionUser) {
@@ -90,24 +125,10 @@ export async function runAutoGroupingPreview(user: SessionUser, level: string) {
     const rules = await tdb.classGroupingRule.findMany({ where: { active: true, OR: [{ targetLevel: null }, { targetLevel: level }] }, orderBy: [{ priority: "asc" }, { createdAt: "asc" }] });
     const ruleConfig = parseJson<GroupRuleConfig>(rules[0]?.configJson, {});
 
-    const bySubjectSet = new Map<string, typeof students>();
-    for (const student of students) {
-      const selected = [...(selectionMap.get(student.id) ?? [])].sort();
-      const key = selected.join("|") || "NO_SELECTION";
-      const arr = bySubjectSet.get(key) ?? [];
-      arr.push(student);
-      bySubjectSet.set(key, arr);
-    }
-
-    const assignments = new Map<string, string>();
-    const orderedClasses = [...classes];
-    for (const [, members] of [...bySubjectSet.entries()].sort((a, b) => b[1].length - a[1].length)) {
-      members.forEach((student, index) => {
-        const target = orderedClasses[index % orderedClasses.length];
-        assignments.set(student.id, target.id);
-      });
-      orderedClasses.push(orderedClasses.shift()!);
-    }
+    // BB.4 — reuses the exact same real, pure grouping algorithm BB.4's own
+    // "Allocate Class" wizard preview uses (see groupStudentsBySubjectCombination
+    // above) — a single source of truth, never two copies of the same logic.
+    const assignments = groupStudentsBySubjectCombination(students, selectionMap, classes);
 
     const preview = classes.map((cls) => {
       const members = students.filter((s) => assignments.get(s.id) === cls.id);
