@@ -30,6 +30,23 @@ const slotSchema = z.object({
 }).refine(
   (slot) => new Set(slot.subjects.map((s) => s.subjectId)).size === slot.subjects.length,
   { message: "The same subject cannot appear twice in one real slot.", path: ["subjects"] },
+).refine(
+  (slot) => {
+    // Real, physically-necessary rule: one teacher cannot teach two
+    // PARALLEL subjects at the exact same real time — a genuine gap found
+    // during this feature's own real regression testing (a school could
+    // otherwise save an impossible request that the solver would then
+    // have to silently misplace or double-book). Two subjects in the SAME
+    // slot sharing the same real teacherId is only valid if their
+    // real classIds don't overlap (e.g. the same teacher genuinely
+    // covers History for Stream A and Geography for Stream B
+    // simultaneously in two different real rooms is still impossible for
+    // ONE person — so this is a hard, always-invalid combination
+    // regardless of classIds, matching how a real school actually works).
+    const teacherIds = slot.subjects.map((s) => s.teacherId).filter(Boolean) as string[];
+    return new Set(teacherIds).size === teacherIds.length;
+  },
+  { message: "The same real teacher cannot be assigned to two subjects in the SAME slot — one person cannot teach two parallel lessons at once.", path: ["subjects"] },
 );
 
 export const electiveBlockSaveSchema = z.object({

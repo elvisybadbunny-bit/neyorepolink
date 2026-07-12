@@ -38,6 +38,7 @@
 import { PrismaClient } from "@prisma/client";
 import { runGeneration } from "../src/lib/services/timetable-engine.service";
 import { saveElectiveBlock, deleteElectiveBlock } from "../src/lib/services/elective-block.service";
+import { electiveBlockSaveSchema } from "../src/lib/validations/elective-block";
 
 const db = new PrismaClient();
 let pass = 0, fail = 0;
@@ -54,6 +55,23 @@ async function main() {
   if (!t) throw new Error("tenant not found");
   const tid = t.id;
   const principal = su(await db.user.findFirst({ where: { tenantId: tid, role: "PRINCIPAL" } }), tid);
+
+  // Real bug caught live during this feature's own development (documented
+  // honestly): a school could otherwise save a physically impossible
+  // request — the SAME real teacher assigned to 2 subjects in the SAME
+  // slot (one person cannot teach two parallel lessons at once). Fixed at
+  // the Zod validation layer; this is the permanent regression proof.
+  const impossibleResult = electiveBlockSaveSchema.safeParse({
+    action: "save_block",
+    name: "Impossible Same-Teacher Test",
+    mode: "MULTI_SLOT",
+    classIds: ["c1"],
+    slots: [{ label: "Slot A", subjects: [
+      { subjectId: "s1", teacherId: "sameTeacher" },
+      { subjectId: "s2", teacherId: "sameTeacher" },
+    ] }],
+  });
+  check("Zod correctly REJECTS the same real teacher in 2 subjects of the same slot (physically impossible)", !impossibleResult.success);
 
   const existingSlots = await db.timetableSlot.findMany({ where: { tenantId: tid } });
   const suffix = Date.now() % 100000;
