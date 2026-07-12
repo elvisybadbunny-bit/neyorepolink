@@ -281,6 +281,8 @@ model Tenant {
   attendanceRecords            AttendanceRecord[]
   principalDelegationTasks     PrincipalDelegationTask[]
   promotionRuns                PromotionRun[]
+  classYearHistories           ClassYearHistory[]
+  teacherAllocationReviewRuns  TeacherAllocationReviewRun[]
   admissionApplications        AdmissionApplication[]
   staffAttendance              StaffAttendance[]
   departments                  Department[]
@@ -2884,6 +2886,78 @@ model PromotionRun {
   createdAt     DateTime  @default(now())
 
   @@index([tenantId, createdAt])
+}
+
+// AA.3 — a permanent, read-only historical snapshot of ONE real class
+// (e.g. "Form 4 West") taken at the exact moment its final-year cohort
+// graduates, BEFORE that same class row is quietly reused next year for the
+// class moving up into it (e.g. Form 3 West -> Form 4 West). This is what
+// lets NEYO keep reusing the same SchoolClass ID across years — which is
+// what makes teacher continuity "just carry over" automatically — WITHOUT
+// ever losing or blurring a graduated year's own real roster and real
+// subject-teacher allocation. One row per graduated class per graduation
+// event (a class could in principle appear again in a future year if a
+// school somehow re-used a level/stream name after a gap — each event gets
+// its own permanent row, never overwritten).
+//
+// Deliberately independent of stream COUNT or naming per level — a school
+// where e.g. Form 1 has 3 streams (East/West/North) but Form 4 only has 2
+// (East/West) already works today because SchoolClass rows are individually
+// keyed by (level, stream), not by an assumed symmetric grid; this history
+// table follows the exact same one-row-per-real-class-instance model, so it
+// needs no special handling for uneven stream counts across levels or years.
+model ClassYearHistory {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  classId          String // the real SchoolClass.id that graduated (and will be reused)
+  level            String // "Form 4" — the level AS OF the graduation moment
+  stream           String? // "West" (null = single-stream)
+  curriculum       String // "CBC" | "8-4-4" — as of the graduation moment
+  graduationYear   Int // the real Class of YYYY this snapshot belongs to
+  promotionRunId   String? // the real PromotionRun that produced this snapshot, if any
+  studentCount     Int
+  roster           String // JSON [{id, name, admissionNo, gender}] — frozen at graduation
+  subjectTeachers  String // JSON [{subjectId, subjectName, teacherId, teacherName, lessonsPerWeek}] — frozen ClassSubjectNeed allocation at graduation
+  classTeacherId   String?
+  classTeacherName String?
+  createdById      String
+  createdByName    String
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId, graduationYear])
+  @@index([tenantId, classId])
+}
+
+// AA.3 — tracks one real "New Academic Year — Teacher Allocation Review"
+// wizard session per level, tying together the already-real Continuity
+// Engine (L.7) + autoAssignTeachersToClasses() specifically for the
+// post-promotion moment. A Principal walks through it level-by-level right
+// after committing a promotion; this row is the honest, auditable record of
+// which real decision was made per subject/class-teacher slot (KEEP the
+// existing teacher, REPLACE with a specific recommended/chosen teacher, or
+// AUTO — let NEYO's own fair auto-assign fill it), and whether it has been
+// applied yet. Never a hidden background process — always staff-reviewed
+// and staff-confirmed before any real ClassSubjectNeed/SchoolClass row
+// changes, exactly like every other real decision this session's Continuity
+// Engine already requires.
+model TeacherAllocationReviewRun {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  promotionRunId  String? // the real PromotionRun this review follows, if any
+  level           String // the level being reviewed, e.g. "Form 2"
+  status          String    @default("IN_PROGRESS") // "IN_PROGRESS" | "COMPLETED"
+  decisions       String // JSON [{classId, subjectId|null, roleType: "SUBJECT"|"CLASS_TEACHER", decision: "KEEP"|"REPLACE"|"AUTO", teacherId|null}]
+  appliedCount    Int       @default(0)
+  autoFilledCount Int       @default(0)
+  createdById     String
+  createdByName   String
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, level])
 }
 
 // L.7 — Automatic admissions grouping / annual reshuffle rules.

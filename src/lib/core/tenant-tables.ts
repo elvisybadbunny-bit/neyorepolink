@@ -72,6 +72,8 @@ export const TENANT_OWNED_MODELS = [
   "attendanceRecord",
   "principalDelegationTask",
   "promotionRun",
+  "classYearHistory", // AA.3
+  "teacherAllocationReviewRun", // AA.3
   "classGroupingRule",
   "teacherWorkloadRule",
   "teacherContinuityAssignment",
