@@ -436,6 +436,7 @@ model Tenant {
   BundiDocumentTemplate        BundiDocumentTemplate[]
   StaffImport                  StaffImport[]
   LibraryImport                LibraryImport[]
+  TeacherAllocationImport      TeacherAllocationImport[]
   SchoolActivity               SchoolActivity[]
   MasterReportCard             MasterReportCard[]
   CombinationGroup             CombinationGroup[]
@@ -7018,6 +7019,35 @@ model LibraryImport {
   createdById   String
   createdByName String
   createdAt     DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+}
+
+// AA.2 — real bulk import history for an existing school's teacher-
+// subject-class allocation (founder-requested 2026-07-12, onboarding
+// scenario: "if a school enrolls into neyo and they already have their
+// teachers subject already allocated subjects how can an import that can
+// read that be entered"). Mirrors the exact real StaffImport/LibraryImport
+// pattern — a real per-run history row, never silently mutating without a
+// trace. `createdNeeds`/`matchedNeeds` distinguish a genuinely NEW
+// ClassSubjectNeed row from one that already existed and was simply
+// re-confirmed/updated (a school re-importing a corrected file should not
+// see every row reported as "created" a second time).
+model TeacherAllocationImport {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fileName       String?
+  source         String // "csv" | "xlsx" | "paste" | "bundi"
+  totalRows      Int
+  createdNeeds   Int // real NEW ClassSubjectNeed rows created
+  matchedNeeds   Int // real EXISTING ClassSubjectNeed rows matched/updated
+  createdTeachers Int // real NEW User+TeacherSubject rows created for a teacher name not already in the school
+  failedRows     Int
+  errorRows      String? // JSON [{row, message}] (null when none)
+  createdById    String
+  createdByName  String
+  createdAt      DateTime @default(now())
 
   @@index([tenantId, createdAt])
 }

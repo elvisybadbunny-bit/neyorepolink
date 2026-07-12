@@ -21,8 +21,12 @@ import { z } from "zod";
  * and batched, never a whole-page/whole-document call.
  */
 
-/** The domains Bundi Intelligent currently supports (extendable). */
-export const BUNDI_DOMAINS = ["STUDENT", "STAFF", "LIBRARY"] as const;
+/** The domains Bundi Intelligent currently supports (extendable).
+ * AA.2 — TEACHER_ALLOCATION added: a school's existing handwritten
+ * teacher-subject-class allocation register (founder-requested onboarding
+ * scenario), reusing this same real pipeline rather than building a
+ * parallel one. */
+export const BUNDI_DOMAINS = ["STUDENT", "STAFF", "LIBRARY", "TEACHER_ALLOCATION"] as const;
 export type BundiDomain = (typeof BUNDI_DOMAINS)[number];
 
 /** Confidence thresholds — deliberately NOT hidden inside a function; a
