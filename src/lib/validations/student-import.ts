@@ -29,6 +29,16 @@ export const IMPORT_FIELDS = [
   "guardianName",
   "guardianPhone",
   "notes",
+  // BB.4 — a real, optional per-student subject-choice column for a fresh
+  // intake arriving with subjects already chosen elsewhere (e.g. a Grade 10
+  // student's real subject choices made during Junior Secondary). A cell's
+  // value is a real, semicolon-OR-comma-delimited list of subject
+  // names/codes the school already uses (e.g. "History;CRE;Business
+  // Studies" or "HIS, CRE, BST") — matched case-insensitively against the
+  // tenant's own real Subject.name/Subject.code. Never required: an import
+  // with no Subjects column behaves exactly as before (zero new
+  // StudentSubjectSelection rows created).
+  "subjects",
   // R.1 — smart create-or-update: a school can add or fix fee/opening-balance
   // info on a re-import without ever touching totals already paid, since
   // this only ever creates a real ARREARS invoice for the DIFFERENCE (see
@@ -56,6 +66,7 @@ export const HEADER_SYNONYMS: Record<Exclude<ImportField, "ignore">, string[]> =
   guardianPhone: ["guardianphone", "parentphone", "phone", "phoneno", "phonenumber", "contact", "mobile", "simu", "telephone", "parentcontact", "guardiancontact"],
   notes: ["notes", "remarks", "comment", "comments", "maelezo"],
   openingBalanceKes: ["openingbalance", "balance", "feebalance", "outstandingbalance", "arrears", "balancebroughtforward", "bbf", "salio"],
+  subjects: ["subjects", "subjectchoices", "chosensubjects", "electives", "subjectselection", "masomo"],
   // "custom" is never auto-mapped by header text — a school always chooses it
   // explicitly and types its own label, so no synonym guessing applies here.
   custom: [],
@@ -82,6 +93,20 @@ export const columnMappingSchema = z.array(
 ).max(40);
 export type ColumnMapping = z.infer<typeof columnMappingSchema>;
 
+/**
+ * BB.4 — declared once per import run (not per row): the real, honest list
+ * of subject names/codes that are COMPULSORY for every student in this
+ * import (e.g. English, Kiswahili, a chosen Mathematics variant, CSL for a
+ * fresh CBE Senior School intake) — resolved the same way as the Subjects
+ * column, then unioned into EVERY student's own real selectedSubjectIds so
+ * a Subjects column only ever needs to list a student's genuine electives,
+ * never having to repeat what's compulsory for everyone on every row.
+ * Optional — omit entirely for a school that doesn't want NEYO writing any
+ * StudentSubjectSelection rows at import time (they can always use the
+ * existing SubjectSelectionPortal afterward instead).
+ */
+export const importCompulsorySubjectsSchema = z.array(z.string().trim().min(1).max(80)).max(20).optional();
+
 /** Preview request: raw pasted/uploaded text (csv or tsv) OR pre-parsed rows. */
 export const importPreviewSchema = z.object({
   source: z.enum(["csv", "xlsx", "paste"]),
@@ -97,6 +122,8 @@ export const importPreviewSchema = z.object({
   targetClassId: z.string().trim().min(1).optional(),
   /** R.1 — preview under smart create-or-update rules (see importCommitSchema). */
   updateExisting: z.boolean().default(true),
+  /** BB.4 — real subjects compulsory for every student in this run, see importCompulsorySubjectsSchema. */
+  compulsorySubjects: importCompulsorySubjectsSchema,
 }).refine((v) => v.text !== undefined || v.rows !== undefined, {
   message: "Provide pasted text or parsed rows.",
 });
@@ -142,6 +169,8 @@ export const importCommitSchema = z.object({
    * asks for the new mode.
    */
   runInBackground: z.boolean().optional().default(false),
+  /** BB.4 — real subjects compulsory for every student in this run, see importCompulsorySubjectsSchema. */
+  compulsorySubjects: importCompulsorySubjectsSchema,
 });
 export type ImportCommitInput = z.infer<typeof importCommitSchema>;
 
@@ -161,5 +190,10 @@ export const importedRowSchema = z.object({
   guardianPhone: z.string().trim().max(20).optional(),
   notes: z.string().trim().max(500).optional(),
   openingBalanceKes: z.coerce.number().int().min(0).max(10_000_000).optional(),
+  // BB.4 — raw delimited text from the Subjects column, resolved against
+  // the tenant's real Subject list at preview/commit time (not here, since
+  // this schema has no DB access) — kept as a plain string, never parsed
+  // into IDs at this layer.
+  subjects: z.string().trim().max(500).optional(),
 });
 export type ImportedRow = z.infer<typeof importedRowSchema>;
