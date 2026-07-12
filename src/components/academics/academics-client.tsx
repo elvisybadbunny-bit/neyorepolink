@@ -35,7 +35,7 @@ interface Subject { id: string; name: string; code: string; curriculum: string; 
 interface Dept { id: string; name: string; hodId: string | null; hodName: string | null; subjectCount: number }
 interface Term { id: string; year: number; term: number; startDate: string; endDate: string; current: boolean }
 interface ClassOpt { id: string; name: string }
-interface Slot { id: string; dayOfWeek: number; period: number; subjectId?: string | null; subjectName?: string | null; subjectCode?: string | null; activityCategoryId?: string | null; activityCategoryName?: string | null; activityCategoryColor?: string | null; teacherId: string | null; teacherName: string | null; venue?: string | null; className?: string; slotType?: string; weekRotation?: string; isCombined?: boolean; combinedDetails?: string; substituteTodayName?: string | null; }
+interface Slot { id: string; dayOfWeek: number; period: number; subjectId?: string | null; subjectName?: string | null; subjectCode?: string | null; activityCategoryId?: string | null; activityCategoryName?: string | null; activityCategoryColor?: string | null; teacherId: string | null; teacherName: string | null; venue?: string | null; className?: string; slotType?: string; weekRotation?: string; isCombined?: boolean; combinedDetails?: string; substituteTodayName?: string | null; electiveBlock?: { label: string; isDouble: boolean; subjects: { subjectName: string; subjectCode: string | null; teacherShortCode: string | null; venue: string | null }[] } | null; }
 interface TimetablePrintGroup { id: string; title: string; subtitle: string; config: any; slots: Slot[] }
 interface TimetablePrintBundle { mode: "classes" | "teachers" | "venues"; groups: TimetablePrintGroup[] }
 interface Plan { id: string; date: string; topic: string; status: string; subjectName: string; subjectCode: string; className: string; teacherName: string }
@@ -655,10 +655,40 @@ function getActivityStyle(color: string | null | undefined, isBandW: boolean) {
 
 function TimetableSlotCard({ slot, isBandW, fontSize, canManage, onClick, teacherFirst = false }: { slot?: Slot; isBandW: boolean; fontSize: number; canManage?: boolean; onClick?: () => void; teacherFirst?: boolean }) {
   const isActivity = slot?.slotType === "ACTIVITY";
-  const cellBgClass = isActivity 
+  // AA.1 — an Options Block cell has genuinely NO single subject/teacher
+  // (different real students attend different parallel lessons at this
+  // one shared time) — rendered distinctly from a normal single-subject
+  // cell, showing every parallel subject's own real teacher short-code
+  // together (the founder's own "HG/TY/EF/TS/GW" printed request).
+  const isElectiveBlock = slot?.slotType === "ELECTIVE_BLOCK" && !!(slot as any)?.electiveBlock;
+  const cellBgClass = isElectiveBlock
+    ? (isBandW ? "border border-purple-300 bg-white text-navy-950 font-bold dark:bg-navy-950 dark:text-white" : "bg-purple-500/10 border border-purple-200 text-purple-900 dark:bg-purple-950/20 dark:text-purple-200 dark:border-purple-900/30")
+    : isActivity
     ? getActivityStyle(slot?.activityCategoryColor ?? null, isBandW)
     : getSubjectStyle(slot?.subjectCode || "FREE", isBandW);
-    
+
+  if (isElectiveBlock) {
+    const block = (slot as any).electiveBlock as { label: string; isDouble: boolean; subjects: { subjectName: string; subjectCode: string | null; teacherShortCode: string | null; venue: string | null }[] };
+    return (
+      <button
+        disabled={!canManage}
+        onClick={onClick}
+        className={`w-full min-h-[52px] rounded-xl p-2 text-left transition relative flex flex-col justify-between ${cellBgClass}`}
+        style={{ fontSize: `${fontSize}px` }}
+      >
+        <div className="flex items-center justify-between w-full gap-1">
+          <span className="font-extrabold tracking-wide leading-tight line-clamp-2">Options</span>
+          <span className="text-[7px] uppercase font-black bg-purple-500/25 px-1 py-0.5 rounded">Block</span>
+        </div>
+        <div className="flex flex-col mt-1 font-medium" style={{ fontSize: `${Math.max(7, fontSize - 3)}px` }}>
+          <span className="truncate">{block.subjects.map((s) => s.subjectCode || s.subjectName.slice(0, 4)).join("/")}</span>
+          {/* The founder's own real "HG/TY/EF/TS/GW" printed multi-teacher-code request. */}
+          <span className="font-bold truncate">{block.subjects.map((s) => s.teacherShortCode).filter(Boolean).join("/")}</span>
+        </div>
+      </button>
+    );
+  }
+
   return (
     <button
       disabled={!canManage}

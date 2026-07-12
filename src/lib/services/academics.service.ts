@@ -276,6 +276,45 @@ export async function getTimetable(user: SessionUser, classId: string) {
         where: { classId },
       }),
     ]);
+
+    // AA.1 — real Elective/Options Block breakdown for any ELECTIVE_BLOCK
+    // slot this class has: the founder's own "HG/TY/EF/TS/GW" printed
+    // multi-teacher-code request. A single class-level cell genuinely has
+    // NO one subject/teacher during an Options Block period (different
+    // real students attend different parallel lessons), so the real
+    // per-subject/teacher/venue list is resolved here and handed to the
+    // renderer to display together in that one cell.
+    const blockSlotIds = [...new Set(slots.map((s) => (s as any).electiveBlockSlotId).filter((x): x is string => Boolean(x)))];
+    const blockBreakdownBySlotId = new Map<string, { label: string; isDouble: boolean; subjects: { subjectName: string; subjectCode: string | null; teacherShortCode: string | null; venue: string | null }[] }>();
+    if (blockSlotIds.length > 0) {
+      const blockSlots = await tenantDb().electiveBlockSlot.findMany({
+        where: { id: { in: blockSlotIds } },
+        include: { subjects: true },
+      });
+      const allTeacherIds = [...new Set(blockSlots.flatMap((bs: any) => bs.subjects.map((s: any) => s.teacherId).filter(Boolean)))] as string[];
+      const allVenueIds = [...new Set(blockSlots.flatMap((bs: any) => bs.subjects.map((s: any) => s.venueId).filter(Boolean)))] as string[];
+      const allSubjectIds = [...new Set(blockSlots.flatMap((bs: any) => bs.subjects.map((s: any) => s.subjectId)))] as string[];
+      const [blockTeachers, blockVenues, blockSubjects] = await Promise.all([
+        allTeacherIds.length ? tenantDb().user.findMany({ where: { id: { in: allTeacherIds } }, select: { id: true, fullName: true, timetableShortCode: true } }) : Promise.resolve([]),
+        allVenueIds.length ? tenantDb().venue.findMany({ where: { id: { in: allVenueIds } } }) : Promise.resolve([]),
+        allSubjectIds.length ? tenantDb().subject.findMany({ where: { id: { in: allSubjectIds } } }) : Promise.resolve([]),
+      ]);
+      const teacherCodeMap = new Map(blockTeachers.map((t) => [t.id, t.timetableShortCode || t.fullName.split(" ").map((p) => p[0]).join("").toUpperCase().slice(0, 3)]));
+      const venueMap = new Map(blockVenues.map((v) => [v.id, v.shortCode || v.name]));
+      const subjectMap = new Map(blockSubjects.map((s) => [s.id, s]));
+      for (const bs of blockSlots as any[]) {
+        blockBreakdownBySlotId.set(bs.id, {
+          label: bs.label,
+          isDouble: bs.isDouble,
+          subjects: bs.subjects.map((s: any) => ({
+            subjectName: subjectMap.get(s.subjectId)?.name ?? "?",
+            subjectCode: subjectMap.get(s.subjectId)?.code ?? null,
+            teacherShortCode: s.teacherId ? teacherCodeMap.get(s.teacherId) ?? null : null,
+            venue: s.venueId ? venueMap.get(s.venueId) ?? null : null,
+          })),
+        });
+      }
+    }
     const teacherIds = [...new Set(slots.map((s) => s.teacherId).filter((x): x is string => Boolean(x)))];
     const teachers = teacherIds.length
       ? await tenantDb().user.findMany({ where: { id: { in: teacherIds } }, select: { id: true, fullName: true, timetableShortCode: true } })
@@ -303,6 +342,7 @@ export async function getTimetable(user: SessionUser, classId: string) {
     return {
       slots: slots.map((s) => {
         const sub = substituteMap.get(s.id);
+        const blockId = (s as any).electiveBlockSlotId as string | null;
         return {
           id: s.id, dayOfWeek: s.dayOfWeek, period: s.period,
           subjectId: s.subjectId, subjectName: s.subject?.name ?? null, subjectCode: s.subject?.code ?? null,
@@ -313,6 +353,9 @@ export async function getTimetable(user: SessionUser, classId: string) {
           weekRotation: s.weekRotation,
           // T.12 — real, honest "who's actually teaching this TODAY" overlay.
           substituteTodayName: sub?.teacherName ?? null,
+          // AA.1 — real Options Block breakdown for ELECTIVE_BLOCK slots
+          // (null for every ordinary ACADEMIC slot).
+          electiveBlock: blockId ? blockBreakdownBySlotId.get(blockId) ?? null : null,
         };
       }),
       config: config || null,
