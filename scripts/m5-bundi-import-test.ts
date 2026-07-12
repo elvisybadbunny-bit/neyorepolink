@@ -205,7 +205,7 @@ async function main() {
     });
     assert(reviewed.status === "REVIEW", "review save keeps the session in REVIEW status");
 
-    const commitResult = await commitSession(principal, session.id, { seedRequirements: false, skipInvalid: true });
+    const commitResult = await commitSession(principal, session.id, { seedRequirements: false, skipInvalid: true }) as { created: number };
     assert(commitResult.created === 1, "commit creates exactly 1 real student through the STANDARD commitImport() engine");
 
     const committedStudent = await withTenant(principal.tenantId, () => db.student.findFirstOrThrow({ where: { firstName: "Wanjiku", lastName: "Njeri", deletedAt: null }, orderBy: { createdAt: "desc" } }));

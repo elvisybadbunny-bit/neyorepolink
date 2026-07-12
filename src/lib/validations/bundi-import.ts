@@ -25,10 +25,16 @@ export const STAFF_MAPPABLE_FIELDS = [
 export const LIBRARY_MAPPABLE_FIELDS = [
   "title", "author", "isbn", "category", "shelf", "copiesTotal", "ignore",
 ] as const;
+// AA.2 — a real school's existing handwritten teacher-subject-class
+// allocation register, read via the SAME real Bundi Intelligent pipeline.
+export const TEACHER_ALLOCATION_MAPPABLE_FIELDS = [
+  "teacherName", "subjectName", "className", "lessonsPerWeek", "doubleCount", "ignore",
+] as const;
 
 export function mappableFieldsForDomain(domain: string): readonly string[] {
   if (domain === "STAFF") return STAFF_MAPPABLE_FIELDS;
   if (domain === "LIBRARY") return LIBRARY_MAPPABLE_FIELDS;
+  if (domain === "TEACHER_ALLOCATION") return TEACHER_ALLOCATION_MAPPABLE_FIELDS;
   return IMPORT_FIELDS; // STUDENT (default)
 }
 
@@ -39,6 +45,7 @@ export function mappableFieldsForDomain(domain: string): readonly string[] {
 export function numericFieldsForDomain(domain: string): string[] {
   if (domain === "STAFF") return ["phone", "tscNumber", "nationalId", "kraPin"];
   if (domain === "LIBRARY") return ["isbn", "copiesTotal"];
+  if (domain === "TEACHER_ALLOCATION") return ["lessonsPerWeek", "doubleCount"];
   return ["admissionNo", "legacyAdmissionNo", "upiNumber", "birthCertNo", "guardianPhone"]; // STUDENT
 }
 

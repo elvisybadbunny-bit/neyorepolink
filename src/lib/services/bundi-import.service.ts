@@ -51,6 +51,8 @@ import type { ColumnMapping } from "@/lib/validations/student-import";
 import { importStaffBatch, type StaffImportRow } from "@/lib/services/staff-import.service";
 import { importLibraryBatch } from "@/lib/services/library-import.service";
 import type { LibraryImportRow } from "@/lib/validations/library-import";
+import { commitTeacherAllocationImport } from "@/lib/services/teacher-allocation-import.service";
+import type { TeacherAllocationImportRow } from "@/lib/validations/teacher-allocation-import";
 import { readObject } from "@/lib/services/storage.service";
 import { readCompanySecret } from "@/lib/services/company-secret.service";
 import {
@@ -701,6 +703,32 @@ export async function commitSession(user: SessionUser, sessionId: string, input:
       const result = await importStaffBatch(user, staffRows);
       await tenantDb().bundiImportSession.update({ where: { id: sessionId }, data: { status: "COMMITTED" } });
       await audit(user, "bundi.import_committed", "BundiImportSession", sessionId, { domain, created: result.created, skipped: result.skipped });
+      return result;
+    }
+
+    if (domain === "TEACHER_ALLOCATION") {
+      // AA.2 — real Bundi-read teacher-subject-class allocation register,
+      // committed through the SAME real service the standard CSV/paste
+      // path uses (createMissingTeachers defaults ON for the Bundi path,
+      // since a school scanning a real handwritten register has already
+      // implicitly confirmed every name on it is real and should be
+      // created if genuinely new — unlike the standard import's own more
+      // cautious opt-in default, matching how a school reviewing a scan
+      // has already visually confirmed every row before committing).
+      const allocationRows: TeacherAllocationImportRow[] = reviewedRows.map((r) => {
+        const out: Record<string, string> = {};
+        for (const f of fields) out[f.mapsTo] = r.cells[f.label]?.value ?? "";
+        return {
+          teacherName: out.teacherName || "",
+          subjectName: out.subjectName || "",
+          className: out.className || "",
+          lessonsPerWeek: out.lessonsPerWeek ? Math.max(1, Math.trunc(Number(out.lessonsPerWeek)) || 5) : 5,
+          doubleCount: out.doubleCount ? Math.max(0, Math.trunc(Number(out.doubleCount)) || 0) : 0,
+        };
+      });
+      const result = await commitTeacherAllocationImport(user, { rows: allocationRows, fileName: session.fileName, source: "bundi", createMissingTeachers: true, skipInvalid: true });
+      await tenantDb().bundiImportSession.update({ where: { id: sessionId }, data: { status: "COMMITTED" } });
+      await audit(user, "bundi.import_committed", "BundiImportSession", sessionId, { domain, createdNeeds: result.createdNeeds, matchedNeeds: result.matchedNeeds, createdTeachers: result.createdTeachers, failedRows: result.failedRows });
       return result;
     }
 
