@@ -283,6 +283,7 @@ model Tenant {
   promotionRuns                PromotionRun[]
   classYearHistories           ClassYearHistory[]
   electiveBlockAutoBuildRuns   ElectiveBlockAutoBuildRun[]
+  classCapacityOverflowRuns    ClassCapacityOverflowRun[]
   teacherAllocationReviewRuns  TeacherAllocationReviewRun[]
   admissionApplications        AdmissionApplication[]
   staffAttendance              StaffAttendance[]
@@ -5152,6 +5153,57 @@ model ElectiveBlockAutoBuildRun {
 
   @@index([tenantId, createdAt])
   @@index([tenantId, level])
+}
+
+// BB.3 — a real, auditable record of one class-size-cap overflow decision.
+// `SchoolClass.capacity` already exists but was never enforced anywhere in
+// the codebase before BB.3 — this model records the REAL moment a school's
+// own subject-choice-driven grouping (L.7 auto-grouping, BB.2/BB.4 auto-
+// build) genuinely exceeded a real class's own configured capacity, and
+// what the school explicitly chose to do about it: split the overflow into
+// a genuinely NEW class/section (auto-named after the real subject that
+// caused the split, e.g. "Form 3 Geo", per the founder's own exact
+// request), or explicitly allow the whole group into the one class anyway,
+// deliberately over capacity. Never a silent decision — always a real,
+// staff-confirmed choice, exactly matching every other NEYO capacity-type
+// decision (e.g. hostel bed capacity, pathway seat capacity).
+model ClassCapacityOverflowRun {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // The real class whose configured capacity was genuinely exceeded, and
+  // the real subject (if any) whose grouping caused the overflow — a plain
+  // whole-class overflow (not tied to one particular subject group, e.g. a
+  // promotion moving too many students into one destination class) leaves
+  // subjectId null.
+  classId   String
+  subjectId String?
+
+  overflowCount Int // how many real students exceeded the class's own real capacity
+  decision      String @default("PENDING") // "PENDING" | "SPLIT_NEW_CLASS" | "ALLOW_OVER_CAPACITY"
+
+  // The real NEW class created, if the school chose to split — auto-named
+  // from the real subject/level/stream context, never a generic "Class B".
+  newClassId String?
+
+  // A real, honest record of whether the new class's own ClassSubjectNeed
+  // teacher gaps were filled by the fair auto-assign engine (only run
+  // AFTER a school's own manual assignment attempt, and only if a real
+  // Master Button generation is actually meaningful for this tenant yet —
+  // per the founder's own explicit instruction: auto-assign runs LAST, as
+  // a fallback for genuinely unfilled gaps, never overriding a school's
+  // own real manual choice, and timetable regeneration never fires blindly
+  // when a school has no real subject groups configured yet).
+  autoAssignedTeacherCount Int @default(0)
+
+  createdById   String
+  createdByName String
+  createdAt     DateTime  @default(now())
+  decidedAt     DateTime?
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, classId])
 }
 
 // L.7 — Configurable timetable constraints a school turns on/off (and tunes).

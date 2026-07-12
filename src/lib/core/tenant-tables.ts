@@ -209,6 +209,7 @@ export const TENANT_OWNED_MODELS = [
   "electiveBlockSlot",
   "electiveBlockSlotSubject",
   "electiveBlockAutoBuildRun", // BB.2
+  "classCapacityOverflowRun", // BB.3
   // AA.2 — real Teacher Allocation Import history.
   "teacherAllocationImport",
   "timetableConstraint",
