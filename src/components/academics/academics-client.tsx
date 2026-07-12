@@ -3129,6 +3129,9 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
         ) : (
           <div className="space-y-4">
             <p className="text-xs text-navy-400">{preview.capacityNote}</p>
+            <p className="text-xs text-navy-400">
+              Each subject below gets exactly ONE real teacher for the whole combined lesson — when 2 or more streams share a subject, that ONE teacher covers everyone together at the same time, never one teacher per stream.
+            </p>
             <div>
               <Label>Block name</Label>
               <Input value={blockName} onChange={(e) => setBlockName(e.target.value)} />
@@ -3138,7 +3141,7 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
                 <div key={row.subjectId} className="rounded-2xl border border-navy-100 p-3 dark:border-navy-800">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-bold text-navy-900 dark:text-white">{row.subjectName} ({row.subjectCode})</p>
-                    <Badge tone="blue">{row.studentCount} student{row.studentCount === 1 ? "" : "s"}</Badge>
+                    <Badge tone="blue">{row.studentCount} student{row.studentCount === 1 ? "" : "s"} combined into one real lesson</Badge>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <select
@@ -3147,7 +3150,7 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
                       className="rounded-xl border border-navy-200 bg-white px-2 py-1.5 text-xs dark:border-navy-700 dark:bg-navy-900"
                     >
                       <option value="">No teacher yet</option>
-                      {row.teacherRecommendations.map((r: any) => <option key={r.teacherId} value={r.teacherId}>{r.teacherName} · {r.classCount} classes · {r.lessonLoad} lessons</option>)}
+                      {row.teacherRecommendations.map((r: any) => <option key={r.teacherId} value={r.teacherId}>{r.teacherName} (currently {r.classCount} other classes, {r.lessonLoad} lessons/week elsewhere)</option>)}
                     </select>
                     <Input
                       type="number" min={1} max={20}
