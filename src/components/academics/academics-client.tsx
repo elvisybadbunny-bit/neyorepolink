@@ -2008,6 +2008,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const [blockSaving, setBlockSaving] = React.useState(false);
   // AA.2 — real Teacher Allocation Import (onboarding scenario).
   const [allocationImportOpen, setAllocationImportOpen] = React.useState(false);
+  const [allocationImportHistory, setAllocationImportHistory] = React.useState<any[]>([]);
   const [draftMeta, setDraftMeta] = React.useState<{ savedAt?: string; dirty: boolean; restored: boolean }>({ dirty: false, restored: false });
   const pollRef = React.useRef<any>(null);
   const hydratingDraftRef = React.useRef(false);
@@ -2015,16 +2016,17 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const [engineRes, generatorRes, jobRes, teacherRes, venueRes, blockRes] = await Promise.all([
+      const [engineRes, generatorRes, jobRes, teacherRes, venueRes, blockRes, allocationImportRes] = await Promise.all([
         fetch("/api/academics/timetable/engine"),
         fetch("/api/academics/timetable/generator"),
         fetch("/api/academics/timetable/generate-job"),
         fetch("/api/conversations/recipients"),
         fetch("/api/academics/timetable/venues"),
         fetch("/api/academics/timetable/elective-blocks"),
+        fetch("/api/academics/teacher-allocation-import"),
       ]);
-      const [engineJson, generatorJson, jobJson, teacherJson, venueJson, blockJson] = await Promise.all([
-        engineRes.json(), generatorRes.json(), jobRes.json(), teacherRes.json(), venueRes.json(), blockRes.json(),
+      const [engineJson, generatorJson, jobJson, teacherJson, venueJson, blockJson, allocationImportJson] = await Promise.all([
+        engineRes.json(), generatorRes.json(), jobRes.json(), teacherRes.json(), venueRes.json(), blockRes.json(), allocationImportRes.json(),
       ]);
       if (!engineJson.ok || !generatorJson.ok) throw new Error("Failed to load timetable engine data.");
       setPayload(engineJson.data);
@@ -2035,6 +2037,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       setTeachers((teacherJson.ok ? teacherJson.data.recipients : []).filter((u: any) => ["TEACHER", "CLASS_TEACHER", "HOD", "DEPUTY_PRINCIPAL", "PRINCIPAL", "SCHOOL_OWNER", "DEAN_OF_STUDIES"].includes(u.role)));
       setVenues(venueJson.ok ? venueJson.data.venues ?? [] : []);
       setElectiveBlocks(blockJson.ok ? blockJson.data.blocks ?? [] : []);
+      setAllocationImportHistory(allocationImportJson.ok ? allocationImportJson.data.imports ?? [] : []);
     } catch {
       toast({ title: "Could not load smart timetable settings.", tone: "error" });
     } finally {
@@ -2819,6 +2822,27 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
             <Button variant="secondary" onClick={() => setAllocationImportOpen(true)} disabled={!canManage}><ClipboardList className="h-4 w-4 text-teal-600" /> Import allocations</Button>
           </div>
         </CardHeader>
+        {allocationImportHistory.length > 0 && (
+          <CardContent>
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-navy-400">Recent import runs</p>
+            <div className="space-y-2">
+              {allocationImportHistory.slice(0, 5).map((run: any) => (
+                <div key={run.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-navy-50 p-2 text-xs dark:border-navy-800">
+                  <div>
+                    <span className="font-semibold text-navy-800 dark:text-navy-100">{run.fileName || "Pasted data"}</span>
+                    <span className="ml-2 text-navy-400">{new Date(run.createdAt).toLocaleDateString("en-KE")} · {run.source} · by {run.createdByName}</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <Badge tone="green">{run.createdNeeds} created</Badge>
+                    <Badge tone="blue">{run.matchedNeeds} updated</Badge>
+                    {run.createdTeachers > 0 && <Badge tone="amber">{run.createdTeachers} new teacher{run.createdTeachers === 1 ? "" : "s"}</Badge>}
+                    {run.failedRows > 0 && <Badge tone="red">{run.failedRows} skipped</Badge>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        )}
       </Card>
 
       {allocationImportOpen && (
