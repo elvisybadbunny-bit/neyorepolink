@@ -157,6 +157,7 @@ export async function commitPromotion(user: SessionUser, graduationYear?: number
     let promoted = 0;
     let graduated = 0;
     let repeated = 0;
+    const historyIds: string[] = []; // AA.3 — ClassYearHistory rows created this run, linked to the PromotionRun once it exists
 
     // Highest levels first so we never promote a student twice in one run.
     const ordered = [...plan].sort((a, b) => {
@@ -172,6 +173,7 @@ export async function commitPromotion(user: SessionUser, graduationYear?: number
         select: {
           id: true, status: true, graduationYear: true, finalClassLabel: true,
           isRepeating: true, repeatingSinceYear: true,
+          firstName: true, lastName: true, gender: true, admissionNo: true,
         },
       });
       if (students.length === 0) continue;
@@ -210,6 +212,54 @@ export async function commitPromotion(user: SessionUser, graduationYear?: number
           data: { status: "GRADUATED", graduationYear: year, finalClassLabel: step.from, classId: null, isRepeating: false, repeatingSinceYear: null },
         });
         graduated += movers.length;
+
+        // AA.3 — real gap fix: BEFORE this class's own ClassSubjectNeed rows
+        // are cleaned up below, freeze a permanent ClassYearHistory snapshot
+        // of exactly who was in this class and who taught it, for this real
+        // graduation year. This is what makes it safe to keep silently
+        // REUSING this same SchoolClass row next year (the class one level
+        // down moving up into it) — nothing about "Form 4 North, Class of
+        // {year}" is ever lost or blurred with next year's intake.
+        {
+          const srcClass = classes.find((c) => c.id === step.classId)!;
+          const needs = await tenantDb().classSubjectNeed.findMany({ where: { classId: step.classId } });
+          const teacherIds = [...new Set(needs.map((n) => n.teacherId).filter((id): id is string => Boolean(id)))];
+          const subjectIds = [...new Set(needs.map((n) => n.subjectId))];
+          const [teachers, subjects] = await Promise.all([
+            teacherIds.length ? db.user.findMany({ where: { id: { in: teacherIds } }, select: { id: true, fullName: true } }) : Promise.resolve([]),
+            subjectIds.length ? tenantDb().subject.findMany({ where: { id: { in: subjectIds } }, select: { id: true, name: true } }) : Promise.resolve([]),
+          ]);
+          const teacherName = (id: string | null) => (id ? teachers.find((t) => t.id === id)?.fullName ?? null : null);
+          const subjectTeachers = needs.map((n) => ({
+            subjectId: n.subjectId,
+            subjectName: subjects.find((s) => s.id === n.subjectId)?.name ?? "Unknown subject",
+            teacherId: n.teacherId,
+            teacherName: teacherName(n.teacherId),
+            lessonsPerWeek: n.lessonsPerWeek,
+          }));
+          const classTeacherName = srcClass.classTeacherId
+            ? (await db.user.findUnique({ where: { id: srcClass.classTeacherId }, select: { fullName: true } }))?.fullName ?? null
+            : null;
+          const historyRow = await tenantDb().classYearHistory.create({
+            data: {
+              classId: step.classId,
+              level: srcClass.level,
+              stream: srcClass.stream,
+              curriculum: srcClass.curriculum,
+              graduationYear: year,
+              studentCount: movers.length,
+              roster: JSON.stringify(movers.map((s) => ({
+                id: s.id, name: `${s.firstName} ${s.lastName}`, gender: s.gender, admissionNo: s.admissionNo,
+              }))),
+              subjectTeachers: JSON.stringify(subjectTeachers),
+              classTeacherId: srcClass.classTeacherId,
+              classTeacherName,
+              createdById: user.id,
+              createdByName: user.fullName,
+            } as never,
+          });
+          historyIds.push(historyRow.id);
+        }
         continue;
       }
 
@@ -243,6 +293,10 @@ export async function commitPromotion(user: SessionUser, graduationYear?: number
     const run = await tenantDb().promotionRun.create({
       data: { kind: "promotion", summary, moves: JSON.stringify(moves), createdById: user.id, createdByName: user.fullName } as never,
     });
+    // AA.3 — link every ClassYearHistory snapshot taken this run to its real PromotionRun.
+    if (historyIds.length > 0) {
+      await tenantDb().classYearHistory.updateMany({ where: { id: { in: historyIds } }, data: { promotionRunId: run.id } });
+    }
     await db.auditLog.create({
       data: {
         tenantId: user.tenantId, actorId: user.id, actorName: user.fullName,
@@ -251,6 +305,35 @@ export async function commitPromotion(user: SessionUser, graduationYear?: number
       },
     });
     return { runId: run.id, promoted, graduated, repeated, year, summary };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// AA.3 — reading back the frozen graduation history
+// ---------------------------------------------------------------------------
+
+export async function listClassYearHistory(user: SessionUser, opts: { graduationYear?: number; classId?: string } = {}) {
+  return withTenant(user.tenantId, async () => {
+    const rows = await tenantDb().classYearHistory.findMany({
+      where: {
+        ...(opts.graduationYear ? { graduationYear: opts.graduationYear } : {}),
+        ...(opts.classId ? { classId: opts.classId } : {}),
+      },
+      orderBy: [{ graduationYear: "desc" }, { level: "asc" }, { stream: "asc" }],
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      classId: r.classId,
+      label: [r.level, r.stream].filter(Boolean).join(" "),
+      curriculum: r.curriculum,
+      graduationYear: r.graduationYear,
+      studentCount: r.studentCount,
+      roster: JSON.parse(r.roster) as { id: string; name: string; gender: string; admissionNo: string }[],
+      subjectTeachers: JSON.parse(r.subjectTeachers) as { subjectId: string; subjectName: string; teacherId: string | null; teacherName: string | null; lessonsPerWeek: number }[],
+      classTeacherName: r.classTeacherName,
+      createdByName: r.createdByName,
+      createdAt: r.createdAt,
+    }));
   });
 }
 
@@ -403,6 +486,11 @@ export async function undoRun(user: SessionUser, runId: string) {
         });
       }
     }
+    // AA.3 — an undone graduation is no longer real; remove the ClassYearHistory
+    // snapshot(s) this run created so history never shows a "graduation" that
+    // was, in truth, reversed the same session.
+    await tenantDb().classYearHistory.deleteMany({ where: { promotionRunId: runId } });
+
     await tenantDb().promotionRun.update({ where: { id: runId }, data: { undoneAt: new Date() } });
     await db.auditLog.create({
       data: {

@@ -35,7 +35,12 @@ async function getWorkloadContext(teacherIds: string[]) {
   return { needs, rules };
 }
 
-async function recommendTeacherForSubject(tenantId: string, subjectId: string, blockedTeacherIds: string[] = []) {
+// AA.3 — exported so the New Academic Year Teacher Allocation Review wizard
+// (teacher-allocation-review.service.ts) can reuse this EXACT same
+// fairness-ranked, conflict-aware recommendation logic instead of
+// duplicating it, for both vacant AND already-filled slots (a genuine
+// "reshuffle" reviewed slot, not just a vacancy-fill).
+export async function recommendTeacherForSubject(tenantId: string, subjectId: string, blockedTeacherIds: string[] = []) {
   return withTenant(tenantId, async () => {
     const tdb = tenantDb();
     const teacherLinks = await tdb.teacherSubject.findMany({ where: { subjectId } });
