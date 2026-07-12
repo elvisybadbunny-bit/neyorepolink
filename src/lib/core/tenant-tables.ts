@@ -259,6 +259,75 @@ export const TENANT_OWNED_MODELS = [
   "tenantPricingSnapshot", // Part V — Capacity-Based Pricing 2.0: real per-school price-calculation history
   "classCapacityOverflowRun", // BB.3 — real class-size cap + overflow decision audit trail (added retroactively — was missing from this registry; see BB.4 chunk 1 commit)
   "classAllocationRun", // BB.4 — real "Allocate Class" wizard run audit trail
+  // Y.3 — a real, wider tenant-isolation security sweep (2026-07-12) found
+  // these 29 real tenant-owned models were ALSO never registered here,
+  // despite most of them being actively queried via tenantDb() in real
+  // service code TODAY — meaning they were silently un-scoped and any
+  // findMany/findUnique/create/update on them ran completely unfiltered
+  // across every tenant, the exact same class of bug found and fixed for
+  // BB.3's ClassCapacityOverflowRun and BB.4's 5 CBE pathway/subject-
+  // selection models earlier this session. Fixed by adding all of them
+  // here in one pass; verified genuinely active with real throwaway
+  // cross-tenant proof scripts for a representative sample (see
+  // scripts/y3-tenant-isolation-sweep-test.ts).
+  "activityCategory",
+  "tenantStorageProvider",
+  "storageUsageSnapshot",
+  "subscriptionPayment",
+  "oAuthConnectedAccount",
+  "oAuthState",
+  "biometricActionTicket",
+  "leavingCertificate",
+  "entranceExamPaper",
+  "studentNationalAssessment",
+  "talentArea",
+  "talentRecord",
+  "studentGoal",
+  "reportTemplate",
+  "communityServiceActivity",
+  "careerDiscoveryRecord",
+  "marksPortal",
+  "termAggregationRule",
+  "subjectPaperConfig",
+  "paperResult",
+  "studentApprovalRequest",
+  "studentDutyArea",
+  "studentDutyAssignment",
+  "promotionRequest",
+  "knecExportBatch",
+  "bundiLearnedCorrection",
+  "bundiDocumentTemplate",
+  "staffImport",
+  "libraryImport",
+  // NOTE: "complianceRequest" is DELIBERATELY NOT tenant-owned — NEYO Ops's
+  // own real compliance queue (`listComplianceRequests()` in
+  // founder-dashboard.service.ts) genuinely lists EVERY tenant's requests
+  // together for company-wide triage (gated by the real `assertMetricsAccess()`
+  // founder/ops permission check, never exposed to an ordinary school
+  // account) — a deliberate cross-tenant view, not a bug. `fileComplianceRequest()`
+  // (a school filing its OWN request) still correctly stamps a real
+  // `tenantId` on write; it is queried directly via the raw `db` client on
+  // both sides, same reasoning as `schoolQuoteRequest`/`storageOptimizerRun` below.
+  // NOTE: "calendarFeedToken" is DELIBERATELY NOT tenant-owned — see the
+  // module-level comment at the top of this file (M.3, unauthenticated
+  // webcal:// feed lookup).
+  // NOTE: "bundiImportUnlockCode" is DELIBERATELY NOT tenant-owned — see
+  // the module-level comment at the top of this file (M.5, company-wide
+  // codes minted with no tenant context).
+  // NOTE: "oAuthConnectedAccount"/"oAuthState"/"biometricActionTicket" ARE
+  // now registered above for real defense-in-depth, but every real call
+  // site already scopes them correctly by their own real `userId` (a user
+  // only ever belongs to one real tenant, so this was transitively safe
+  // even before being added here) — confirmed via direct code review
+  // during the Y.3 sweep, not a live leak like the other 26.
+  // NOTE: "neyoContract"/"neyoCustomerThread"/"pathwayGuideSession" are
+  // DELIBERATELY NOT tenant-owned — all three have a real NULLABLE
+  // `tenantId` (a prospective school with no account yet, or a genuine
+  // public outsider with no NEYO account at all), so they are queried
+  // directly via the raw `db` client, same reasoning as `schoolQuoteRequest`
+  // below. (An earlier Y.3 audit pass incorrectly flagged these 3 as
+  // missing due to a regex bug matching `String?` as `String` — corrected
+  // before this fix was applied.)
   // NOTE: "schoolQuoteRequest" is DELIBERATELY NOT tenant-owned — a quote
   // request can exist for a genuinely prospective school with NO real
   // tenantId yet (before they've ever signed up), so it is queried directly
