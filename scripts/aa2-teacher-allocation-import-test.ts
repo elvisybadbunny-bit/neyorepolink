@@ -104,6 +104,28 @@ async function main() {
       // Confirm re-importing again did NOT create a 2nd ClassSubjectNeed row.
       const needCount = await db.classSubjectNeed.count({ where: { classId: cls.id, subjectId: subject.id } });
       check("Exactly ONE real ClassSubjectNeed row exists for this class+subject (no duplicate created by the re-import)", needCount === 1);
+
+      // Real bug found and fixed live during this feature's own seed-data
+      // testing: the SAME genuinely-new teacher name appearing on 2
+      // DIFFERENT rows within ONE commit batch (e.g. one new teacher
+      // allocated to 2 different real classes) must create exactly ONE
+      // real new teacher, not one per row.
+      const cls2 = await db.schoolClass.create({ data: { tenantId: t.id, level: `AA2B${suffix}`, stream: "WEST", curriculum: "8-4-4" } });
+      const sameTeacherRows = [
+        { teacherName: `AA2 Batch Teacher ${suffix}`, subjectName: subject.name, className: `AA2${suffix} East`, lessonsPerWeek: 3, doubleCount: 0 },
+        { teacherName: `AA2 Batch Teacher ${suffix}`, subjectName: subject.name, className: `AA2B${suffix} WEST`, lessonsPerWeek: 3, doubleCount: 0 },
+      ];
+      const batchResult = await commitTeacherAllocationImport(principal, {
+        rows: sameTeacherRows, fileName: "aa2-batch-test.csv", source: "csv", createMissingTeachers: true, skipInvalid: true,
+      });
+      check("A real NEW teacher named on 2 different rows in ONE batch creates EXACTLY 1 real new teacher (not 2)", batchResult.createdTeachers === 1);
+      const batchTeacherCount = await db.user.count({ where: { tenantId: t.id, fullName: `AA2 Batch Teacher ${suffix}` } });
+      check("Exactly ONE real User row exists for that teacher name (no duplicate created within the batch)", batchTeacherCount === 1);
+      await db.classSubjectNeed.deleteMany({ where: { classId: { in: [cls.id, cls2.id] } } });
+      await db.teacherAllocationImport.deleteMany({ where: { fileName: "aa2-batch-test.csv" } });
+      const batchTeacher = await db.user.findFirst({ where: { tenantId: t.id, fullName: `AA2 Batch Teacher ${suffix}` } });
+      if (batchTeacher) await db.user.delete({ where: { id: batchTeacher.id } });
+      await db.schoolClass.deleteMany({ where: { id: cls2.id } });
     });
   } finally {
     await db.classSubjectNeed.deleteMany({ where: { classId: cls.id } });

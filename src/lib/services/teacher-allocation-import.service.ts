@@ -206,6 +206,19 @@ export async function commitTeacherAllocationImport(user: SessionUser, input: Co
 
     const errors: { row: number; message: string }[] = [];
     let createdNeeds = 0, matchedNeeds = 0, createdTeachers = 0, failedRows = 0;
+    // Real bug found and fixed live during this feature's own seed-data
+    // testing: the SAME genuinely-new teacher name can legitimately appear
+    // on MULTIPLE rows within one real import batch (e.g. one teacher
+    // allocated to 2 different real classes) — since `preview` is computed
+    // ONCE up-front from the school's pre-import state, every one of those
+    // rows independently reports `teacherMatch: "NEW"`, and without this
+    // real within-batch memory the OLD code created a genuinely DUPLICATE
+    // real teacher for every row past the first. Fixed by remembering
+    // which NEW teacher names this exact commit call has already created,
+    // keyed by the school's own real name-normalization rule (case/
+    // whitespace-insensitive, matching previewTeacherAllocationImport's
+    // own matching logic exactly).
+    const newlyCreatedTeacherIdByName = new Map<string, string>();
 
     for (const p of preview) {
       if (p.error) {
@@ -223,12 +236,19 @@ export async function commitTeacherAllocationImport(user: SessionUser, input: Co
 
       let teacherId = p.matchedTeacherId;
       if (p.teacherMatch === "NEW" && input.createMissingTeachers) {
-        const loginId = await generateNeyoLoginId();
-        const newTeacher = await tdb.user.create({
-          data: { tenantId: user.tenantId, neyoLoginId: loginId, fullName: p.teacherName, role: "TEACHER", isActive: true },
-        });
-        teacherId = newTeacher.id;
-        createdTeachers++;
+        const nameKey = normName(p.teacherName);
+        const alreadyCreatedId = newlyCreatedTeacherIdByName.get(nameKey);
+        if (alreadyCreatedId) {
+          teacherId = alreadyCreatedId;
+        } else {
+          const loginId = await generateNeyoLoginId();
+          const newTeacher = await tdb.user.create({
+            data: { tenantId: user.tenantId, neyoLoginId: loginId, fullName: p.teacherName, role: "TEACHER", isActive: true },
+          });
+          teacherId = newTeacher.id;
+          newlyCreatedTeacherIdByName.set(nameKey, teacherId);
+          createdTeachers++;
+        }
       }
       if (!teacherId || !p.matchedSubjectId || !p.matchedClassId) {
         failedRows++;
