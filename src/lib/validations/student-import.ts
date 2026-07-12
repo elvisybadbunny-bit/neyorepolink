@@ -143,6 +143,16 @@ export const importCommitSchema = z.object({
   /** M.4 — import every row into this ONE class only (isolation mode). */
   targetClassId: z.string().trim().min(1).optional(),
   /**
+   * BB.4 — the real level (e.g. "Grade 10") a fresh intake belongs to when
+   * they haven't been placed into any real class yet (the founder's own
+   * "hasn't yet enrolled" scenario) — no className column, no
+   * targetClassId, just a real declared level so their real subject
+   * selections are attached to the right real portal.targetLevel for the
+   * "Allocate Class" wizard to find them afterward. Ignored if the row
+   * already resolves a real class (className column or targetClassId).
+   */
+  targetLevel: z.string().trim().min(1).max(60).optional(),
+  /**
    * R.1 — "smart import": when a row matches an EXISTING student (by
    * admission no / UPI / birth cert / name+DOB / name+guardian phone), fill
    * in any blank fields on that student and add new info (guardian, custom

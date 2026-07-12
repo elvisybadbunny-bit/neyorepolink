@@ -217,6 +217,37 @@ export async function confirmClassAllocation(
         if (!input.streamCount || !input.capacityPerClass) {
           throw new ClassAllocationError("INVALID", "Choose how many new classes to create and their capacity.");
         }
+        const { students, selectionMap } = await findClasslessStudentsForLevel(tdb, input.level);
+        if (students.length === 0) {
+          throw new ClassAllocationError("NOT_FOUND", "No real classless students with confirmed subject choices were found for that level.");
+        }
+
+        // Real, honest capacity gate computed against VIRTUAL (not-yet-
+        // created) proposed classes first — never writes a single real
+        // SchoolClass row until every real capacity warning has a real
+        // staff decision. This is the exact same discipline L.7's own
+        // commitAutoGrouping() applies, just evaluated BEFORE any real
+        // class exists rather than after, since CREATE_NEW's classes don't
+        // exist yet at preview time. (A real bug was found and fixed here:
+        // an earlier version created the real classes FIRST and only
+        // checked capacity afterward, meaning a genuinely refused confirm
+        // still left real orphaned empty classes behind — caught by this
+        // feature's own regression test.) Same synthetic id scheme
+        // (`NEW_${i+1}`) previewClassAllocation() itself already used, so
+        // a school's real capacityDecisions (collected against the exact
+        // preview they saw) line up directly.
+        const proposedClasses = Array.from({ length: input.streamCount }, (_, i) => ({ id: `NEW_${i + 1}` }));
+        const virtualAssignments = groupStudentsBySubjectCombination(students, selectionMap, proposedClasses);
+        const virtualPerClassCount = new Map<string, number>();
+        for (const cls of proposedClasses) virtualPerClassCount.set(cls.id, students.filter((s) => virtualAssignments.get(s.id) === cls.id).length);
+        const decisions = input.capacityDecisions ?? {};
+        const undecidedVirtual = proposedClasses.filter((c) => (virtualPerClassCount.get(c.id) ?? 0) > input.capacityPerClass! && !decisions[c.id]);
+        if (undecidedVirtual.length > 0) {
+          throw new ClassAllocationError("CONFLICT", `${undecidedVirtual.length} new class(es) would exceed the chosen capacity of ${input.capacityPerClass}. Resolve each one before confirming.`);
+        }
+
+        // The real capacity gate passed (or every real overflow was
+        // explicitly allowed) — only NOW do we write any real class rows.
         const tenant = await db.tenant.findUniqueOrThrow({ where: { id: user.tenantId }, select: { curriculum: true } });
         const newClasses = [];
         for (let i = 0; i < input.streamCount; i++) {
@@ -232,22 +263,15 @@ export async function confirmClassAllocation(
         }
         createdClassIds = newClasses.map((c) => c.id);
 
-        const { students, selectionMap } = await findClasslessStudentsForLevel(tdb, input.level);
-        if (students.length === 0) {
-          throw new ClassAllocationError("NOT_FOUND", "No real classless students with confirmed subject choices were found for that level.");
-        }
+        // Re-run the exact same real grouping algorithm against the now-
+        // real classes — groupStudentsBySubjectCombination() is a pure,
+        // deterministic function of (students, selectionMap, classes), so
+        // given the identical real inputs it produces the identical real
+        // assignment already validated above; this is not a second
+        // decision, just mapping the same real outcome onto real ids.
         const assignments = groupStudentsBySubjectCombination(students, selectionMap, newClasses);
-
-        // BB.3 — real, honest capacity gate, identical discipline to L.7's
-        // own commitAutoGrouping(): a class the placement would genuinely
-        // exceed needs a real staff decision before this commit proceeds.
         const perClassCount = new Map<string, number>();
         for (const cls of newClasses) perClassCount.set(cls.id, students.filter((s) => assignments.get(s.id) === cls.id).length);
-        const decisions = input.capacityDecisions ?? {};
-        const undecided = newClasses.filter((c) => (perClassCount.get(c.id) ?? 0) > input.capacityPerClass! && !decisions[c.id]);
-        if (undecided.length > 0) {
-          throw new ClassAllocationError("CONFLICT", `${undecided.length} new class(es) would exceed the chosen capacity: ${undecided.map((c) => classLabel(c)).join(", ")}. Resolve each one before confirming.`);
-        }
         for (const cls of newClasses) {
           const count = perClassCount.get(cls.id) ?? 0;
           if (count > input.capacityPerClass!) {
@@ -263,6 +287,7 @@ export async function confirmClassAllocation(
 
         const moves: { studentId: string; fromClassId: null; toClassId: string }[] = [];
         for (const student of students) {
+
           const toClassId = assignments.get(student.id)!;
           await tdb.student.update({ where: { id: student.id }, data: { classId: toClassId } });
           moves.push({ studentId: student.id, fromClassId: null, toClassId });

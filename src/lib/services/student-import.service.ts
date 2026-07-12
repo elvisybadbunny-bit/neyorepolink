@@ -660,6 +660,8 @@ export async function commitImport(
     seedRequirements: boolean;
     skipInvalid: boolean;
     targetClassId?: string;
+    /** BB.4 — see importCommitSchema's own explanation. */
+    targetLevel?: string;
     /** R.1 — see importCommitSchema for the full explanation. */
     updateExisting?: boolean;
     confirmedConflictRows?: number[];
@@ -893,7 +895,7 @@ export async function commitImport(
           // BB.4 — real subject selections for this row, if this import run
           // has a Subjects column or a declared compulsory list at all.
           const updateRowClassId = forcedClassId ?? (c.className ? byKey.get(classKey(c.className)) ?? null : match.classId);
-          const updateRowLevel = updateRowClassId ? (forcedClassLevel ?? levelByClassId.get(updateRowClassId) ?? null) : null;
+          const updateRowLevel = updateRowClassId ? (forcedClassLevel ?? levelByClassId.get(updateRowClassId) ?? null) : (input.targetLevel ?? null);
           const unresolvedSubjects = await writeSubjectSelectionForRow(match.id, updateRowLevel, c.subjects);
           if (unresolvedSubjects.length > 0) {
             failed.push({ row: c._row, message: `Subject(s) not found for this school and skipped: ${unresolvedSubjects.join(", ")}.` });
@@ -937,7 +939,7 @@ export async function commitImport(
         // intake scenario, where students already made real subject
         // choices in Junior Secondary and arrive with them in the same
         // import, never needing a separate portal step.
-        const createRowLevel = createRowClassId ? (forcedClassLevel ?? levelByClassId.get(createRowClassId) ?? null) : null;
+        const createRowLevel = createRowClassId ? (forcedClassLevel ?? levelByClassId.get(createRowClassId) ?? null) : (input.targetLevel ?? null);
         const unresolvedSubjects = await writeSubjectSelectionForRow(student.id, createRowLevel, c.subjects);
         if (unresolvedSubjects.length > 0) {
           failed.push({ row: c._row, message: `Subject(s) not found for this school and skipped: ${unresolvedSubjects.join(", ")}.` });

@@ -108,6 +108,12 @@ export function ImportWizard() {
   // Subjects column only needs to list genuine electives. Optional —
   // leaving this blank changes nothing about a pre-existing import.
   const [compulsorySubjectsText, setCompulsorySubjectsText] = React.useState("");
+
+  // BB.4 — a real, optional declared level for a fresh intake that hasn't
+  // been placed into any real class yet (no Class column, no single-class
+  // target) — so their real subject selections still attach to a real
+  // level the "Allocate Class" wizard can find them under afterward.
+  const [targetLevelText, setTargetLevelText] = React.useState("");
   // Rows where the school has explicitly reviewed a real conflict (e.g. two
   // different birth dates) and confirmed the NEW value should win.
   const [confirmedConflictRows, setConfirmedConflictRows] = React.useState<Set<number>>(new Set());
@@ -202,6 +208,7 @@ export function ImportWizard() {
           updateExisting, confirmedConflictRows: [...confirmedConflictRows],
           runInBackground,
           ...(compulsorySubjects.length > 0 ? { compulsorySubjects } : {}),
+          ...(targetLevelText.trim() ? { targetLevel: targetLevelText.trim() } : {}),
         }),
       });
       const json = await res.json();
@@ -523,16 +530,31 @@ export function ImportWizard() {
           {preview.mapping.some((m) => m.field === "subjects") && (
             <Card>
               <CardHeader><CardTitle>Compulsory subjects for this intake (optional)</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-xs text-navy-500 dark:text-navy-400">
-                  Real subjects every student here must take (e.g. English, Kiswahili, a chosen Mathematics variant, Community Service Learning) — added to each student&apos;s own real subject choices automatically, so your Subjects column only needs to list their genuine electives.
-                </p>
-                <input
-                  value={compulsorySubjectsText}
-                  onChange={(e) => setCompulsorySubjectsText(e.target.value)}
-                  placeholder="e.g. English, Kiswahili, Core Mathematics, Community Service Learning"
-                  className="w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm text-navy-900 placeholder:text-navy-300 focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-navy-700 dark:bg-navy-900 dark:text-navy-100"
-                />
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-xs text-navy-500 dark:text-navy-400">
+                    Real subjects every student here must take (e.g. English, Kiswahili, a chosen Mathematics variant, Community Service Learning) — added to each student&apos;s own real subject choices automatically, so your Subjects column only needs to list their genuine electives.
+                  </p>
+                  <input
+                    value={compulsorySubjectsText}
+                    onChange={(e) => setCompulsorySubjectsText(e.target.value)}
+                    placeholder="e.g. English, Kiswahili, Core Mathematics, Community Service Learning"
+                    className="w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm text-navy-900 placeholder:text-navy-300 focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-navy-700 dark:bg-navy-900 dark:text-navy-100"
+                  />
+                </div>
+                {!preview.targetClass && preview.unknownClasses.length === 0 && (
+                  <div className="space-y-2 border-t border-navy-100 pt-3 dark:border-navy-800">
+                    <p className="text-xs text-navy-500 dark:text-navy-400">
+                      This file has no Class column and these students haven&apos;t been placed anywhere yet (e.g. a fresh intake not yet allocated). Tell NEYO which real level they belong to, so you can allocate them into classes afterward:
+                    </p>
+                    <input
+                      value={targetLevelText}
+                      onChange={(e) => setTargetLevelText(e.target.value)}
+                      placeholder="e.g. Grade 10"
+                      className="w-full max-w-xs rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm text-navy-900 placeholder:text-navy-300 focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-navy-700 dark:bg-navy-900 dark:text-navy-100"
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -576,7 +598,7 @@ export function ImportWizard() {
                   Subjects column) — the founder's own "both entry points"
                   choice: right here after import, or later from Promotion. */}
               {(result.subjectSelectionsCreated ?? 0) > 0 && (
-                <Link href={`/students/promotion?tab=allocate-class${preview?.targetClass ? `&level=${encodeURIComponent(preview.targetClass.label)}` : ""}`}>
+                <Link href={`/students/promotion?tab=allocate-class${preview?.targetClass ? `&level=${encodeURIComponent(preview.targetClass.label)}` : targetLevelText.trim() ? `&level=${encodeURIComponent(targetLevelText.trim())}` : ""}`}>
                   <Button><ArrowRight className="h-4 w-4" /> Allocate class</Button>
                 </Link>
               )}
