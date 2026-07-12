@@ -17,7 +17,7 @@ import {
   BookOpen, Building2, CalendarRange, Grid3X3, NotebookPen, Plus,
   AlertCircle, Loader2, X, Sparkles, Trash2, Check, Calendar, Printer, Palette, Sliders, Info, HelpCircle, Save, Trophy,
   Calculator, FileText, Clock3, Wand2, RefreshCw, Link2, Ban, Users, TimerReset, ShieldCheck, RotateCcw, ClipboardList,
-  GraduationCap, MapPin, Tag
+  GraduationCap, MapPin, Tag, Shuffle
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -2775,6 +2775,123 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base"><Shuffle className="h-5 w-5 text-purple-600" /> Elective / Options Blocks</CardTitle>
+          <p className="text-xs text-navy-400">
+            For subjects students genuinely choose BETWEEN (e.g. History OR CRE — every student is doing something at this time, but which room/teacher depends on their own choice). NEYO schedules every subject in a block at the SAME real time so movement between rooms works cleanly, and no two block subjects clash with each other's teachers/venues. Use &quot;Single-Choice&quot; mode when every slot offers the exact same subjects (e.g. Technical &amp; Applied: choose ONE of Business/Computer/Art/Agriculture/French) — use &quot;Multi-Slot&quot; when different slots can offer different subject pairings (e.g. History appears opposite CRE in one slot, and opposite Geography in another).
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+            <div className="space-y-3 rounded-2xl border border-navy-100 p-4 dark:border-navy-800">
+              <div className="grid grid-cols-2 gap-2">
+                <Input value={blockForm.name} onChange={(e) => setBlockForm((p: any) => ({ ...p, name: e.target.value }))} placeholder="e.g. Humanities Pair" />
+                <select value={blockForm.mode} onChange={(e) => setBlockForm((p: any) => ({ ...p, mode: e.target.value }))} className={selectClass}>
+                  <option value="MULTI_SLOT">Multi-Slot (different subjects per slot)</option>
+                  <option value="SINGLE_CHOICE">Single-Choice (same subjects every slot)</option>
+                </select>
+              </div>
+              <label className="flex items-center gap-2 text-xs text-navy-600 dark:text-navy-300">
+                <input type="checkbox" checked={blockForm.preferAfterBreak} onChange={(e) => setBlockForm((p: any) => ({ ...p, preferAfterBreak: e.target.checked }))} className="h-4 w-4 rounded border-navy-300 text-purple-600 focus:ring-purple-500" />
+                Prefer scheduling right after a break (soft preference — never risks an unplaced lesson)
+              </label>
+              <div>
+                <Label>Classes in this block</Label>
+                <div className="mt-2 max-h-28 overflow-y-auto rounded-xl border border-navy-100 p-3 dark:border-navy-800">
+                  <div className="grid grid-cols-2 gap-2">
+                    {classes.map((c: any) => {
+                      const checked = blockForm.classIds.includes(c.id);
+                      return (
+                        <label key={c.id} className="flex items-center gap-2 text-xs text-navy-700 dark:text-navy-200">
+                          <input type="checkbox" checked={checked} onChange={(e) => setBlockForm((p: any) => ({ ...p, classIds: e.target.checked ? [...p.classIds, c.id] : p.classIds.filter((id: string) => id !== c.id) }))} />
+                          <span>{c.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-navy-400">Slots (each slot is one real weekly period this block occupies)</p>
+                {blockForm.slots.map((slot: any, slotIndex: number) => (
+                  <div key={slotIndex} className="rounded-xl border border-purple-100 bg-purple-50/40 p-3 dark:border-purple-900/30 dark:bg-purple-950/10">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Input value={slot.label} onChange={(e) => setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, label: e.target.value } : s) }))} placeholder="Slot label" className="h-8 text-xs" />
+                      <label className="flex items-center gap-1 whitespace-nowrap text-[11px] text-navy-500">
+                        <input type="checkbox" checked={slot.isDouble} onChange={(e) => setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, isDouble: e.target.checked } : s) }))} /> Double
+                      </label>
+                      {blockForm.slots.length > 1 && (
+                        <Button size="sm" variant="ghost" onClick={() => removeBlockSlot(slotIndex)}><X className="h-3 w-3" /></Button>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      {slot.subjects.map((sub: any, subjectIndex: number) => (
+                        <div key={subjectIndex} className="grid grid-cols-[1.2fr_1fr_1fr_auto] gap-1.5">
+                          <select value={sub.subjectId} onChange={(e) => setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, subjects: s.subjects.map((x: any, j: number) => j === subjectIndex ? { ...x, subjectId: e.target.value } : x) } : s) }))} className={`${selectClass} h-8 text-xs`}>
+                            <option value="">Subject…</option>
+                            {subjects.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                          </select>
+                          <select value={sub.teacherId} onChange={(e) => setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, subjects: s.subjects.map((x: any, j: number) => j === subjectIndex ? { ...x, teacherId: e.target.value } : x) } : s) }))} className={`${selectClass} h-8 text-xs`}>
+                            <option value="">Teacher (optional)</option>
+                            {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+                          </select>
+                          <select value={sub.venueId} onChange={(e) => setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, subjects: s.subjects.map((x: any, j: number) => j === subjectIndex ? { ...x, venueId: e.target.value } : x) } : s) }))} className={`${selectClass} h-8 text-xs`}>
+                            <option value="">Venue (optional)</option>
+                            {venues.map((v: any) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                          </select>
+                          {slot.subjects.length > 2 && (
+                            <Button size="sm" variant="ghost" onClick={() => removeSlotSubject(slotIndex, subjectIndex)}><X className="h-3 w-3" /></Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <Button size="sm" variant="secondary" className="mt-2" onClick={() => addSlotSubject(slotIndex)}><Plus className="h-3 w-3" /> Add subject to this slot</Button>
+                  </div>
+                ))}
+                <Button variant="secondary" onClick={addBlockSlot}><Plus className="h-4 w-4" /> Add another slot</Button>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={saveElectiveBlockForm} disabled={blockSaving || !canManage}>{blockSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {blockForm.id ? "Update block" : "Add block"}</Button>
+                {blockForm.id && (
+                  <Button variant="secondary" onClick={() => setBlockForm(emptyBlockForm)}>Cancel edit</Button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {electiveBlocks.length === 0 && (
+                <EmptyState icon={Shuffle} title="No Options Blocks yet" description="Add a real elective pairing here — e.g. History/CRE — and NEYO will schedule every subject in it at the same real time, so students choosing between them can move freely between rooms." />
+              )}
+              {electiveBlocks.map((block: any) => (
+                <div key={block.id} className="rounded-2xl border border-navy-100 p-3 dark:border-navy-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-navy-900 dark:text-white">{block.name} <Badge tone={block.mode === "SINGLE_CHOICE" ? "amber" : "blue"}>{block.mode === "SINGLE_CHOICE" ? "Single-Choice" : "Multi-Slot"}</Badge></p>
+                      <p className="mt-1 text-xs text-navy-500 dark:text-navy-400">{block.classIds.length} class{block.classIds.length === 1 ? "" : "es"} · {block.slots.length} slot{block.slots.length === 1 ? "" : "s"}{block.preferAfterBreak ? " · prefers after-break placement" : ""}</p>
+                      <div className="mt-2 space-y-1">
+                        {block.slots.map((slot: any) => (
+                          <p key={slot.id} className="text-[11px] text-navy-500 dark:text-navy-400">
+                            <span className="font-semibold">{slot.label}{slot.isDouble ? " (double)" : ""}:</span>{" "}
+                            {slot.subjects.map((s: any) => subjects.find((sub: any) => sub.id === s.subjectId)?.name || "?").join(" / ")}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" disabled={!canManage} onClick={() => editElectiveBlock(block)}><Tag className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" disabled={blockSaving || !canManage} onClick={() => deleteElectiveBlockRow(block.id)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
