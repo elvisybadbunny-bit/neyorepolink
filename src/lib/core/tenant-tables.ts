@@ -46,6 +46,19 @@ export const TENANT_OWNED_MODELS = [
   "qrScanEvent", // N.2 — QR hardware scan audit trail + duplicate-scan guard
   "idempotentRequest", // Z.1 — real offline-safe replay ledger for non-naturally-idempotent create actions (Gate Pass, Visitor sign-in)
   "venue", // Z.3 — real Venue/Lab pool for timetable venue assignment + conflict checking
+  // BB.4 — a real, SERIOUS, PRE-EXISTING security gap found and fixed while
+  // building BB.4: these 5 real CBE pathway/subject-selection models
+  // (P.1/P.2/L.4, all pre-dating this session) were NEVER registered here
+  // — silently un-scoped since the day they were created, the exact same
+  // class of bug found and fixed for other models during AA.1/AA.2 and
+  // (retroactively) BB.3's own build. Confirmed via a real end-to-end
+  // BB.4 verification script that a genuinely cross-tenant write was
+  // possible before this fix. Fixed by adding all 5 immediately.
+  "pathway",
+  "pathwaySubjectRequirement",
+  "studentPathwayPreference",
+  "subjectSelectionPortal",
+  "studentSubjectSelection",
   "apiKey",
   "webhookSubscription",
   "webhookDelivery",

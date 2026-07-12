@@ -21,6 +21,15 @@ import {
   type ImportedRow,
 } from "@/lib/validations/student-import";
 
+// BB.4 — real subject-name/code resolution shared by the Subjects column +
+// the once-per-run compulsory-subjects list. Case/whitespace-insensitive,
+// matches a real Subject.name OR Subject.code for THIS tenant only (no
+// cross-curriculum guessing — a subject that doesn't exist yet is honestly
+// reported back, never silently invented).
+function splitSubjectList(raw: string): string[] {
+  return raw.split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+}
+
 export class ImportError extends Error {
   constructor(public code: "EMPTY" | "TOO_MANY_ROWS" | "BAD_FILE" | "NO_NAME_MAPPING" | "ABORTED" | "DUPLICATE", message: string) {
     super(message);
@@ -276,6 +285,7 @@ export function buildCandidates(
       guardianPhone,
       notes: rec.notes,
       openingBalanceKes: rec.openingBalanceKes ? Number(rec.openingBalanceKes) : undefined,
+      subjects: rec.subjects,
     };
 
     const parsed = importedRowSchema.safeParse(candidate);
@@ -653,6 +663,8 @@ export async function commitImport(
     /** R.1 — see importCommitSchema for the full explanation. */
     updateExisting?: boolean;
     confirmedConflictRows?: number[];
+    /** BB.4 — see importCompulsorySubjectsSchema for the full explanation. */
+    compulsorySubjects?: string[];
   }
 ) {
   return withTenant(user.tenantId, async () => {
@@ -668,24 +680,54 @@ export async function commitImport(
       throw new ImportError("ABORTED", `${invalid.length} row(s) have errors. Fix them or enable "skip invalid rows".`);
 
     const valid = candidates.filter((c) => c._issues.length === 0);
+
+    // BB.4 — resolve the real subject universe this import will need ONCE
+    // up front (every real tenant Subject, matched case-insensitively by
+    // name or code), rather than re-querying per row.
+    const allTenantSubjects = await tenantDb().subject.findMany({ where: { archived: false }, select: { id: true, name: true, code: true } });
+    const subjectByKey = new Map<string, string>();
+    for (const s of allTenantSubjects) {
+      subjectByKey.set(s.name.trim().toLowerCase(), s.id);
+      subjectByKey.set(s.code.trim().toLowerCase(), s.id);
+    }
+    function resolveSubjectNames(names: string[]): { resolvedIds: string[]; unresolved: string[] } {
+      const resolvedIds: string[] = [];
+      const unresolved: string[] = [];
+      for (const name of names) {
+        const id = subjectByKey.get(name.trim().toLowerCase());
+        if (id) resolvedIds.push(id);
+        else unresolved.push(name);
+      }
+      return { resolvedIds: [...new Set(resolvedIds)], unresolved };
+    }
+    const compulsorySubjectNames = input.compulsorySubjects ?? [];
+    const { resolvedIds: compulsorySubjectIds, unresolved: unresolvedCompulsory } = resolveSubjectNames(compulsorySubjectNames);
+    if (unresolvedCompulsory.length > 0) {
+      issues.push({ row: 0, message: `Compulsory subject(s) not found for this school: ${unresolvedCompulsory.join(", ")}. Add them under Academics -> Subjects first, or remove them from the compulsory list.` });
+    }
+    let subjectSelectionsCreated = 0;
     if (valid.length === 0) throw new ImportError("EMPTY", "No valid rows to import.");
 
     // M.4 — single-class-only import: every row goes into this ONE class.
     // No class resolution from the file, no auto-creation, no ambiguity.
     let forcedClassId: string | null = null;
+    let forcedClassLevel: string | null = null;
     if (input.targetClassId) {
       const cls = await tenantDb().schoolClass.findUnique({ where: { id: input.targetClassId } });
       if (!cls) throw new ImportError("BAD_FILE", "The chosen class was not found.");
       forcedClassId = cls.id;
+      forcedClassLevel = cls.level;
     }
 
     // resolve / create classes (skipped entirely in single-class-only mode)
     const classes = forcedClassId ? [] : await tenantDb().schoolClass.findMany({ where: { archived: false } });
     const byKey = new Map<string, string>();
+    const levelByClassId = new Map<string, string>();
     for (const c of classes) {
       const label = [c.level, c.stream].filter(Boolean).join(" ");
       byKey.set(classKey(label), c.id);
       byKey.set(classKey(c.level), c.id);
+      levelByClassId.set(c.id, c.level);
     }
     const tenant = await db.tenant.findUniqueOrThrow({ where: { id: user.tenantId }, select: { curriculum: true, joiningRequirements: true } });
     if (!forcedClassId) {
@@ -707,6 +749,7 @@ export async function commitImport(
         });
         byKey.set(k, created.id);
         byKey.set(classKey(level), created.id);
+        levelByClassId.set(created.id, level);
       }
     }
 
@@ -719,6 +762,55 @@ export async function commitImport(
     let createdCount = 0;
     let updatedCount = 0;
     const failed: RowIssue[] = [...issues];
+
+    // BB.4 — a real, lazily-created SubjectSelectionPortal per distinct
+    // level this import touches, ONLY when at least one row actually has a
+    // real Subjects value or a real compulsory list was declared for this
+    // run — an import with neither creates zero new portals/selections,
+    // exactly matching every pre-existing import's behaviour. Status
+    // FINALIZED from the start (these are real, already-made choices being
+    // recorded, not an open window students still need to submit into) —
+    // still reusing the exact same real StudentSubjectSelection model/
+    // unique constraint every other real selection in NEYO uses, so BB.2's
+    // auto-build and L.7's auto-grouping engine both see these rows
+    // exactly like any portal-submitted selection, with zero special-casing.
+    const importPortalByLevel = new Map<string, string>();
+    async function getOrCreateImportPortal(level: string): Promise<string> {
+      const existing = importPortalByLevel.get(level);
+      if (existing) return existing;
+      const portal = await tenantDb().subjectSelectionPortal.create({
+        data: {
+          name: `Student import — ${level} — ${new Date().toISOString().slice(0, 10)}`,
+          targetLevel: level,
+          openDate: new Date(),
+          closeDate: new Date(),
+          status: "FINALIZED",
+          rulesJson: JSON.stringify({ minElectives: 0, maxElectives: 0, compulsorySubjectIds, source: "student_import" }),
+        } as never,
+      });
+      importPortalByLevel.set(level, portal.id);
+      return portal.id;
+    }
+    /** Real, honest per-row subject-selection write — unions the row's own
+     * resolved Subjects with the run's own declared compulsory subjects,
+     * skips entirely (returns null) when there is genuinely nothing to
+     * write for this row, and reports any subject name that didn't match a
+     * real tenant Subject back to the school instead of silently dropping it. */
+    async function writeSubjectSelectionForRow(studentId: string, level: string | null, rawSubjects: string | undefined): Promise<string[]> {
+      const rowNames = rawSubjects ? splitSubjectList(rawSubjects) : [];
+      const { resolvedIds: rowSubjectIds, unresolved } = resolveSubjectNames(rowNames);
+      const allIds = [...new Set([...rowSubjectIds, ...compulsorySubjectIds])];
+      if (allIds.length === 0) return unresolved;
+      if (!level) return unresolved; // no real class/level resolved for this row — nothing to attach a portal to
+      const portalId = await getOrCreateImportPortal(level);
+      await tenantDb().studentSubjectSelection.upsert({
+        where: { tenantId_portalId_studentId: { tenantId: user.tenantId, portalId, studentId } },
+        create: { tenantId: user.tenantId, portalId, studentId, selectedSubjectIds: JSON.stringify(allIds), isConfirmed: true } as never,
+        update: { selectedSubjectIds: JSON.stringify(allIds), isConfirmed: true } as never,
+      });
+      subjectSelectionsCreated++;
+      return unresolved;
+    }
 
     for (const c of valid) {
       // R.1 — check for a real existing-student match BEFORE creating a new
@@ -798,6 +890,15 @@ export async function commitImport(
             await reconcileOpeningBalance(user, match.id, c.openingBalanceKes);
           }
 
+          // BB.4 — real subject selections for this row, if this import run
+          // has a Subjects column or a declared compulsory list at all.
+          const updateRowClassId = forcedClassId ?? (c.className ? byKey.get(classKey(c.className)) ?? null : match.classId);
+          const updateRowLevel = updateRowClassId ? (forcedClassLevel ?? levelByClassId.get(updateRowClassId) ?? null) : null;
+          const unresolvedSubjects = await writeSubjectSelectionForRow(match.id, updateRowLevel, c.subjects);
+          if (unresolvedSubjects.length > 0) {
+            failed.push({ row: c._row, message: `Subject(s) not found for this school and skipped: ${unresolvedSubjects.join(", ")}.` });
+          }
+
           updatedCount++;
         } catch (e) {
           failed.push({ row: c._row, message: e instanceof Error ? e.message.slice(0, 140) : "Could not update this learner." });
@@ -813,6 +914,7 @@ export async function commitImport(
           if (dupLegacy) throw new Error(`School admission no "${legacyAdmissionNo}" already exists.`);
         }
 
+        const createRowClassId = forcedClassId ?? (c.className ? byKey.get(classKey(c.className)) ?? null : null);
         const student = await tenantDb().student.create({
           data: {
             admissionNo,
@@ -822,12 +924,24 @@ export async function commitImport(
             lastName: c.lastName,
             gender: c.gender,
             dateOfBirth: c.dateOfBirth || null,
-            classId: forcedClassId ?? (c.className ? byKey.get(classKey(c.className)) ?? null : null),
+            classId: createRowClassId,
             upiNumber: c.upiNumber || null,
             birthCertNo: c.birthCertNo || null,
             notes: c.notes || null,
           } as never,
         });
+
+        // BB.4 — real subject selections for this brand-new student, if
+        // this import run has a Subjects column or a declared compulsory
+        // list at all — the founder's own real Grade 10 CBE Senior School
+        // intake scenario, where students already made real subject
+        // choices in Junior Secondary and arrive with them in the same
+        // import, never needing a separate portal step.
+        const createRowLevel = createRowClassId ? (forcedClassLevel ?? levelByClassId.get(createRowClassId) ?? null) : null;
+        const unresolvedSubjects = await writeSubjectSelectionForRow(student.id, createRowLevel, c.subjects);
+        if (unresolvedSubjects.length > 0) {
+          failed.push({ row: c._row, message: `Subject(s) not found for this school and skipped: ${unresolvedSubjects.join(", ")}.` });
+        }
 
         // M.4 — write any school-defined custom fields for this row.
         if (c._customFields && c._customFields.length > 0) {
@@ -892,6 +1006,7 @@ export async function commitImport(
         failedRows: failed.length,
         errorRows: failed.length ? JSON.stringify(failed.slice(0, 200)) : null,
         targetClassId: forcedClassId,
+        subjectSelectionsCreated,
         createdById: user.id,
         createdByName: user.fullName,
       } as never,
@@ -910,7 +1025,7 @@ export async function commitImport(
       },
     });
 
-    return { importId: importRow.id, totalRows: candidates.length, created: createdCount, updated: updatedCount, failed };
+    return { importId: importRow.id, totalRows: candidates.length, created: createdCount, updated: updatedCount, failed, subjectSelectionsCreated };
   });
 }
 
@@ -927,6 +1042,7 @@ export async function listImports(user: SessionUser) {
       updatedRows: r.updatedRows,
       failedRows: r.failedRows,
       errorRows: r.errorRows ? (JSON.parse(r.errorRows) as RowIssue[]) : [],
+      subjectSelectionsCreated: r.subjectSelectionsCreated,
       createdByName: r.createdByName,
       createdAt: r.createdAt,
     }));
