@@ -682,6 +682,12 @@ interface ReviewClassTeacherRow {
 }
 type ReviewDecisionKind = "KEEP" | "REPLACE" | "AUTO";
 interface ReviewRunRow { id: string; level: string; status: string; appliedCount: number; autoFilledCount: number; decisionCount: number; createdByName: string; createdAt: string; completedAt: string | null }
+interface ClassYearHistoryRow {
+  id: string; classId: string; label: string; curriculum: string; graduationYear: number; studentCount: number;
+  roster: { id: string; name: string; gender: string; admissionNo: string }[];
+  subjectTeachers: { subjectId: string; subjectName: string; teacherId: string | null; teacherName: string | null; lessonsPerWeek: number }[];
+  classTeacherName: string | null; createdByName: string; createdAt: string;
+}
 
 function TeacherAllocationReviewPanel() {
   const { toast } = useToast();
@@ -694,6 +700,8 @@ function TeacherAllocationReviewPanel() {
   const [runs, setRuns] = React.useState<ReviewRunRow[]>([]);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState(false);
+  const [classHistory, setClassHistory] = React.useState<ClassYearHistoryRow[]>([]);
+  const [expandedHistoryId, setExpandedHistoryId] = React.useState<string | null>(null);
 
   const loadHistory = React.useCallback(async () => {
     try {
@@ -703,10 +711,19 @@ function TeacherAllocationReviewPanel() {
     } catch { /* history is a nice-to-have; snapshot errors are surfaced separately */ }
   }, []);
 
+  const loadClassHistory = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/promotion/class-year-history");
+      const json = await res.json();
+      if (json.ok) setClassHistory(json.data.history);
+    } catch { /* nice-to-have; not a review-blocking error */ }
+  }, []);
+
   React.useEffect(() => {
     fetch("/api/classes").then((r) => r.json()).then((j) => j.ok && setClasses(j.data.classes));
     loadHistory();
-  }, [loadHistory]);
+    loadClassHistory();
+  }, [loadHistory, loadClassHistory]);
 
   const levels = React.useMemo(() => Array.from(new Set(classes.map((c) => c.level))).sort(), [classes]);
 
@@ -914,6 +931,56 @@ function TeacherAllocationReviewPanel() {
                   <Badge tone={r.status === "COMPLETED" ? "green" : "neutral"}>{r.status === "COMPLETED" ? "Completed" : "In progress"}</Badge>
                 </li>
               ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><GraduationCap className="h-4 w-4 text-navy-400" /> Graduated class history</CardTitle>
+          <p className="text-xs text-navy-400">
+            A permanent record of each class&apos;s real roster and subject-teacher allocation, frozen the moment it graduated —
+            kept forever even though the same class slot is reused for next year&apos;s intake.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {classHistory.length === 0 ? (
+            <EmptyState icon={GraduationCap} title="No graduations recorded yet" description="Once a class graduates during a new academic year, its final roster and teacher allocation will appear here permanently." />
+          ) : (
+            <ul className="divide-y divide-navy-50 dark:divide-navy-800">
+              {classHistory.map((h) => {
+                const isOpen = expandedHistoryId === h.id;
+                return (
+                  <li key={h.id} className="py-2.5">
+                    <button onClick={() => setExpandedHistoryId(isOpen ? null : h.id)} className="flex w-full items-center justify-between gap-3 text-left">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-navy-800 dark:text-navy-100">{h.label} — Class of {h.graduationYear}</p>
+                        <p className="text-xs text-navy-400">{h.studentCount} students · Class teacher: {h.classTeacherName ?? "— none —"}</p>
+                      </div>
+                      <Badge tone="blue">{h.subjectTeachers.length} subjects</Badge>
+                    </button>
+                    {isOpen && (
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl bg-warm-50/60 p-3 dark:bg-navy-900/60">
+                          <p className="mb-1 text-xs font-semibold text-navy-600 dark:text-navy-300">Subject-teacher allocation</p>
+                          <ul className="space-y-0.5 text-xs text-navy-600 dark:text-navy-300">
+                            {h.subjectTeachers.map((s) => (
+                              <li key={s.subjectId}>{s.subjectName}: {s.teacherName ?? "— unassigned —"} ({s.lessonsPerWeek}/wk)</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="rounded-xl bg-warm-50/60 p-3 dark:bg-navy-900/60">
+                          <p className="mb-1 text-xs font-semibold text-navy-600 dark:text-navy-300">Final roster</p>
+                          <ul className="max-h-40 space-y-0.5 overflow-y-auto text-xs text-navy-600 dark:text-navy-300">
+                            {h.roster.map((s) => <li key={s.id}>{s.name} · {s.admissionNo}</li>)}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardContent>
