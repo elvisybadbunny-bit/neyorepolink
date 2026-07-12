@@ -2889,6 +2889,12 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
 
               <div className="space-y-3">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-navy-400">Slots (each slot is one real weekly period this block occupies)</p>
+                {blockForm.classIds.length > 0 && (
+                  <p className="text-[11px] text-navy-400">
+                    A slot&apos;s first {blockForm.classIds.length} subject{blockForm.classIds.length === 1 ? "" : "s"} use each class&apos;s own home classroom automatically.
+                    Any subject beyond that needs a real spare venue — leave &quot;Venue&quot; blank and NEYO will auto-pick one from your venue pool (library/labs), or pin one yourself.
+                  </p>
+                )}
                 {blockForm.slots.map((slot: any, slotIndex: number) => (
                   <div key={slotIndex} className="rounded-xl border border-purple-100 bg-purple-50/40 p-3 dark:border-purple-900/30 dark:bg-purple-950/10">
                     <div className="mb-2 flex items-center gap-2">
@@ -2901,25 +2907,35 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                       )}
                     </div>
                     <div className="space-y-1.5">
-                      {slot.subjects.map((sub: any, subjectIndex: number) => (
-                        <div key={subjectIndex} className="grid grid-cols-[1.2fr_1fr_1fr_auto] gap-1.5">
-                          <select value={sub.subjectId} onChange={(e) => setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, subjects: s.subjects.map((x: any, j: number) => j === subjectIndex ? { ...x, subjectId: e.target.value } : x) } : s) }))} className={`${selectClass} h-8 text-xs`}>
-                            <option value="">Subject…</option>
-                            {subjects.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                          </select>
-                          <select value={sub.teacherId} onChange={(e) => setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, subjects: s.subjects.map((x: any, j: number) => j === subjectIndex ? { ...x, teacherId: e.target.value } : x) } : s) }))} className={`${selectClass} h-8 text-xs`}>
-                            <option value="">Teacher (optional)</option>
-                            {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
-                          </select>
-                          <select value={sub.venueId} onChange={(e) => setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, subjects: s.subjects.map((x: any, j: number) => j === subjectIndex ? { ...x, venueId: e.target.value } : x) } : s) }))} className={`${selectClass} h-8 text-xs`}>
-                            <option value="">Venue (optional)</option>
-                            {venues.map((v: any) => <option key={v.id} value={v.id}>{v.name}</option>)}
-                          </select>
-                          {slot.subjects.length > 2 && (
-                            <Button size="sm" variant="ghost" onClick={() => removeSlotSubject(slotIndex, subjectIndex)}><X className="h-3 w-3" /></Button>
-                          )}
-                        </div>
-                      ))}
+                      {slot.subjects.map((sub: any, subjectIndex: number) => {
+                        // BB.1 — mirror the solver's own real overflow rule here so a
+                        // school sees, WHILE BUILDING the block, which subjects will
+                        // need a real venue at all: the first N subjects (N = this
+                        // block's own real selected class count) are assumed to use
+                        // each member class's own home classroom; anything beyond
+                        // that is a genuine overflow subject that NEYO will
+                        // auto-pick a real spare venue for if left blank.
+                        const isOverflow = subjectIndex >= blockForm.classIds.length;
+                        return (
+                          <div key={subjectIndex} className="grid grid-cols-[1.2fr_1fr_1fr_auto] gap-1.5">
+                            <select value={sub.subjectId} onChange={(e) => setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, subjects: s.subjects.map((x: any, j: number) => j === subjectIndex ? { ...x, subjectId: e.target.value } : x) } : s) }))} className={`${selectClass} h-8 text-xs`}>
+                              <option value="">Subject…</option>
+                              {subjects.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                            <select value={sub.teacherId} onChange={(e) => setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, subjects: s.subjects.map((x: any, j: number) => j === subjectIndex ? { ...x, teacherId: e.target.value } : x) } : s) }))} className={`${selectClass} h-8 text-xs`}>
+                              <option value="">Teacher (optional)</option>
+                              {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+                            </select>
+                            <select value={sub.venueId} onChange={(e) => setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, subjects: s.subjects.map((x: any, j: number) => j === subjectIndex ? { ...x, venueId: e.target.value } : x) } : s) }))} className={`${selectClass} h-8 text-xs`} title={isOverflow && !sub.venueId ? "More subjects than classes in this block — leave blank and NEYO will auto-pick a real spare venue (library/lab) when generating." : undefined}>
+                              <option value="">{isOverflow ? "Venue (auto-pick if blank)" : "Venue (optional)"}</option>
+                              {venues.map((v: any) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                            </select>
+                            {slot.subjects.length > 2 && (
+                              <Button size="sm" variant="ghost" onClick={() => removeSlotSubject(slotIndex, subjectIndex)}><X className="h-3 w-3" /></Button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                     <Button size="sm" variant="secondary" className="mt-2" onClick={() => addSlotSubject(slotIndex)}><Plus className="h-3 w-3" /> Add subject to this slot</Button>
                   </div>
