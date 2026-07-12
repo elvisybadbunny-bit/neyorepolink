@@ -10,7 +10,7 @@ import * as React from "react";
 import {
   ArrowUpRight, GraduationCap, Shuffle, AlertCircle, Loader2,
   Undo2, History, Check, Sparkles, Wand2, UserCheck, Replace,
-  Users, RefreshCw,
+  Users, RefreshCw, ClipboardCheck,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ interface ClassOpt { id: string; level: string; stream: string | null; name: str
 
 export function PromotionClient() {
   const { toast } = useToast();
-  const [tab, setTab] = React.useState<"promote" | "reshuffle" | "auto-grouping" | "continuity" | "transfer-impact">("promote");
+  const [tab, setTab] = React.useState<"promote" | "reshuffle" | "auto-grouping" | "continuity" | "transfer-impact" | "review-wizard">("promote");
   const [plan, setPlan] = React.useState<PlanStep[] | null>(null);
   const [unmapped, setUnmapped] = React.useState<string[]>([]);
   const [history, setHistory] = React.useState<RunRow[]>([]);
@@ -104,6 +104,9 @@ export function PromotionClient() {
         </button>
         <button onClick={() => setTab("continuity")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "continuity" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
           Continuity engine
+        </button>
+        <button onClick={() => setTab("review-wizard")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "review-wizard" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
+          New year teacher review
         </button>
         <button onClick={() => setTab("transfer-impact")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "transfer-impact" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
           Teacher transfer impact
@@ -236,6 +239,8 @@ export function PromotionClient() {
         <AutoGroupingPanel onDone={load} />
       ) : tab === "continuity" ? (
         <ContinuityEnginePanel />
+      ) : tab === "review-wizard" ? (
+        <TeacherAllocationReviewPanel />
       ) : (
         <TeacherTransferImpactPanel />
       )}
@@ -664,6 +669,258 @@ function ContinuityEnginePanel() {
   );
 }
 
+
+// ---- AA.3 New Academic Year Teacher Allocation Review wizard --------------
+interface ReviewSubjectRow {
+  classId: string; classLabel: string; subjectId: string; subjectName: string; subjectCode: string;
+  lessonsPerWeek: number; currentTeacherId: string | null; currentTeacherName: string | null;
+  currentTeacherValid: boolean; recommendations: { teacherId: string; teacherName: string; classCount: number; lessonLoad: number }[];
+}
+interface ReviewClassTeacherRow {
+  classId: string; classLabel: string; currentTeacherId: string | null; currentTeacherName: string | null;
+  currentTeacherValid: boolean; recommendations: { teacherId: string; teacherName: string; classCount: number; lessonLoad: number }[];
+}
+type ReviewDecisionKind = "KEEP" | "REPLACE" | "AUTO";
+interface ReviewRunRow { id: string; level: string; status: string; appliedCount: number; autoFilledCount: number; decisionCount: number; createdByName: string; createdAt: string; completedAt: string | null }
+
+function TeacherAllocationReviewPanel() {
+  const { toast } = useToast();
+  const [classes, setClasses] = React.useState<ClassOpt[]>([]);
+  const [level, setLevel] = React.useState("");
+  const [snapshot, setSnapshot] = React.useState<{ level: string; subjectRows: ReviewSubjectRow[]; classTeacherRows: ReviewClassTeacherRow[]; needsAttentionCount: number } | null>(null);
+  const [reviewRunId, setReviewRunId] = React.useState<string | null>(null);
+  const [subjectDecisions, setSubjectDecisions] = React.useState<Record<string, { decision: ReviewDecisionKind; teacherId: string }>>({});
+  const [classTeacherDecisions, setClassTeacherDecisions] = React.useState<Record<string, { decision: ReviewDecisionKind; teacherId: string }>>({});
+  const [runs, setRuns] = React.useState<ReviewRunRow[]>([]);
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState(false);
+
+  const loadHistory = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/promotion/teacher-allocation-review?action=history");
+      const json = await res.json();
+      if (json.ok) setRuns(json.data.runs);
+    } catch { /* history is a nice-to-have; snapshot errors are surfaced separately */ }
+  }, []);
+
+  React.useEffect(() => {
+    fetch("/api/classes").then((r) => r.json()).then((j) => j.ok && setClasses(j.data.classes));
+    loadHistory();
+  }, [loadHistory]);
+
+  const levels = React.useMemo(() => Array.from(new Set(classes.map((c) => c.level))).sort(), [classes]);
+
+  function keyFor(classId: string, subjectId: string) { return `${classId}::${subjectId}`; }
+
+  async function loadSnapshot(target = level) {
+    if (!target) return;
+    setBusy(true);
+    setError(false);
+    try {
+      const res = await fetch(`/api/promotion/teacher-allocation-review?level=${encodeURIComponent(target)}`);
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Failed");
+      setSnapshot(json.data);
+      setSubjectDecisions({});
+      setClassTeacherDecisions({});
+      const startRes = await fetch("/api/promotion/teacher-allocation-review", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "start", level: target }),
+      });
+      const startJson = await startRes.json();
+      if (startJson.ok) setReviewRunId(startJson.data.reviewRunId);
+    } catch (e: any) {
+      setError(true);
+      toast({ title: e?.message || "Could not load the review", tone: "error" });
+    } finally { setBusy(false); }
+  }
+
+  function setSubjectDecision(row: ReviewSubjectRow, decision: ReviewDecisionKind, teacherId = "") {
+    setSubjectDecisions((prev) => ({ ...prev, [keyFor(row.classId, row.subjectId)]: { decision, teacherId } }));
+  }
+  function setClassTeacherDecision(row: ReviewClassTeacherRow, decision: ReviewDecisionKind, teacherId = "") {
+    setClassTeacherDecisions((prev) => ({ ...prev, [row.classId]: { decision, teacherId } }));
+  }
+
+  const totalDecided = Object.keys(subjectDecisions).length + Object.keys(classTeacherDecisions).length;
+  const totalSlots = (snapshot?.subjectRows.length ?? 0) + (snapshot?.classTeacherRows.length ?? 0);
+
+  async function apply() {
+    if (!snapshot || !reviewRunId) return;
+    const decisions: any[] = [];
+    for (const row of snapshot.subjectRows) {
+      const d = subjectDecisions[keyFor(row.classId, row.subjectId)];
+      if (!d) continue;
+      decisions.push({ classId: row.classId, subjectId: row.subjectId, roleType: "SUBJECT", decision: d.decision, teacherId: d.decision === "REPLACE" ? d.teacherId : null });
+    }
+    for (const row of snapshot.classTeacherRows) {
+      const d = classTeacherDecisions[row.classId];
+      if (!d) continue;
+      decisions.push({ classId: row.classId, roleType: "CLASS_TEACHER", decision: d.decision, teacherId: d.decision === "REPLACE" ? d.teacherId : null });
+    }
+    if (decisions.length === 0) { toast({ title: "Make at least one decision first", tone: "error" }); return; }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/promotion/teacher-allocation-review", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "apply", reviewRunId, decisions, regenerateTimetable: true }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Failed");
+      toast({ title: `${json.data.appliedCount} replaced · ${json.data.autoFilledCount} auto-filled · timetable regenerating`, tone: "success" });
+      setSnapshot(null);
+      setReviewRunId(null);
+      setSubjectDecisions({});
+      setClassTeacherDecisions({});
+      loadHistory();
+    } catch (e: any) {
+      toast({ title: e?.message || "Could not apply the review", tone: "error" });
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="space-y-5">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-green-600" /> New academic year — teacher allocation review</CardTitle>
+          <p className="text-xs text-navy-400">
+            Right after promoting to a new academic year, walk through one level at a time: keep each teacher, replace with a specific
+            person, or let NEYO auto-assign fairly. Nothing changes until you apply.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[220px]">
+              <Label>Level</Label>
+              <select value={level} onChange={(e) => setLevel(e.target.value)} className="mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900">
+                <option value="">Choose level…</option>
+                {levels.map((l) => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+            <Button onClick={() => loadSnapshot()} disabled={busy || !level}>
+              {busy && !snapshot ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Review this level
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {error ? (
+        <div className="flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+          <AlertCircle className="h-4 w-4" /> Couldn&apos;t load that level&apos;s review. <button onClick={() => loadSnapshot()} className="font-medium underline">Retry</button>
+        </div>
+      ) : busy && !snapshot ? (
+        <div className="space-y-3">{[...Array(2)].map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div>
+      ) : snapshot && totalSlots === 0 ? (
+        <EmptyState icon={ClipboardCheck} title="Nothing to review yet" description="This level has no subject loads or class teachers assigned yet." />
+      ) : snapshot ? (
+        <>
+          <div className="flex items-center justify-between rounded-2xl bg-warm-50 p-4 dark:bg-navy-800">
+            <p className="text-sm text-navy-700 dark:text-navy-200">
+              <span className="font-semibold">{snapshot.needsAttentionCount}</span> of {totalSlots} slots need attention ·
+              <span className="ml-1 font-semibold">{totalDecided}</span> decided so far
+            </p>
+            <Button onClick={apply} disabled={busy || totalDecided === 0}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Apply decisions + regenerate timetable
+            </Button>
+          </div>
+
+          <Card>
+            <CardHeader><CardTitle>Subject-teacher slots · {snapshot.level}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {snapshot.subjectRows.map((row) => {
+                const d = subjectDecisions[keyFor(row.classId, row.subjectId)];
+                return (
+                  <div key={keyFor(row.classId, row.subjectId)} className="rounded-2xl border border-navy-100 p-4 dark:border-navy-800">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-navy-900 dark:text-white">{row.classLabel} · {row.subjectName} ({row.subjectCode})</p>
+                        <p className="text-xs text-navy-400">
+                          Current: {row.currentTeacherName ?? "— none —"} · {row.lessonsPerWeek} lessons/week
+                        </p>
+                      </div>
+                      {row.currentTeacherValid ? <Badge tone="green">Teacher active</Badge> : <Badge tone="amber">Needs attention</Badge>}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button onClick={() => setSubjectDecision(row, "KEEP")} className={`rounded-full px-3 py-1.5 text-xs font-medium ${d?.decision === "KEEP" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "border border-navy-200 text-navy-600 dark:border-navy-700 dark:text-navy-300"}`}>Keep</button>
+                      <button onClick={() => setSubjectDecision(row, "AUTO")} className={`rounded-full px-3 py-1.5 text-xs font-medium ${d?.decision === "AUTO" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "border border-navy-200 text-navy-600 dark:border-navy-700 dark:text-navy-300"}`}>Let NEYO auto-assign</button>
+                      <select
+                        value={d?.decision === "REPLACE" ? d.teacherId : ""}
+                        onChange={(e) => setSubjectDecision(row, "REPLACE", e.target.value)}
+                        className="rounded-full border border-navy-200 bg-white px-3 py-1.5 text-xs dark:border-navy-700 dark:bg-navy-900"
+                      >
+                        <option value="">Replace with…</option>
+                        {row.recommendations.map((r) => <option key={r.teacherId} value={r.teacherId}>{r.teacherName} · {r.classCount} classes · {r.lessonLoad} lessons</option>)}
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Class-teacher slots · {snapshot.level}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {snapshot.classTeacherRows.map((row) => {
+                const d = classTeacherDecisions[row.classId];
+                return (
+                  <div key={row.classId} className="rounded-2xl border border-navy-100 p-4 dark:border-navy-800">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-navy-900 dark:text-white">{row.classLabel}</p>
+                        <p className="text-xs text-navy-400">Current: {row.currentTeacherName ?? "— none —"}</p>
+                      </div>
+                      {row.currentTeacherValid ? <Badge tone="green">Teacher active</Badge> : <Badge tone="amber">Needs attention</Badge>}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button onClick={() => setClassTeacherDecision(row, "KEEP")} className={`rounded-full px-3 py-1.5 text-xs font-medium ${d?.decision === "KEEP" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "border border-navy-200 text-navy-600 dark:border-navy-700 dark:text-navy-300"}`}>Keep</button>
+                      <button onClick={() => setClassTeacherDecision(row, "AUTO")} className={`rounded-full px-3 py-1.5 text-xs font-medium ${d?.decision === "AUTO" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "border border-navy-200 text-navy-600 dark:border-navy-700 dark:text-navy-300"}`}>Let NEYO auto-assign</button>
+                      <select
+                        value={d?.decision === "REPLACE" ? d.teacherId : ""}
+                        onChange={(e) => setClassTeacherDecision(row, "REPLACE", e.target.value)}
+                        className="rounded-full border border-navy-200 bg-white px-3 py-1.5 text-xs dark:border-navy-700 dark:bg-navy-900"
+                      >
+                        <option value="">Replace with…</option>
+                        {row.recommendations.map((r) => <option key={r.teacherId} value={r.teacherId}>{r.teacherName} · {r.classCount} classes · {r.lessonLoad} lessons</option>)}
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <EmptyState icon={ClipboardCheck} title="Choose a level to begin" description="Pick a level above (usually right after promoting to a new academic year) to review its teacher allocation." />
+      )}
+
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2"><History className="h-4 w-4 text-navy-400" /> Review history</CardTitle></CardHeader>
+        <CardContent>
+          {runs.length === 0 ? (
+            <EmptyState icon={History} title="No reviews yet" description="Completed reviews appear here." />
+          ) : (
+            <ul className="divide-y divide-navy-50 dark:divide-navy-800">
+              {runs.map((r) => (
+                <li key={r.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-navy-800 dark:text-navy-100">
+                      {r.level} — {r.decisionCount} decisions ({r.appliedCount} replaced, {r.autoFilledCount} auto-filled)
+                    </p>
+                    <p className="text-xs text-navy-400">
+                      {new Date(r.createdAt).toLocaleString("en-KE", { dateStyle: "medium", timeStyle: "short" })} · {r.createdByName}
+                    </p>
+                  </div>
+                  <Badge tone={r.status === "COMPLETED" ? "green" : "neutral"}>{r.status === "COMPLETED" ? "Completed" : "In progress"}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 function TeacherTransferImpactPanel() {
   const { toast } = useToast();
