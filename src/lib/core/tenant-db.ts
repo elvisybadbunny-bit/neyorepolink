@@ -101,20 +101,36 @@ export function tenantDb() {
             return query(a);
           }
 
-          // 3) findUnique/update/delete by unique key: run, then verify tenant.
+          // 3) findUnique/update/delete by unique key: a REAL, CRITICAL
+          // security fix (found live during AA.1/AA.2's own regression
+          // testing this session) — the OLD code here ran the real
+          // update/delete FIRST and only verified the tenant AFTERWARD.
+          // For `update`/`delete` this meant a cross-tenant mutation had
+          // ALREADY happened by the time the mismatch was detected — the
+          // "block" only ever prevented the caller from seeing the
+          // result, not the real underlying row change. Fixed: a real
+          // pre-flight ownership check (a cheap `findUnique` selecting
+          // only `tenantId`, run on the RAW un-scoped `db` client to
+          // avoid recursing into this same extension) now runs BEFORE
+          // the real operation is ever allowed to execute. A record that
+          // doesn't exist at all is allowed through so Prisma's own
+          // genuine not-found error/behavior surfaces normally (never
+          // fabricated); a record that exists but belongs to a DIFFERENT
+          // tenant is blocked here, before any real read/write happens.
           if (SINGLE_BY_UNIQUE.has(operation)) {
-            const result = await query(args);
-            if (
-              result &&
-              typeof result === "object" &&
-              "tenantId" in result &&
-              (result as { tenantId?: string }).tenantId !== tenantId
-            ) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const a = (args ?? {}) as any;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const rawDelegate = (db as any)[modelKey];
+            const existing = await rawDelegate
+              .findUnique({ where: a.where, select: { tenantId: true } })
+              .catch(() => null);
+            if (existing && existing.tenantId !== tenantId) {
               throw new TenantIsolationError(
                 `Cross-tenant access blocked on ${model}.${operation}`
               );
             }
-            return result;
+            return query(args);
           }
 
           return query(args);

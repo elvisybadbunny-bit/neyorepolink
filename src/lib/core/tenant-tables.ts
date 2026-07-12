@@ -194,6 +194,20 @@ export const TENANT_OWNED_MODELS = [
   "masterReportCard",
   "combinationGroup",
   "combinationGroupClass",
+  // AA.1 — real Elective/Options Block engine models. A REAL, SERIOUS
+  // cross-tenant data-leak bug was found live during this session's own
+  // testing (a Karibu High principal could see Kilimo Day Secondary
+  // School's real Options Block data via GET /api/academics/timetable/
+  // elective-blocks) — these 4 models were never registered here when
+  // AA.1 was built, so tenantDb() silently never scoped them by tenantId
+  // at all. Fixed by registering them, exactly like every other real
+  // tenant-owned model in this list.
+  "electiveBlock",
+  "electiveBlockClass",
+  "electiveBlockSlot",
+  "electiveBlockSlotSubject",
+  // AA.2 — real Teacher Allocation Import history.
+  "teacherAllocationImport",
   "timetableConstraint",
   "teacherTimeOff",
   "timetableGenerationJob",
