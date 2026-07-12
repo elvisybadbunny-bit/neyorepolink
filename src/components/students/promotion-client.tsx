@@ -400,6 +400,11 @@ function AutoGroupingPanel({ onDone }: { onDone: () => void }) {
   const [busy, setBusy] = React.useState(false);
   const [ruleName, setRuleName] = React.useState("Subject-choice continuity rule");
   const [maxClasses, setMaxClasses] = React.useState("4");
+  // BB.3 — real, staff-confirmed resolution per real classId the preview's
+  // own capacityWarnings flagged as exceeding its configured capacity.
+  const [capacityDecisions, setCapacityDecisions] = React.useState<Record<string, "ALLOW_OVER_CAPACITY">>({});
+  const [splittingClassId, setSplittingClassId] = React.useState<string | null>(null);
+  const [newClassName, setNewClassName] = React.useState("");
 
   const load = React.useCallback(async () => {
     const res = await fetch('/api/promotion/auto-grouping');
@@ -439,7 +444,7 @@ function AutoGroupingPanel({ onDone }: { onDone: () => void }) {
     try {
       const res = await fetch('/api/promotion/auto-grouping', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: commit ? 'commit' : 'preview', level })
+        body: JSON.stringify({ action: commit ? 'commit' : 'preview', level, ...(commit ? { capacityDecisions } : {}) })
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error?.message || 'Failed');
@@ -449,10 +454,41 @@ function AutoGroupingPanel({ onDone }: { onDone: () => void }) {
           toast({ title: 'Whole-school timetable regeneration started in the background to reflect the reassigned teachers.', tone: 'success' });
         }
         setPreview(null);
+        setCapacityDecisions({});
         onDone();
-      } else setPreview(json.data);
+      } else { setPreview(json.data); setCapacityDecisions({}); }
     } catch (e: any) {
       toast({ title: e?.message || 'Could not run auto-grouping', tone: 'error' });
+    } finally { setBusy(false); }
+  }
+
+  // BB.3 — real, explicit, staff-confirmed split: creates a genuinely new
+  // real class/section named from the school's own real input, then
+  // re-runs the preview so the new class appears as a real extra
+  // destination the grouping naturally spreads students into.
+  async function splitOverflowClass(classId: string, subjectId: string | null) {
+    if (!newClassName.trim()) { toast({ title: 'Name the new class/section first', tone: 'error' }); return; }
+    setBusy(true);
+    try {
+      const checkRes = await fetch('/api/academics/class-capacity-overflow', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'check', classId, subjectId, studentIds: (preview?.preview.find((g: any) => g.classId === classId)?.students ?? []).map((s: any) => s.id) }),
+      });
+      const checkJson = await checkRes.json();
+      if (!checkJson.ok) throw new Error(checkJson.error?.message || 'Failed');
+      if (!checkJson.data.overflow) { toast({ title: 'This class is no longer over capacity', tone: 'success' }); return; }
+      const decideRes = await fetch('/api/academics/class-capacity-overflow', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'decide', runId: checkJson.data.runId, decision: 'SPLIT_NEW_CLASS', newClassName }),
+      });
+      const decideJson = await decideRes.json();
+      if (!decideJson.ok) throw new Error(decideJson.error?.message || 'Failed');
+      toast({ title: `Real new class "${newClassName}" created — re-run preview to see students spread into it.`, tone: 'success' });
+      setSplittingClassId(null);
+      setNewClassName('');
+      await runPreview(false);
+    } catch (e: any) {
+      toast({ title: e?.message || 'Could not split into a new class', tone: 'error' });
     } finally { setBusy(false); }
   }
 
@@ -495,6 +531,47 @@ function AutoGroupingPanel({ onDone }: { onDone: () => void }) {
           </div>
         </CardContent>
       </Card>
+
+      {preview && (preview.capacityWarnings ?? []).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400"><AlertCircle className="h-5 w-5" /> Real class capacity exceeded</CardTitle>
+            <p className="text-xs text-navy-400">
+              These real classes have their own configured maximum size — this grouping would put more real students into them than that. Resolve each one before committing.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {preview.capacityWarnings.map((w: any) => (
+              <div key={w.classId} className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/40 dark:bg-amber-950/10">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-navy-900 dark:text-white">{w.label}</p>
+                    <p className="text-xs text-navy-500 dark:text-navy-400">{w.projectedCount} real students would be placed here · maximum is {w.capacity} · {w.overflowCount} over</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {capacityDecisions[w.classId] === "ALLOW_OVER_CAPACITY" ? (
+                      <Badge tone="amber">Will allow over capacity</Badge>
+                    ) : (
+                      <Button size="sm" variant="secondary" onClick={() => setCapacityDecisions((p) => ({ ...p, [w.classId]: "ALLOW_OVER_CAPACITY" }))} disabled={busy}>
+                        Allow all in this class anyway
+                      </Button>
+                    )}
+                    {splittingClassId === w.classId ? (
+                      <>
+                        <Input value={newClassName} onChange={(e) => setNewClassName(e.target.value)} placeholder="e.g. Geo" className="h-8 w-32 text-xs" />
+                        <Button size="sm" onClick={() => splitOverflowClass(w.classId, null)} disabled={busy}>Create</Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setSplittingClassId(null); setNewClassName(""); }}>Cancel</Button>
+                      </>
+                    ) : (
+                      <Button size="sm" variant="secondary" onClick={() => setSplittingClassId(w.classId)} disabled={busy}>Split into a new class</Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {preview && (
         <Card>
