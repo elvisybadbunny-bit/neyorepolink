@@ -2006,6 +2006,8 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const [electiveBlocks, setElectiveBlocks] = React.useState<any[]>([]);
   const [blockForm, setBlockForm] = React.useState<any>(emptyBlockForm);
   const [blockSaving, setBlockSaving] = React.useState(false);
+  // BB.2 — real "Build from student choices" auto-build modal state.
+  const [autoBuildOpen, setAutoBuildOpen] = React.useState(false);
   // AA.2 — real Teacher Allocation Import (onboarding scenario).
   const [allocationImportOpen, setAllocationImportOpen] = React.useState(false);
   const [allocationImportHistory, setAllocationImportHistory] = React.useState<any[]>([]);
@@ -2851,10 +2853,17 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><Shuffle className="h-5 w-5 text-purple-600" /> Elective / Options Blocks</CardTitle>
-          <p className="text-xs text-navy-400">
-            For subjects students genuinely choose BETWEEN (e.g. History OR CRE — every student is doing something at this time, but which room/teacher depends on their own choice). NEYO schedules every subject in a block at the SAME real time so movement between rooms works cleanly, and no two block subjects clash with each other's teachers/venues. Use &quot;Single-Choice&quot; mode when every slot offers the exact same subjects (e.g. Technical &amp; Applied: choose ONE of Business/Computer/Art/Agriculture/French) — use &quot;Multi-Slot&quot; when different slots can offer different subject pairings (e.g. History appears opposite CRE in one slot, and opposite Geography in another).
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base"><Shuffle className="h-5 w-5 text-purple-600" /> Elective / Options Blocks</CardTitle>
+              <p className="mt-1 text-xs text-navy-400">
+                For subjects students genuinely choose BETWEEN (e.g. History OR CRE — every student is doing something at this time, but which room/teacher depends on their own choice). NEYO schedules every subject in a block at the SAME real time so movement between rooms works cleanly, and no two block subjects clash with each other&apos;s teachers/venues. Use &quot;Single-Choice&quot; mode when every slot offers the exact same subjects (e.g. Technical &amp; Applied: choose ONE of Business/Computer/Art/Agriculture/French) — use &quot;Multi-Slot&quot; when different slots can offer different subject pairings (e.g. History appears opposite CRE in one slot, and opposite Geography in another).
+              </p>
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => setAutoBuildOpen(true)} disabled={!canManage}>
+              <Sparkles className="h-3.5 w-3.5" /> Build from student choices
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
@@ -2987,6 +2996,179 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
           </div>
         </CardContent>
       </Card>
+
+      {autoBuildOpen && (
+        <ElectiveBlockAutoBuildModal
+          classes={classes}
+          onClose={() => setAutoBuildOpen(false)}
+          onDone={() => { setAutoBuildOpen(false); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// BB.2 — real "Build from student choices" auto-build modal. Founder's own
+// real request: the school picks a level, NEYO reads real confirmed
+// StudentSubjectSelection data, detects genuine elective subjects (or the
+// real Core/Essential Mathematics split), shows a real preview (combined
+// roster + suggested fair teacher per subject), and the school reviews/
+// edits before confirming — nothing is ever silently created.
+function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: any[]; onClose: () => void; onDone: () => void }) {
+  const { toast } = useToast();
+  const [level, setLevel] = React.useState("");
+  const [kind, setKind] = React.useState<"ELECTIVES" | "MATH_SPLIT">("ELECTIVES");
+  const [defaultLessonsPerWeek, setDefaultLessonsPerWeek] = React.useState(5);
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [preview, setPreview] = React.useState<any>(null);
+  const [blockName, setBlockName] = React.useState("");
+  const [rowOverrides, setRowOverrides] = React.useState<Record<string, { teacherId: string; lessonsPerWeek: number }>>({});
+
+  const levels = React.useMemo(() => Array.from(new Set(classes.map((c: any) => c.level))).sort(), [classes]);
+
+  async function runPreview() {
+    if (!level) { toast({ title: "Choose a real level first", tone: "error" }); return; }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/academics/timetable/elective-blocks/auto-build", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "preview", level, kind, defaultLessonsPerWeek }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Failed");
+      setPreview(json.data);
+      setBlockName(kind === "MATH_SPLIT" ? `${level} — Core/Essential Mathematics` : `${level} — Options`);
+      const overrides: Record<string, { teacherId: string; lessonsPerWeek: number }> = {};
+      for (const row of json.data.rows) overrides[row.subjectId] = { teacherId: row.suggestedTeacherId || "", lessonsPerWeek: row.defaultLessonsPerWeek };
+      setRowOverrides(overrides);
+    } catch (e: any) {
+      setError(e?.message || "Could not build a real preview for that level");
+    } finally { setBusy(false); }
+  }
+
+  async function confirm() {
+    if (!preview) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/academics/timetable/elective-blocks/auto-build", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "confirm",
+          runId: preview.runId,
+          blockName,
+          preferAfterBreak: false,
+          subjects: preview.rows.map((r: any) => ({
+            subjectId: r.subjectId,
+            teacherId: rowOverrides[r.subjectId]?.teacherId || null,
+            lessonsPerWeek: rowOverrides[r.subjectId]?.lessonsPerWeek || r.defaultLessonsPerWeek,
+            classIds: r.classIds,
+          })),
+        }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Failed");
+      toast({ title: "Options Block created from real student choices", tone: "success" });
+      onDone();
+    } catch (e: any) {
+      toast({ title: e?.message || "Could not create the block", tone: "error" });
+    } finally { setBusy(false); }
+  }
+
+  async function discard() {
+    if (preview) {
+      await fetch("/api/academics/timetable/elective-blocks/auto-build", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "discard", runId: preview.runId }),
+      }).catch(() => {});
+    }
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-navy-900">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-lg font-bold text-navy-900 dark:text-white"><Sparkles className="h-5 w-5 text-purple-600" /> Build Options Block from student choices</h3>
+          <Button size="sm" variant="ghost" onClick={discard}><X className="h-4 w-4" /></Button>
+        </div>
+
+        {!preview ? (
+          <div className="space-y-4">
+            <p className="text-xs text-navy-400">
+              NEYO reads real confirmed subject selections for a level and detects genuine elective subjects (or a real Core/Essential Mathematics split), showing you a real preview to review and edit before anything is created. You can still build a block manually instead — this is just a shortcut.
+            </p>
+            <div>
+              <Label>Level</Label>
+              <select value={level} onChange={(e) => setLevel(e.target.value)} className="mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900">
+                <option value="">Choose level…</option>
+                {levels.map((l) => <option key={l as string} value={l as string}>{l as string}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label>What are we building?</Label>
+              <div className="mt-1 flex gap-2">
+                <button onClick={() => setKind("ELECTIVES")} className={`flex-1 rounded-xl border px-3 py-2 text-xs font-medium ${kind === "ELECTIVES" ? "border-purple-400 bg-purple-50 text-purple-700 dark:bg-purple-950/30" : "border-navy-200 text-navy-600 dark:border-navy-700"}`}>General electives</button>
+                <button onClick={() => setKind("MATH_SPLIT")} className={`flex-1 rounded-xl border px-3 py-2 text-xs font-medium ${kind === "MATH_SPLIT" ? "border-purple-400 bg-purple-50 text-purple-700 dark:bg-purple-950/30" : "border-navy-200 text-navy-600 dark:border-navy-700"}`}>Core/Essential Mathematics split</button>
+              </div>
+            </div>
+            {kind === "ELECTIVES" && (
+              <div>
+                <Label>Default lessons/week per detected subject</Label>
+                <Input type="number" min={1} max={20} value={defaultLessonsPerWeek} onChange={(e) => setDefaultLessonsPerWeek(Number(e.target.value) || 5)} className="mt-1 w-32" />
+              </div>
+            )}
+            {error && (
+              <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+                <AlertCircle className="h-4 w-4" /> {error}
+              </div>
+            )}
+            <Button onClick={runPreview} disabled={busy || !level}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Analyse real student choices</Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-xs text-navy-400">{preview.capacityNote}</p>
+            <div>
+              <Label>Block name</Label>
+              <Input value={blockName} onChange={(e) => setBlockName(e.target.value)} />
+            </div>
+            <div className="space-y-3">
+              {preview.rows.map((row: any) => (
+                <div key={row.subjectId} className="rounded-2xl border border-navy-100 p-3 dark:border-navy-800">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-navy-900 dark:text-white">{row.subjectName} ({row.subjectCode})</p>
+                    <Badge tone="blue">{row.studentCount} student{row.studentCount === 1 ? "" : "s"}</Badge>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <select
+                      value={rowOverrides[row.subjectId]?.teacherId ?? ""}
+                      onChange={(e) => setRowOverrides((p) => ({ ...p, [row.subjectId]: { ...p[row.subjectId], teacherId: e.target.value } }))}
+                      className="rounded-xl border border-navy-200 bg-white px-2 py-1.5 text-xs dark:border-navy-700 dark:bg-navy-900"
+                    >
+                      <option value="">No teacher yet</option>
+                      {row.teacherRecommendations.map((r: any) => <option key={r.teacherId} value={r.teacherId}>{r.teacherName} · {r.classCount} classes · {r.lessonLoad} lessons</option>)}
+                    </select>
+                    <Input
+                      type="number" min={1} max={20}
+                      value={rowOverrides[row.subjectId]?.lessonsPerWeek ?? row.defaultLessonsPerWeek}
+                      onChange={(e) => setRowOverrides((p) => ({ ...p, [row.subjectId]: { ...p[row.subjectId], lessonsPerWeek: Number(e.target.value) || 5 } }))}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  {row.teacherRecommendations.length === 0 && (
+                    <p className="mt-1 text-[11px] text-amber-600">No real teacher is currently linked to this subject — link one under Staff first, or leave blank for now.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={confirm} disabled={busy || !blockName.trim()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Confirm and create block</Button>
+              <Button variant="secondary" onClick={() => setPreview(null)} disabled={busy}>Back</Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
