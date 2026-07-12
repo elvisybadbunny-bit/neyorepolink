@@ -14,6 +14,13 @@ const slotSubjectSchema = z.object({
   id: z.string().optional(), // present on update, absent on create
   subjectId: z.string().min(1, "Choose a real subject."),
   teacherId: z.string().min(1).optional().or(z.literal("")),
+  // BB.1 — left blank ("" or omitted) means "let NEYO auto-pick a real
+  // venue from the pool if this subject genuinely needs one" (a school's
+  // own explicit pin here always wins over the solver's own pick — see
+  // ElectiveBlockSlotSubject.resolvedVenueId in the DB layer). This is a
+  // deliberately UNCHANGED validation shape from AA.1 (blank was already
+  // valid) — BB.1's real new behaviour lives entirely in the solver
+  // (timetable-engine.service.ts), not in this input contract.
   venueId: z.string().min(1).optional().or(z.literal("")),
   // Real classIds sharing this exact subject inside this slot — defaults to
   // the whole block's class list when omitted (the common case), but can be
