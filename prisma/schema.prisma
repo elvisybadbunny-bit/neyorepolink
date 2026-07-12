@@ -284,6 +284,7 @@ model Tenant {
   classYearHistories           ClassYearHistory[]
   electiveBlockAutoBuildRuns   ElectiveBlockAutoBuildRun[]
   classCapacityOverflowRuns    ClassCapacityOverflowRun[]
+  classAllocationRuns          ClassAllocationRun[]
   teacherAllocationReviewRuns  TeacherAllocationReviewRun[]
   admissionApplications        AdmissionApplication[]
   staffAttendance              StaffAttendance[]
@@ -3141,11 +3142,66 @@ model StudentImport {
   failedRows    Int
   errorRows     String? // JSON [{row, message}] (null when none)
   targetClassId String? // M.4 — set when this run imported into ONE specific class only
-  createdById   String
-  createdByName String
-  createdAt     DateTime @default(now())
+  // BB.4 — a real, honest count of how many real StudentSubjectSelection
+  // rows this import run itself created (from an optional real "Subjects"
+  // column + a real declared-compulsory-subjects list, e.g. a fresh Grade
+  // 10 intake arriving with subject choices already made in Junior
+  // Secondary). Zero for every import that doesn't map a Subjects column —
+  // no behaviour change for any pre-existing import flow.
+  subjectSelectionsCreated Int      @default(0)
+  createdById              String
+  createdByName            String
+  createdAt                DateTime @default(now())
 
   @@index([tenantId, createdAt])
+}
+
+// BB.4 — a real, auditable record of one "Allocate Class" wizard run: takes
+// a level's real students (freshly imported or already enrolled) with real
+// confirmed StudentSubjectSelection data and places them into real classes
+// by subject combination, reusing the exact same real fair-grouping engine
+// L.7's runAutoGroupingPreview()/commitAutoGrouping() already provides —
+// BB.4 never invents a second placement algorithm. This row exists purely
+// so a school can see WHEN a Grade 10 (or any level's) intake was allocated,
+// how many real classes were created vs. reused, and which real
+// PromotionRun (the actual student-move ledger) resulted, mirroring the
+// exact same "wizard session -> real underlying engine call" pattern AA.3's
+// TeacherAllocationReviewRun already established.
+model ClassAllocationRun {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  level String // the level allocated, e.g. "Grade 10"
+
+  // "CREATE_NEW" — the wizard created its own real new classes/streams for
+  // this run (school supplied streamCount + capacity); "USE_EXISTING" — the
+  // wizard placed students into real classes that already existed (e.g.
+  // already named in the import file), never creating a new one.
+  classStrategy String // "CREATE_NEW" | "USE_EXISTING"
+
+  streamCount      Int? // real number of classes created, when classStrategy = CREATE_NEW
+  capacityPerClass Int? // the real per-class cap the school chose for this run (feeds BB.3)
+
+  createdClassIds String @default("[]") // JSON — real SchoolClass.id[] genuinely created by this run (empty for USE_EXISTING)
+
+  // The real underlying calls this run made — never a duplicate engine.
+  promotionRunId String? // the real L.7 PromotionRun produced by commitAutoGrouping()
+  timetableJobId String? // the real background TimetableGenerationJob, if the school chose to generate immediately after
+
+  totalStudents          Int @default(0)
+  classSubjectNeedsSeeded Int @default(0) // real ClassSubjectNeed rows this run created from students' actual subject combinations
+  teachersAutoAssigned    Int @default(0) // real teacher gaps filled by the existing fair auto-assign engine
+
+  status String @default("PENDING") // "PENDING" | "COMPLETED" | "FAILED"
+
+  createdById   String
+  createdByName String
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, level])
 }
 
 // PART M.4 — Import Engine Upgrades: schools can map spreadsheet columns

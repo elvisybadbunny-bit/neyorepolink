@@ -244,6 +244,8 @@ export const TENANT_OWNED_MODELS = [
   "schoolActivityClass", // R.6 — which real classes an activity's roster is drawn from
   "activityParticipant", // R.6 — one real roster row per real student per activity
   "tenantPricingSnapshot", // Part V — Capacity-Based Pricing 2.0: real per-school price-calculation history
+  "classCapacityOverflowRun", // BB.3 — real class-size cap + overflow decision audit trail (added retroactively — was missing from this registry; see BB.4 chunk 1 commit)
+  "classAllocationRun", // BB.4 — real "Allocate Class" wizard run audit trail
   // NOTE: "schoolQuoteRequest" is DELIBERATELY NOT tenant-owned — a quote
   // request can exist for a genuinely prospective school with NO real
   // tenantId yet (before they've ever signed up), so it is queried directly
