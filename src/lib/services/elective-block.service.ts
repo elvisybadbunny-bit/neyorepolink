@@ -31,7 +31,7 @@ export async function listElectiveBlocks(user: SessionUser) {
       where: { active: true },
       include: {
         classes: true,
-        slots: { orderBy: { sortOrder: "asc" }, include: { subjects: { orderBy: { createdAt: "asc" } } } },
+        slots: { orderBy: { sortOrder: "asc" }, include: { subjects: { orderBy: { id: "asc" } } } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -160,7 +160,7 @@ export async function getElectiveBlocksForSolver(tenantId: string) {
         // classroom, remaining = genuine overflow" rule (N = the block's
         // real member-class count) means the same real thing every single
         // generation run, not whatever order SQLite happens to return.
-        slots: { orderBy: { sortOrder: "asc" }, include: { subjects: { orderBy: { createdAt: "asc" } } } },
+        slots: { orderBy: { sortOrder: "asc" }, include: { subjects: { orderBy: { id: "asc" } } } },
       },
     });
     return blocks
