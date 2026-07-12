@@ -30,6 +30,7 @@ import {
   CORE_ESSENTIAL_MATHEMATICS,
   COMMUNITY_SERVICE_LEARNING_SUBJECT,
 } from "@/lib/validations/pathways";
+import { getElectiveBlocksForSolver } from "@/lib/services/elective-block.service";
 
 export class TimetableEngineError extends Error {
   constructor(public code: "NOT_FOUND" | "INVALID" | "BUSY", message: string) {
@@ -331,6 +332,12 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     ]);
     return { tenant, classes, subjects, needs, configs, teacherAssoc, constraints, groups, timeOff, venues };
   });
+  // AA.1 — real school-defined Elective/Options Blocks (a set of subjects
+  // students genuinely choose BETWEEN, sharing identical timetable slots).
+  // Loaded through its own dedicated service function (not inlined into the
+  // Promise.all above) since it needs its own nested include shape — see
+  // elective-block.service.ts's getElectiveBlocksForSolver().
+  const electiveBlocks = await getElectiveBlocksForSolver(tenantId);
 
   if (data.classes.length === 0) throw new TimetableEngineError("NOT_FOUND", "No active classes found.");
 
@@ -485,6 +492,128 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     }
   }
 
+  // AA.1 — real Elective/Options Block placement. A block's slot(s) are
+  // placed as ONE atomic real reservation BEFORE normal cards are built,
+  // exactly like lunch above: every subject running in parallel during a
+  // slot shares the SAME real day+period across every one of its own real
+  // member classes, and every real teacher/venue attached to a slot's
+  // subjects is genuinely booked at that exact time — a shared History
+  // teacher covering 2 real block slots in the same week is checked
+  // against their OWN busy-ness exactly like any other card. This
+  // correctly matches the founder's own worked example: History appearing
+  // in only ONE of a block's slots (not every slot) places its own real
+  // teacher/room booking only for that one real slot, while the block's
+  // OTHER slot (e.g. Geography) genuinely reserves a DIFFERENT real
+  // teacher's time. Because the reservation happens before ordinary
+  // ClassSubjectNeed cards are built, a normal lesson card can never be
+  // placed on top of an Options Block period for any of the block's own
+  // member classes — and a block's own subjects' teachers/venues are
+  // reserved here too, so ordinary cards for those same teachers/venues
+  // correctly skip this exact slot as well.
+  const electiveBlockWarnings: { classLabel: string; subjectCode: string; message: string }[] = [];
+  const electiveBlockSlotRows: any[] = [];
+  for (const block of electiveBlocks) {
+    for (const slot of block.slots) {
+      // Real candidate day/period search: the SAME real day+period must be
+      // free for every member class of the block, AND for every teacher/
+      // venue this slot's subjects need, AND (for a double slot) both
+      // periods must be consecutive and free. Movement-preference scoring
+      // (Part 8 of the design doc) gives a soft bonus to a period landing
+      // right after one of this class's own configured real breaks —
+      // never a hard requirement, so a school with tight capacity never
+      // ends up with a genuinely unplaced Options Block over a soft
+      // cosmetic preference.
+      const size = slot.isDouble ? 2 : 1;
+      const candidates: { day: number; periods: number[]; score: number }[] = [];
+      for (const day of daysForCard(block.classIds)) {
+        const maxP = maxPeriodsForCard(block.classIds, day);
+        const periodWindows: number[][] = size === 1
+          ? Array.from({ length: maxP }, (_, i) => [i + 1])
+          : Array.from({ length: Math.max(0, maxP - 1) }, (_, i) => [i + 1, i + 2]);
+        for (const periods of periodWindows) {
+          // Every member class must be genuinely free at every one of
+          // these periods (a normal lesson, lunch, or another block).
+          const classesFree = block.classIds.every((cid) =>
+            periods.every((p) => !classGrid.has(`${cid}:${day}:${p}`))
+          );
+          if (!classesFree) continue;
+          // Every real teacher this slot's subjects need must be free too
+          // (a teacher covering 2 slots of the same block, or teaching a
+          // completely different class elsewhere, is correctly blocked).
+          const teachersFree = slot.subjects.every((s) =>
+            !s.teacherId || periods.every((p) => !teacherGrid.has(`${s.teacherId}:${day}:${p}`))
+          );
+          if (!teachersFree) continue;
+          // Real venue availability, reusing the exact same capacity-aware
+          // check every other card in this engine already uses.
+          const venuesFree = slot.subjects.every((s) => {
+            if (!s.venueId) return true;
+            const cap = venueById.get(s.venueId)?.capacityPerPeriod ?? 1;
+            return periods.every((p) => (venueGrid.get(`${s.venueId}:${day}:${p}`) ?? 0) < cap);
+          });
+          if (!venuesFree) continue;
+
+          let score = day * 2 + periods[0];
+          if (block.preferAfterBreak) {
+            const cfg = configByClass.get(block.classIds[0]);
+            const breakEnds = [cfg?.shortBreakStart, cfg?.shortBreak2Start, cfg?.longBreakStart].filter(Boolean) as number[];
+            const isRightAfterBreak = breakEnds.some((b) => periods[0] === b + 1);
+            if (!isRightAfterBreak) score += 25; // soft penalty, never a hard block
+          }
+          candidates.push({ day, periods, score });
+        }
+      }
+      candidates.sort((a, b) => a.score - b.score);
+      const chosen = candidates[0];
+      if (!chosen) {
+        electiveBlockWarnings.push({
+          classLabel: block.name,
+          subjectCode: "ELECTIVE_BLOCK",
+          message: `Could not find a free slot for Options Block "${block.name}" (${slot.label}) across all its member classes/teachers this week.`,
+        });
+        continue;
+      }
+      // Reserve: every member class's classGrid entry marks this real
+      // period as genuinely occupied (a synthetic marker, since no SINGLE
+      // subject owns the whole class's period here) so ordinary cards
+      // correctly skip it; every subject's own teacher/venue is booked too.
+      for (const cid of block.classIds) {
+        for (const p of chosen.periods) classGrid.set(`${cid}:${chosen.day}:${p}`, `ELECTIVE_BLOCK:${slot.id}`);
+      }
+      for (const s of slot.subjects) {
+        if (s.teacherId) for (const p of chosen.periods) teacherGrid.set(`${s.teacherId}:${chosen.day}:${p}`, s.classIds.join(","));
+        if (s.venueId) {
+          for (const p of chosen.periods) {
+            venueGrid.set(`${s.venueId}:${chosen.day}:${p}`, (venueGrid.get(`${s.venueId}:${chosen.day}:${p}`) ?? 0) + 1);
+          }
+        }
+      }
+      // Real, IMPORTANT modeling decision: `TimetableSlot` is uniquely keyed
+      // per (classId, dayOfWeek, period, slotType) — it cannot hold more
+      // than one row per class per real period even under the SAME
+      // slotType, because a real class's own printed timetable only ever
+      // has ONE cell per period. Since different real students within the
+      // SAME class attend DIFFERENT parallel subjects during an Options
+      // Block slot, this is correctly modeled as exactly ONE real row per
+      // member class per period (subjectId/teacherId left null on the row
+      // itself), tagged with `electiveBlockSlotId` — the real parallel
+      // subject/teacher/venue breakdown for that one cell is resolved by
+      // the print/live renderer joining back to `ElectiveBlockSlotSubject`,
+      // which is exactly how the founder's own "HG/TY/EF/TS/GW" printed
+      // teacher-code list for one shared Options cell should render.
+      for (const cid of block.classIds) {
+        for (const p of chosen.periods) {
+          electiveBlockSlotRows.push({
+            tenantId, classId: cid, subjectId: null, teacherId: null,
+            dayOfWeek: chosen.day, period: p, slotType: "ELECTIVE_BLOCK",
+            electiveBlockSlotId: slot.id,
+            venue: null,
+          });
+        }
+      }
+    }
+  }
+
   await setProgress(tenantId, jobId, 35, "Building lesson cards (singles, doubles, combinations)");
   const presetWarnings: string[] = [];
   if (preset.isSeniorSchool) presetWarnings.push("Senior School preset bias applied: richer combination and subject-structure planning is preferred.");
@@ -560,7 +689,7 @@ async function buildAndSolve(tenantId: string, jobId: string) {
 
   await setProgress(tenantId, jobId, 50, "Placing lessons with constraints");
 
-  const warnings: { classLabel: string; subjectCode: string; message: string }[] = presetWarnings.map((message) => ({ classLabel: "SYSTEM", subjectCode: "PRESET", message }));
+  const warnings: { classLabel: string; subjectCode: string; message: string }[] = presetWarnings.map((message) => ({ classLabel: "SYSTEM", subjectCode: "PRESET", message })).concat(electiveBlockWarnings);
   const unplaced: { classLabel: string; subjectCode: string; reason: string }[] = [];
 
   // Helpers used by the placement check.
@@ -1014,6 +1143,11 @@ async function buildAndSolve(tenantId: string, jobId: string) {
 
   for (const [key, subjectId] of classGrid.entries()) {
     if (subjectId === lunchSubject.id) continue;
+    // AA.1 — skip the synthetic `ELECTIVE_BLOCK:<slotId>` classGrid marker
+    // used only to keep ordinary cards from double-booking this period;
+    // the REAL persisted row for this period comes from
+    // `electiveBlockSlotRows` below, not this normal single-subject path.
+    if (subjectId.startsWith("ELECTIVE_BLOCK:")) continue;
     const [classId, dayStr, periodStr] = key.split(":");
     const teacherId = teacherForClassSubject.get(`${classId}::${subjectId}`) ?? null;
     const classExists = data.classes.some((c) => c.id === classId);
@@ -1045,14 +1179,21 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     // fixed during the P.5 audit that silently destroyed those rows on every
     // Master Button run.
     await tdb.timetableSlot.deleteMany({ where: { slotType: "ACADEMIC" } });
+    // AA.1 — the Master Button also fully owns/regenerates its own real
+    // ELECTIVE_BLOCK rows every run, same scoping discipline as ACADEMIC.
+    await tdb.timetableSlot.deleteMany({ where: { slotType: "ELECTIVE_BLOCK" } });
     const validTeacherIds = new Set((await tdb.user.findMany({ where: { isActive: true }, select: { id: true } })).map((u) => u.id));
     const validClassIds = new Set(data.classes.map((c) => c.id));
     const validSubjectIds = new Set(data.subjects.map((s) => s.id).concat([lunchSubject.id]));
     const safeRows = slotRows.filter((row) => validClassIds.has(row.classId) && validSubjectIds.has(row.subjectId) && (!row.teacherId || validTeacherIds.has(row.teacherId)));
     if (safeRows.length > 0) await tdb.timetableSlot.createMany({ data: safeRows });
+    // AA.1 — real Elective Block rows validated the same way (real class
+    // ids only; subjectId/teacherId are intentionally null on these rows).
+    const safeBlockRows = electiveBlockSlotRows.filter((row) => validClassIds.has(row.classId));
+    if (safeBlockRows.length > 0) await tdb.timetableSlot.createMany({ data: safeBlockRows });
   });
 
-  return { slotsPlaced: slotRows.length, unplaced, warnings, fullySolved };
+  return { slotsPlaced: slotRows.length + electiveBlockSlotRows.length, unplaced, warnings, fullySolved };
 }
 
 // ---------------------------------------------------------------------------
