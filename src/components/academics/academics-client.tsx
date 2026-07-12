@@ -17,7 +17,7 @@ import {
   BookOpen, Building2, CalendarRange, Grid3X3, NotebookPen, Plus,
   AlertCircle, Loader2, X, Sparkles, Trash2, Check, Calendar, Printer, Palette, Sliders, Info, HelpCircle, Save, Trophy,
   Calculator, FileText, Clock3, Wand2, RefreshCw, Link2, Ban, Users, TimerReset, ShieldCheck, RotateCcw, ClipboardList,
-  GraduationCap, MapPin, Tag, Shuffle
+  GraduationCap, MapPin, Tag, Shuffle, Eye
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import { TableContainer, Table, THead, TBody, TR, TH, TD } from "@/components/ui
 import { useToast } from "@/components/ui/toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { cn, curriculumLabel } from "@/lib/utils";
+import { BundiIntelligentWizard } from "@/components/bundi/bundi-intelligent-wizard";
 
 interface Subject { id: string; name: string; code: string; curriculum: string; departmentId: string | null; departmentName: string | null; archived: boolean }
 interface Dept { id: string; name: string; hodId: string | null; hodName: string | null; subjectCount: number }
@@ -2005,6 +2006,8 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const [electiveBlocks, setElectiveBlocks] = React.useState<any[]>([]);
   const [blockForm, setBlockForm] = React.useState<any>(emptyBlockForm);
   const [blockSaving, setBlockSaving] = React.useState(false);
+  // AA.2 — real Teacher Allocation Import (onboarding scenario).
+  const [allocationImportOpen, setAllocationImportOpen] = React.useState(false);
   const [draftMeta, setDraftMeta] = React.useState<{ savedAt?: string; dirty: boolean; restored: boolean }>({ dirty: false, restored: false });
   const pollRef = React.useRef<any>(null);
   const hydratingDraftRef = React.useRef(false);
@@ -2808,6 +2811,22 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
 
       <Card>
         <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base"><ClipboardList className="h-5 w-5 text-teal-600" /> Import Existing Teacher Allocations</CardTitle>
+              <p className="mt-1 text-xs text-navy-400">Already switching from paper or another system? Upload your existing "Teacher — Subject — Class" list (CSV/Excel, paste from a spreadsheet, or a photo of a handwritten register via Bundi) and NEYO matches it against your real teachers/subjects/classes — showing exactly what will be created or updated before anything happens.</p>
+            </div>
+            <Button variant="secondary" onClick={() => setAllocationImportOpen(true)} disabled={!canManage}><ClipboardList className="h-4 w-4 text-teal-600" /> Import allocations</Button>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {allocationImportOpen && (
+        <TeacherAllocationImportModal onClose={() => setAllocationImportOpen(false)} onDone={load} />
+      )}
+
+      <Card>
+        <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><Shuffle className="h-5 w-5 text-purple-600" /> Elective / Options Blocks</CardTitle>
           <p className="text-xs text-navy-400">
             For subjects students genuinely choose BETWEEN (e.g. History OR CRE — every student is doing something at this time, but which room/teacher depends on their own choice). NEYO schedules every subject in a block at the SAME real time so movement between rooms works cleanly, and no two block subjects clash with each other's teachers/venues. Use &quot;Single-Choice&quot; mode when every slot offers the exact same subjects (e.g. Technical &amp; Applied: choose ONE of Business/Computer/Art/Agriculture/French) — use &quot;Multi-Slot&quot; when different slots can offer different subject pairings (e.g. History appears opposite CRE in one slot, and opposite Geography in another).
@@ -2922,6 +2941,237 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// AA.2 — real Teacher Allocation Import modal (onboarding scenario: a
+// school switching to NEYO already has their existing teacher-subject-
+// class allocation on paper/Excel). Real preview-before-commit flow: the
+// school sees exactly which rows match an existing real teacher/subject/
+// class vs. which would create something new, before anything is written.
+const TEACHER_ALLOCATION_BUNDI_FIELD_OPTIONS: Record<string, string> = {
+  teacherName: "Teacher name", subjectName: "Subject", className: "Class/Stream",
+  lessonsPerWeek: "Lessons per week", doubleCount: "Double lessons", ignore: "— Skip —",
+};
+
+function TeacherAllocationImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { toast } = useToast();
+  const [mode, setMode] = React.useState<"standard" | "bundi">("standard");
+  const [text, setText] = React.useState("");
+  const [file, setFile] = React.useState<File | null>(null);
+  const [hasHeader, setHasHeader] = React.useState(true);
+  const [busy, setBusy] = React.useState(false);
+  const [preview, setPreview] = React.useState<any[] | null>(null);
+  const [createMissingTeachers, setCreateMissingTeachers] = React.useState(false);
+  const [result, setResult] = React.useState<{ createdNeeds: number; matchedNeeds: number; createdTeachers: number; failedRows: number; errors: { row: number; message: string }[] } | null>(null);
+
+  async function runPreview() {
+    if (!text.trim() && !file) return;
+    setBusy(true);
+    setPreview(null);
+    try {
+      let res: Response;
+      if (file) {
+        const form = new FormData();
+        form.append("file", file);
+        form.append("hasHeader", String(hasHeader));
+        form.append("action", "preview");
+        res = await fetch("/api/academics/teacher-allocation-import", { method: "POST", body: form });
+      } else {
+        res = await fetch("/api/academics/teacher-allocation-import", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "preview", text, hasHeader }),
+        });
+      }
+      const json = await res.json();
+      if (!json.ok) { toast({ title: json.error?.message || "Could not read this file.", tone: "error" }); return; }
+      setPreview(json.data.preview);
+    } catch {
+      toast({ title: "Failed to parse the import data.", tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runCommit() {
+    setBusy(true);
+    try {
+      let res: Response;
+      if (file) {
+        const form = new FormData();
+        form.append("file", file);
+        form.append("hasHeader", String(hasHeader));
+        form.append("createMissingTeachers", String(createMissingTeachers));
+        res = await fetch("/api/academics/teacher-allocation-import", { method: "POST", body: form });
+      } else {
+        res = await fetch("/api/academics/teacher-allocation-import", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, hasHeader, createMissingTeachers, fileName: file ? (file as File).name : "pasted.csv", source: "paste" }),
+        });
+      }
+      const json = await res.json();
+      if (!json.ok) { toast({ title: json.error?.message || "Import failed.", tone: "error" }); return; }
+      setResult(json.data);
+      toast({ title: `Import complete: ${json.data.createdNeeds} created, ${json.data.matchedNeeds} updated`, tone: json.data.createdNeeds + json.data.matchedNeeds > 0 ? "success" : "error" });
+      if (json.data.createdNeeds + json.data.matchedNeeds > 0) onDone();
+    } catch {
+      toast({ title: "Failed to submit the import.", tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const sample = "Teacher Name,Subject,Class,Lessons Per Week,Doubles\nWanjiru Consolata,Mathematics,Form 2 East,5,1\nOtieno Brian,English,Form 1 West,5,0";
+  const hasNewTeachers = (preview ?? []).some((p) => p.teacherMatch === "NEW");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/40 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-navy-100 bg-white p-6 shadow-pop dark:border-navy-800 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between">
+          <div className="space-y-0.5">
+            <h3 className="text-base font-bold text-navy-900 dark:text-navy-50">Import Existing Teacher Allocations</h3>
+            <p className="text-xs text-navy-400">Upload CSV/XLSX, paste from Excel, or scan a handwritten register with Bundi.</p>
+          </div>
+          <button onClick={onClose} className="rounded-full p-1.5 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {!result && (
+          <div className="mb-4 flex gap-1.5 rounded-full bg-navy-50 p-1 text-xs font-semibold dark:bg-navy-800">
+            <button onClick={() => setMode("standard")} className={`flex-1 rounded-full px-3 py-1.5 transition-colors ${mode === "standard" ? "bg-white text-navy-900 shadow-sm dark:bg-navy-900 dark:text-navy-50" : "text-navy-500 dark:text-navy-400"}`}>
+              CSV / Excel / Paste
+            </button>
+            <button onClick={() => setMode("bundi")} className={`flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-1.5 transition-colors ${mode === "bundi" ? "bg-white text-navy-900 shadow-sm dark:bg-navy-900 dark:text-navy-50" : "text-navy-500 dark:text-navy-400"}`}>
+              <Sparkles className="h-3.5 w-3.5" /> Bundi Intelligent (scan)
+            </button>
+          </div>
+        )}
+
+        {mode === "bundi" && !result ? (
+          <BundiIntelligentWizard
+            domain="TEACHER_ALLOCATION"
+            fieldOptions={TEACHER_ALLOCATION_BUNDI_FIELD_OPTIONS}
+            onClose={onDone}
+            onDone={(r: any) => { toast({ title: `${r.createdNeeds ?? 0} allocation(s) created, ${r.matchedNeeds ?? 0} updated via Bundi Intelligent`, tone: "success" }); onDone(); }}
+          />
+        ) : (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-dashed border-teal-200 bg-teal-50/60 p-4 text-xs dark:border-teal-900/40 dark:bg-teal-950/15">
+            <p className="font-bold text-navy-800 dark:text-navy-100">Accepted columns</p>
+            <p className="mt-1 font-mono text-navy-600 dark:text-navy-300">Teacher Name · Subject · Class/Stream · Lessons Per Week · Doubles</p>
+            <p className="mt-2 text-navy-500 dark:text-navy-400">Headers are auto-mapped. Class names must match this school's real class names exactly (e.g. "Form 2 East"). Nothing is created until you preview and confirm.</p>
+          </div>
+
+          {!result && !preview && (
+            <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="allocation-import-file">Upload allocation file</Label>
+                  <input
+                    id="allocation-import-file"
+                    type="file"
+                    accept=".csv,.tsv,.txt,.xlsx"
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                    className="mt-1.5 w-full rounded-2xl border border-navy-200 bg-white px-3.5 py-2.5 text-sm dark:border-navy-700 dark:bg-navy-900"
+                    disabled={busy}
+                  />
+                  {file && <p className="mt-1 text-[11px] text-green-700 dark:text-green-300">Selected: {file.name}</p>}
+                </div>
+                <label className="flex items-center gap-2 rounded-2xl border border-navy-100 bg-white/60 px-3 py-2 text-xs text-navy-600 dark:border-navy-800 dark:bg-navy-950/40 dark:text-navy-300">
+                  <input type="checkbox" checked={hasHeader} onChange={(e) => setHasHeader(e.target.checked)} className="h-4 w-4 rounded border-navy-300 text-teal-600" />
+                  First row contains column headers
+                </label>
+                <Button variant="secondary" onClick={() => { setText(sample); setFile(null); }} disabled={busy} className="w-full">
+                  <FileText className="h-4 w-4" /> Use sample CSV
+                </Button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="allocation-paste-data">Or paste spreadsheet cells</Label>
+                  <textarea
+                    id="allocation-paste-data"
+                    rows={8}
+                    value={text}
+                    onChange={(e) => { setText(e.target.value); if (e.target.value.trim()) setFile(null); }}
+                    placeholder={sample}
+                    className="mt-1.5 w-full rounded-2xl border border-navy-200 bg-white px-3.5 py-2.5 text-xs font-mono transition-colors duration-200 ease-apple focus:border-navy-300 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-navy-700 dark:bg-navy-900 text-navy-900 dark:text-navy-50"
+                    disabled={busy}
+                  />
+                </div>
+                <Button onClick={runPreview} disabled={busy || (!text.trim() && !file)} className="w-full">
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                  Preview import
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {preview && !result && (
+            <div className="space-y-3">
+              <div className="max-h-64 overflow-y-auto rounded-2xl border border-navy-100 dark:border-navy-800">
+                <table className="w-full text-left text-xs">
+                  <thead className="sticky top-0 bg-navy-50 dark:bg-navy-800">
+                    <tr>
+                      <th className="p-2">Row</th><th className="p-2">Teacher</th><th className="p-2">Subject</th><th className="p-2">Class</th><th className="p-2">Outcome</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.map((p) => (
+                      <tr key={p.row} className="border-t border-navy-50 dark:border-navy-800">
+                        <td className="p-2">{p.row}</td>
+                        <td className="p-2">{p.teacherName} {p.teacherMatch === "NEW" && <Badge tone="amber">New</Badge>} {p.teacherMatch === "AMBIGUOUS" && <Badge tone="red">Ambiguous</Badge>}</td>
+                        <td className="p-2">{p.subjectName} {p.subjectMatch === "NOT_FOUND" && <Badge tone="red">Not found</Badge>}</td>
+                        <td className="p-2">{p.className} {p.classMatch === "NOT_FOUND" && <Badge tone="red">Not found</Badge>}</td>
+                        <td className="p-2">
+                          {p.error ? <span className="text-red-600 dark:text-red-400">{p.error}</span> : p.needMatch === "WILL_CREATE" ? <Badge tone="green">Will create</Badge> : <Badge tone="blue">Will update</Badge>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {hasNewTeachers && (
+                <label className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+                  <input type="checkbox" checked={createMissingTeachers} onChange={(e) => setCreateMissingTeachers(e.target.checked)} className="h-4 w-4 rounded border-amber-300 text-amber-600" />
+                  Create the new teacher(s) marked "New" above — otherwise those rows will be skipped
+                </label>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={runCommit} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Confirm import</Button>
+                <Button variant="secondary" onClick={() => setPreview(null)} disabled={busy}>Back</Button>
+              </div>
+            </div>
+          )}
+
+          {result && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="rounded-2xl bg-green-500/10 border border-green-500/20 p-3 text-green-700 dark:text-green-300 font-semibold">
+                  <span className="block text-lg font-bold">{result.createdNeeds}</span>Created
+                </div>
+                <div className="rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 text-blue-700 dark:text-blue-300 font-semibold">
+                  <span className="block text-lg font-bold">{result.matchedNeeds}</span>Updated
+                </div>
+                <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-3 text-amber-700 dark:text-amber-300 font-semibold">
+                  <span className="block text-lg font-bold">{result.failedRows}</span>Skipped / Errors
+                </div>
+              </div>
+              {result.errors.length > 0 && (
+                <div className="max-h-40 overflow-y-auto rounded-2xl border border-red-100 bg-red-50/50 p-3 dark:border-red-900/30 dark:bg-red-950/20 space-y-1.5">
+                  <p className="text-xs font-bold text-red-700 dark:text-red-300">Detailed import logs:</p>
+                  {result.errors.map((e, idx) => (
+                    <p key={idx} className="text-[11px] text-red-600 dark:text-red-400">Row {e.row}: {e.message}</p>
+                  ))}
+                </div>
+              )}
+              <Button onClick={onClose} className="w-full"><Check className="h-4 w-4" /> Done</Button>
+            </div>
+          )}
+        </div>
+        )}
+      </div>
     </div>
   );
 }

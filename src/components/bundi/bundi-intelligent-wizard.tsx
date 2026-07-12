@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 
-export type BundiWizardDomain = "STUDENT" | "STAFF" | "LIBRARY";
+export type BundiWizardDomain = "STUDENT" | "STAFF" | "LIBRARY" | "TEACHER_ALLOCATION";
 
 interface FieldRow { label: string; description: string; mapsTo: string }
 interface BundiCell { value: string; ocrConfidencePct?: number; source: "OCR" | "RULE_FIXED" | "TEMPLATE_KNOWN" | "AI_CORRECTED" | "MANUAL" }
