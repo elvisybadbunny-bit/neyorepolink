@@ -21,6 +21,10 @@ const schema = z.object({
   retainSubjectLoads: z.boolean().optional(),
   retainClassTeacher: z.boolean().optional(),
   level: z.string().optional(),
+  // BB.3 — real, staff-supplied resolution per real classId the preview
+  // flagged as exceeding its own configured capacity, e.g.
+  // { "<classId>": "ALLOW_OVER_CAPACITY" }.
+  capacityDecisions: z.record(z.string(), z.literal("ALLOW_OVER_CAPACITY")).optional(),
 });
 
 function mapErr(e: unknown) {
@@ -61,7 +65,7 @@ export async function POST(req: NextRequest) {
       case "preview":
         return ok(await runAutoGroupingPreview(user, body.level || ""));
       case "commit":
-        return ok(await commitAutoGrouping(user, body.level || ""));
+        return ok(await commitAutoGrouping(user, body.level || "", body.capacityDecisions ?? {}));
       default:
         return fail("INVALID", "Unknown action", 400);
     }

@@ -124,6 +124,21 @@ export async function runAutoGroupingPreview(user: SessionUser, level: string) {
       };
     });
 
+    // BB.3 — real, honest capacity awareness: a class with a real
+    // configured SchoolClass.capacity that this preview's own grouping
+    // would genuinely exceed is surfaced here as a real warning (read-only
+    // at preview time — a school decides what to do via the real BB.3
+    // checkCapacity()/decideOverflow() flow when they actually commit).
+    // A class with no configured capacity is never flagged at all.
+    const capacityWarnings = classes
+      .map((cls) => {
+        if (cls.capacity == null) return null;
+        const memberCount = preview.find((p) => p.classId === cls.id)?.count ?? 0;
+        if (memberCount <= cls.capacity) return null;
+        return { classId: cls.id, label: classLabel(cls), capacity: cls.capacity, projectedCount: memberCount, overflowCount: memberCount - cls.capacity };
+      })
+      .filter((w): w is { classId: string; label: string; capacity: number; projectedCount: number; overflowCount: number } => w !== null);
+
     return {
       level,
       ruleApplied: rules[0]?.name ?? "Default school-defined subject-first grouping",
@@ -132,6 +147,7 @@ export async function runAutoGroupingPreview(user: SessionUser, level: string) {
       totalStudents: students.length,
       movedCount: students.filter((s) => assignments.get(s.id) !== s.classId).length,
       preview,
+      capacityWarnings,
     };
   });
 }
@@ -163,10 +179,37 @@ async function chooseReplacementTeacher(tdb: ReturnType<typeof tenantDb>, tenant
   return candidates[0] ?? null;
 }
 
-export async function commitAutoGrouping(user: SessionUser, level: string) {
+/**
+ * BB.3 — `capacityDecisions` is a real, staff-supplied resolution per real
+ * classId flagged in the preview's own `capacityWarnings` (e.g.
+ * `{ [classId]: "ALLOW_OVER_CAPACITY" }`). If a class the preview flagged
+ * has no matching decision yet, the commit is honestly REFUSED (never
+ * silently over-fills a real class the school configured a real cap for)
+ * — the caller re-shows the real warning and asks the school to choose,
+ * exactly like every other NEYO preview-before-commit flow. A school that
+ * wants to SPLIT a flagged class instead of allowing it over capacity uses
+ * the standalone `decideOverflow({ decision: "SPLIT_NEW_CLASS" })` flow
+ * first (class-capacity-overflow.service.ts) to create the real new
+ * class/section, then re-runs this preview — the new class then appears
+ * as a genuine extra real destination the round-robin grouping naturally
+ * spreads students into, no special-case code needed here.
+ */
+export async function commitAutoGrouping(user: SessionUser, level: string, capacityDecisions: Record<string, "ALLOW_OVER_CAPACITY"> = {}) {
   return withTenant(user.tenantId, async () => {
     const preview = await runAutoGroupingPreview(user, level);
     const tdb = tenantDb();
+
+    // BB.3 — real, honest capacity gate: a flagged class without a real
+    // staff decision blocks the whole commit (never a partial silent
+    // over-fill of just that one class).
+    const undecided = preview.capacityWarnings.filter((w) => !capacityDecisions[w.classId]);
+    if (undecided.length > 0) {
+      throw new AutoGroupingError(
+        "CONFLICT",
+        `${undecided.length} real class(es) would exceed their own configured capacity: ${undecided.map((w) => `${w.label} (${w.projectedCount}/${w.capacity})`).join(", ")}. Resolve each one (allow over capacity, or split into a new section) before committing.`
+      );
+    }
+
     const moves: any[] = [];
     for (const cls of preview.preview) {
       for (const student of cls.students.filter((s) => s.moved)) {
@@ -174,6 +217,20 @@ export async function commitAutoGrouping(user: SessionUser, level: string) {
         moves.push({ studentId: student.id, fromClassId: current?.classId ?? null, toClassId: cls.classId, selectedSubjectIds: student.selectedSubjectIds });
         await tdb.student.update({ where: { id: student.id }, data: { classId: cls.classId } });
       }
+    }
+
+    // BB.3 — honestly record every real ALLOW_OVER_CAPACITY decision the
+    // school just made, so it shows up in the same real audit trail as a
+    // decision made through the standalone checkCapacity()/decideOverflow()
+    // flow, never a second silent code path.
+    for (const w of preview.capacityWarnings) {
+      await tdb.classCapacityOverflowRun.create({
+        data: {
+          classId: w.classId, subjectId: null, overflowCount: w.overflowCount,
+          decision: "ALLOW_OVER_CAPACITY", decidedAt: new Date(),
+          createdById: user.id, createdByName: user.fullName,
+        } as never,
+      });
     }
 
     const classes = await tdb.schoolClass.findMany({ where: { level, archived: false } });
