@@ -1970,6 +1970,11 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const [venues, setVenues] = React.useState<any[]>([]);
   const [venueForm, setVenueForm] = React.useState<any>({ id: "", name: "", shortCode: "", capacityPerPeriod: 1, supportsSubjectIds: [] as string[] });
   const [venueSaving, setVenueSaving] = React.useState(false);
+  // AA.1 — real Elective/Options Block state.
+  const emptyBlockForm = { id: "", name: "", mode: "MULTI_SLOT" as "MULTI_SLOT" | "SINGLE_CHOICE", preferAfterBreak: false, classIds: [] as string[], slots: [{ label: "Slot A", isDouble: false, subjects: [{ subjectId: "", teacherId: "", venueId: "" }, { subjectId: "", teacherId: "", venueId: "" }] }] };
+  const [electiveBlocks, setElectiveBlocks] = React.useState<any[]>([]);
+  const [blockForm, setBlockForm] = React.useState<any>(emptyBlockForm);
+  const [blockSaving, setBlockSaving] = React.useState(false);
   const [draftMeta, setDraftMeta] = React.useState<{ savedAt?: string; dirty: boolean; restored: boolean }>({ dirty: false, restored: false });
   const pollRef = React.useRef<any>(null);
   const hydratingDraftRef = React.useRef(false);
@@ -1977,15 +1982,16 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const [engineRes, generatorRes, jobRes, teacherRes, venueRes] = await Promise.all([
+      const [engineRes, generatorRes, jobRes, teacherRes, venueRes, blockRes] = await Promise.all([
         fetch("/api/academics/timetable/engine"),
         fetch("/api/academics/timetable/generator"),
         fetch("/api/academics/timetable/generate-job"),
         fetch("/api/conversations/recipients"),
         fetch("/api/academics/timetable/venues"),
+        fetch("/api/academics/timetable/elective-blocks"),
       ]);
-      const [engineJson, generatorJson, jobJson, teacherJson, venueJson] = await Promise.all([
-        engineRes.json(), generatorRes.json(), jobRes.json(), teacherRes.json(), venueRes.json(),
+      const [engineJson, generatorJson, jobJson, teacherJson, venueJson, blockJson] = await Promise.all([
+        engineRes.json(), generatorRes.json(), jobRes.json(), teacherRes.json(), venueRes.json(), blockRes.json(),
       ]);
       if (!engineJson.ok || !generatorJson.ok) throw new Error("Failed to load timetable engine data.");
       setPayload(engineJson.data);
@@ -1995,6 +2001,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       setClassNeeds(generatorJson.data.needsByClassId ?? {});
       setTeachers((teacherJson.ok ? teacherJson.data.recipients : []).filter((u: any) => ["TEACHER", "CLASS_TEACHER", "HOD", "DEPUTY_PRINCIPAL", "PRINCIPAL", "SCHOOL_OWNER", "DEAN_OF_STUDIES"].includes(u.role)));
       setVenues(venueJson.ok ? venueJson.data.venues ?? [] : []);
+      setElectiveBlocks(blockJson.ok ? blockJson.data.blocks ?? [] : []);
     } catch {
       toast({ title: "Could not load smart timetable settings.", tone: "error" });
     } finally {
@@ -2238,6 +2245,98 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
     } finally {
       setVenueSaving(false);
     }
+  }
+
+  // AA.1 — real Elective/Options Block save/delete.
+  function addBlockSlot() {
+    setBlockForm((p: any) => ({ ...p, slots: [...p.slots, { label: `Slot ${String.fromCharCode(65 + p.slots.length)}`, isDouble: false, subjects: [{ subjectId: "", teacherId: "", venueId: "" }, { subjectId: "", teacherId: "", venueId: "" }] }] }));
+  }
+  function removeBlockSlot(index: number) {
+    setBlockForm((p: any) => ({ ...p, slots: p.slots.length > 1 ? p.slots.filter((_: any, i: number) => i !== index) : p.slots }));
+  }
+  function addSlotSubject(slotIndex: number) {
+    setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, subjects: [...s.subjects, { subjectId: "", teacherId: "", venueId: "" }] } : s) }));
+  }
+  function removeSlotSubject(slotIndex: number, subjectIndex: number) {
+    setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, subjects: s.subjects.length > 2 ? s.subjects.filter((_: any, j: number) => j !== subjectIndex) : s.subjects } : s) }));
+  }
+  async function saveElectiveBlockForm() {
+    if (!blockForm.name.trim()) {
+      toast({ title: "Name this Options Block, e.g. \"Humanities Pair\".", tone: "error" });
+      return;
+    }
+    if (blockForm.classIds.length === 0) {
+      toast({ title: "Select at least one real class for this block.", tone: "error" });
+      return;
+    }
+    for (const slot of blockForm.slots) {
+      const validSubjects = slot.subjects.filter((s: any) => s.subjectId);
+      if (validSubjects.length < 2) {
+        toast({ title: `Slot "${slot.label}" needs at least 2 real subjects for students to genuinely choose between.`, tone: "error" });
+        return;
+      }
+    }
+    setBlockSaving(true);
+    try {
+      const res = await fetch("/api/academics/timetable/elective-blocks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_block",
+          id: blockForm.id || undefined,
+          name: blockForm.name,
+          mode: blockForm.mode,
+          preferAfterBreak: blockForm.preferAfterBreak,
+          classIds: blockForm.classIds,
+          slots: blockForm.slots.map((s: any) => ({
+            label: s.label,
+            isDouble: s.isDouble,
+            subjects: s.subjects.filter((sub: any) => sub.subjectId).map((sub: any) => ({
+              subjectId: sub.subjectId,
+              teacherId: sub.teacherId || undefined,
+              venueId: sub.venueId || undefined,
+            })),
+          })),
+        }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Failed");
+      setBlockForm(emptyBlockForm);
+      await load();
+      toast({ title: blockForm.id ? "Options Block updated" : "Options Block added", tone: "success" });
+    } catch (e: any) {
+      toast({ title: e?.message || "Could not save this Options Block.", tone: "error" });
+    } finally {
+      setBlockSaving(false);
+    }
+  }
+  async function deleteElectiveBlockRow(id: string) {
+    setBlockSaving(true);
+    try {
+      const res = await fetch("/api/academics/timetable/elective-blocks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete_block", id }) });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Failed");
+      await load();
+      toast({ title: "Options Block removed", tone: "success" });
+    } catch (e: any) {
+      toast({ title: e?.message || "Could not remove this Options Block.", tone: "error" });
+    } finally {
+      setBlockSaving(false);
+    }
+  }
+  function editElectiveBlock(block: any) {
+    setBlockForm({
+      id: block.id,
+      name: block.name,
+      mode: block.mode,
+      preferAfterBreak: block.preferAfterBreak,
+      classIds: block.classIds,
+      slots: block.slots.map((s: any) => ({
+        label: s.label,
+        isDouble: s.isDouble,
+        subjects: s.subjects.map((sub: any) => ({ subjectId: sub.subjectId, teacherId: sub.teacherId ?? "", venueId: sub.venueId ?? "" })),
+      })),
+    });
   }
 
   async function setTeacherShortCode(id: string, shortCode: string) {
