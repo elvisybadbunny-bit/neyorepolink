@@ -282,6 +282,7 @@ model Tenant {
   principalDelegationTasks     PrincipalDelegationTask[]
   promotionRuns                PromotionRun[]
   classYearHistories           ClassYearHistory[]
+  electiveBlockAutoBuildRuns   ElectiveBlockAutoBuildRun[]
   teacherAllocationReviewRuns  TeacherAllocationReviewRun[]
   admissionApplications        AdmissionApplication[]
   staffAttendance              StaffAttendance[]
@@ -5112,6 +5113,45 @@ model ElectiveBlockSlotSubject {
 
   @@unique([slotId, subjectId])
   @@index([tenantId])
+}
+
+// BB.2 — a real, auditable record of one "Build from student choices" run:
+// the founder's own real request to auto-derive an ElectiveBlock's subjects
+// + combined rosters + suggested teachers directly from real, confirmed
+// StudentSubjectSelection data for a level, rather than a school manually
+// re-typing what students already told NEYO they chose. Never a silent
+// background process — a school always sees a real preview (recorded here)
+// and explicitly confirms before any real ElectiveBlock is created, exactly
+// matching every other NEYO importer's preview-before-commit discipline.
+// Also covers the real Core/Essential Mathematics SPLIT scenario (a class
+// with a genuine mix of STEM/non-STEM students needs a real parallel
+// Core-vs-Essential block, not one variant picked for the whole class) —
+// `kind` distinguishes the two real scenarios since their real subject
+// detection rules differ (general electives vs. the fixed 2-variant split).
+model ElectiveBlockAutoBuildRun {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  level String // the real level this run analysed, e.g. "Grade 10"
+  kind  String @default("ELECTIVES") // "ELECTIVES" | "MATH_SPLIT"
+
+  // JSON snapshot of the real preview shown to the school: detected
+  // subjects, per-subject combined roster (student ids/names), suggested
+  // teacher (from the real fairness-ranked recommendation engine), and any
+  // real capacity/leftover-lesson notes — frozen at preview time so the
+  // school's own later decision is auditable even if source data changes.
+  previewJson String @default("{}")
+
+  status            String   @default("PREVIEWED") // "PREVIEWED" | "CONFIRMED" | "DISCARDED"
+  createdElectiveBlockId String? // the real ElectiveBlock this run produced, once confirmed
+  createdById       String
+  createdByName     String
+  createdAt         DateTime @default(now())
+  confirmedAt       DateTime?
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, level])
 }
 
 // L.7 — Configurable timetable constraints a school turns on/off (and tunes).
