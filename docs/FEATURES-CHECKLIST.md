@@ -4148,10 +4148,21 @@ Real design: the founder's own detailed CBE Senior School intake scenario — fr
 
 **Real regression test**: `scripts/bb4-class-allocation-test.ts` — 37/37 assertions (import-time subject-selection writing including the targetLevel fix, both class strategies, BB.3's capacity gate on CREATE_NEW's own new classes with the orphan-fix verified, real subject-need seeding + fair teacher auto-fill, double-confirm/race-guard refusals, cross-tenant isolation). Zero regression across the whole app (aa1/aa2/aa3/bb1/bb2/bb3/l7/p6/import-suite/test-roles all green). `tsc --noEmit` 0 errors throughout.
 
-## BB.5 through BB.7 — Remaining Part BB Work Items — **NOT YET STARTED**
+## BB.5 — Progressive Per-Combination Teacher Short-Code Display — **ANSWERED, ALREADY WORKING (2026-07-12), NO CODE CHANGE NEEDED**
 
-Full design document: `docs/CBE-ELECTIVES-VENUE-AUTOROSTER-DESIGN.md`. The remaining 3 work items from the CBE electives/venue/auto-roster design audit (BB.1 through BB.4 above are now complete):
-- [ ] **BB.5 — Progressive per-stream teacher/venue short-code pattern**: an open design question, not yet resolved — does this replace or supplement the existing persistent per-teacher initials-based short-code system (`resolveTeacherShortCode`)?
+Real design question resolved via `ask_user`: the founder clarified BB.5 is NOT about replacing the persistent per-teacher short-code system with a new stream-position code — it means that inside a real COMBINED lesson cell (e.g. a Core-vs-Essential Mathematics split, or any multi-subject Options Block), each parallel subject's own real teacher short-code should display progressively in the same order as the subjects, one code per subject, covering every real teacher in that combination (e.g. "MATC/MATE" on top, "MD/NE" underneath — Core Maths's own teacher code first, then Essential Maths's own teacher code next).
+
+**Investigated with real live data and confirmed this already exists and works correctly today** — no code change needed. `getTimetable()` (`academics.service.ts`) already resolves every real `ElectiveBlockSlotSubject`'s own real teacher short-code (via `resolveTeacherShortCode()`/`timetableShortCode`) in the exact same deterministic order as the subjects themselves (the same real `id`-based ordering fixed during BB.1's own bug fix), and `academics-client.tsx`'s cell renderer already displays them as `block.subjects.map((s) => s.teacherShortCode).filter(Boolean).join("/")` directly underneath the subject codes.
+
+**Verified with two real, independent live scenarios** (each via a real throwaway script against real live data, then cleaned up):
+1. Mombasa Coast Senior School's real Core/Essential Mathematics split block — Core Mathematics assigned to real teacher Mwakio Daniel, Essential Mathematics assigned to real teacher Nyaboke Esther — the real rendered timetable cell correctly showed `MATC/MATE` with `MD/NE` directly underneath, in the exact matching order.
+2. Kilimo Day Secondary's real 3-subject "Technical & Applied Options" block (Business Studies/Agriculture/Computer Studies) — the real rendered cell correctly showed `BST/AGR/COM` with `KA/OM/KT` underneath, confirming this already generalizes to ANY number of parallel subjects, not just a 2-way split.
+
+No new commit was needed for BB.5 itself — it is a real, already-shipped capability from AA.1's original design (combined-block teacher-code rendering) plus BB.1's own deterministic-ordering bug fix, simply not previously described using this exact "progressive" framing.
+
+## BB.6 through BB.7 — Remaining Part BB Work Items — **NOT YET STARTED**
+
+Full design document: `docs/CBE-ELECTIVES-VENUE-AUTOROSTER-DESIGN.md`. The remaining 2 work items from the CBE electives/venue/auto-roster design audit (BB.1 through BB.5 above are now complete/answered):
 - [ ] **BB.6 — Multi-subject-per-row teacher allocation import**: a small, additive extension to the already-real AA.2 import pipeline to accept multiple subjects in one row per teacher, rather than requiring one row per subject.
 - [ ] **BB.7 — Dedicated per-stream printable subject/venue/teacher roster**: an open question on whether AA.1's existing printed-timetable Options Block cell (which already shows the full subject/teacher/venue breakdown) already substantially answers this, or whether a genuinely separate deliverable is wanted.
 

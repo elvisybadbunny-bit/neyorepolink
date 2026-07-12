@@ -1,3 +1,21 @@
+## 2026-07-12 (later same day, part 11) — BB.5 Progressive Per-Combination Teacher Short-Code Display — ANSWERED, ALREADY WORKING, NO CODE CHANGE NEEDED
+
+**Founder's own words**: after Y.3 shipped, clarified BB.5's real meaning via a design question — not a new stream-position short-code system replacing the existing persistent per-teacher codes, but specifically: inside a real combined lesson cell (e.g. Core-vs-Essential Mathematics, or any Options Block), each parallel subject's own teacher's short-code should display progressively in the same order as the subjects, covering every teacher in that combination (e.g. Core Maths's teacher code first, then Essential Maths's teacher code next, and so on for however many subjects/teachers are combined).
+
+**Investigated with real live data before writing any code, per standing discipline** — confirmed this exact behaviour ALREADY EXISTS and works correctly today, inherited from AA.1's original combined-block cell design plus BB.1's own deterministic-ordering bug fix (fixed earlier this session): `getTimetable()` resolves every real `ElectiveBlockSlotSubject`'s own teacher short-code in the same deterministic subject order, and the UI renders them joined with "/" directly under the subject codes.
+
+**Verified with two real, independent live scenarios**, each via a real throwaway script against real live data then cleaned up:
+1. Mombasa Coast Senior School's real Core/Essential Mathematics split — assigned real teacher Mwakio Daniel to Core Mathematics and real teacher Nyaboke Esther to Essential Mathematics, manually placed a real TimetableSlot (mirroring what a real Master Button run would do), and confirmed the real rendered cell shows exactly "MATC/MATE" with "MD/NE" underneath, in the correct matching order.
+2. Kilimo Day Secondary's real 3-subject "Technical & Applied Options" block (Business Studies/Agriculture/Computer Studies, from BB.1's own seed) — confirmed the real rendered cell shows "BST/AGR/COM" with "KA/OM/KT" underneath, proving this already generalizes correctly to any number of parallel subjects, not just a 2-way split.
+
+**No code was changed for BB.5** — this was a real, valuable verification exercise (confirming existing behaviour actually matches the founder's real intent, not just assuming it does) rather than a build. Founder confirmed via `ask_user` to accept this as already-working and move straight to BB.6.
+
+Docs updated: `FEATURES-CHECKLIST.md`'s Part BB section now shows BB.5 as "ANSWERED, ALREADY WORKING (2026-07-12), NO CODE CHANGE NEEDED" with full detail on the investigation and both real verification scenarios, remaining backlog renumbered to "## BB.6 through BB.7 — Remaining Part BB Work Items — NOT YET STARTED" (2 items). Synced to all 4 standard doc-sync locations, `md5sum`-verified byte-identical.
+
+**Not Solved / Not Yet Started**: BB.6 (multi-subject-per-row teacher allocation import) and BB.7 (dedicated printable roster, open question) — resuming with BB.6 next per the founder's own explicit instruction. Also still open: AA.4 through AA.10 (the Part AA backlog).
+
+---
+
 ## 2026-07-12 (later same day, part 10) — Y.3 Cross-Codebase Tenant-Isolation Security Sweep — FULLY FIXED, TESTED & VERIFIED
 
 **Founder's own words**: after BB.4 shipped, asked to "check on that y3" before continuing to BB.5. Given the security severity of the finding, the security sweep was tackled first as its own dedicated, focused piece of work.
