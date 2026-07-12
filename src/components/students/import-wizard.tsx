@@ -28,6 +28,9 @@ const FIELD_LABELS: Record<string, string> = {
   birthCertNo: "Birth cert no", guardianName: "Guardian name",
   guardianPhone: "Guardian phone", notes: "Notes",
   openingBalanceKes: "Opening balance (KES)",
+  // BB.4 — a real, optional per-student subject-choice column, e.g. a
+  // fresh Grade 10 intake arriving with real subjects already chosen.
+  subjects: "Subjects (e.g. History;CRE)",
   custom: "Custom field (school-defined)…", ignore: "— Skip column —",
 };
 const FIELD_OPTIONS = Object.keys(FIELD_LABELS);
@@ -62,7 +65,7 @@ interface PreviewData {
   targetClass: { id: string; label: string } | null;
 }
 
-interface CommitResult { importId: string; totalRows: number; created: number; updated: number; failed: { row: number; message: string }[]; }
+interface CommitResult { importId: string; totalRows: number; created: number; updated: number; failed: { row: number; message: string }[]; subjectSelectionsCreated?: number; }
 interface ImportHistoryRow {
   id: string; fileName: string | null; source: string; totalRows: number;
   createdRows: number; updatedRows: number; failedRows: number; createdByName: string; createdAt: string;
@@ -98,6 +101,13 @@ export function ImportWizard() {
   // R.1 — smart create-or-update: on by default (re-importing a register
   // enriches existing students instead of always failing as a duplicate).
   const [updateExisting, setUpdateExisting] = React.useState(true);
+
+  // BB.4 — once-per-run declared compulsory subjects (e.g. "English,
+  // Kiswahili, Core Mathematics, CSL" for a fresh CBE Senior School
+  // intake) unioned into every real student's own subject selection, so a
+  // Subjects column only needs to list genuine electives. Optional —
+  // leaving this blank changes nothing about a pre-existing import.
+  const [compulsorySubjectsText, setCompulsorySubjectsText] = React.useState("");
   // Rows where the school has explicitly reviewed a real conflict (e.g. two
   // different birth dates) and confirmed the NEW value should win.
   const [confirmedConflictRows, setConfirmedConflictRows] = React.useState<Set<number>>(new Set());
@@ -180,6 +190,7 @@ export function ImportWizard() {
     if (!preview) return;
     setBusy(true);
     const runInBackground = preview.rows.length > LARGE_IMPORT_ROW_THRESHOLD;
+    const compulsorySubjects = compulsorySubjectsText.split(",").map((s) => s.trim()).filter(Boolean);
     try {
       const res = await fetch("/api/students/import", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -190,6 +201,7 @@ export function ImportWizard() {
           targetClassId: preview.targetClass?.id ?? activeTargetClassId,
           updateExisting, confirmedConflictRows: [...confirmedConflictRows],
           runInBackground,
+          ...(compulsorySubjects.length > 0 ? { compulsorySubjects } : {}),
         }),
       });
       const json = await res.json();
@@ -505,6 +517,26 @@ export function ImportWizard() {
             </CardContent>
           </Card>
 
+          {/* BB.4 — only surfaced when a real Subjects column is actually
+              mapped, since a compulsory-subjects declaration is meaningless
+              otherwise. Optional: leaving it blank changes nothing. */}
+          {preview.mapping.some((m) => m.field === "subjects") && (
+            <Card>
+              <CardHeader><CardTitle>Compulsory subjects for this intake (optional)</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-xs text-navy-500 dark:text-navy-400">
+                  Real subjects every student here must take (e.g. English, Kiswahili, a chosen Mathematics variant, Community Service Learning) — added to each student&apos;s own real subject choices automatically, so your Subjects column only needs to list their genuine electives.
+                </p>
+                <input
+                  value={compulsorySubjectsText}
+                  onChange={(e) => setCompulsorySubjectsText(e.target.value)}
+                  placeholder="e.g. English, Kiswahili, Core Mathematics, Community Service Learning"
+                  className="w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm text-navy-900 placeholder:text-navy-300 focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-navy-700 dark:bg-navy-900 dark:text-navy-100"
+                />
+              </CardContent>
+            </Card>
+          )}
+
           <div className="flex items-center justify-between">
             <Button variant="secondary" onClick={() => { setPreview(null); setStep(1); }} disabled={busy}>
               <ArrowLeft className="h-4 w-4" /> Back
@@ -536,10 +568,22 @@ export function ImportWizard() {
                 {result.failed.map((f) => <li key={f.row}>Row {f.row}: {f.message}</li>)}
               </ul>
             )}
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
               <Button variant="secondary" onClick={() => { setStep(1); setPreview(null); setResult(null); setPasteText(""); }}>Import more</Button>
-              <Link href="/students"><Button><Users className="h-4 w-4" /> View students</Button></Link>
+              <Link href="/students"><Button variant="secondary"><Users className="h-4 w-4" /> View students</Button></Link>
+              {/* BB.4 — a real, direct next step when this import wrote real
+                  subject selections (e.g. a fresh Grade 10 intake with a
+                  Subjects column) — the founder's own "both entry points"
+                  choice: right here after import, or later from Promotion. */}
+              {(result.subjectSelectionsCreated ?? 0) > 0 && (
+                <Link href={`/students/promotion?tab=allocate-class${preview?.targetClass ? `&level=${encodeURIComponent(preview.targetClass.label)}` : ""}`}>
+                  <Button><ArrowRight className="h-4 w-4" /> Allocate class</Button>
+                </Link>
+              )}
             </div>
+            {(result.subjectSelectionsCreated ?? 0) > 0 && (
+              <p className="text-xs text-navy-400">{result.subjectSelectionsCreated} real student(s) had their subject choices recorded — allocate them into classes next.</p>
+            )}
           </CardContent>
         </Card>
       )}

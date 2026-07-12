@@ -7,10 +7,11 @@
  * History card with one-click Undo. All 4 UX states.
  */
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowUpRight, GraduationCap, Shuffle, AlertCircle, Loader2,
   Undo2, History, Check, Sparkles, Wand2, UserCheck, Replace,
-  Users, RefreshCw, ClipboardCheck,
+  Users, RefreshCw, ClipboardCheck, LayoutGrid,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,14 @@ interface ClassOpt { id: string; level: string; stream: string | null; name: str
 
 export function PromotionClient() {
   const { toast } = useToast();
-  const [tab, setTab] = React.useState<"promote" | "reshuffle" | "auto-grouping" | "continuity" | "transfer-impact" | "review-wizard">("promote");
+  const searchParams = useSearchParams();
+  // BB.4 — a real deep link into this exact page, e.g. right after a
+  // student import completes: /students/promotion?tab=allocate-class&level=Grade%2010
+  // so the founder's own "both entry points, one engine" choice works
+  // without any separate second wizard/page.
+  const initialTab = (searchParams?.get("tab") as "allocate-class" | null) === "allocate-class" ? "allocate-class" : "promote";
+  const initialLevel = searchParams?.get("level") ?? "";
+  const [tab, setTab] = React.useState<"promote" | "reshuffle" | "auto-grouping" | "allocate-class" | "continuity" | "transfer-impact" | "review-wizard">(initialTab);
   const [plan, setPlan] = React.useState<PlanStep[] | null>(null);
   const [unmapped, setUnmapped] = React.useState<string[]>([]);
   const [history, setHistory] = React.useState<RunRow[]>([]);
@@ -101,6 +109,9 @@ export function PromotionClient() {
         </button>
         <button onClick={() => setTab("auto-grouping")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "auto-grouping" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
           Auto-grouping
+        </button>
+        <button onClick={() => setTab("allocate-class")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "allocate-class" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
+          Allocate class
         </button>
         <button onClick={() => setTab("continuity")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "continuity" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
           Continuity engine
@@ -237,6 +248,8 @@ export function PromotionClient() {
         <ReshufflePanel onDone={load} />
       ) : tab === "auto-grouping" ? (
         <AutoGroupingPanel onDone={load} />
+      ) : tab === "allocate-class" ? (
+        <AllocateClassPanel onDone={load} initialLevel={initialLevel} />
       ) : tab === "continuity" ? (
         <ContinuityEnginePanel />
       ) : tab === "review-wizard" ? (
@@ -608,6 +621,286 @@ function AutoGroupingPanel({ onDone }: { onDone: () => void }) {
   );
 }
 
+/**
+ * BB.4 — real "Allocate Class" one-click flow. Founder's own real intake
+ * scenario: a fresh Grade 10 cohort arrives with real subject choices
+ * already made (imported via the Students import wizard's own new
+ * Subjects column), and this panel is the guided next step that reads the
+ * real subject combinations and offers the school an explicit real choice
+ * — continue with classes already named in the import file (USE_EXISTING,
+ * delegating straight to the real L.7 engine), or create brand-new real
+ * classes from scratch (CREATE_NEW, the "hasn't yet enrolled grade 10"
+ * case) — never assuming either way.
+ */
+function AllocateClassPanel({ onDone, initialLevel }: { onDone: () => void; initialLevel?: string }) {
+  const { toast } = useToast();
+  const [level, setLevel] = React.useState(initialLevel ?? "");
+  const [busy, setBusy] = React.useState(false);
+  const [preview, setPreview] = React.useState<any>(null);
+  const [previewError, setPreviewError] = React.useState<string | null>(null);
+  const [proposedStreamCount, setProposedStreamCount] = React.useState("2");
+  const [proposedCapacityPerClass, setProposedCapacityPerClass] = React.useState("40");
+  const [classStrategy, setClassStrategy] = React.useState<"CREATE_NEW" | "USE_EXISTING">("USE_EXISTING");
+  const [capacityDecisions, setCapacityDecisions] = React.useState<Record<string, "ALLOW_OVER_CAPACITY">>({});
+  const [seedSubjectNeeds, setSeedSubjectNeeds] = React.useState(true);
+  const [generateTimetable, setGenerateTimetable] = React.useState(false);
+  const [result, setResult] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    if (initialLevel) runPreview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function runPreview() {
+    if (!level.trim()) { toast({ title: "Enter a real level first, e.g. Grade 10", tone: "error" }); return; }
+    setBusy(true);
+    setPreviewError(null);
+    setResult(null);
+    try {
+      const body: Record<string, unknown> = { action: "preview", level: level.trim() };
+      const res = await fetch("/api/academics/class-allocation", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        // A level with zero real classes yet needs proposed stream count +
+        // capacity before a real preview can run — an honest, in-context
+        // message, never a raw stack trace.
+        if (json.error?.code === "INVALID" && json.error.message?.includes("no real classes yet")) {
+          setPreview(null);
+          setClassStrategy("CREATE_NEW");
+          setPreviewError("This level has no real classes yet. Choose how many new classes to create and their capacity, then preview again.");
+          return;
+        }
+        throw new Error(json.error?.message || "Could not preview.");
+      }
+      setPreview(json.data);
+      setClassStrategy(json.data.classStrategyAvailable);
+      setCapacityDecisions({});
+    } catch (e: any) {
+      setPreviewError(e?.message || "Could not preview.");
+    } finally { setBusy(false); }
+  }
+
+  async function runPreviewCreateNew() {
+    if (!level.trim()) { toast({ title: "Enter a real level first, e.g. Grade 10", tone: "error" }); return; }
+    const streamCount = Number(proposedStreamCount);
+    const capacityPerClass = Number(proposedCapacityPerClass);
+    if (!streamCount || !capacityPerClass) { toast({ title: "Enter a real number of streams and capacity", tone: "error" }); return; }
+    setBusy(true);
+    setPreviewError(null);
+    setResult(null);
+    try {
+      const res = await fetch("/api/academics/class-allocation", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "preview", level: level.trim(), proposedStreamCount: streamCount, proposedCapacityPerClass: capacityPerClass }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Could not preview.");
+      setPreview(json.data);
+      setClassStrategy("CREATE_NEW");
+      setCapacityDecisions({});
+    } catch (e: any) {
+      setPreviewError(e?.message || "Could not preview.");
+    } finally { setBusy(false); }
+  }
+
+  async function confirm() {
+    if (!level.trim()) return;
+    setBusy(true);
+    try {
+      const body: Record<string, unknown> = {
+        action: "confirm", level: level.trim(), classStrategy,
+        seedSubjectNeeds, generateTimetable, capacityDecisions,
+      };
+      if (classStrategy === "CREATE_NEW") {
+        body.streamCount = Number(proposedStreamCount);
+        body.capacityPerClass = Number(proposedCapacityPerClass);
+      }
+      const res = await fetch("/api/academics/class-allocation", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Could not allocate classes.");
+      setResult(json.data);
+      setPreview(null);
+      setCapacityDecisions({});
+      toast({ title: json.data.summary, tone: "success" });
+      if (json.data.timetableJobId) {
+        toast({ title: "Whole-school timetable regeneration started in the background.", tone: "success" });
+      }
+      onDone();
+    } catch (e: any) {
+      toast({ title: e?.message || "Could not allocate classes.", tone: "error" });
+    } finally { setBusy(false); }
+  }
+
+  const capacityWarnings = preview?.capacityWarnings ?? [];
+  const undecidedWarnings = capacityWarnings.filter((w: any) => !capacityDecisions[w.classId]);
+
+  return (
+    <div className="space-y-5">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><LayoutGrid className="h-5 w-5 text-green-600" /> Allocate class</CardTitle>
+          <p className="text-xs text-navy-400">
+            For a fresh intake (e.g. a new Grade 10 cohort) with real subject choices already made — reads the real subject combinations and places students into real classes, filling any missing teacher automatically.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <Label>Level</Label>
+              <Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. Grade 10" />
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={runPreview} disabled={busy || !level.trim()}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Preview
+            </Button>
+          </div>
+
+          {previewError && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+              {previewError}
+            </div>
+          )}
+
+          {classStrategy === "CREATE_NEW" && !preview && (
+            <div className="space-y-3 rounded-2xl border border-navy-100 bg-warm-50 p-4 dark:border-navy-800 dark:bg-navy-900">
+              <p className="text-xs font-semibold text-navy-700 dark:text-navy-200">No real classes exist yet for this level — choose how many to create:</p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label>Number of new classes/streams</Label>
+                  <Input type="number" min={1} value={proposedStreamCount} onChange={(e) => setProposedStreamCount(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Capacity per class</Label>
+                  <Input type="number" min={1} value={proposedCapacityPerClass} onChange={(e) => setProposedCapacityPerClass(e.target.value)} />
+                </div>
+              </div>
+              <Button onClick={runPreviewCreateNew} disabled={busy}>
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Preview new classes
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {preview && undecidedWarnings.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400"><AlertCircle className="h-5 w-5" /> Real class capacity exceeded</CardTitle>
+            <p className="text-xs text-navy-400">Resolve each one before confirming.</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {capacityWarnings.map((w: any) => (
+              <div key={w.classId} className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/40 dark:bg-amber-950/10">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-navy-900 dark:text-white">{w.label}</p>
+                    <p className="text-xs text-navy-500 dark:text-navy-400">{w.projectedCount} real students would be placed here · maximum is {w.capacity} · {w.overflowCount} over</p>
+                  </div>
+                  {capacityDecisions[w.classId] === "ALLOW_OVER_CAPACITY" ? (
+                    <Badge tone="amber">Will allow over capacity</Badge>
+                  ) : (
+                    <Button size="sm" variant="secondary" onClick={() => setCapacityDecisions((p) => ({ ...p, [w.classId]: "ALLOW_OVER_CAPACITY" }))} disabled={busy}>
+                      Allow all in this class anyway
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {preview && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Allocation preview · {preview.level}</CardTitle>
+            <p className="text-xs text-navy-400">
+              {preview.classStrategyAvailable === "USE_EXISTING"
+                ? "Real classes already exist for this level — continuing with them."
+                : `${preview.proposedStreamCount ?? Number(proposedStreamCount)} new real class(es) will be created.`}
+              {" "}{preview.totalStudents} real student(s) · {preview.movedCount} will be placed.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {preview.classStrategyAvailable === "USE_EXISTING" && (
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-navy-100 bg-warm-50 px-3 py-2.5 dark:border-navy-800 dark:bg-navy-900">
+                <input
+                  type="radio" checked={classStrategy === "USE_EXISTING"}
+                  onChange={() => setClassStrategy("USE_EXISTING")}
+                  className="mt-0.5 h-4 w-4 border-navy-300 text-green-600 focus:ring-green-500"
+                />
+                <span className="text-xs text-navy-600 dark:text-navy-300">
+                  <span className="block font-semibold text-navy-900 dark:text-navy-50">Continue with these classes</span>
+                  Group real students into the real classes already named in your import file.
+                </span>
+              </label>
+            )}
+            <div className="grid gap-4 md:grid-cols-2">
+              {(preview.preview ?? []).map((group: any) => (
+                <div key={group.classId} className="rounded-2xl border border-navy-100 p-4 dark:border-navy-800">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-bold text-navy-900 dark:text-white">{group.label}</p>
+                    <Badge tone="blue">{group.count} students</Badge>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {group.students.slice(0, 8).map((student: any) => (
+                      <div key={student.id} className="flex items-center justify-between gap-3 rounded-xl border border-navy-50 px-3 py-2 text-xs dark:border-navy-800">
+                        <div>
+                          <p className="font-medium text-navy-800 dark:text-navy-100">{student.name}</p>
+                          <p className="text-navy-400">{student.selectedSubjectIds.length > 0 ? `${student.selectedSubjectIds.length} chosen subjects` : "No confirmed subject choice yet"}</p>
+                        </div>
+                        <Badge tone="amber">Placed</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2 rounded-xl border border-navy-100 bg-warm-50 p-3 dark:border-navy-800 dark:bg-navy-900">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input type="checkbox" checked={seedSubjectNeeds} onChange={(e) => setSeedSubjectNeeds(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-navy-300 text-green-600 focus:ring-green-500" />
+                <span className="text-xs text-navy-600 dark:text-navy-300">
+                  <span className="block font-semibold text-navy-900 dark:text-navy-50">Set up subject teaching needs and auto-fill teachers</span>
+                  Creates the real subject-teaching records each class needs based on students&apos; actual choices, then fills any missing teacher fairly — never overriding a teacher you&apos;ve already assigned.
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input type="checkbox" checked={generateTimetable} onChange={(e) => setGenerateTimetable(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-navy-300 text-green-600 focus:ring-green-500" />
+                <span className="text-xs text-navy-600 dark:text-navy-300">
+                  <span className="block font-semibold text-navy-900 dark:text-navy-50">Generate the timetable now</span>
+                  Only runs if real subject needs were set up and a real teacher was found — you can always generate later from the Timetable page instead.
+                </span>
+              </label>
+            </div>
+
+            <Button onClick={confirm} disabled={busy || undecidedWarnings.length > 0}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />} Confirm allocation
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {result && (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
+              <Check className="h-7 w-7 text-green-600" />
+            </span>
+            <h2 className="text-lg font-semibold text-navy-900 dark:text-navy-50">{result.summary}</h2>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
 
 function ContinuityEnginePanel() {
   const { toast } = useToast();
