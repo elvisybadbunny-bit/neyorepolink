@@ -56,8 +56,11 @@ async function main() {
   const principal2 = su(await db.user.findFirstOrThrow({ where: { tenantId: t2.id, role: "PRINCIPAL" } }), t2.id);
   const suffix = Date.now() % 100000;
 
-  // 3 real classes, 5 real subjects (2 home-classroom, 3 genuine overflow).
-  const classes = await Promise.all(["A", "B", "C"].map((n) =>
+  // 2 real classes, 5 real subjects (2 home-classroom, 3 genuine overflow —
+  // matching the founder's own "5 subjects, 4 streams" shape at a smaller,
+  // test-friendly scale: N=2 classes -> first 2 subjects use their own home
+  // classroom, the remaining 3 are genuine overflow subjects).
+  const classes = await Promise.all(["A", "B"].map((n) =>
     db.schoolClass.create({ data: { tenantId: t1.id, level: `BB1${suffix}`, stream: n, curriculum: "8-4-4" } })
   ));
   const subjectNames = ["Home1", "Home2", "Over1", "Over2", "Over3"];
@@ -98,7 +101,7 @@ async function main() {
 
     const forSolver = await getElectiveBlocksForSolver(t1.id);
     const ours = forSolver.find((b) => b.id === blockId);
-    check("Solver sees the real block with all 5 subjects across 3 classes", ours?.slots[0].subjects.length === 5 && ours?.classIds.length === 3);
+    check("Solver sees the real block with all 5 subjects across 2 classes", ours?.slots[0].subjects.length === 5 && ours?.classIds.length === 2);
 
     const job = await db.timetableGenerationJob.create({ data: { tenantId: t1.id, status: "RUNNING", progress: 0, phase: "start", startedById: principal1.id, startedByName: principal1.fullName } as any });
     const genResult = await runGeneration(t1.id, job.id, principal1);
