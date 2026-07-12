@@ -4903,7 +4903,8 @@ model Venue {
 
   classSubjectNeeds ClassSubjectNeed[]
   combinationGroups CombinationGroup[]
-  electiveBlockSlotSubjects ElectiveBlockSlotSubject[]
+  electiveBlockSlotSubjects ElectiveBlockSlotSubject[] @relation("ElectiveBlockSlotSubjectPinnedVenue")
+  electiveBlockSlotSubjectsResolved ElectiveBlockSlotSubject[] @relation("ElectiveBlockSlotSubjectResolvedVenue")
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -5082,7 +5083,23 @@ model ElectiveBlockSlotSubject {
   subjectId String
   teacherId String?
   venueId   String?
-  venue     Venue?            @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  venue     Venue?            @relation("ElectiveBlockSlotSubjectPinnedVenue", fields: [venueId], references: [id], onDelete: SetNull)
+
+  // BB.1 — when a school leaves `venueId` unset for a genuine "overflow"
+  // subject (a slot with more parallel subjects than the block has member
+  // classes to host them in their own home classrooms — e.g. 5 real
+  // subjects but only 4 real streams), the solver auto-picks a real venue
+  // from the tenant's own Venue pool (respecting supportsSubjectIds +
+  // capacity + full clash-avoidance, exactly like an ordinary
+  // ClassSubjectNeed card already does) and persists its pick HERE, once
+  // per real generation run — never fabricated, always genuinely reserved
+  // and conflict-checked. `venueId` (a school's own explicit pin) always
+  // wins over this at render time; this field only matters when `venueId`
+  // is null. Cleared/recomputed honestly on every real generation run
+  // (a previously-picked venue may no longer be free, or may no longer
+  // even be needed if the school later pins one explicitly).
+  resolvedVenueId String?
+  resolvedVenue   Venue?  @relation("ElectiveBlockSlotSubjectResolvedVenue", fields: [resolvedVenueId], references: [id], onDelete: SetNull)
 
   // JSON array of real classId strings genuinely offering this subject
   // inside this slot — for MULTI_SLOT mode this is normally the block's
