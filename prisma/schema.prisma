@@ -1,6 +1,8 @@
 // NEYO database schema — Chunk 0 Foundation
-// Dev provider: sqlite (file-based, zero-install, testable in preview today).
-// Production: change provider to "postgresql" and point DATABASE_URL at Neon.
+// PRODUCTION provider: postgresql (real production database — Neon).
+// Switched from sqlite to postgresql for the real neyo.co.ke go-live deploy.
+// Old SQLite migration history is preserved for reference in
+// prisma/migrations-sqlite-archive/ (not used anymore, kept only as a record).
 //   Postgres-only features flagged in code: Row-Level Security (A.2), tsvector search (A.11).
 // Each feature chunk EXTENDS this schema with its own models.
 
@@ -9,7 +11,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
