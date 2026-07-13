@@ -3707,6 +3707,12 @@ function ClassConfigModal({ classId, currentConfig, onClose, onSaved }: {
     hasRemedials: currentConfig?.hasRemedials ?? false,
     hasPreps: currentConfig?.hasPreps ?? false,
     lunchShift: currentConfig?.lunchShift ?? 1,
+    // CC.1 — real, direct lunch period. Defaults to the class's own
+    // already-saved value; if never explicitly set, resolves from the
+    // legacy lunchShift enum so the UI honestly shows what's ACTUALLY
+    // happening today rather than a blank/misleading field.
+    lunchAfterPeriod: currentConfig?.lunchAfterPeriod
+      ?? (currentConfig?.lunchShift === 2 ? 6 : currentConfig?.lunchShift === 3 ? 7 : currentConfig?.lunchShift === 4 ? 8 : 5),
     hasSaturday: currentConfig?.hasSaturday ?? true, // Added for Saturday attendance control
   });
 
@@ -3787,22 +3793,6 @@ function ClassConfigModal({ classId, currentConfig, onClose, onSaved }: {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor="cfg-lunchshift">Lunch Shift</Label>
-            <select
-              id="cfg-lunchshift"
-              value={f.lunchShift}
-              onChange={(e) => set("lunchShift", Number(e.target.value))}
-              className="mt-1 w-full h-10 rounded-2xl border border-navy-200 bg-white px-3.5 text-sm dark:border-navy-700 dark:bg-navy-900 text-navy-800 dark:text-navy-100"
-            >
-              <option value={1}>Shift 1 (Period 5)</option>
-              <option value={2}>Shift 2 (Period 6)</option>
-              <option value={3}>Shift 3 (Period 7)</option>
-            </select>
-          </div>
-        </div>
-
         <div className="border-t border-navy-100 dark:border-navy-800 pt-3 space-y-3">
           <p className="text-xs font-bold text-navy-800 dark:text-navy-100">Configure Breaks &amp; Times</p>
           <div className="grid grid-cols-3 gap-2">
@@ -3828,7 +3818,23 @@ function ClassConfigModal({ classId, currentConfig, onClose, onSaved }: {
           <div className="grid grid-cols-3 gap-2">
             <div>
               <Label className="text-[10px]">Lunch Break After Period</Label>
-              <Input type="number" value={f.lunchStart} onChange={(e) => set("lunchStart", Number(e.target.value))} />
+              <Input
+                type="number"
+                min={1}
+                value={f.lunchAfterPeriod ?? f.lunchStart}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  // CC.1 — a school directly picks ANY real period number
+                  // lunch should follow, no longer limited to 4 fixed
+                  // shift positions. lunchStart is kept in sync purely for
+                  // the existing clock-time math fallback (never the
+                  // source of truth for WHICH period is lunch anymore).
+                  setF((p: any) => ({ ...p, lunchAfterPeriod: v, lunchStart: v }));
+                }}
+              />
+              <p className="mt-1 text-[10px] text-navy-400">
+                For a school running dual-shift lunches (e.g. Form 1&amp;2 at period 6, Form 3&amp;4 at period 7), save this class&apos;s own real lunch period here — repeat for each group with its own real value.
+              </p>
             </div>
             <div>
               <Label className="text-[10px]">Lunch Break (mins)</Label>
@@ -4390,6 +4396,10 @@ function BulkConfigDialog({ data, onClose, onDone }: any) {
             shortBreakStart: shortBreak, 
             shortBreak2Start: shortBreak2 || null,
             lunchStart: lunchAfter,
+            // CC.1 — this is what ACTUALLY moves the real lunch period
+            // (lunchStart alone only ever affected clock-time math, never
+            // real placement) — a real bug this bulk dialog had before.
+            lunchAfterPeriod: lunchAfter,
             saturdayEndTime: satEnd
           })
         });

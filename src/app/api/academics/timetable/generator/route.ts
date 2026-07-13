@@ -66,6 +66,10 @@ export async function POST(req: NextRequest) {
         hasRemedials: Boolean(body.hasRemedials),
         hasPreps: Boolean(body.hasPreps),
         lunchShift: Number(body.lunchShift || 1),
+        // CC.1 — real, direct "lunch is after period N" choice.
+        lunchAfterPeriod: body.lunchAfterPeriod !== undefined && body.lunchAfterPeriod !== null && body.lunchAfterPeriod !== ""
+          ? Number(body.lunchAfterPeriod)
+          : null,
         hasSaturday: Boolean(body.hasSaturday !== undefined ? body.hasSaturday : true),
       });
       return ok(result);

@@ -104,7 +104,7 @@ async function main() {
   const tHist = await db.user.create({ data: { tenantId: tid, neyoLoginId: `aa5h${suffix}`, fullName: "AA5 History Teacher", role: "TEACHER", isActive: true } as any });
   const tCre = await db.user.create({ data: { tenantId: tid, neyoLoginId: `aa5c${suffix}`, fullName: "AA5 CRE Teacher", role: "TEACHER", isActive: true } as any });
   const block = await saveElectiveBlock(principal, {
-    action: "save_block", name: `AA5 Block ${suffix}`, mode: "MULTI_SLOT", classIds: [cls3a.id, cls3b.id],
+    action: "save_block", name: `AA5 Block ${suffix}`, mode: "MULTI_SLOT", preferAfterBreak: false, classIds: [cls3a.id, cls3b.id],
     slots: [{ label: "Slot A", isDouble: false, sortOrder: 0, subjects: [
       { subjectId: hist.id, teacherId: tHist.id },
       { subjectId: cre.id, teacherId: tCre.id },

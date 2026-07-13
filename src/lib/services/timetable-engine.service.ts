@@ -82,6 +82,21 @@ const SATURDAY = 6;
 const DEFAULT_PERIODS_PER_DAY = 8;
 const DEFAULT_SATURDAY_PERIODS = 4;
 
+// CC.1 — real, direct "lunch is after period N" resolution. A school's own
+// explicit `lunchAfterPeriod` (any real period number, matching how their
+// actual day is shaped) ALWAYS wins once set — replacing the old rigid
+// Shift 1/2/3/4 (period 5/6/7/8 only) enum. Deliberately backward-
+// compatible: a class with `lunchAfterPeriod` still null (every
+// already-configured real school, until they explicitly re-save via the
+// redesigned Schedule Rules UI) keeps resolving from the existing
+// `lunchShift` enum exactly as before — no existing real timetable's
+// lunch placement silently changes because of this addition.
+function resolveLunchPeriod(cfg: { lunchAfterPeriod?: number | null; lunchShift?: number | null } | undefined | null): number {
+  if (cfg?.lunchAfterPeriod != null && cfg.lunchAfterPeriod > 0) return cfg.lunchAfterPeriod;
+  const shift = cfg?.lunchShift ?? 1;
+  return shift === 1 ? 5 : shift === 2 ? 6 : shift === 3 ? 7 : 8;
+}
+
 function levelAwareTimetablePreset(levels: string[]) {
   const isSeniorSchool = levels.includes("SENIOR_SCHOOL");
   const isJuniorSchool = levels.includes("JUNIOR_SCHOOL");
@@ -268,8 +283,7 @@ export async function getPreGenerationSummary(user: SessionUser) {
     }
     function lunchPeriodsForClass(classId: string): number {
       const cfg = configByClass.get(classId);
-      const shift = cfg?.lunchShift ?? 1;
-      const lunchPeriod = shift === 1 ? 5 : shift === 2 ? 6 : shift === 3 ? 7 : 8;
+      const lunchPeriod = resolveLunchPeriod(cfg);
       let count = 0;
       for (const day of daysForClass(classId)) {
         if (lunchPeriod <= maxPeriodsForClass(classId, day)) count++;
@@ -619,21 +633,23 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     return l;
   });
 
-  // Reserve lunch per class according to its config lunch shift — only on
-  // days/periods that actually exist for that class (a short Saturday with
-  // fewer periods than the lunch slot simply has no lunch reservation that day,
-  // matching how a real short day works instead of forcing a phantom period).
+  // Reserve lunch per class according to its own real configured lunch
+  // period — only on days/periods that actually exist for that class (a
+  // short Saturday with fewer periods than the lunch slot simply has no
+  // lunch reservation that day, matching how a real short day works
+  // instead of forcing a phantom period).
   const lunchSlots: any[] = [];
   for (const c of data.classes) {
     const cfg = configByClass.get(c.id);
-    const shift = cfg?.lunchShift ?? 1;
-    // Real 4-position lunch shift: 1=period 5, 2=period 6, 3=period 7,
-    // 4=period 8 — the 4th position exists specifically for a real
-    // 2-shift school (e.g. Form 1&2 eat during period 7 while Form 3&4
-    // are still in class, then swap: Form 3&4 eat during period 8 while
-    // Form 1&2 are back in class) so both real groups keep the SAME real
-    // total teaching periods on the SAME real clock.
-    const lunchPeriod = shift === 1 ? 5 : shift === 2 ? 6 : shift === 3 ? 7 : 8;
+    // CC.1 — a school's own explicit lunchAfterPeriod (any real period
+    // number) always wins; falls back to the legacy lunchShift enum for
+    // any class that hasn't been re-saved via the redesigned Schedule
+    // Rules UI yet. This is exactly how a real 2-group dual-shift lunch
+    // (e.g. Form 1&2 eat during period 7 while Form 3&4 are still in
+    // class, then swap) is now genuinely configured — a school sets each
+    // group's own real lunchAfterPeriod directly, no longer limited to 4
+    // fixed shift positions.
+    const lunchPeriod = resolveLunchPeriod(cfg);
     for (const day of daysForClass(c.id)) {
       if (lunchPeriod > maxPeriodsForClass(c.id, day)) continue;
       classGrid.set(`${c.id}:${day}:${lunchPeriod}`, lunchSubject.id);

@@ -134,6 +134,12 @@ export async function saveTimetableConfig(
     hasRemedials?: boolean;
     hasPreps?: boolean;
     lunchShift?: number;
+    // CC.1 — real, direct "lunch is after period N" choice. When
+    // provided (and > 0), always wins over lunchShift for this class.
+    // Left undefined/null preserves the existing lunchShift-based
+    // behaviour exactly (backward-compatible for every already-
+    // configured real school).
+    lunchAfterPeriod?: number | null;
     hasSaturday?: boolean;
   }
 ) {
@@ -163,6 +169,7 @@ export async function saveTimetableConfig(
         hasRemedials: input.hasRemedials ?? false,
         hasPreps: input.hasPreps ?? false,
         lunchShift: input.lunchShift ?? 1,
+        lunchAfterPeriod: input.lunchAfterPeriod ?? null,
         hasSaturday: input.hasSaturday ?? true,
       },
       update: {
@@ -185,6 +192,7 @@ export async function saveTimetableConfig(
         hasRemedials: input.hasRemedials ?? false,
         hasPreps: input.hasPreps ?? false,
         lunchShift: input.lunchShift ?? 1,
+        lunchAfterPeriod: input.lunchAfterPeriod ?? null,
         hasSaturday: input.hasSaturday ?? true,
       },
     });
@@ -314,8 +322,17 @@ export async function generateWholeSchoolTimetable(user: SessionUser) {
         });
       }
 
-      // Schedule Lunch Shifts (Shift 1 = Period 5, Shift 2 = Period 6, Shift 3 = Period 7)
-      const lunchPeriod = (config.lunchShift ?? 1) === 1 ? 5 : (config.lunchShift ?? 1) === 2 ? 6 : 7;
+      // CC.1 — a school's own explicit lunchAfterPeriod (any real period
+      // number) always wins over the legacy Shift 1/2/3/4 enum, matching
+      // the same real resolution logic as the main L.7 engine
+      // (timetable-engine.service.ts's own resolveLunchPeriod()) — kept
+      // as its own small inline computation here rather than a cross-
+      // service import, since this older G.18 generator is a separate,
+      // simpler code path.
+      const cfgLunchAfterPeriod = (config as any).lunchAfterPeriod as number | null | undefined;
+      const lunchPeriod = cfgLunchAfterPeriod != null && cfgLunchAfterPeriod > 0
+        ? cfgLunchAfterPeriod
+        : (config.lunchShift ?? 1) === 1 ? 5 : (config.lunchShift ?? 1) === 2 ? 6 : (config.lunchShift ?? 1) === 3 ? 7 : 8;
       for (const day of daysForClassId(c.id)) {
         if (lunchPeriod > maxPeriodsForClassId(c.id, day)) continue; // short Saturday may have no lunch period
         const key = `${c.id}:${day}:${lunchPeriod}`;

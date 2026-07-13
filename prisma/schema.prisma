@@ -5488,6 +5488,18 @@ model TimetableConfig {
   hasRemedials         Boolean @default(false)
   hasPreps             Boolean @default(false)
   lunchShift           Int     @default(1)
+  // CC.1 — real, direct "lunch is after period N" choice, replacing the
+  // rigid Shift 1/2/3/4 (period 5/6/7/8 only) model with genuine
+  // flexibility: a school picks ANY real period number lunch should
+  // follow, matching their own real schedule (e.g. "our 10-slot day —
+  // Form 1&2 eat after period 6, Form 3&4 eat after period 7"). Nullable
+  // and deliberately backward-compatible: null (the default, and every
+  // already-configured real school's current value) means "keep using
+  // the existing lunchShift enum exactly as before" — a school's
+  // existing real timetable is never silently changed by this addition.
+  // Once a school explicitly sets this (via the redesigned Schedule
+  // Rules UI), it always wins over lunchShift for that class.
+  lunchAfterPeriod     Int?
   hasSaturday          Boolean @default(true) // class-level Saturday toggle
   // P.5 — how many real timetable periods exist on Saturday for this class
   // (independent of periodsPerDay, since Saturday is normally a short day).
