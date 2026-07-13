@@ -203,6 +203,144 @@ export async function deleteCombinationGroup(user: SessionUser, id: string) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// AA.5 — Pre-generation "undecided lessons → free periods" confirmation
+// summary. Per docs/TEACHER-ALLOCATION-AND-ELECTIVES-ENGINE-DESIGN.md
+// Part 9: the underlying Free Study Period math (Z.3's own
+// freePeriodsPerWeek distribution fix) already works correctly and
+// silently — what's genuinely missing is a real, honest, PRE-generation
+// message telling a school exactly how many of a class's own real
+// possible weekly teaching slots are covered by real configured lesson
+// needs vs. how many will become genuine Free Study Periods, BEFORE they
+// press the Master Button, so a school can catch an incomplete setup
+// (e.g. "we only got round to 6 of Form 2 East's 9 subjects") rather than
+// being surprised by a timetable full of Frees after the fact.
+//
+// Real, honest arithmetic per class (mirrors buildAndSolve()'s own real
+// slot-counting logic, without needing to run the full solver):
+//   totalRealSlots      = every real teaching period this class has this
+//                          week (every day/period from its own real
+//                          TimetableConfig, MINUS its own real lunch
+//                          reservation — lunch is never a "possible
+//                          lesson slot").
+//   configuredLessons   = the sum of every real ClassSubjectNeed.lessonsPerWeek
+//                          for this class (its own needs PLUS its real
+//                          share of any CombinationGroup it belongs to,
+//                          PLUS one real slot per week for every
+//                          ElectiveBlockSlot period this class's block
+//                          membership covers — an Options Block period
+//                          genuinely occupies one real slot even though
+//                          it holds several parallel subjects at once).
+//   honestFreeCount     = max(0, totalRealSlots - configuredLessons) — the
+//                          real number of periods that will genuinely
+//                          become Free Study Periods if generation runs
+//                          right now (capped by the school's own real
+//                          freePeriodsPerWeek in the ACTUAL solver — this
+//                          summary intentionally shows the school's real
+//                          UNCAPPED gap so a school configured for e.g. 4
+//                          Frees/week but with a real 9-period gap can see
+//                          the genuine shortfall, not a falsely-reassuring
+//                          already-capped number).
+// ---------------------------------------------------------------------------
+export async function getPreGenerationSummary(user: SessionUser) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const [classes, needs, configs, groups] = await Promise.all([
+      tdb.schoolClass.findMany({ where: { archived: false }, orderBy: [{ level: "asc" }, { stream: "asc" }] }),
+      tdb.classSubjectNeed.findMany(),
+      tdb.timetableConfig.findMany(),
+      tdb.combinationGroup.findMany({ where: { active: true }, include: { members: true } }),
+    ]);
+    const electiveBlocks = await getElectiveBlocksForSolver(user.tenantId);
+
+    const configByClass = new Map(configs.map((c) => [c.classId, c]));
+    const classLabel = (c: { level: string; stream: string | null }) => [c.level, c.stream].filter(Boolean).join(" ");
+
+    function daysForClass(classId: string): number[] {
+      const cfg = configByClass.get(classId);
+      if (cfg?.hasSaturday === false) return WEEKDAYS;
+      return [...WEEKDAYS, SATURDAY];
+    }
+    function maxPeriodsForClass(classId: string, day: number): number {
+      const cfg = configByClass.get(classId);
+      if (day === SATURDAY) return cfg?.saturdayPeriodsCount ?? DEFAULT_SATURDAY_PERIODS;
+      return cfg?.periodsPerDay ?? DEFAULT_PERIODS_PER_DAY;
+    }
+    function lunchPeriodsForClass(classId: string): number {
+      const cfg = configByClass.get(classId);
+      const shift = cfg?.lunchShift ?? 1;
+      const lunchPeriod = shift === 1 ? 5 : shift === 2 ? 6 : shift === 3 ? 7 : 8;
+      let count = 0;
+      for (const day of daysForClass(classId)) {
+        if (lunchPeriod <= maxPeriodsForClass(classId, day)) count++;
+      }
+      return count;
+    }
+
+    // Real per-class configured lesson count: this class's own real
+    // ClassSubjectNeed rows, PLUS its own real share of every
+    // CombinationGroup it's a genuine member of, PLUS one real slot per
+    // week for every ElectiveBlockSlot period its Options Block
+    // membership covers.
+    const comboLessonsByClass = new Map<string, number>();
+    for (const g of groups) {
+      for (const m of g.members) {
+        if (!m.classId) continue;
+        comboLessonsByClass.set(m.classId, (comboLessonsByClass.get(m.classId) ?? 0) + g.lessonsPerWeek);
+      }
+    }
+    const electiveBlockSlotsByClass = new Map<string, number>();
+    for (const block of electiveBlocks) {
+      // Every real slot in this block occupies one real weekly period
+      // (isDouble = one double period = still ONE real slot from a
+      // "possible lesson slot" counting perspective, mirroring how the
+      // real solver reserves it as a single atomic placement).
+      for (const cid of block.classIds) {
+        electiveBlockSlotsByClass.set(cid, (electiveBlockSlotsByClass.get(cid) ?? 0) + block.slots.length);
+      }
+    }
+
+    const perClass = classes.map((c) => {
+      const totalPossibleSlots = daysForClass(c.id).reduce((sum, day) => sum + maxPeriodsForClass(c.id, day), 0) - lunchPeriodsForClass(c.id);
+      const comboSubjectIds = new Set(groups.filter((g) => g.members.some((m) => m.classId === c.id)).map((g) => g.subjectId));
+      const ownNeedsLessons = needs
+        .filter((n) => n.classId === c.id && !comboSubjectIds.has(n.subjectId))
+        .reduce((sum, n) => sum + n.lessonsPerWeek, 0);
+      const comboLessons = comboLessonsByClass.get(c.id) ?? 0;
+      const electiveBlockLessons = electiveBlockSlotsByClass.get(c.id) ?? 0;
+      const configuredLessons = ownNeedsLessons + comboLessons + electiveBlockLessons;
+      const honestFreeCount = Math.max(0, totalPossibleSlots - configuredLessons);
+      const configuredFreeCap = Math.max(0, configByClass.get(c.id)?.freePeriodsPerWeek ?? 0);
+      return {
+        classId: c.id,
+        className: classLabel(c),
+        totalPossibleSlots,
+        configuredLessons,
+        honestFreeCount,
+        // A real, honest flag: this class's real configured gap is BIGGER
+        // than what the school explicitly told the solver to fill as Free
+        // Study Periods — meaning some of those genuinely-free periods
+        // will sit completely empty (no lesson, no Free label) after
+        // generation, since the real solver only ever fills UP TO
+        // freePeriodsPerWeek worth of Frees, by design (Z.3).
+        exceedsConfiguredFreeCap: honestFreeCount > configuredFreeCap,
+      };
+    });
+
+    const totalPossibleSlots = perClass.reduce((sum, p) => sum + p.totalPossibleSlots, 0);
+    const totalConfiguredLessons = perClass.reduce((sum, p) => sum + p.configuredLessons, 0);
+    const totalHonestFreeCount = Math.max(0, totalPossibleSlots - totalConfiguredLessons);
+
+    return {
+      totalPossibleSlots,
+      totalConfiguredLessons,
+      totalHonestFreeCount,
+      classesWithGapsExceedingCap: perClass.filter((p) => p.exceedsConfiguredFreeCap).length,
+      perClass,
+    };
+  });
+}
+
 function safeParse<T>(s: string, fallback: T): T {
   try { return JSON.parse(s) as T; } catch { return fallback; }
 }

@@ -1,6 +1,8 @@
 /**
  * L.7 — Advanced Timetable Engine settings API.
- * GET  -> all constraints + combination groups (the school's configured rules).
+ * GET  -> all constraints + combination groups (the school's configured rules);
+ *         ?action=pre_generation_summary -> AA.5's real "undecided lessons ->
+ *         free periods" confirmation summary.
  * POST -> actions: upsert_constraint, delete_constraint, save_timeoff,
  *         upsert_combination, delete_combination.
  */
@@ -10,7 +12,7 @@ import { ok, fail, handleError } from "@/lib/api/respond";
 import {
   listConstraints, upsertConstraint, deleteConstraint, saveTeacherTimeOff,
   listCombinationGroups, upsertCombinationGroup, deleteCombinationGroup,
-  applyKicdSeniorSchoolTemplate,
+  applyKicdSeniorSchoolTemplate, getPreGenerationSummary,
   TimetableEngineError,
 } from "@/lib/services/timetable-engine.service";
 
@@ -24,9 +26,16 @@ function mapErr(e: unknown) {
   return null;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const user = await requirePermission("academics.view");
+    // AA.5 — real pre-generation "undecided lessons -> free periods"
+    // confirmation summary, fetched on demand right before a school
+    // presses the Master Button (never blocks the main constraints/
+    // combinations fetch above).
+    if (req.nextUrl.searchParams.get("action") === "pre_generation_summary") {
+      return ok(await getPreGenerationSummary(user));
+    }
     const [constraints, combinations] = await Promise.all([listConstraints(user), listCombinationGroups(user)]);
     return ok({ constraints, combinations });
   } catch (e) {

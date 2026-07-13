@@ -2013,6 +2013,12 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const [allocationImportOpen, setAllocationImportOpen] = React.useState(false);
   const [allocationImportHistory, setAllocationImportHistory] = React.useState<any[]>([]);
   const [draftMeta, setDraftMeta] = React.useState<{ savedAt?: string; dirty: boolean; restored: boolean }>({ dirty: false, restored: false });
+  // AA.5 — real pre-generation "undecided lessons -> free periods"
+  // confirmation summary, fetched fresh right before a school presses the
+  // Master Button so the numbers always reflect their LATEST real setup.
+  const [preGenSummary, setPreGenSummary] = React.useState<any>(null);
+  const [preGenOpen, setPreGenOpen] = React.useState(false);
+  const [preGenLoading, setPreGenLoading] = React.useState(false);
   const pollRef = React.useRef<any>(null);
   const hydratingDraftRef = React.useRef(false);
 
@@ -2401,8 +2407,9 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
     }
   }
 
-  async function runMasterButton() {
+  async function actuallyStartGeneration() {
     setStarting(true);
+    setPreGenOpen(false);
     try {
       const res = await fetch("/api/academics/timetable/generate-job", { method: "POST" });
       const json = await res.json();
@@ -2414,6 +2421,32 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
     } finally {
       setStarting(false);
     }
+  }
+
+  // AA.5 — real, honest pre-generation confirmation step. Fetches a FRESH
+  // summary (never a stale cached one) of exactly how many of each real
+  // class's own possible weekly teaching slots are covered by configured
+  // lesson needs vs. how many will become genuine Free Study Periods —
+  // shown BEFORE the Master Button actually runs, so a school can catch a
+  // genuinely incomplete setup rather than being surprised afterward. A
+  // school with zero real gap (every slot accounted for) skips the
+  // confirmation entirely and starts generation immediately — this step
+  // only ever interrupts a school when there's real honest information
+  // worth confirming.
+  async function runMasterButton() {
+    setPreGenLoading(true);
+    try {
+      const res = await fetch("/api/academics/timetable/engine?action=pre_generation_summary");
+      const json = await res.json();
+      if (json.ok && json.data.totalHonestFreeCount > 0) {
+        setPreGenSummary(json.data);
+        setPreGenOpen(true);
+        setPreGenLoading(false);
+        return;
+      }
+    } catch { /* best-effort — never blocks generation on a summary fetch failure */ }
+    setPreGenLoading(false);
+    await actuallyStartGeneration();
   }
 
   if (loading || !payload) return <Skeletons />;
@@ -2461,11 +2494,11 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                   Set the real school rules first, then press one master button. NEYO builds the timetable in the background, shows live progress, respects teacher time-off, avoids clashes, and schedules single, double and combination lessons deterministically.
                 </p>
               </div>
-              <Button onClick={runMasterButton} disabled={!canManage || starting || ["QUEUED", "RUNNING"].includes(job?.status)} className="h-12 min-w-[220px]">
-                {starting || ["QUEUED", "RUNNING"].includes(job?.status)
+              <Button onClick={runMasterButton} disabled={!canManage || starting || preGenLoading || ["QUEUED", "RUNNING"].includes(job?.status)} className="h-12 min-w-[220px]">
+                {starting || preGenLoading || ["QUEUED", "RUNNING"].includes(job?.status)
                   ? <Loader2 className="h-4 w-4 animate-spin" />
                   : <Wand2 className="h-4 w-4" />}
-                {job?.status === "RUNNING" ? "Generating…" : job?.status === "QUEUED" ? "Queued…" : "Start Master Button"}
+                {job?.status === "RUNNING" ? "Generating…" : job?.status === "QUEUED" ? "Queued…" : preGenLoading ? "Checking setup…" : "Start Master Button"}
               </Button>
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-3">
@@ -2502,6 +2535,61 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
             )}
           </CardContent>
         </Card>
+
+        {/* AA.5 — real, honest pre-generation confirmation modal. Only ever
+            shown when there's a genuine gap worth confirming (see
+            runMasterButton() above) — never interrupts a school whose
+            setup already fully accounts for every real possible slot. */}
+        {preGenOpen && preGenSummary && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setPreGenOpen(false)}>
+            <div className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-navy-950" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-6 w-6 shrink-0 text-amber-500" />
+                <div>
+                  <h3 className="text-lg font-black text-navy-950 dark:text-white">Confirm before generating</h3>
+                  <p className="mt-1 text-sm text-navy-500 dark:text-navy-400">
+                    You&apos;ve configured <strong>{preGenSummary.totalConfiguredLessons}</strong> of a possible <strong>{preGenSummary.totalPossibleSlots}</strong> real weekly lesson-slots this week. The remaining <strong>{preGenSummary.totalHonestFreeCount}</strong> will become Free Study Periods.
+                  </p>
+                </div>
+              </div>
+              {preGenSummary.classesWithGapsExceedingCap > 0 && (
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+                  <strong>{preGenSummary.classesWithGapsExceedingCap}</strong> class{preGenSummary.classesWithGapsExceedingCap === 1 ? "" : "es"} {preGenSummary.classesWithGapsExceedingCap === 1 ? "has" : "have"} a gap bigger than its own configured Free Study Period count — some periods will be left completely empty (no lesson, no Free label) rather than all becoming Frees, since NEYO only ever fills up to the number a school explicitly set.
+                </div>
+              )}
+              <div className="mt-4 max-h-64 overflow-y-auto rounded-2xl border border-navy-100 dark:border-navy-800">
+                <table className="w-full text-left text-xs">
+                  <thead className="sticky top-0 bg-warm-50 dark:bg-navy-900">
+                    <tr>
+                      <th className="px-3 py-2 font-bold text-navy-500 dark:text-navy-400">Class</th>
+                      <th className="px-3 py-2 font-bold text-navy-500 dark:text-navy-400">Configured</th>
+                      <th className="px-3 py-2 font-bold text-navy-500 dark:text-navy-400">Possible</th>
+                      <th className="px-3 py-2 font-bold text-navy-500 dark:text-navy-400">Will be Free</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preGenSummary.perClass.filter((p: any) => p.honestFreeCount > 0).map((p: any) => (
+                      <tr key={p.classId} className="border-t border-navy-50 dark:border-navy-800">
+                        <td className="px-3 py-2 font-semibold text-navy-800 dark:text-navy-100">{p.className}</td>
+                        <td className="px-3 py-2 text-navy-600 dark:text-navy-300">{p.configuredLessons}</td>
+                        <td className="px-3 py-2 text-navy-600 dark:text-navy-300">{p.totalPossibleSlots}</td>
+                        <td className="px-3 py-2">
+                          <Badge tone={p.exceedsConfiguredFreeCap ? "amber" : "blue"}>{p.honestFreeCount}</Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-5 flex flex-wrap justify-end gap-2">
+                <Button variant="secondary" onClick={() => setPreGenOpen(false)}>Go back &amp; add more lessons</Button>
+                <Button onClick={actuallyStartGeneration} disabled={starting}>
+                  {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Confirm &amp; generate anyway
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <Card>
           <CardHeader>
