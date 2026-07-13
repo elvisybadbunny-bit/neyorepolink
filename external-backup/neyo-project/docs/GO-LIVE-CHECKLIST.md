@@ -86,13 +86,16 @@ what NEYO's own config already expects.
    chat with anyone you don't fully trust.
 
 > **Real, important technical note**: NEYO's database schema file
-> (`prisma/schema.prisma`) is currently set to `provider = "sqlite"` (for
-> your local laptop testing). Before this will work with Neon's real
-> Postgres database, that line needs to change to `provider = "postgresql"`
-> and a fresh set of migrations needs generating against Postgres. **Tell me
-> when you're ready for this step and I'll make that change, test it fully,
-> and push it to GitHub for you** — it's a real one-time code change, not
-> something you do yourself in this checklist.
+> (`prisma/schema.prisma`) is currently set to `provider = "sqlite"` for
+> your local laptop/sandbox testing (your choice, so all your existing test
+> schools keep working exactly as before). The real Postgres version of the
+> schema has ALREADY been built and fully tested against a genuine
+> PostgreSQL database — real login, real dashboard, the full automated test
+> suite, all confirmed working — but is kept as its OWN separate,
+> ready-to-push branch of work rather than merged into your everyday
+> sandbox code. **Tell me "push the Postgres switch now"** once you have
+> your real Neon connection string ready, and I'll push it to GitHub as its
+> own dedicated commit — your local SQLite testing setup is never affected.
 
 ---
 
@@ -124,11 +127,32 @@ to do that part.
 > Replace `neyo.co.ke` above with YOUR actual domain everywhere — every row
 > that mentions it needs your exact real domain, not this example.
 
+> **Real, important note on the deploy failing with a cron error**: if your
+> very first deploy fails with a message like *"Hobby accounts are limited
+> to daily cron jobs"*, that's NOT about hosting your site — it's Vercel's
+> free ("Hobby") plan only allowing a scheduled background task to run once
+> a day, and NEYO's config originally asked for one every minute. This has
+> already been fixed in the code (pushed to GitHub) — the schedule now runs
+> once a day instead, which is completely fine for testing. If you already
+> pulled the code before this fix, just re-pull the latest `main` branch (or
+> click **Redeploy** in Vercel once you've re-imported/re-pulled) and the
+> error will be gone. You do **not** need to pay for Vercel Pro just to
+> deploy and test your site.
+
 ---
 
 ## 5. Point your domain at Vercel
 
-1. Still on your Vercel project: go to **Settings → Domains**.
+> **You will only see the "Domains" tab once your project exists in Vercel
+> AND has completed at least one deploy.** If Vercel Import screen has a
+> visible **Domains** entry in the left-hand menu once you're inside the
+> project (even before deploying), use that. If you don't see it yet, finish
+> Step 7 (Deploy) first — once the first deploy succeeds, go to your
+> project's page → click the **Settings** tab along the top → **Domains**
+> will be one of the items in the left sidebar there.
+
+1. Inside your Vercel project: click the **Settings** tab (top of the page)
+   → **Domains** (left sidebar).
 2. Type your domain (e.g. `neyo.co.ke`) and click **Add**.
 3. Vercel will show you 1-2 DNS records to add — usually something like:
    - Type `A`, Name `@`, Value `76.76.21.21` (Vercel's real IP — Vercel shows
