@@ -1996,6 +1996,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
     source: "MANUAL",
     classIds: [] as string[],
     venueId: "",
+    requiresMovement: false,
   });
   // Z.3 — real Venue/Lab pool state.
   const [venues, setVenues] = React.useState<any[]>([]);
@@ -2121,6 +2122,9 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
         doubleCount: Number(patch.doubleCount ?? current.doubleCount ?? 0),
         allowSplitDouble: Boolean(patch.allowSplitDouble ?? current.allowSplitDouble ?? false),
         venueId: patch.venueId !== undefined ? (patch.venueId || null) : (current.venueId ?? null),
+        // AA.4 — real, school-set "prefer right after a break" flag for
+        // subjects that genuinely involve student movement (labs, PE).
+        requiresMovement: Boolean(patch.requiresMovement ?? current.requiresMovement ?? false),
       };
       const res = await fetch("/api/academics/timetable/generator", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const json = await res.json();
@@ -2192,7 +2196,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error?.message || "Failed");
-      setCombinationForm({ id: "", name: "", subjectId: "", teacherId: "", lessonsPerWeek: 4, doubleCount: 0, scope: "SELECTED", source: "MANUAL", classIds: [], venueId: "" });
+      setCombinationForm({ id: "", name: "", subjectId: "", teacherId: "", lessonsPerWeek: 4, doubleCount: 0, scope: "SELECTED", source: "MANUAL", classIds: [], venueId: "", requiresMovement: false });
       await load();
       clearDraft(false);
       toast({ title: "Combination group saved", tone: "success" });
@@ -2635,6 +2639,20 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                             </select>
                           </div>
                         )}
+                        {/* AA.4 — real, school-set soft preference: this
+                            subject genuinely involves student movement (a
+                            lab session, workshop, PE) and should be
+                            preferred right after a real break — never a
+                            hard rule, so a school with limited slots never
+                            gets an unplaced lesson because of this. */}
+                        <label className="flex items-center gap-2 pl-1 text-[11px] text-navy-500 dark:text-navy-400">
+                          <input
+                            type="checkbox"
+                            defaultChecked={Boolean(current.requiresMovement)}
+                            onChange={(e) => saveNeed(cls.id, subject.id, { requiresMovement: e.target.checked })}
+                          />
+                          Movement-heavy (prefer right after a break)
+                        </label>
                       </div>
                     );
                   })}
@@ -2684,6 +2702,18 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                   {venues.map((v: any) => <option key={v.id} value={v.id}>{v.name} ({v.shortCode})</option>)}
                 </select>
               </div>
+              {/* AA.4 — same real soft "prefer right after a break"
+                  preference as the per-class subject need above, for a
+                  combined lesson that genuinely involves movement (e.g. a
+                  combined Science practical across streams). */}
+              <label className="flex items-center gap-2 text-xs text-navy-600 dark:text-navy-300">
+                <input
+                  type="checkbox"
+                  checked={Boolean(combinationForm.requiresMovement)}
+                  onChange={(e) => setCombinationForm((p: any) => ({ ...p, requiresMovement: e.target.checked }))}
+                />
+                Movement-heavy (prefer right after a break)
+              </label>
               <div className="max-h-36 overflow-y-auto rounded-2xl border border-navy-100 p-3 dark:border-navy-800">
                 <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-navy-400">Member classes</p>
                 <div className="space-y-2">

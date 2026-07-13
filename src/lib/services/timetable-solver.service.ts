@@ -68,7 +68,7 @@ export async function getTeacherSubjects(user: SessionUser, teacherId: string) {
 /** Save subject weekly lessons need + assigned teacher (The Input Matrix). */
 export async function saveClassSubjectNeed(
   user: SessionUser,
-  input: { classId: string; subjectId: string; lessonsPerWeek: number; teacherId?: string | null; doubleCount?: number; allowSplitDouble?: boolean; venueId?: string | null }
+  input: { classId: string; subjectId: string; lessonsPerWeek: number; teacherId?: string | null; doubleCount?: number; allowSplitDouble?: boolean; venueId?: string | null; requiresMovement?: boolean }
 ) {
   return withTenant(user.tenantId, async () => {
     const tdb = tenantDb();
@@ -80,6 +80,8 @@ export async function saveClassSubjectNeed(
     // need (takes priority over the school's own subject-tagged Venue
     // pool at solve time). Nullable — most needs use the pool instead.
     const venueId = input.venueId || null;
+    // AA.4 — real, school-set soft "prefer right after a break" flag.
+    const requiresMovement = input.requiresMovement ?? false;
 
     const row = await tdb.classSubjectNeed.upsert({
       where: { tenantId_classId_subjectId: { tenantId: user.tenantId, classId, subjectId } },
@@ -92,6 +94,7 @@ export async function saveClassSubjectNeed(
         doubleCount,
         allowSplitDouble,
         venueId,
+        requiresMovement,
       },
       update: {
         teacherId: teacherId || null,
@@ -99,6 +102,7 @@ export async function saveClassSubjectNeed(
         doubleCount,
         allowSplitDouble,
         venueId,
+        requiresMovement,
       },
     });
 

@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
         doubleCount: body.doubleCount !== undefined ? Number(body.doubleCount) : undefined,
         allowSplitDouble: body.allowSplitDouble !== undefined ? Boolean(body.allowSplitDouble) : undefined,
         venueId: body.venueId || null,
+        // AA.4 — real, school-set "prefer right after a break" flag.
+        requiresMovement: body.requiresMovement !== undefined ? Boolean(body.requiresMovement) : undefined,
       });
       return ok(result);
     }

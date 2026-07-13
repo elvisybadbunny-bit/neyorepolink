@@ -160,7 +160,7 @@ export async function listCombinationGroups(user: SessionUser) {
 
 export async function upsertCombinationGroup(
   user: SessionUser,
-  input: { id?: string; name: string; subjectId: string; teacherId?: string | null; lessonsPerWeek: number; doubleCount?: number; scope?: string; source?: string; classIds: string[]; venueId?: string | null }
+  input: { id?: string; name: string; subjectId: string; teacherId?: string | null; lessonsPerWeek: number; doubleCount?: number; scope?: string; source?: string; classIds: string[]; venueId?: string | null; requiresMovement?: boolean }
 ) {
   return withTenant(user.tenantId, async () => {
     const tdb = tenantDb();
@@ -177,6 +177,8 @@ export async function upsertCombinationGroup(
       // mechanism), nullable — falls back to the school's subject-tagged
       // Venue pool at solve time when not set.
       venueId: input.venueId || null,
+      // AA.4 — real, school-set soft "prefer right after a break" flag.
+      requiresMovement: input.requiresMovement ?? false,
     };
     let group;
     if (input.id) {
@@ -269,6 +271,15 @@ interface Card {
   // this subject. Empty array = no specific venue required (never blocks
   // placement on venue availability).
   venueCandidateIds: string[];
+  // AA.4 — a real, school-set soft preference (from
+  // ClassSubjectNeed.requiresMovement / CombinationGroup.requiresMovement):
+  // this card's own real lessons genuinely involve student movement (a lab
+  // session, workshop, PE) and should be preferred right after a real
+  // break/lunch — generalizing AA.1's own ElectiveBlock.preferAfterBreak
+  // soft-scoring pattern. NEVER a hard rule (see movementPreferencePenalty
+  // below) — a school with tight capacity never ends up with a genuinely
+  // unplaced lesson purely because of this cosmetic preference.
+  requiresMovement: boolean;
 }
 
 export async function runGeneration(tenantId: string, jobId: string, user: SessionUser) {
@@ -708,11 +719,13 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     // Z.3 — real venue candidates for this Combination Group (pinned venue
     // takes priority, else the school's real subject-tagged venue pool).
     const comboVenueCandidates = venueCandidatesFor(g.subjectId, (g as any).venueId);
+    // AA.4 — real school-set movement preference for this combined lesson.
+    const comboRequiresMovement = Boolean((g as any).requiresMovement);
     for (let i = 0; i < dbl; i++) {
-      cards.push({ id: `c${cardSeq++}`, classIds: memberClassIds, classLabel: labels, subjectId: g.subjectId, subjectCode: sub?.code ?? "?", teacherId: g.teacherId, size: 2, splitAllowed: false, isCombination: true, venueCandidateIds: comboVenueCandidates });
+      cards.push({ id: `c${cardSeq++}`, classIds: memberClassIds, classLabel: labels, subjectId: g.subjectId, subjectCode: sub?.code ?? "?", teacherId: g.teacherId, size: 2, splitAllowed: false, isCombination: true, venueCandidateIds: comboVenueCandidates, requiresMovement: comboRequiresMovement });
     }
     for (let i = 0; i < singles; i++) {
-      cards.push({ id: `c${cardSeq++}`, classIds: memberClassIds, classLabel: labels, subjectId: g.subjectId, subjectCode: sub?.code ?? "?", teacherId: g.teacherId, size: 1, splitAllowed: false, isCombination: true, venueCandidateIds: comboVenueCandidates });
+      cards.push({ id: `c${cardSeq++}`, classIds: memberClassIds, classLabel: labels, subjectId: g.subjectId, subjectCode: sub?.code ?? "?", teacherId: g.teacherId, size: 1, splitAllowed: false, isCombination: true, venueCandidateIds: comboVenueCandidates, requiresMovement: comboRequiresMovement });
     }
   }
 
@@ -728,11 +741,13 @@ async function buildAndSolve(tenantId: string, jobId: string) {
       // Z.3 — real venue candidates for this class-subject need (pinned
       // venue takes priority, else the school's real subject-tagged venue pool).
       const needVenueCandidates = venueCandidatesFor(n.subjectId, (n as any).venueId);
+      // AA.4 — real school-set movement preference for this class-subject.
+      const needRequiresMovement = Boolean((n as any).requiresMovement);
       for (let i = 0; i < dbl; i++) {
-        cards.push({ id: `c${cardSeq++}`, classIds: [c.id], classLabel: classLabel(c), subjectId: n.subjectId, subjectCode: sub.code, teacherId: n.teacherId, size: 2, splitAllowed: n.allowSplitDouble, isCombination: false, venueCandidateIds: needVenueCandidates });
+        cards.push({ id: `c${cardSeq++}`, classIds: [c.id], classLabel: classLabel(c), subjectId: n.subjectId, subjectCode: sub.code, teacherId: n.teacherId, size: 2, splitAllowed: n.allowSplitDouble, isCombination: false, venueCandidateIds: needVenueCandidates, requiresMovement: needRequiresMovement });
       }
       for (let i = 0; i < singles; i++) {
-        cards.push({ id: `c${cardSeq++}`, classIds: [c.id], classLabel: classLabel(c), subjectId: n.subjectId, subjectCode: sub.code, teacherId: n.teacherId, size: 1, splitAllowed: false, isCombination: false, venueCandidateIds: needVenueCandidates });
+        cards.push({ id: `c${cardSeq++}`, classIds: [c.id], classLabel: classLabel(c), subjectId: n.subjectId, subjectCode: sub.code, teacherId: n.teacherId, size: 1, splitAllowed: false, isCombination: false, venueCandidateIds: needVenueCandidates, requiresMovement: needRequiresMovement });
       }
     }
   }
@@ -901,6 +916,22 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     }
     return penalty;
   }
+  // AA.4 — real soft scoring penalty generalizing AA.1's own
+  // ElectiveBlock.preferAfterBreak shape to any ordinary/combined card
+  // flagged requiresMovement: a card NOT landing on the period right after
+  // one of its own class's real configured breaks/lunch pays the exact
+  // same soft +25 penalty AA.1 already uses — never a hard block, so a
+  // school with tight capacity is never left with a genuinely unplaced
+  // lesson purely because of this cosmetic preference. Uses the card's
+  // first member class's own real TimetableConfig (identical real pattern
+  // to AA.1's own `configByClass.get(block.classIds[0])`).
+  function movementPreferencePenalty(card: Card, periods: number[]): number {
+    if (!card.requiresMovement) return 0;
+    const cfg = configByClass.get(card.classIds[0]);
+    const breakEnds = [cfg?.shortBreakStart, cfg?.shortBreak2Start, cfg?.longBreakStart].filter(Boolean) as number[];
+    const isRightAfterBreak = breakEnds.some((b) => periods[0] === b + 1);
+    return isRightAfterBreak ? 0 : 25;
+  }
 
   function occupy(card: Card, day: number, periods: number[]) {
     for (const cid of card.classIds) {
@@ -1018,8 +1049,12 @@ async function buildAndSolve(tenantId: string, jobId: string) {
       const repeatPenaltyB = periodRepeatPenalty(card, periodsB);
       const spreadPenaltyA = daySpreadPenalty(card, dayA);
       const spreadPenaltyB = daySpreadPenalty(card, dayB);
-      const scoreA = morningPenaltyA + pePenaltyA + streamPenaltyA + densityBonusA + repeatPenaltyA + spreadPenaltyA + dayA * 2 + periodsA[0];
-      const scoreB = morningPenaltyB + pePenaltyB + streamPenaltyB + densityBonusB + repeatPenaltyB + spreadPenaltyB + dayB * 2 + periodsB[0];
+      // AA.4 — real soft movement-preference penalty (0 unless this card is
+      // flagged requiresMovement).
+      const movementPenaltyA = movementPreferencePenalty(card, periodsA);
+      const movementPenaltyB = movementPreferencePenalty(card, periodsB);
+      const scoreA = morningPenaltyA + pePenaltyA + streamPenaltyA + densityBonusA + repeatPenaltyA + spreadPenaltyA + movementPenaltyA + dayA * 2 + periodsA[0];
+      const scoreB = morningPenaltyB + pePenaltyB + streamPenaltyB + densityBonusB + repeatPenaltyB + spreadPenaltyB + movementPenaltyB + dayB * 2 + periodsB[0];
       return scoreA - scoreB;
     });
     candidateCache.set(card.id, placements);
@@ -1060,6 +1095,9 @@ async function buildAndSolve(tenantId: string, jobId: string) {
         // Z.2 — same real soft penalties as candidatePlacements() above.
         s += periodRepeatPenalty(card, periods);
         s += daySpreadPenalty(card, day);
+        // AA.4 — same real soft movement-preference penalty as
+        // candidatePlacements() above.
+        s += movementPreferencePenalty(card, periods);
         s += day * 10 + periods[0];
         return s;
       };
