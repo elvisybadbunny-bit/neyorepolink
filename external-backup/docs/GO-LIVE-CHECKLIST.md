@@ -85,17 +85,18 @@ what NEYO's own config already expects.
    Step 6). Treat it like a password; never post it publicly or paste it into
    chat with anyone you don't fully trust.
 
-> **Real, important technical note**: NEYO's database schema file
-> (`prisma/schema.prisma`) is currently set to `provider = "sqlite"` for
-> your local laptop/sandbox testing (your choice, so all your existing test
-> schools keep working exactly as before). The real Postgres version of the
-> schema has ALREADY been built and fully tested against a genuine
+> **Real, important technical note — UPDATE**: NEYO's database schema file
+> (`prisma/schema.prisma`) has now been switched to `provider = "postgresql"`
+> and this is already pushed to GitHub (this was done the moment you hit the
+> real Vercel error `"the URL must start with the protocol file:"` — that
+> error meant your code was still set to only accept a local-laptop database
+> while Vercel was trying to give it a real internet database, so the code
+> needed updating to match). This was fully tested first against a genuine
 > PostgreSQL database — real login, real dashboard, the full automated test
-> suite, all confirmed working — but is kept as its OWN separate,
-> ready-to-push branch of work rather than merged into your everyday
-> sandbox code. **Tell me "push the Postgres switch now"** once you have
-> your real Neon connection string ready, and I'll push it to GitHub as its
-> own dedicated commit — your local SQLite testing setup is never affected.
+> suite, and the exact real Vercel build command all confirmed working
+> before pushing. **What this means for you right now**: simply add your
+> real Neon `DATABASE_URL` in Vercel (Step 4 below) and redeploy — no
+> further code changes are needed on my end for this specific error.
 
 ---
 
