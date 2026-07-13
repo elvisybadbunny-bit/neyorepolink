@@ -4917,6 +4917,18 @@ model ClassSubjectNeed {
   venueId String?
   venue   Venue?  @relation(fields: [venueId], references: [id], onDelete: SetNull)
 
+  // AA.4 — a real, school-set soft preference: this subject's own real
+  // lessons involve genuine student MOVEMENT (e.g. a lab session, a
+  // workshop, PE) and should be preferred right after a real break/lunch,
+  // since students are already up and moving anyway rather than
+  // interrupting a settled lesson block. A pure soft scoring bonus in the
+  // solver's own existing candidate-scoring step (generalizing AA.1's own
+  // ElectiveBlock.preferAfterBreak to ordinary per-class subjects) — NEVER
+  // a hard rule, so a school with limited slots never gets an unplaced
+  // lesson because of this preference. Default false (most subjects, e.g.
+  // Mathematics, have no real reason to sit near a break).
+  requiresMovement Boolean @default(false)
+
   @@unique([tenantId, classId, subjectId])
   @@index([tenantId])
   @@index([tenantId, venueId])
@@ -5000,6 +5012,12 @@ model CombinationGroup {
   // exactly like any other class-subject need.
   venueId String?
   venue   Venue?  @relation(fields: [venueId], references: [id], onDelete: SetNull)
+
+  // AA.4 — same real soft "prefer right after a break" preference as
+  // ClassSubjectNeed.requiresMovement above, for a combined/lab session
+  // that genuinely involves student movement (e.g. a combined Science
+  // practical across streams). Default false.
+  requiresMovement Boolean @default(false)
 
   members CombinationGroupClass[]
 
