@@ -33,11 +33,23 @@ export default async function AppLayout({
   if (!ctx) redirect("/login");
   const user = ctx.user; // effective user (impersonated, if impersonating)
 
-  // Effective tenant for the top-bar module switcher and branding.
-  const tenant = await db.tenant.findUnique({
-    where: { id: user.tenantId },
-    select: { name: true, slug: true, logoUrl: true, brandPrimary: true, brandAccent: true },
-  });
+  // PERFORMANCE (founder-reported real-world slowness, 2026-07-13): these 6
+  // real lookups are all independent (none depends on another's result), so
+  // running them with Promise.all lets their real DB round-trips overlap
+  // instead of paying for each one's own latency back-to-back in sequence —
+  // a real, measurable per-page-load speedup with zero behaviour change.
+  const [tenant, enabledModulesSet, hiddenNav, platformHiddenHrefsSet, permissions, demo, shellVersion] = await Promise.all([
+    db.tenant.findUnique({
+      where: { id: user.tenantId },
+      select: { name: true, slug: true, logoUrl: true, brandPrimary: true, brandAccent: true },
+    }),
+    getEnabledModuleKeys(user.tenantId),
+    getNavVisibility(user.tenantId),
+    pausedFeatureHrefs(),
+    effectivePermissionsForUser(user),
+    demoStatus(user.tenantId),
+    resolveShellVersion(user),
+  ]);
 
   // A.2.3 enforcement: skip while impersonating (admin operates cross-tenant).
   if (!ctx.isImpersonating) {
@@ -50,17 +62,8 @@ export default async function AppLayout({
   // A.2.6: sidebar shows only modules this (effective) school has enabled.
   // Pass enabled keys (strings) — NOT pre-filtered nav with icon functions,
   // which can't cross the server->client boundary.
-  const enabledModules = Array.from(await getEnabledModuleKeys(user.tenantId));
-
-  // H.2 Role-Based Settings & Module Visibility: owner-configured map of which
-  // nav items are hidden for which roles. The sidebar applies it per role.
-  const hiddenNav = await getNavVisibility(user.tenantId);
-  const platformHiddenHrefs = Array.from(await pausedFeatureHrefs());
-
-  // A.3.4/A.3.5 + I.92: seed the CLIENT with EFFECTIVE permissions from the server.
-  // This includes dual roles and strict per-staff support-area scoping, so hidden
-  // modules/cards do not briefly flash before /api/auth/permissions refreshes.
-  const permissions = await effectivePermissionsForUser(user);
+  const enabledModules = Array.from(enabledModulesSet);
+  const platformHiddenHrefs = Array.from(platformHiddenHrefsSet);
 
   // Distinguish the two "acting as" modes:
   //  - View-As (G.5): in-school, read-only -> blue banner.
@@ -72,16 +75,6 @@ export default async function AppLayout({
   const canViewAs =
     !ctx.isImpersonating &&
     ["SCHOOL_OWNER", "PRINCIPAL", "DEPUTY_PRINCIPAL"].includes(user.role);
-
-  // G.14 — demo banner when the session's tenant is a sandboxed demo.
-  const demo = await demoStatus(user.tenantId);
-
-  // Shell Version (founder-requested "NEYO 2.0", 2026-07-04): resolved
-  // server-side so there is zero flash-of-wrong-shell on first paint.
-  // Shell V1 (today's sidebar) stays the default; Shell V2 (floating
-  // brand-colored bottom bar + left Activity/Intercom rail) only renders
-  // when NEYO Ops has switched the platform default to "v2".
-  const shellVersion = await resolveShellVersion(user);
 
   return (
     <PermissionsProvider initialRole={user.role} initialSecondaryRole={user.secondaryRole} initialPermissions={permissions}>

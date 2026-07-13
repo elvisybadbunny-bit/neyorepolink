@@ -8,6 +8,7 @@
  * Upgraded to support dual roles for staff members holding 2 roles simultaneously.
  */
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { DEVICE_COOKIE, cleanDeviceId } from "@/lib/core/device-id";
 import { isRole, type Role } from "@/lib/core/roles";
@@ -149,8 +150,17 @@ function toSessionUser(u: {
  * Resolve the full session context from the cookie, or null.
  * When the session is impersonating, `user` is the IMPERSONATED user (so all
  * tenant-scoped code acts as that school) and `realUser` is the admin.
+ *
+ * PERFORMANCE (founder-reported real-world slowness, 2026-07-13): wrapped in
+ * React's `cache()` so every real Server Component invoked during the SAME
+ * single request (root layout, (app) layout, and the page itself all call
+ * this independently) shares ONE real DB round-trip instead of each paying
+ * for its own — `cache()` is request-scoped (a fresh cache starts on the
+ * very next request), so this is never stale across real page loads, only
+ * de-duplicated WITHIN one. The exported name/signature is unchanged, so
+ * every existing call site keeps working with zero changes needed.
  */
-export async function getSessionContext(): Promise<SessionContext | null> {
+export const getSessionContext = cache(async (): Promise<SessionContext | null> => {
   const token = cookies().get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
@@ -235,7 +245,7 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     token,
     twoFactorEnforcedMissing,
   };
-}
+});
 
 /**
  * Resolve the EFFECTIVE logged-in user (impersonated user if impersonating),

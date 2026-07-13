@@ -56,21 +56,27 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Check for Global Liquid Glass Operator Switch (Feature G.22 Toggle)
-  const liquidSetting = await db.platformSetting.findUnique({ where: { key: "neyo_liquid_system_active" } }).catch(() => null);
-  const isLiquidActive = liquidSetting ? liquidSetting.value === "true" : true; // Default true!
-
-  // Check for System-Wide Maintenance Mode
-  const [maintenanceSetting, maintenanceMessageSetting, maintenanceEtaSetting] = await Promise.all([
+  // PERFORMANCE (founder-reported real-world slowness, 2026-07-13): these
+  // real lookups are all independent of each other (none needs another's
+  // result), so running them together lets their real DB round-trips
+  // overlap instead of queuing one after another on every single page
+  // load. `getSessionContext()` itself is wrapped in React's `cache()`
+  // (src/lib/core/session.ts), so this call and the one the (app) layout
+  // makes moments later for the SAME request share one real DB round-trip
+  // instead of two.
+  const [liquidSetting, maintenanceSetting, maintenanceMessageSetting, maintenanceEtaSetting, sessionCtx, companyLgContrast] = await Promise.all([
+    db.platformSetting.findUnique({ where: { key: "neyo_liquid_system_active" } }).catch(() => null),
     db.platformSetting.findUnique({ where: { key: "maintenance_mode" } }).catch(() => null),
     db.platformSetting.findUnique({ where: { key: "maintenance_message" } }).catch(() => null),
     db.platformSetting.findUnique({ where: { key: "maintenance_eta" } }).catch(() => null),
+    getSessionContext().catch(() => null),
+    getLiquidColorLevel(),
   ]);
+  const isLiquidActive = liquidSetting ? liquidSetting.value === "true" : true; // Default true!
   const isMaintenanceActive = maintenanceSetting?.value === "true";
   const maintenanceMessage = maintenanceMessageSetting?.value || "We are currently conducting scheduled upgrades and maintenance on NEYO School OS. The platform will be back online shortly with improved speed and reliability.";
   const maintenanceEta = maintenanceEtaSetting?.value || "Back shortly";
 
-  const sessionCtx = await getSessionContext().catch(() => null);
   const isSuperAdmin = sessionCtx?.user ? isFounderTier(sessionCtx.user.role) : false;
 
   // Check for School OS Subscription Expiration / Lockouts (Automated Lockout)
@@ -108,11 +114,11 @@ export default async function RootLayout({
 
   // O.3: resolve the EFFECTIVE colour/contrast level — the user's personal
   // override (User.lgContrast) if they set one, else the company default
-  // (PlatformSetting liquid_color_level). Rendered server-side, same
-  // no-flash/cross-device pattern as popupStyle above. "1" (standard) is
-  // the platform default and needs no CSS override, but we still render it
-  // explicitly for clarity/consistency with the existing data-liquid="2".
-  const companyLgContrast = await getLiquidColorLevel();
+  // (PlatformSetting liquid_color_level, fetched above alongside the other
+  // independent lookups). Rendered server-side, same no-flash/cross-device
+  // pattern as popupStyle above. "1" (standard) is the platform default and
+  // needs no CSS override, but we still render it explicitly for clarity/
+  // consistency with the existing data-liquid="2".
   const userLgContrast = sessionCtx?.user?.lgContrast;
   const hasPersonalLgContrast = Boolean(userLgContrast && userLgContrast !== "company");
   const effectiveLgContrast = hasPersonalLgContrast ? userLgContrast : companyLgContrast;
