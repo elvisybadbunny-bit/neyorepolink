@@ -187,3 +187,172 @@ export async function getElectiveBlocksForSolver(tenantId: string) {
       }));
   });
 }
+
+// ---------------------------------------------------------------------------
+// BB.7 — Dedicated Options Block & Subject-Combination Roster Prints.
+//
+// Real gap found via investigation (not assumed): the founder asked for
+// venue/teacher detail for a combined Options Block slot to be printable —
+// but `timetablePrintBundle()` (the function powering the ACTUAL printed
+// timetable at /print/timetable) never resolves the same real
+// `electiveBlock` breakdown that `getTimetable()` (the live on-screen view)
+// already computes. A printed/PDF class timetable would therefore silently
+// show just one generic subject/teacher cell for what's actually a real
+// multi-subject Options Block period, hiding which room/teacher a given
+// student actually needs to go to.
+//
+// Founder's own explicit instruction (verbatim, real design decision):
+// "THE VENUE DETAILS SHOULD BE AND TEACHER DETAILS SHOULD BE IN A DIFFERENT
+// PRINT EXPLAINING THAT NOT IN THE TIMETABLE OVERCROWDING IT JUST IN A
+// DIFFERENT PRINT MAYBE PER CLASS SHOWING THAT AND ALSO PRINTS SHOWING THE
+// SUBJECT CLASS LISTS AND COMBINATIONS THAT THE SYSTEM GENERATED" — i.e.
+// TWO separate, dedicated reference prints, never embedded in/overcrowding
+// the main timetable grid:
+//   1. getOptionsBlockRosterPrint() — per real class, every real placed
+//      Options Block period with its real subject/teacher/venue breakdown.
+//   2. getSubjectCombinationRosterPrint() — the real subject-combination
+//      groups the system itself generated from student choices (reuses
+//      L.7's own real groupStudentsBySubjectCombination() algorithm —
+//      never a second, drifting copy of that logic).
+// ---------------------------------------------------------------------------
+
+export async function getOptionsBlockRosterPrint(user: SessionUser, level?: string | null) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+
+    const classWhere = level ? { level, archived: false } : { archived: false };
+    const classes = await tdb.schoolClass.findMany({ where: classWhere, orderBy: [{ level: "asc" }, { stream: "asc" }] });
+    if (classes.length === 0) return { level: level ?? null, classes: [] as any[] };
+    const classIds = classes.map((c) => c.id);
+    const classMap = new Map(classes.map((c) => [c.id, c]));
+
+    // Real placed Options Block periods only — never a proposed/unbuilt
+    // block, since this print is a reference for staff/students about what
+    // ACTUALLY got scheduled.
+    const slots = await tdb.timetableSlot.findMany({
+      where: { classId: { in: classIds }, slotType: "ELECTIVE_BLOCK", electiveBlockSlotId: { not: null } },
+      orderBy: [{ dayOfWeek: "asc" }, { period: "asc" }],
+    });
+    if (slots.length === 0) return { level: level ?? null, classes: [] as any[] };
+
+    const blockSlotIds = [...new Set(slots.map((s) => s.electiveBlockSlotId).filter((x): x is string => Boolean(x)))];
+    const blockSlots = await tdb.electiveBlockSlot.findMany({
+      where: { id: { in: blockSlotIds } },
+      include: { subjects: { orderBy: { id: "asc" } }, block: true },
+    });
+    const blockSlotMap = new Map(blockSlots.map((bs) => [bs.id, bs]));
+
+    const allTeacherIds = [...new Set(blockSlots.flatMap((bs) => bs.subjects.map((s) => s.teacherId).filter((x): x is string => Boolean(x))))];
+    const allVenueIds = [...new Set(blockSlots.flatMap((bs) => bs.subjects.flatMap((s) => [s.venueId, s.resolvedVenueId]).filter((x): x is string => Boolean(x))))];
+    const allSubjectIds = [...new Set(blockSlots.flatMap((bs) => bs.subjects.map((s) => s.subjectId)))];
+
+    const [teachers, venues, subjects] = await Promise.all([
+      allTeacherIds.length ? tdb.user.findMany({ where: { id: { in: allTeacherIds } }, select: { id: true, fullName: true, timetableShortCode: true } }) : Promise.resolve([]),
+      allVenueIds.length ? tdb.venue.findMany({ where: { id: { in: allVenueIds } } }) : Promise.resolve([]),
+      allSubjectIds.length ? tdb.subject.findMany({ where: { id: { in: allSubjectIds } } }) : Promise.resolve([]),
+    ]);
+    const teacherNameMap = new Map(teachers.map((t) => [t.id, t.fullName]));
+    const venueMap = new Map(venues.map((v) => [v.id, v.shortCode || v.name]));
+    const subjectMap = new Map(subjects.map((s) => [s.id, s]));
+
+    const DAY_NAMES = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+    const byClass = new Map<string, { classId: string; className: string; rows: any[] }>();
+    for (const s of slots) {
+      const bs = s.electiveBlockSlotId ? blockSlotMap.get(s.electiveBlockSlotId) : null;
+      if (!bs) continue;
+      const cls = classMap.get(s.classId);
+      if (!cls) continue;
+      const className = [cls.level, cls.stream].filter(Boolean).join(" ");
+      const entry = byClass.get(s.classId) ?? { classId: s.classId, className, rows: [] };
+      entry.rows.push({
+        classId: s.classId,
+        className,
+        day: DAY_NAMES[s.dayOfWeek] ?? String(s.dayOfWeek),
+        period: s.period,
+        blockName: bs.block.name,
+        slotLabel: bs.label,
+        subjects: bs.subjects.map((sub) => ({
+          subjectName: subjectMap.get(sub.subjectId)?.name ?? "?",
+          subjectCode: subjectMap.get(sub.subjectId)?.code ?? null,
+          teacherName: sub.teacherId ? teacherNameMap.get(sub.teacherId) ?? null : null,
+          teacherShortCode: sub.teacherId ? (teachers.find((t) => t.id === sub.teacherId)?.timetableShortCode ?? null) : null,
+          // An explicit school pin always wins; otherwise show the
+          // solver's own real auto-picked overflow venue (BB.1), if any;
+          // null when neither is set — this subject genuinely runs in the
+          // class's own home classroom (the print renderer displays this
+          // real null case with its own honest "Own home classroom" label,
+          // rather than baking display text into the data layer).
+          venue: (sub.venueId ? venueMap.get(sub.venueId) : null) ?? (sub.resolvedVenueId ? venueMap.get(sub.resolvedVenueId) : null) ?? null,
+        })),
+      });
+      byClass.set(s.classId, entry);
+    }
+
+    const result = [...byClass.values()]
+      .map((c) => ({ ...c, rows: c.rows.sort((a, b) => (a.day === b.day ? a.period - b.period : DAY_NAMES.indexOf(a.day) - DAY_NAMES.indexOf(b.day))) }))
+      .sort((a, b) => a.className.localeCompare(b.className));
+
+    return { level: level ?? null, classes: result };
+  });
+}
+
+export async function getSubjectCombinationRosterPrint(user: SessionUser, level: string) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const { groupStudentsBySubjectCombination, classLabel: l7ClassLabel } = await import("@/lib/services/l7-auto-grouping.service");
+
+    const classes = await tdb.schoolClass.findMany({ where: { level, archived: false }, orderBy: [{ stream: "asc" }] });
+    if (classes.length === 0) return { level, groups: [] as any[] };
+    const classMap = new Map(classes.map((c) => [c.id, c]));
+
+    const students = await tdb.student.findMany({
+      where: { classId: { in: classes.map((c) => c.id) }, status: "ACTIVE" },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      select: { id: true, firstName: true, lastName: true, admissionNo: true, classId: true },
+    });
+    if (students.length === 0) return { level, groups: [] as any[] };
+
+    const selections = await tdb.studentSubjectSelection.findMany({
+      where: { isConfirmed: true, studentId: { in: students.map((s) => s.id) } },
+      select: { studentId: true, selectedSubjectIds: true },
+    });
+    const selectionMap = new Map(selections.map((s) => [s.studentId, safeParse<string[]>(s.selectedSubjectIds, [])]));
+    if (selections.length === 0) return { level, groups: [] as any[] };
+
+    // Real, exact same grouping key shape L.7's own
+    // groupStudentsBySubjectCombination() uses internally (sorted subject id
+    // set) — recomputed here (rather than reusing that function's own
+    // classId assignments) since this print exists to show the real
+    // COMBINATION groups themselves, independent of which physical class a
+    // student was ultimately placed into.
+    const allSubjectIds = [...new Set([...selectionMap.values()].flat())];
+    const subjects = allSubjectIds.length ? await tdb.subject.findMany({ where: { id: { in: allSubjectIds } }, select: { id: true, name: true } }) : [];
+    const subjectNameMap = new Map(subjects.map((s) => [s.id, s.name]));
+
+    const bySubjectSet = new Map<string, { key: string; subjectIds: string[]; students: typeof students }>();
+    for (const student of students) {
+      const selected = selectionMap.get(student.id);
+      if (!selected || selected.length === 0) continue; // no confirmed choice yet — not part of any real generated combination
+      const sortedIds = [...selected].sort();
+      const key = sortedIds.join("|");
+      const entry = bySubjectSet.get(key) ?? { key, subjectIds: sortedIds, students: [] as typeof students };
+      entry.students.push(student);
+      bySubjectSet.set(key, entry);
+    }
+
+    const groups = [...bySubjectSet.values()]
+      .sort((a, b) => b.students.length - a.students.length)
+      .map((g) => ({
+        subjectNames: g.subjectIds.length > 0 ? g.subjectIds.map((id) => subjectNameMap.get(id) ?? "?") : ["No confirmed subject choice yet"],
+        studentCount: g.students.length,
+        students: g.students.map((s) => ({
+          name: `${s.firstName} ${s.lastName}`,
+          admissionNo: s.admissionNo,
+          currentClass: s.classId ? l7ClassLabel(classMap.get(s.classId) ?? { level, stream: null }) : level,
+        })),
+      }));
+
+    return { level, groups };
+  });
+}

@@ -760,6 +760,18 @@ function AllocateClassPanel({ onDone, initialLevel }: { onDone: () => void; init
             <Button onClick={runPreview} disabled={busy || !level.trim()}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Preview
             </Button>
+            {/* BB.7 — real, dedicated print of the subject-combination groups
+                the system generated for this level, kept as its own
+                separate reference print per the founder's own explicit
+                instruction. */}
+            {level.trim() && (
+              <Button
+                variant="secondary"
+                onClick={() => window.open(`/print/electives-roster?kind=combination_roster&level=${encodeURIComponent(level.trim())}`, "_blank")}
+              >
+                <ClipboardCheck className="h-4 w-4" /> Print subject-combination roster
+              </Button>
+            )}
           </div>
 
           {previewError && (

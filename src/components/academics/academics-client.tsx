@@ -2860,9 +2860,17 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                 For subjects students genuinely choose BETWEEN (e.g. History OR CRE — every student is doing something at this time, but which room/teacher depends on their own choice). NEYO schedules every subject in a block at the SAME real time so movement between rooms works cleanly, and no two block subjects clash with each other&apos;s teachers/venues. Use &quot;Single-Choice&quot; mode when every slot offers the exact same subjects (e.g. Technical &amp; Applied: choose ONE of Business/Computer/Art/Agriculture/French) — use &quot;Multi-Slot&quot; when different slots can offer different subject pairings (e.g. History appears opposite CRE in one slot, and opposite Geography in another).
               </p>
             </div>
-            <Button variant="secondary" size="sm" onClick={() => setAutoBuildOpen(true)} disabled={!canManage}>
-              <Sparkles className="h-3.5 w-3.5" /> Build from student choices
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setAutoBuildOpen(true)} disabled={!canManage}>
+                <Sparkles className="h-3.5 w-3.5" /> Build from student choices
+              </Button>
+              {/* BB.7 — real, dedicated venue/teacher roster print, kept
+                  deliberately SEPARATE from the main timetable grid per the
+                  founder's own explicit instruction. */}
+              <Button variant="secondary" size="sm" onClick={() => window.open("/print/electives-roster?kind=venue_roster", "_blank")}>
+                <Printer className="h-3.5 w-3.5" /> Print venue &amp; teacher roster
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
