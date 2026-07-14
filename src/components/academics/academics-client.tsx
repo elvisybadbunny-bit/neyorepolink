@@ -1977,6 +1977,8 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [starting, setStarting] = React.useState(false);
+  // AA.9 — real "start of term" teacher-rotation action state.
+  const [rotatingTeachers, setRotatingTeachers] = React.useState(false);
   const [payload, setPayload] = React.useState<any>(null);
   const [job, setJob] = React.useState<any>(null);
   const [classes, setClasses] = React.useState<any[]>([]);
@@ -2135,6 +2137,9 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
         // and real soft lab-priority tier ("NORMAL" | "HIGH").
         noLabAccess: Boolean(patch.noLabAccess ?? current.noLabAccess ?? false),
         labPriority: patch.labPriority ?? current.labPriority ?? "NORMAL",
+        // AA.9 — real, school-set "rotate this subject's teacher every
+        // term" flag.
+        rotateTeacherEachTerm: Boolean(patch.rotateTeacherEachTerm ?? current.rotateTeacherEachTerm ?? false),
       };
       const res = await fetch("/api/academics/timetable/generator", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const json = await res.json();
@@ -2453,6 +2458,38 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
     await actuallyStartGeneration();
   }
 
+  // AA.9 — real "start of term" action: deliberately re-rolls the
+  // teacher assignment for every real class-subject pairing a school has
+  // flagged "Rotate this subject's teacher every term" — a Principal/
+  // office role triggers this explicitly, typically once per real new
+  // term, never automatically.
+  async function runTeacherRotation() {
+    setRotatingTeachers(true);
+    try {
+      const res = await fetch("/api/academics/timetable/generator", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "rotate_flagged_teachers" }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        const { rotatedCount, reassignedCount } = json.data;
+        toast({
+          title: rotatedCount === 0
+            ? "No subjects are flagged to rotate each term yet."
+            : `Rotated ${rotatedCount} flagged subject${rotatedCount === 1 ? "" : "s"} — ${reassignedCount} real reassignment${reassignedCount === 1 ? "" : "s"} made.`,
+          tone: "success",
+        });
+        await load();
+      } else {
+        toast({ title: json.error?.message || "Could not rotate teachers.", tone: "error" });
+      }
+    } catch {
+      toast({ title: "Network error", tone: "error" });
+    } finally {
+      setRotatingTeachers(false);
+    }
+  }
+
   if (loading || !payload) return <Skeletons />;
 
   const constraintSummary = (c: any) => {
@@ -2498,12 +2535,23 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                   Set the real school rules first, then press one master button. NEYO builds the timetable in the background, shows live progress, respects teacher time-off, avoids clashes, and schedules single, double and combination lessons deterministically.
                 </p>
               </div>
-              <Button onClick={runMasterButton} disabled={!canManage || starting || preGenLoading || ["QUEUED", "RUNNING"].includes(job?.status)} className="h-12 min-w-[220px]">
-                {starting || preGenLoading || ["QUEUED", "RUNNING"].includes(job?.status)
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <Wand2 className="h-4 w-4" />}
-                {job?.status === "RUNNING" ? "Generating…" : job?.status === "QUEUED" ? "Queued…" : preGenLoading ? "Checking setup…" : "Start Master Button"}
-              </Button>
+              <div className="flex flex-col items-stretch gap-2 md:items-end">
+                <Button onClick={runMasterButton} disabled={!canManage || starting || preGenLoading || ["QUEUED", "RUNNING"].includes(job?.status)} className="h-12 min-w-[220px]">
+                  {starting || preGenLoading || ["QUEUED", "RUNNING"].includes(job?.status)
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <Wand2 className="h-4 w-4" />}
+                  {job?.status === "RUNNING" ? "Generating…" : job?.status === "QUEUED" ? "Queued…" : preGenLoading ? "Checking setup…" : "Start Master Button"}
+                </Button>
+                {/* AA.9 — real, deliberate "start of term" action: only
+                    ever re-rolls the teacher assigned to a subject a
+                    school has explicitly flagged to rotate (e.g. PE with
+                    no dedicated specialist) — every other real assignment
+                    in the school stays completely untouched. */}
+                <Button size="sm" variant="secondary" onClick={runTeacherRotation} disabled={!canManage || rotatingTeachers} title="Re-rolls the teacher for every subject flagged 'Rotate this subject's teacher every term' below — everything else stays untouched.">
+                  {rotatingTeachers ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                  Start of term: rotate flagged teachers
+                </Button>
+              </div>
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-3">
               <StatPill icon={Users} label="Classes" value={String(classes.length)} />
@@ -2777,6 +2825,22 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                             </label>
                           </div>
                         )}
+                        {/* AA.9 — real, school-set "deliberately re-roll
+                            this subject's teacher assignment at the start
+                            of each new term" flag. Never a hardcoded rule
+                            about which subject (a school picks this for
+                            PE, or any subject with no dedicated
+                            specialist) or who covers it — eligibility
+                            still comes entirely from the school's own
+                            real Teacher ↔ Subject links below. */}
+                        <label className="flex items-center gap-2 pl-1 text-[11px] text-navy-500 dark:text-navy-400">
+                          <input
+                            type="checkbox"
+                            defaultChecked={Boolean(current.rotateTeacherEachTerm)}
+                            onChange={(e) => saveNeed(cls.id, subject.id, { rotateTeacherEachTerm: e.target.checked })}
+                          />
+                          Rotate this subject&apos;s teacher every term (e.g. PE with no dedicated specialist)
+                        </label>
                       </div>
                     );
                   })}

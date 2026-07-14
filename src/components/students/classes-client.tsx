@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Loader2, AlertCircle, Users, X, CreditCard, Layers } from "lucide-react";
+import { Plus, Loader2, AlertCircle, Users, X, CreditCard, Layers, UserCog, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -14,8 +14,11 @@ import { curriculumLabel } from "@/lib/utils";
 
 interface ClassRow {
   id: string; level: string; stream: string | null; curriculum: string;
+  classTeacherId: string | null;
   capacity: number | null; archived: boolean; studentCount: number; name: string;
 }
+
+interface TeacherOption { id: string; fullName: string; role: string }
 
 export function ClassesClient({ canManage }: { canManage: boolean }) {
   const { toast } = useToast();
@@ -23,6 +26,15 @@ export function ClassesClient({ canManage }: { canManage: boolean }) {
   const [error, setError] = React.useState(false);
   const [dialog, setDialog] = React.useState(false);
   const [bulkDialog, setBulkDialog] = React.useState(false);
+  const [editClass, setEditClass] = React.useState<ClassRow | null>(null);
+  // AA.9 — real, school-picked list of every staff member who could
+  // plausibly be set as a class's own real Class Teacher (homeroom
+  // teacher). Never hardcoded to a single role — a school's own real
+  // staffing choices vary (a Deputy Principal or HOD sometimes doubles as
+  // a class teacher too), so the same real staff-recipient list already
+  // used elsewhere in the app (Smart Timetable, messaging) is reused here.
+  const [teachers, setTeachers] = React.useState<TeacherOption[]>([]);
+  const [savingTeacherFor, setSavingTeacherFor] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
     setError(false);
@@ -34,6 +46,37 @@ export function ClassesClient({ canManage }: { canManage: boolean }) {
     } catch { setError(true); }
   }, []);
   React.useEffect(()=>{ load(); }, [load]);
+  React.useEffect(() => {
+    fetch("/api/conversations/recipients").then((r) => r.json()).then((j) => {
+      if (j.ok) setTeachers((j.data.recipients ?? []).filter((u: any) => ["TEACHER", "CLASS_TEACHER", "HOD", "DEPUTY_PRINCIPAL", "PRINCIPAL", "DEAN_OF_STUDIES"].includes(u.role)));
+    }).catch(() => {});
+  }, []);
+
+  // AA.9 — real, direct "who is this class's own real Class Teacher"
+  // assignment, settable right from the class list (fast path) — reuses
+  // the existing PATCH /api/classes/:id endpoint, which already fully
+  // supported classTeacherId on the backend (service + schema), it simply
+  // had no UI anywhere in the app to actually set it until now.
+  async function saveClassTeacher(classId: string, classTeacherId: string) {
+    setSavingTeacherFor(classId);
+    try {
+      const res = await fetch(`/api/classes/${classId}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ classTeacherId: classTeacherId || "" }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        toast({ title: classTeacherId ? "Class teacher assigned." : "Class teacher removed.", tone: "success" });
+        await load();
+      } else {
+        toast({ title: json.error?.message || "Could not save class teacher.", tone: "error" });
+      }
+    } catch {
+      toast({ title: "Network error", tone: "error" });
+    } finally {
+      setSavingTeacherFor(null);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -55,12 +98,33 @@ export function ClassesClient({ canManage }: { canManage: boolean }) {
       ) : (
         <TableContainer>
           <Table>
-            <THead><TR><TH>Class</TH><TH>Curriculum</TH><TH align="center">Students</TH><TH align="center">Capacity</TH><TH align="right">Mzazi cards</TH></TR></THead>
+            <THead><TR><TH>Class</TH><TH>Curriculum</TH><TH>Class teacher</TH><TH align="center">Students</TH><TH align="center">Capacity</TH><TH align="right">Mzazi cards</TH>{canManage && <TH align="right">Edit</TH>}</TR></THead>
             <TBody>
               {rows.map((c)=>(
                 <TR key={c.id}>
                   <TD><span className="font-medium text-navy-900 dark:text-navy-50">{c.name}</span></TD>
                   <TD><Badge tone={c.curriculum==="CBC"?"green":"blue"}>{curriculumLabel(c.curriculum)}</Badge></TD>
+                  <TD>
+                    {canManage ? (
+                      <div className="flex items-center gap-1.5">
+                        <UserCog className="h-3.5 w-3.5 shrink-0 text-navy-400" />
+                        <select
+                          defaultValue={c.classTeacherId ?? ""}
+                          disabled={savingTeacherFor === c.id}
+                          onChange={(e) => saveClassTeacher(c.id, e.target.value)}
+                          className="w-full min-w-[150px] rounded-lg border border-navy-100 bg-white px-2 py-1 text-xs dark:border-navy-800 dark:bg-navy-900"
+                        >
+                          <option value="">No class teacher set</option>
+                          {teachers.map((t) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+                        </select>
+                        {savingTeacherFor === c.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-navy-400" />}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-navy-500 dark:text-navy-400">
+                        {teachers.find((t) => t.id === c.classTeacherId)?.fullName ?? <span className="text-navy-300">Not set</span>}
+                      </span>
+                    )}
+                  </TD>
                   <TD align="center">{c.studentCount}</TD>
                   <TD align="center">{c.capacity ?? "—"}</TD>
                   <TD align="right">
@@ -70,6 +134,11 @@ export function ClassesClient({ canManage }: { canManage: boolean }) {
                       </a>
                     ) : <span className="text-xs text-navy-300">—</span>}
                   </TD>
+                  {canManage && (
+                    <TD align="right">
+                      <Button size="sm" variant="ghost" onClick={() => setEditClass(c)}><Pencil className="h-3.5 w-3.5" /></Button>
+                    </TD>
+                  )}
                 </TR>
               ))}
             </TBody>
@@ -78,6 +147,14 @@ export function ClassesClient({ canManage }: { canManage: boolean }) {
       )}
       {dialog && <NewClassDialog onClose={()=>setDialog(false)} onSaved={()=>{ setDialog(false); toast({title:"Class created",tone:"success"}); load(); }} />}
       {bulkDialog && <BulkStreamsDialog onClose={()=>setBulkDialog(false)} onSaved={(msg)=>{ setBulkDialog(false); toast({title: msg, tone:"success"}); load(); }} />}
+      {editClass && (
+        <EditClassDialog
+          cls={editClass}
+          teachers={teachers}
+          onClose={() => setEditClass(null)}
+          onSaved={() => { setEditClass(null); toast({ title: "Class updated", tone: "success" }); load(); }}
+        />
+      )}
     </div>
   );
 }
@@ -220,6 +297,83 @@ function NewClassDialog({ onClose, onSaved }: { onClose:()=>void; onSaved:()=>vo
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={save} disabled={saving}>{saving?<Loader2 className="h-4 w-4 animate-spin" />:<Plus className="h-4 w-4" />} Create class</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// AA.9 — real "edit class" dialog: level/stream/curriculum/capacity/class
+// teacher all editable together in one place, per the founder's own
+// explicit request for a dedicated edit surface (in addition to the fast
+// inline class-teacher picker on the list itself).
+function EditClassDialog({ cls, teachers, onClose, onSaved }: { cls: ClassRow; teachers: TeacherOption[]; onClose: () => void; onSaved: () => void }) {
+  const { toast } = useToast();
+  const [f, setF] = React.useState({
+    level: cls.level, stream: cls.stream ?? "", curriculum: cls.curriculum,
+    capacity: cls.capacity != null ? String(cls.capacity) : "", classTeacherId: cls.classTeacherId ?? "",
+  });
+  const [saving, setSaving] = React.useState(false);
+  const set = (k: string, v: string) => setF((p) => ({ ...p, [k]: v }));
+
+  async function save() {
+    if (!f.level.trim()) { toast({ title: "Enter a level, e.g. Grade 4.", tone: "error" }); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/classes/${cls.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: f.level.trim(),
+          stream: f.stream.trim() || "",
+          curriculum: f.curriculum,
+          capacity: f.capacity ? Number(f.capacity) : undefined,
+          classTeacherId: f.classTeacherId || "",
+        }),
+      });
+      const json = await res.json();
+      if (json.ok) onSaved();
+      else toast({ title: json.error?.message || "Could not save", tone: "error" });
+    } catch {
+      toast({ title: "Network error", tone: "error" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/40 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-card dark:bg-navy-900 sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-navy-900 dark:text-navy-50">Edit class</h3>
+          <button onClick={onClose} className="rounded-full p-1.5 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1"><Label>Level</Label><Input value={f.level} onChange={(e) => set("level", e.target.value)} placeholder="Grade 4 / Form 2" autoFocus /></div>
+            <div className="space-y-1"><Label>Stream (optional)</Label><Input value={f.stream} onChange={(e) => set("stream", e.target.value)} placeholder="Blue / East" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1"><Label>Curriculum</Label>
+              <select value={f.curriculum} onChange={(e) => set("curriculum", e.target.value)} className="w-full rounded-2xl border border-navy-200 bg-white px-3.5 py-2.5 text-sm dark:border-navy-700 dark:bg-navy-900">
+                <option value="CBC">CBE</option><option value="8-4-4">8-4-4</option>
+              </select>
+            </div>
+            <div className="space-y-1"><Label>Capacity (optional)</Label><Input type="number" value={f.capacity} onChange={(e) => set("capacity", e.target.value)} placeholder="45" /></div>
+          </div>
+          <div className="space-y-1">
+            <Label>Class teacher (homeroom)</Label>
+            <select value={f.classTeacherId} onChange={(e) => set("classTeacherId", e.target.value)} className="w-full rounded-2xl border border-navy-200 bg-white px-3.5 py-2.5 text-sm dark:border-navy-700 dark:bg-navy-900">
+              <option value="">No class teacher set</option>
+              {teachers.map((t) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+            </select>
+            <p className="text-[11px] text-navy-400">
+              This is the class&apos;s own homeroom teacher — real subject teachers who only teach one subject to this class are set separately in Academics → Smart Timetable and can already see and mark their own students there too.
+            </p>
+          </div>
+        </div>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />} Save changes</Button>
         </div>
       </div>
     </div>

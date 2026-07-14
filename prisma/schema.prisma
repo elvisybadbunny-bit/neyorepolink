@@ -4957,6 +4957,23 @@ model ClassSubjectNeed {
   // Chemistry labs specifically while staying NORMAL for Computer Studies.
   labPriority String @default("NORMAL") // NORMAL | HIGH
 
+  // AA.9 — real, school-set "deliberately re-roll this subject's teacher
+  // assignment at the start of each new term" flag. Per docs/TEACHER-
+  // ALLOCATION-AND-ELECTIVES-ENGINE-DESIGN.md Part 14: today's
+  // autoAssignTeachersToClasses() assignment is genuinely STICKY (stays
+  // the same until manually changed or the teacher becomes unavailable),
+  // which is correct for most subjects but wrong for a school that
+  // deliberately wants a subject like PE (or any subject with NO
+  // dedicated specialist) to rotate fairly among several eligible real
+  // teachers term by term. Default false — most real subjects have no
+  // reason to deliberately reset a working assignment. NEVER a hardcoded
+  // rule about WHICH subject rotates or WHO covers it — a school's own
+  // real TeacherSubject links (any teacher genuinely linked to this
+  // subject) decide who's eligible; this flag only controls WHETHER a
+  // real "start of term" reshuffle deliberately clears this pairing's own
+  // sticky assignment before re-running the same fair-allocation logic.
+  rotateTeacherEachTerm Boolean @default(false)
+
   @@unique([tenantId, classId, subjectId])
   @@index([tenantId])
   @@index([tenantId, venueId])

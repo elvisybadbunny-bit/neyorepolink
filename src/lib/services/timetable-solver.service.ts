@@ -68,7 +68,7 @@ export async function getTeacherSubjects(user: SessionUser, teacherId: string) {
 /** Save subject weekly lessons need + assigned teacher (The Input Matrix). */
 export async function saveClassSubjectNeed(
   user: SessionUser,
-  input: { classId: string; subjectId: string; lessonsPerWeek: number; teacherId?: string | null; doubleCount?: number; allowSplitDouble?: boolean; venueId?: string | null; requiresMovement?: boolean; noLabAccess?: boolean; labPriority?: string }
+  input: { classId: string; subjectId: string; lessonsPerWeek: number; teacherId?: string | null; doubleCount?: number; allowSplitDouble?: boolean; venueId?: string | null; requiresMovement?: boolean; noLabAccess?: boolean; labPriority?: string; rotateTeacherEachTerm?: boolean }
 ) {
   return withTenant(user.tenantId, async () => {
     const tdb = tenantDb();
@@ -87,6 +87,9 @@ export async function saveClassSubjectNeed(
     // real soft priority tier for when lab capacity is genuinely scarce.
     const noLabAccess = input.noLabAccess ?? false;
     const labPriority = input.labPriority === "HIGH" ? "HIGH" : "NORMAL";
+    // AA.9 — real, school-set "deliberately re-roll this subject's
+    // teacher assignment at the start of each new term" flag.
+    const rotateTeacherEachTerm = input.rotateTeacherEachTerm ?? false;
 
     const row = await tdb.classSubjectNeed.upsert({
       where: { tenantId_classId_subjectId: { tenantId: user.tenantId, classId, subjectId } },
@@ -102,6 +105,7 @@ export async function saveClassSubjectNeed(
         requiresMovement,
         noLabAccess,
         labPriority,
+        rotateTeacherEachTerm,
       },
       update: {
         teacherId: teacherId || null,
@@ -112,6 +116,7 @@ export async function saveClassSubjectNeed(
         requiresMovement,
         noLabAccess,
         labPriority,
+        rotateTeacherEachTerm,
       },
     });
 
@@ -720,6 +725,61 @@ export async function autoAssignTeachersToClasses(user: SessionUser) {
     }
 
     return { success: true, assignedCount };
+  });
+}
+
+// AA.9 — real "start of term" teacher-rotation action, per docs/TEACHER-
+// ALLOCATION-AND-ELECTIVES-ENGINE-DESIGN.md Part 14: a school with NO
+// dedicated PE (or other) specialist may deliberately flag a real
+// class-subject pairing `rotateTeacherEachTerm = true` (school's own
+// choice, never a hardcoded rule about which subject or who covers it —
+// eligibility is still entirely driven by the school's own real
+// TeacherSubject links, exactly like every other subject). This action:
+//   1. Finds every real ClassSubjectNeed row flagged rotateTeacherEachTerm.
+//   2. Deliberately clears (nulls) ONLY those rows' own sticky
+//      teacherId — every other real assignment in the school is
+//      completely untouched, since autoAssignTeachersToClasses() only
+//      ever fills needs where teacherId is null.
+//   3. Re-runs the EXACT SAME existing fair-allocation logic
+//      (autoAssignTeachersToClasses()) to genuinely re-roll a NEW fair
+//      pick for just those cleared rows — reusing proven logic rather
+//      than inventing a second allocator.
+// A Principal/office role triggers this explicitly (never automatic —
+// "start of term" is a real, deliberate human decision), typically once
+// per real new term.
+export async function rotateFlaggedTeacherAssignments(user: SessionUser) {
+  return withTenant(user.tenantId, async () => {
+    const tDb = tenantDb();
+    const flagged = await tDb.classSubjectNeed.findMany({
+      where: { rotateTeacherEachTerm: true, teacherId: { not: null } },
+    });
+    if (flagged.length === 0) return { rotatedCount: 0, reassignedCount: 0 };
+
+    // Real, honest "who had it before" record for the audit trail — kept
+    // in memory only, never persisted as its own table (a real
+    // TeacherAllocationImport-style audit log already exists elsewhere
+    // for the broader allocation-import flow; this is a much smaller,
+    // simpler action that doesn't need its own dedicated history table).
+    const previousTeacherByNeedId = new Map(flagged.map((n) => [n.id, n.teacherId]));
+
+    await tDb.classSubjectNeed.updateMany({
+      where: { id: { in: flagged.map((n) => n.id) } },
+      data: { teacherId: null },
+    });
+
+    const result = await autoAssignTeachersToClasses(user);
+
+    // Real, honest report of exactly what changed for each rotated pairing.
+    const after = await tDb.classSubjectNeed.findMany({ where: { id: { in: flagged.map((n) => n.id) } } });
+    const changes = after.map((n) => ({
+      classId: n.classId,
+      subjectId: n.subjectId,
+      previousTeacherId: previousTeacherByNeedId.get(n.id) ?? null,
+      newTeacherId: n.teacherId,
+      genuinelyRotated: n.teacherId !== previousTeacherByNeedId.get(n.id),
+    }));
+
+    return { rotatedCount: flagged.length, reassignedCount: result.assignedCount, changes };
   });
 }
 

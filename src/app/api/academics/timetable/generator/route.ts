@@ -9,6 +9,7 @@ import { ok, handleError, fail } from "@/lib/api/respond";
 import {
   getTimetableInputs, saveClassSubjectNeed, saveTimetableConfig,
   saveTeacherSubjects, generateWholeSchoolTimetable, autoAssignTeachersToClasses,
+  rotateFlaggedTeacherAssignments,
 } from "@/lib/services/timetable-solver.service";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,9 @@ export async function POST(req: NextRequest) {
         // and real soft lab-priority tier ("NORMAL" | "HIGH").
         noLabAccess: body.noLabAccess !== undefined ? Boolean(body.noLabAccess) : undefined,
         labPriority: typeof body.labPriority === "string" ? body.labPriority : undefined,
+        // AA.9 — real, school-set "rotate this subject's teacher each
+        // term" flag (never a hardcoded rule about which subject/who).
+        rotateTeacherEachTerm: body.rotateTeacherEachTerm !== undefined ? Boolean(body.rotateTeacherEachTerm) : undefined,
       });
       return ok(result);
     }
@@ -86,6 +90,15 @@ export async function POST(req: NextRequest) {
 
     if (action === "generate") {
       const result = await generateWholeSchoolTimetable(user);
+      return ok(result);
+    }
+
+    // AA.9 — real "start of term" action: deliberately re-rolls the
+    // teacher assignment for every real class-subject pairing flagged
+    // rotateTeacherEachTerm, reusing the exact same existing fair-
+    // allocation logic. A Principal/office role triggers this explicitly.
+    if (action === "rotate_flagged_teachers") {
+      const result = await rotateFlaggedTeacherAssignments(user);
       return ok(result);
     }
 

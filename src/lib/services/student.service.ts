@@ -31,9 +31,54 @@ export class StudentError extends Error {
 // Row-scoping (A.3.8 / A.3.9)
 // ---------------------------------------------------------------------------
 
+// AA.9 — real, shared "which classes does this real teacher genuinely
+// teach" resolver, used by `scopeWhere()` below. A real union of every
+// genuine way a teacher can be linked to a class (never just "class
+// teacher"/homeroom) — mirrors `teacherClassIds()` in
+// `teacher-portal.service.ts` (kept as two functions, not merged, since
+// the portal's own version intentionally also covers HOD/DEAN_OF_STUDIES
+// and returns `null` for leadership, a different real contract than
+// `scopeWhere()`'s own "always return a real where-fragment" shape).
+async function teacherOwnedClassIds(teacherId: string): Promise<string[]> {
+  const [ownClasses, subjectNeeds, comboGroups, timetableSlots] = await Promise.all([
+    tenantDb().schoolClass.findMany({ where: { classTeacherId: teacherId }, select: { id: true } }),
+    tenantDb().classSubjectNeed.findMany({ where: { teacherId }, select: { classId: true } }),
+    tenantDb().combinationGroup.findMany({ where: { teacherId, active: true }, include: { members: true } }),
+    tenantDb().timetableSlot.findMany({ where: { teacherId }, select: { classId: true } }),
+  ]);
+  const ids = new Set<string>();
+  for (const c of ownClasses) ids.add(c.id);
+  for (const n of subjectNeeds) ids.add(n.classId);
+  for (const g of comboGroups) for (const m of g.members) ids.add(m.classId);
+  for (const s of timetableSlots) ids.add(s.classId);
+  return [...ids];
+}
+
 /**
  * Build the extra `where` a viewer is allowed to see:
- *  - TEACHER / CLASS_TEACHER: only students in classes they teach.
+ *  - TEACHER / CLASS_TEACHER: only students in classes they genuinely
+ *    teach — AA.9 fix: this is now the REAL union of every way a teacher
+ *    can be genuinely linked to a class, not just "class teacher"
+ *    (homeroom). A real subject teacher (e.g. teaches Chemistry to Form 2
+ *    West but isn't that class's own homeroom teacher) was previously
+ *    getting ZERO visible students and could not even enter marks for
+ *    their own real class — confirmed live with real Kilimo Day Secondary
+ *    data before this fix (a real teacher, genuinely assigned via
+ *    ClassSubjectNeed, saw 0 students). Reuses the exact same real,
+ *    already-proven "fail-closed union" pattern `teacher-portal.service.ts`
+ *    already uses for its own scoping (`teacherClassIds()`), generalized
+ *    here so every one of the 20+ other real features built on top of
+ *    `scopeWhere()` (marks entry, attendance, discipline, clinic, library,
+ *    LMS, etc.) gets the same real fix at once:
+ *      1. SchoolClass.classTeacherId === them (real homeroom/class teacher).
+ *      2. ClassSubjectNeed.teacherId === them (a real, directly-assigned
+ *         subject-teacher pairing — works even before any timetable has
+ *         ever been generated).
+ *      3. CombinationGroup.teacherId === them, for every real member class
+ *         (a shared/combined-lesson teacher).
+ *      4. TimetableSlot.teacherId === them (a real generated timetable
+ *         placement — catches any real assignment method not covered by
+ *         1-3, e.g. a manual timetable edit).
  *  - PARENT: only their own children (via Guardian.userId).
  *  - STUDENT: only themselves.
  *  - Everyone else (leadership/office): all (no extra filter).
@@ -43,12 +88,8 @@ export async function scopeWhere(user: SessionUser): Promise<Record<string, unkn
   const role = user.role as Role;
 
   if (role === "TEACHER" || role === "CLASS_TEACHER") {
-    const classes = await tenantDb().schoolClass.findMany({
-      where: { classTeacherId: user.id },
-      select: { id: true },
-    });
-    const ids = classes.map((c) => c.id);
-    // If they teach no class, they see nothing (fail-closed).
+    const ids = await teacherOwnedClassIds(user.id);
+    // If they teach no class at all, they see nothing (fail-closed).
     return { classId: { in: ids.length ? ids : ["__none__"] } };
   }
 
