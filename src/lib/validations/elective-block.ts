@@ -82,7 +82,18 @@ export const electiveBlockSaveSchema = z.object({
   },
   { message: "In Single-Choice mode, every slot must offer the exact same set of subjects.", path: ["slots"] },
 );
-export type ElectiveBlockSaveInput = z.infer<typeof electiveBlockSaveSchema>;
+// Real, pre-existing type-strictness gap found and fixed while working on
+// DD.1 (an unrelated feature, but this broke `tsc --noEmit` cleanliness):
+// `z.infer` resolves to a Zod schema's OUTPUT type, where every
+// `.optional().default(...)` field becomes non-optional (since parsing
+// always fills it in) — but callers of `saveElectiveBlock()` genuinely
+// experience the INPUT shape, where `preferAfterBreak`/
+// `preferSplitExamSittings`/etc. are still genuinely optional. `z.input`
+// is the correct type here; several pre-existing call sites (aa1-*,
+// aa5-*, elective-block-auto-build.service.ts) never passed
+// `preferSplitExamSittings` at all, which `z.infer`'s output type wrongly
+// demanded once AA.10's follow-up added that field.
+export type ElectiveBlockSaveInput = z.input<typeof electiveBlockSaveSchema>;
 
 export const electiveBlockDeleteSchema = z.object({
   action: z.literal("delete_block"),

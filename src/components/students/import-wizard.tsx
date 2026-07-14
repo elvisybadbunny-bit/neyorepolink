@@ -35,7 +35,9 @@ const FIELD_LABELS: Record<string, string> = {
 };
 const FIELD_OPTIONS = Object.keys(FIELD_LABELS);
 
-interface ClassOption { id: string; level: string; stream: string | null; name: string; archived: boolean; }
+interface ClassOption { id: string; level: string; stream: string | null; name: string; archived: boolean; curriculum?: string; }
+
+interface SubjectOption { id: string; name: string; code: string; curriculum: string; archived: boolean; }
 
 interface MatchedRow {
   row: number;
@@ -102,12 +104,23 @@ export function ImportWizard() {
   // enriches existing students instead of always failing as a duplicate).
   const [updateExisting, setUpdateExisting] = React.useState(true);
 
-  // BB.4 — once-per-run declared compulsory subjects (e.g. "English,
-  // Kiswahili, Core Mathematics, CSL" for a fresh CBE Senior School
+  // BB.4 — once-per-run declared compulsory subjects (e.g. English,
+  // Kiswahili, Core Mathematics, CSL for a fresh CBE Senior School
   // intake) unioned into every real student's own subject selection, so a
   // Subjects column only needs to list genuine electives. Optional —
   // leaving this blank changes nothing about a pre-existing import.
-  const [compulsorySubjectsText, setCompulsorySubjectsText] = React.useState("");
+  //
+  // DD.1 — founder's own real request: replace free-typed text (a real,
+  // reported source of typos/misspelled subject names that then fail to
+  // resolve against the school's own real Subject rows) with clickable
+  // buttons showing the school's own real subject list for the relevant
+  // curriculum (CBE vs 8-4-4) — a school picks, never types. Two real
+  // behaviours confirmed via ask_user: (1) a subject button disappears
+  // from the remaining pick-list the instant it's chosen (can't be
+  // double-added); (2) the whole selection resets once an import run
+  // completes, so the next import starts genuinely fresh.
+  const [subjects, setSubjects] = React.useState<SubjectOption[] | null>(null);
+  const [compulsorySubjectIds, setCompulsorySubjectIds] = React.useState<string[]>([]);
 
   // BB.4 — a real, optional declared level for a fresh intake that hasn't
   // been placed into any real class yet (no Class column, no single-class
@@ -120,6 +133,8 @@ export function ImportWizard() {
 
   React.useEffect(() => {
     fetch("/api/classes").then((r) => r.json()).then((j) => { if (j.ok) setClasses(j.data.classes); });
+    // DD.1 — real subject list for the compulsory-subject buttons below.
+    fetch("/api/academics/subjects").then((r) => r.json()).then((j) => { if (j.ok) setSubjects(j.data.subjects); });
   }, []);
 
   const loadHistory = React.useCallback(async () => {
@@ -134,6 +149,49 @@ export function ImportWizard() {
   React.useEffect(() => { loadHistory(); }, [loadHistory]);
 
   const activeTargetClassId = importMode === "single" && targetClassId ? targetClassId : undefined;
+
+  // DD.1 — real curriculum(s) actually relevant to THIS import run, so the
+  // compulsory-subject buttons only ever show the school's own real CBE
+  // subjects when importing into CBE classes, and real 8-4-4 subjects
+  // when importing into 8-4-4 classes (never a mixed, confusing list).
+  // "BOTH"-curriculum subjects (a school's own real cross-curriculum
+  // subjects, e.g. a shared PE/Games subject) are always included
+  // alongside whichever specific curriculum(s) are actually in play.
+  const relevantCurricula = React.useMemo<Set<string>>(() => {
+    if (activeTargetClassId && classes) {
+      const cls = classes.find((c) => c.id === activeTargetClassId);
+      return new Set(cls?.curriculum ? [cls.curriculum] : []);
+    }
+    if (preview && classes) {
+      const found = new Set<string>();
+      for (const row of preview.sample) {
+        const label = String((row as Record<string, unknown>).className ?? "").trim();
+        if (!label) continue;
+        const match = classes.find((c) => (c.stream ? `${c.level} ${c.stream}` : c.level).toLowerCase() === label.toLowerCase() || c.level.toLowerCase() === label.toLowerCase());
+        if (match?.curriculum) found.add(match.curriculum);
+      }
+      if (found.size > 0) return found;
+    }
+    // Fall back to every real curriculum this school actually uses across
+    // its own classes, rather than showing nothing while a school hasn't
+    // yet reached a step where a specific class/curriculum is known.
+    return new Set((classes ?? []).map((c) => c.curriculum).filter(Boolean) as string[]);
+  }, [activeTargetClassId, classes, preview]);
+
+  const compulsorySubjectChoices = React.useMemo(() => {
+    if (!subjects) return [];
+    return subjects
+      .filter((s) => !s.archived && (relevantCurricula.size === 0 || relevantCurricula.has(s.curriculum) || s.curriculum === "BOTH"))
+      .filter((s) => !compulsorySubjectIds.includes(s.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [subjects, relevantCurricula, compulsorySubjectIds]);
+
+  const chosenCompulsorySubjects = React.useMemo(() => {
+    if (!subjects) return [];
+    return compulsorySubjectIds
+      .map((id) => subjects.find((s) => s.id === id))
+      .filter((s): s is SubjectOption => Boolean(s));
+  }, [subjects, compulsorySubjectIds]);
 
   async function handleFile(file: File) {
     setBusy(true);
@@ -205,7 +263,11 @@ export function ImportWizard() {
     if (!preview) return;
     setBusy(true);
     const runInBackground = preview.rows.length > LARGE_IMPORT_ROW_THRESHOLD;
-    const compulsorySubjects = compulsorySubjectsText.split(",").map((s) => s.trim()).filter(Boolean);
+    // DD.1 — real subject NAMES resolved from the school's own clicked
+    // buttons (never typed text), sent exactly like the pre-existing
+    // compulsorySubjects contract expects (the service already resolves
+    // by name/code against the tenant's real Subject rows).
+    const compulsorySubjects = chosenCompulsorySubjects.map((s) => s.name);
     try {
       const res = await fetch("/api/students/import", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -230,6 +292,10 @@ export function ImportWizard() {
       }
 
       setResult(json.data); setStep(3); loadHistory();
+      // DD.1 — the compulsory-subject button selection resets the moment
+      // THIS import run completes, so the next import genuinely starts
+      // fresh (never silently carries over a previous run's own choices).
+      setCompulsorySubjectIds([]);
       const parts = [`${json.data.created} created`];
       if (json.data.updated > 0) parts.push(`${json.data.updated} updated`);
       toast({ title: `Import complete: ${parts.join(", ")}`, tone: "success" });
@@ -542,14 +608,43 @@ export function ImportWizard() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <p className="text-xs text-navy-500 dark:text-navy-400">
-                    Real subjects every student here must take (e.g. English, Kiswahili, a chosen Mathematics variant, Community Service Learning) — added to each student&apos;s own real subject choices automatically, so your Subjects column only needs to list their genuine electives.
+                    Real subjects every student here must take (e.g. English, Kiswahili, a chosen Mathematics variant, Community Service Learning) — click to add. Added to each student&apos;s own real subject choices automatically, so your Subjects column only needs to list their genuine electives.
                   </p>
-                  <input
-                    value={compulsorySubjectsText}
-                    onChange={(e) => setCompulsorySubjectsText(e.target.value)}
-                    placeholder="e.g. English, Kiswahili, Core Mathematics, Community Service Learning"
-                    className="w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm text-navy-900 placeholder:text-navy-300 focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-navy-700 dark:bg-navy-900 dark:text-navy-100"
-                  />
+                  {chosenCompulsorySubjects.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {chosenCompulsorySubjects.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setCompulsorySubjectIds((ids) => ids.filter((id) => id !== s.id))}
+                          className="flex items-center gap-1.5 rounded-full border border-green-300 bg-green-50 px-3 py-1 text-xs font-medium text-green-800 hover:bg-green-100 dark:border-green-800 dark:bg-green-950/30 dark:text-green-300"
+                          title="Click to remove"
+                        >
+                          {s.name} <span aria-hidden>×</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {subjects === null ? (
+                    <p className="text-xs text-navy-400">Loading your school&apos;s real subjects…</p>
+                  ) : compulsorySubjectChoices.length === 0 ? (
+                    <p className="text-xs text-navy-400">
+                      {chosenCompulsorySubjects.length > 0 ? "All matching subjects have been added." : "No subjects found for this class's curriculum yet — add them under Academics → Subjects first."}
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5 rounded-xl border border-navy-100 bg-warm-50 p-2 dark:border-navy-800 dark:bg-navy-900">
+                      {compulsorySubjectChoices.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setCompulsorySubjectIds((ids) => [...ids, s.id])}
+                          className="rounded-full border border-navy-200 bg-white px-3 py-1 text-xs font-medium text-navy-700 hover:border-green-400 hover:bg-green-50 hover:text-green-800 dark:border-navy-700 dark:bg-navy-800 dark:text-navy-200 dark:hover:bg-green-950/30"
+                        >
+                          + {s.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {!preview.targetClass && preview.unknownClasses.length === 0 && (
                   <div className="space-y-2 border-t border-navy-100 pt-3 dark:border-navy-800">
@@ -607,7 +702,7 @@ export function ImportWizard() {
               </ul>
             )}
             <div className="mt-2 flex flex-wrap justify-center gap-2">
-              <Button variant="secondary" onClick={() => { setStep(1); setPreview(null); setResult(null); setPasteText(""); }}>Import more</Button>
+              <Button variant="secondary" onClick={() => { setStep(1); setPreview(null); setResult(null); setPasteText(""); setCompulsorySubjectIds([]); }}>Import more</Button>
               <Link href="/students"><Button variant="secondary"><Users className="h-4 w-4" /> View students</Button></Link>
               {/* BB.4 — a real, direct next step when this import wrote real
                   subject selections (e.g. a fresh Grade 10 intake with a
