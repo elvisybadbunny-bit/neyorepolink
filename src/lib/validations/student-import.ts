@@ -81,17 +81,48 @@ export const HEADER_SYNONYMS: Record<Exclude<ImportField, "ignore">, string[]> =
  * mixed into the free-text `notes` field. This stays fully deterministic
  * (the school types the label once at mapping time); it never depends on AI.
  */
+/**
+ * DD.2 — real bug found and fixed (2026-07-14): a school picking "Custom
+ * field" from a column's dropdown fires an IMMEDIATE preview re-request
+ * with a genuinely empty customLabel (they haven't typed one yet — the
+ * label input only even RENDERS once the mapping's field is "custom").
+ * The mapping schema used to hard-require a non-empty label the instant
+ * `field === "custom"`, so that very first re-request 422'd before the
+ * school ever got a chance to type — the preview's own server-driven
+ * `mapping` state (a controlled <select>) then never actually flipped to
+ * "custom", so the label input could never appear at all. Fixed by
+ * dropping the label requirement from the shared, lenient schema (used
+ * for every in-progress preview/remap request) — a "custom" column with
+ * no label yet simply contributes nothing (mirrors "Skip column") until
+ * a real label is typed, exactly like the service layer's own
+ * `customColumns = mapping.filter((m) => m.field === "custom" &&
+ * m.customLabel)` already assumed. The label is still genuinely REQUIRED
+ * before a commit is allowed — see `columnMappingCommitSchema` below,
+ * used only by `importCommitSchema` — so a school can never silently
+ * lose real custom-field data by committing with an incomplete mapping.
+ */
 export const columnMappingSchema = z.array(
   z.object({
     column: z.number().int().min(0),
     field: z.enum(IMPORT_FIELDS),
-    customLabel: z.string().trim().min(1).max(60).optional(),
-  }).refine((v) => v.field !== "custom" || Boolean(v.customLabel), {
-    message: "A custom field mapping needs a label.",
-    path: ["customLabel"],
+    customLabel: z.string().trim().max(60).optional(),
   })
 ).max(40);
 export type ColumnMapping = z.infer<typeof columnMappingSchema>;
+
+/** DD.2 — the same shape, but genuinely enforced only at commit time: every
+ * "custom" column must carry a real, non-empty label before NEYO will
+ * create permanent StudentCustomField rows from it. */
+export const columnMappingCommitSchema = z.array(
+  z.object({
+    column: z.number().int().min(0),
+    field: z.enum(IMPORT_FIELDS),
+    customLabel: z.string().trim().max(60).optional(),
+  }).refine((v) => v.field !== "custom" || Boolean(v.customLabel?.trim()), {
+    message: "Type a label for your custom field column (e.g. \"House\"), or change it to \"— Skip column —\".",
+    path: ["customLabel"],
+  })
+).max(40);
 
 /**
  * BB.4 — declared once per import run (not per row): the real, honest list
@@ -129,13 +160,14 @@ export const importPreviewSchema = z.object({
 });
 export type ImportPreviewInput = z.infer<typeof importPreviewSchema>;
 
-/** Commit request = same shape but mapping is required. */
+/** Commit request = same shape but mapping is required, and (DD.2) every
+ * "custom" column must carry a real label — see columnMappingCommitSchema. */
 export const importCommitSchema = z.object({
   source: z.enum(["csv", "xlsx", "paste"]),
   fileName: z.string().trim().max(120).optional(),
   rows: z.array(z.array(z.string().max(300))).min(1).max(MAX_IMPORT_ROWS + 1),
   hasHeader: z.boolean().default(true),
-  mapping: columnMappingSchema,
+  mapping: columnMappingCommitSchema,
   /** Create per-student joining requirements from the G.9 master list. */
   seedRequirements: z.boolean().default(true),
   /** Skip rows that fail validation (true) or abort whole import (false). */

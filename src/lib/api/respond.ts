@@ -132,6 +132,32 @@ export function fail(
   );
 }
 
+/**
+ * DD.12 — real, systemic bug found and fixed (2026-07-14): every one of
+ * NEYO's 200+ API routes throws the SAME real per-field detail on a Zod
+ * validation failure (via the `fields` object below), but well over 100
+ * real pages' own save handlers only ever display `error?.message` in
+ * their toast — never `error?.fields` — so a school always saw the same
+ * generic "Please check the form." with zero indication of what was
+ * actually wrong, on every single page that hit this path. Rather than
+ * touch 100+ individual call sites (each its own real risk of a typo or
+ * a missed one), the fix lives here once: `message` itself now includes
+ * the real first field name + its real reason, so every existing
+ * `toast({ title: json.error?.message })` call site across the whole app
+ * automatically becomes useful with zero changes needed there. A route
+ * that genuinely wants the FULL per-field detail (a real dedicated form
+ * with inline field-level errors) still can — `error.fields` keeps every
+ * issue, unchanged, for that smaller set of routes that already read it.
+ */
+function humanizeFieldPath(path: (string | number)[]): string {
+  if (path.length === 0) return "form";
+  // Turn ["mapping", 3, "customLabel"] into "customLabel" (drop numeric
+  // array indices — a school never thinks in terms of "row 3", it thinks
+  // in terms of the actual field name it typed into).
+  const named = path.filter((p) => typeof p === "string");
+  return String(named[named.length - 1] ?? path[path.length - 1]);
+}
+
 /** Turn any thrown error into the right HTTP response. */
 export function handleError(err: unknown) {
   // Zod validation failures -> 422 with per-field messages.
@@ -141,7 +167,11 @@ export function handleError(err: unknown) {
       const key = issue.path.join(".") || "form";
       if (!fields[key]) fields[key] = issue.message;
     }
-    return fail("VALIDATION_ERROR", "Please check the form.", 422, fields);
+    const firstIssue = err.issues[0];
+    const summary = firstIssue
+      ? `Please check the form: ${humanizeFieldPath(firstIssue.path as (string | number)[])} — ${firstIssue.message}`
+      : "Please check the form.";
+    return fail("VALIDATION_ERROR", summary, 422, fields);
   }
 
   // Auth service domain errors -> meaningful status codes.

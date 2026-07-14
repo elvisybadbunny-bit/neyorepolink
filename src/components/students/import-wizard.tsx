@@ -192,6 +192,15 @@ export function ImportWizard() {
   // the moment it's actually done.
   const LARGE_IMPORT_ROW_THRESHOLD = 50;
 
+  // DD.2 — a "Custom field" column with no real label typed yet (the
+  // preview step now genuinely allows this in-progress state instead of
+  // 422'ing immediately — see columnMappingSchema's own comment) must
+  // still never be silently committed as a real, permanently-blank
+  // StudentCustomField label. Block the commit button and explain why,
+  // rather than showing the previous generic "Please check the form."
+  // error only after the school already tried to import.
+  const unlabeledCustomColumns = preview?.mapping.filter((m) => m.field === "custom" && !m.customLabel?.trim()) ?? [];
+
   async function commit() {
     if (!preview) return;
     setBusy(true);
@@ -563,10 +572,17 @@ export function ImportWizard() {
             <Button variant="secondary" onClick={() => { setPreview(null); setStep(1); }} disabled={busy}>
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
-            <Button onClick={commit} disabled={busy || preview.validRows === 0}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
-              Import {preview.validRows} student{preview.validRows === 1 ? "" : "s"}
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              {unlabeledCustomColumns.length > 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Type a label for every &ldquo;Custom field&rdquo; column above (or change it back to &ldquo;— Skip column —&rdquo;) before importing.
+                </p>
+              )}
+              <Button onClick={commit} disabled={busy || preview.validRows === 0 || unlabeledCustomColumns.length > 0}>
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+                Import {preview.validRows} student{preview.validRows === 1 ? "" : "s"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
