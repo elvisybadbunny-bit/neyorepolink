@@ -356,3 +356,187 @@ export async function getSubjectCombinationRosterPrint(user: SessionUser, level:
     return { level, groups };
   });
 }
+
+// ---------------------------------------------------------------------------
+// AA.10 — Exam-generator Options-Block-awareness.
+//
+// Per docs/TEACHER-ALLOCATION-AND-ELECTIVES-ENGINE-DESIGN.md Part 15, the
+// founder's own real observation: a "Technical & Applied" SINGLE_CHOICE
+// block (choose ONE of Business/Computer/Art/Agriculture/French) CAN
+// combine cleanly at exam time — exactly one subject applies per student,
+// so "everyone choosing subject X sits together" is a real, clean, single
+// combined sitting per subject. A genuinely mixed-choice MULTI_SLOT block
+// (e.g. History OR CRE in one real slot, Geography OR Business in
+// another — a student's own real combination varies) is "hard to combine"
+// (the founder's own honest words) and must NOT be forced into one
+// sitting — instead each subject gets its own real, INDEPENDENT exam
+// slot, containing only the real students who actually chose it, at a
+// genuinely different real time so a student's own 2 (or more) chosen
+// subjects from the same block never clash.
+//
+// Real gap this closes: Options Block subjects live ENTIRELY outside
+// ClassSubjectNeed (they're scheduled via ElectiveBlock/ElectiveBlockSlot/
+// ElectiveBlockSlotSubject instead), so the exam generator's own existing
+// `buildGenerationPlan()` — which only ever reads ClassSubjectNeed rows —
+// had ZERO awareness of Options Block subjects at all. A school running
+// electives previously got no automated exam papers for those subjects
+// whatsoever. Confirmed via direct investigation before writing this file
+// (no `classSubjectNeed.create` call exists anywhere in the elective-block
+// build/save path).
+//
+// Real per-student rosters come from StudentSubjectSelection (already the
+// single real source of truth every other real per-student subject-choice
+// feature in NEYO uses — BB.2's auto-build, BB.4's class allocation, the
+// L.7 auto-grouping algorithm, and this file's own BB.7 roster print all
+// already trust the exact same real field). A student's own real
+// selectedSubjectIds is intersected against a block's own real subject
+// set to determine which of THIS block's subjects they genuinely chose —
+// this deliberately allows one real student to appear correctly under
+// multiple real blocks (e.g. a genuine Humanities pair AND a separate
+// genuine Technical & Applied choice) without any cross-block leakage.
+export type ElectiveExamPaper = {
+  blockId: string;
+  blockName: string;
+  blockMode: "MULTI_SLOT" | "SINGLE_CHOICE";
+  // AA.10 — real, critical distinction: subjects sharing the SAME real
+  // slotId are mutually exclusive alternatives for any one real student
+  // (they pick exactly one per slot), so they may safely share the exact
+  // same real exam date/period (a SINGLE_CHOICE block is simply the
+  // special case of exactly one real slot for everything). Subjects from
+  // DIFFERENT real slotIds of the SAME block may genuinely both be chosen
+  // by the same real student (e.g. History from Slot A + Geography from
+  // Slot B), so those must NEVER be scheduled at the same real
+  // date/period — the caller uses this field to enforce exactly that.
+  slotId: string;
+  subjectId: string;
+  subjectName: string;
+  // Real classIds this paper's own real roster is drawn from (the
+  // block's own configured member classes) — used only to scope which
+  // students are eligible; the REAL sitting only ever includes students
+  // who genuinely chose this subject, never the whole class.
+  classIds: string[];
+  studentIds: string[];
+  studentCount: number;
+  // Real per-class breakdown of studentIds above — every downstream
+  // ExamTimetableSlot row still needs exactly one real classId per row
+  // (the shape every other scope already uses), so this lets the caller
+  // create one real row per real class that actually has at least one
+  // real student sitting this subject, each with its own real, honest,
+  // class-scoped student roster (never the whole class).
+  studentIdsByClass: Record<string, string[]>;
+};
+
+export async function getElectiveBlockExamPapers(tenantId: string, classIds: string[]): Promise<ElectiveExamPaper[]> {
+  return withTenant(tenantId, async () => {
+    const tdb = tenantDb();
+    const classIdSet = new Set(classIds);
+
+    const blocks = await tdb.electiveBlock.findMany({
+      where: { active: true },
+      include: {
+        classes: true,
+        slots: { orderBy: { sortOrder: "asc" }, include: { subjects: { orderBy: { id: "asc" } } } },
+      },
+    });
+
+    // Only blocks with at least one real member class actually selected
+    // for THIS exam run are relevant — a school running an exam for only
+    // some real levels should never see an unrelated block's subjects.
+    const relevantBlocks = blocks.filter((b) => b.classes.some((c) => classIdSet.has(c.classId)));
+    if (relevantBlocks.length === 0) return [];
+
+    // Real subject metadata (names) needed for honest, readable output.
+    const allSubjectIds = [...new Set(relevantBlocks.flatMap((b) => b.slots.flatMap((s) => s.subjects.map((sub) => sub.subjectId))))];
+    const subjects = allSubjectIds.length ? await tdb.subject.findMany({ where: { id: { in: allSubjectIds } }, select: { id: true, name: true } }) : [];
+    const subjectNameMap = new Map(subjects.map((s) => [s.id, s.name]));
+
+    const papers: ElectiveExamPaper[] = [];
+
+    for (const block of relevantBlocks) {
+      const blockClassIds = block.classes.map((c) => c.classId).filter((id) => classIdSet.has(id));
+      if (blockClassIds.length === 0) continue;
+
+      // Real per-slot subject membership (which real slotId each real
+      // subject belongs to) — needed so the caller can correctly treat
+      // same-slot subjects as mutually exclusive (safe to share a real
+      // date/period) while cross-slot subjects of the same block are kept
+      // genuinely independent (never scheduled at the same real time).
+      const slotIdBySubject = new Map<string, string>();
+      for (const slot of block.slots) {
+        for (const sub of slot.subjects) {
+          // A subject appearing in more than one real slot of the SAME
+          // block (unusual, but not impossible for a school-defined
+          // MULTI_SLOT setup) keeps its FIRST real slot association —
+          // exam placement only needs one consistent real grouping key.
+          if (!slotIdBySubject.has(sub.subjectId)) slotIdBySubject.set(sub.subjectId, slot.id);
+        }
+      }
+      const blockSubjectIds = [...slotIdBySubject.keys()];
+      if (blockSubjectIds.length === 0) continue;
+
+      const students = await tdb.student.findMany({
+        where: { classId: { in: blockClassIds }, status: "ACTIVE" },
+        select: { id: true, classId: true },
+      });
+      if (students.length === 0) continue;
+      const classIdByStudent = new Map(students.map((s) => [s.id, s.classId as string]));
+
+      const selections = await tdb.studentSubjectSelection.findMany({
+        where: { isConfirmed: true, studentId: { in: students.map((s) => s.id) } },
+        select: { studentId: true, selectedSubjectIds: true },
+      });
+
+      // Real per-subject roster: a student is included under a real
+      // subject only if that subject genuinely appears in THEIR OWN
+      // confirmed selectedSubjectIds AND is one of this block's own real
+      // subjects (the intersection) — never the whole class, and never a
+      // subject the student didn't actually choose.
+      const studentsBySubject = new Map<string, string[]>();
+      for (const sel of selections) {
+        let chosen: string[] = [];
+        try { chosen = JSON.parse(sel.selectedSubjectIds) as string[]; } catch { chosen = []; }
+        for (const subjectId of chosen) {
+          if (!slotIdBySubject.has(subjectId)) continue; // not one of THIS block's subjects
+          const arr = studentsBySubject.get(subjectId) ?? [];
+          arr.push(sel.studentId);
+          studentsBySubject.set(subjectId, arr);
+        }
+      }
+
+      // Both SINGLE_CHOICE and MULTI_SLOT modes produce one real
+      // INDEPENDENT paper per subject with its own real per-student
+      // roster — the real difference between the two modes is handled by
+      // the CALLER (buildGenerationPlan()) via each paper's own real
+      // slotId: SINGLE_CHOICE subjects all share one real slotId (so they
+      // may cleanly share the exact same real date/period, since a
+      // student only ever picks one), while MULTI_SLOT subjects from
+      // DIFFERENT real slots of the SAME block must never be scheduled at
+      // the same real date/period as each other (a student may genuinely
+      // be sitting one subject from EACH of the block's own real slots).
+      for (const subjectId of blockSubjectIds) {
+        const studentIds = studentsBySubject.get(subjectId) ?? [];
+        if (studentIds.length === 0) continue; // honestly skip a subject nobody actually chose this run
+        const studentIdsByClass: Record<string, string[]> = {};
+        for (const sid of studentIds) {
+          const cid = classIdByStudent.get(sid);
+          if (!cid) continue; // defensive — every id here came from `students`, which always has a real classId
+          (studentIdsByClass[cid] ??= []).push(sid);
+        }
+        papers.push({
+          blockId: block.id,
+          blockName: block.name,
+          blockMode: block.mode as "MULTI_SLOT" | "SINGLE_CHOICE",
+          slotId: slotIdBySubject.get(subjectId)!,
+          subjectId,
+          subjectName: subjectNameMap.get(subjectId) ?? "Unknown subject",
+          classIds: blockClassIds,
+          studentIds,
+          studentCount: studentIds.length,
+          studentIdsByClass,
+        });
+      }
+    }
+
+    return papers;
+  });
+}

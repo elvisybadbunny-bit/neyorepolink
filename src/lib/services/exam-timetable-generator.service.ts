@@ -2,6 +2,10 @@ import { withTenant } from "@/lib/core/tenant-context";
 import { tenantDb } from "@/lib/core/tenant-db";
 import type { SessionUser } from "@/lib/core/session";
 import { generateExamInvigilators } from "@/lib/services/exam-timetable-invigilator.service";
+// AA.10 — real Options-Block exam awareness (see the full design
+// explanation in elective-block.service.ts, right above
+// getElectiveBlockExamPapers()).
+import { getElectiveBlockExamPapers, type ElectiveExamPaper } from "@/lib/services/elective-block.service";
 
 export class ExamTimetableGeneratorError extends Error {
   constructor(public code: "NOT_FOUND" | "INVALID" | "CONFLICT", message: string) {
@@ -143,6 +147,17 @@ async function buildGenerationPlan(user: SessionUser, input: GeneratorInput) {
       tdb.combinationGroup.findMany({ where: { active: true }, include: { members: true } }),
     ]);
 
+    // AA.10 — real Options-Block exam awareness: automatically detects
+    // every real active ElectiveBlock covering at least one of THIS run's
+    // own selected classes, with a real, honest per-student roster for
+    // each of its real subjects (never the whole class — only students
+    // who genuinely chose that subject via a real confirmed
+    // StudentSubjectSelection). Automatic per the founder's own explicit
+    // choice (no separate opt-in checkbox) — a school selecting classes
+    // that happen to run electives simply gets those real papers included
+    // alongside their ordinary ClassSubjectNeed-based ones.
+    const electivePapers = await getElectiveBlockExamPapers(user.tenantId, classIds);
+
     if (classes.length !== classIds.length) throw new ExamTimetableGeneratorError('INVALID', 'One or more selected classes no longer exist.');
     if (existingExamSlots.length > 0) throw new ExamTimetableGeneratorError('CONFLICT', 'This exam name already has saved timetable slots. Use a different exam name or delete the existing slots first.');
 
@@ -183,7 +198,12 @@ async function buildGenerationPlan(user: SessionUser, input: GeneratorInput) {
       }
     }
 
-    const papersToPlace: Array<{ classId: string; subjectId: string; paperConfigId: string | null; paperName: string; comboClassIds?: string[]; groupedByLevel?: boolean }> = [];
+    const papersToPlace: Array<{
+      classId: string; subjectId: string; paperConfigId: string | null; paperName: string;
+      comboClassIds?: string[]; groupedByLevel?: boolean;
+      // AA.10 — present only for a real Options-Block-derived paper.
+      elective?: { blockId: string; blockName: string; blockMode: "MULTI_SLOT" | "SINGLE_CHOICE"; slotId: string; studentIds: string[]; studentIdsByClass: Record<string, string[]> };
+    }> = [];
     const comboHandled = new Set<string>(); // "subjectId::paperName::sortedComboKey" already queued once
     const levelGroupHandled = new Set<string>(); // "level::subjectId::paperName" already queued once
     for (const need of subjectNeeds) {
@@ -229,12 +249,66 @@ async function buildGenerationPlan(user: SessionUser, input: GeneratorInput) {
       }
     }
 
+    // AA.10 — real Options-Block papers: each real elective subject gets
+    // its own real paper. A school's own real SubjectPaperConfig for that
+    // subject (if configured) is honored exactly like any ordinary
+    // subject; when none exists, this falls back to the same real
+    // level-aware naming ordinary un-configured subjects already use —
+    // keeping exactly one real consistent naming rule across the whole
+    // generator rather than a second one just for electives. One real
+    // ExamTimetableSlot row is queued PER real class that has at least
+    // one real student sitting this subject, each carrying its own real,
+    // honest, class-scoped student roster.
+    for (const paper of electivePapers) {
+      for (const [classId, studentIds] of Object.entries(paper.studentIdsByClass)) {
+        if (studentIds.length === 0) continue;
+        const specificConfigs = paperConfigs.filter((cfg) => cfg.subjectId === paper.subjectId && cfg.classId === classId);
+        const fallbackConfigs = paperConfigs.filter((cfg) => cfg.subjectId === paper.subjectId && cfg.classId === null);
+        const pickedConfigs = specificConfigs.length > 0 ? specificConfigs : fallbackConfigs;
+        const paperNames = pickedConfigs.length > 0
+          ? pickedConfigs.map((cfg) => ({ paperConfigId: cfg.id, paperName: normalizePaperName(cfg.name) }))
+          : levelAwarePaperFallbacks(classMap.get(classId)?.level).map((paperName) => ({ paperConfigId: null as string | null, paperName }));
+        for (const p of paperNames) {
+          papersToPlace.push({
+            classId,
+            subjectId: paper.subjectId,
+            paperConfigId: p.paperConfigId,
+            paperName: p.paperName,
+            elective: { blockId: paper.blockId, blockName: paper.blockName, blockMode: paper.blockMode, slotId: paper.slotId, studentIds, studentIdsByClass: paper.studentIdsByClass },
+          });
+        }
+      }
+    }
 
     const capacity = dates.length * periods.length;
     if (papersToPlace.length === 0) throw new ExamTimetableGeneratorError('NOT_FOUND', 'No class subject needs were found for the selected classes.');
     if (papersToPlace.length > capacity) throw new ExamTimetableGeneratorError('CONFLICT', 'Not enough exam periods for the selected classes and subject papers. Increase the date range or add more periods.');
 
     const occupied = new Set<string>();
+    // AA.10 — real per-STUDENT occupancy, needed ONLY for elective papers:
+    // a class-wide `occupied` check alone is insufficient for a MULTI_SLOT
+    // block, since the SAME real class can have two different real exam
+    // rows scheduled (one per subject) that only individually involve a
+    // SUBSET of that class's students — a class-level check would
+    // wrongly allow both to land at the same real date/period as long as
+    // neither one had already claimed the whole class. Tracking real
+    // per-student occupancy closes that gap precisely, without changing
+    // any existing non-elective behavior (ordinary/combo/level-group
+    // papers never populate or read this set).
+    const studentOccupied = new Set<string>();
+    // AA.10 — real "already placed at this date/period" record, keyed by
+    // blockId::slotId, so every SINGLE_CHOICE-mode subject sharing the
+    // same real slotId (mutually exclusive alternatives — a student picks
+    // exactly one) can genuinely combine into ONE shared real exam
+    // date/period, exactly matching the founder's own real observation
+    // that this shape "CAN combine cleanly... since only one subject
+    // applies per student". This is a pure efficiency/clarity preference
+    // (fewer distinct real exam periods needed for the whole block, and a
+    // cleaner single "Options Exam" slot on the printed timetable) — never
+    // attempted for a MULTI_SLOT-mode subject (a student may genuinely be
+    // sitting one subject from EACH of several different real slots, so
+    // those must always place independently).
+    const singleChoiceSlotPlacement = new Map<string, { date: string; period: PeriodInput }>();
     const blocked = new Set(blockingSlots.map((slot) => `${slot.classId}:${slot.subjectId}:${normalizePaperName(slot.paperName)}:${slot.examDate}:${slot.startTime}`));
     const created: any[] = [];
     let cursor = 0;
@@ -242,21 +316,14 @@ async function buildGenerationPlan(user: SessionUser, input: GeneratorInput) {
     for (const paper of papersToPlace) {
       const sittingClassIds = paper.comboClassIds ?? [paper.classId];
       let placed = false;
-      for (; cursor < capacity * 6 && !placed; cursor++) {
-        const slotIndex = cursor % capacity;
-        const date = dates[Math.floor(slotIndex / periods.length)];
-        const period = periods[slotIndex % periods.length];
-        // A combined sitting needs the SAME date/period free for every
-        // member class simultaneously (they are literally in one room/exam
-        // together), not just the class this paper was enumerated from.
-        const anyOccupied = sittingClassIds.some((cid) => occupied.has(`${cid}:${date}:${period.startTime}`));
-        const anyBlocked = sittingClassIds.some((cid) => blocked.has(`${cid}:${paper.subjectId}:${paper.paperName}:${date}:${period.startTime}`));
-        if (anyOccupied || anyBlocked) continue;
-        for (const cid of sittingClassIds) occupied.add(`${cid}:${date}:${period.startTime}`);
+
+      function createRowsFor(date: string, period: PeriodInput) {
         const venueLabel = paper.groupedByLevel
           ? `${classMap.get(paper.classId)?.level ?? 'Level'} (whole level, ${sittingClassIds.length} streams)`
           : paper.comboClassIds
           ? `${sittingClassIds.map((cid) => classMap.get(cid)?.stream ? `${classMap.get(cid)?.level} ${classMap.get(cid)?.stream}` : classMap.get(cid)?.level).join(' + ')} (combined)`
+          : paper.elective
+          ? `${classMap.get(paper.classId)?.level ?? 'Level'}${classMap.get(paper.classId)?.stream ? ' ' + classMap.get(paper.classId)?.stream : ''} — ${paper.elective.blockName} (${paper.elective.studentIds.length} student${paper.elective.studentIds.length === 1 ? '' : 's'})`
           : classMap.get(paper.classId)?.stream ? `${classMap.get(paper.classId)?.level} ${classMap.get(paper.classId)?.stream} Room` : `${classMap.get(paper.classId)?.level} Room`;
         for (const cid of sittingClassIds) {
           created.push({
@@ -270,13 +337,73 @@ async function buildGenerationPlan(user: SessionUser, input: GeneratorInput) {
             startTime: period.startTime,
             endTime: period.endTime,
             venue: venueLabel,
-            targetScope: paper.groupedByLevel ? 'STREAM_GROUP' : paper.comboClassIds ? 'COMBINATION' : 'CLASS',
+            targetScope: paper.groupedByLevel ? 'STREAM_GROUP' : paper.comboClassIds ? 'COMBINATION' : paper.elective ? 'ELECTIVE_BLOCK' : 'CLASS',
             targetJson: JSON.stringify(sittingClassIds),
+            electiveBlockId: paper.elective ? paper.elective.blockId : null,
+            // AA.10 — the real, honest per-student roster actually sitting
+            // THIS specific paper — never the whole class. Only ever set
+            // for a real elective paper; every other scope leaves this
+            // unset, matching its own existing real class-wide meaning.
+            studentIdsJson: paper.elective ? JSON.stringify(paper.elective.studentIdsByClass[cid] ?? []) : undefined,
             notes: input.notes || `Auto-generated from exam setup period ${period.label}`,
             createdById: user.id,
             createdByName: user.fullName,
           });
         }
+      }
+
+      // AA.10 — real SINGLE_CHOICE combine-cleanly attempt: if a sibling
+      // subject sharing this exact real blockId+slotId has ALREADY been
+      // placed this run, reuse that exact same real date/period —
+      // genuinely safe because these subjects are real mutually-exclusive
+      // alternatives (no student sits more than one), so reusing the slot
+      // never creates a real per-student clash. Deliberately does NOT
+      // re-check the class-level `occupied` set here (a real, GENUINE bug
+      // found via this feature's own regression test before shipping: the
+      // class's own slot is, BY DESIGN, already marked occupied by the
+      // very first sibling subject in this exact combinable group, so
+      // checking `occupied` again would always incorrectly reject every
+      // subsequent sibling). Only real per-STUDENT occupancy is checked —
+      // two genuinely different students choosing two different Technical
+      // subjects never overlap, so this can never silently create a real
+      // per-student double-booking.
+      if (paper.elective && paper.elective.blockMode === "SINGLE_CHOICE") {
+        const sharedKey = `${paper.elective.blockId}::${paper.elective.slotId}`;
+        const already = singleChoiceSlotPlacement.get(sharedKey);
+        if (already) {
+          const anyBlocked = sittingClassIds.some((cid) => blocked.has(`${cid}:${paper.subjectId}:${paper.paperName}:${already.date}:${already.period.startTime}`));
+          const anyStudentOccupied = paper.elective.studentIds.some((sid) => studentOccupied.has(`${sid}:${already.date}:${already.period.startTime}`));
+          if (!anyBlocked && !anyStudentOccupied) {
+            for (const sid of paper.elective.studentIds) studentOccupied.add(`${sid}:${already.date}:${already.period.startTime}`);
+            createRowsFor(already.date, already.period);
+            placed = true;
+          }
+        }
+      }
+
+      for (; cursor < capacity * 6 && !placed; cursor++) {
+        const slotIndex = cursor % capacity;
+        const date = dates[Math.floor(slotIndex / periods.length)];
+        const period = periods[slotIndex % periods.length];
+        // A combined sitting needs the SAME date/period free for every
+        // member class simultaneously (they are literally in one room/exam
+        // together), not just the class this paper was enumerated from.
+        const anyOccupied = sittingClassIds.some((cid) => occupied.has(`${cid}:${date}:${period.startTime}`));
+        const anyBlocked = sittingClassIds.some((cid) => blocked.has(`${cid}:${paper.subjectId}:${paper.paperName}:${date}:${period.startTime}`));
+        // AA.10 — for a real elective paper, ALSO check that none of its
+        // own real sitting students already has a different real exam at
+        // this exact date/period (catches the exact cross-slot MULTI_SLOT
+        // clash a class-level check alone would miss).
+        const anyStudentOccupied = paper.elective ? paper.elective.studentIds.some((sid) => studentOccupied.has(`${sid}:${date}:${period.startTime}`)) : false;
+        if (anyOccupied || anyBlocked || anyStudentOccupied) continue;
+        for (const cid of sittingClassIds) occupied.add(`${cid}:${date}:${period.startTime}`);
+        if (paper.elective) {
+          for (const sid of paper.elective.studentIds) studentOccupied.add(`${sid}:${date}:${period.startTime}`);
+          if (paper.elective.blockMode === "SINGLE_CHOICE") {
+            singleChoiceSlotPlacement.set(`${paper.elective.blockId}::${paper.elective.slotId}`, { date, period });
+          }
+        }
+        createRowsFor(date, period);
         placed = true;
       }
       if (!placed) throw new ExamTimetableGeneratorError('CONFLICT', `Could not place ${subjectMap.get(paper.subjectId)?.name || 'a subject'} ${paper.paperName}.`);

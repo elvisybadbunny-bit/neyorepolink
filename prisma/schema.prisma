@@ -5716,7 +5716,7 @@ model ExamTimetableSlot {
   startTime               String // HH:MM
   endTime                 String // HH:MM
   venue                   String?
-  targetScope             String   @default("CLASS") // CLASS | STREAM_GROUP | COMBINATION
+  targetScope             String   @default("CLASS") // CLASS | STREAM_GROUP | COMBINATION | ELECTIVE_BLOCK
   targetJson              String?  @default("[]")
   invigilatorScope        String   @default("AUTO") // AUTO | ELIGIBLE_ONLY
   eligibleInvigilatorJson String?  @default("[]")
@@ -5727,6 +5727,22 @@ model ExamTimetableSlot {
   createdByName           String
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
+
+  // AA.10 — real Options-Block exam awareness. When targetScope =
+  // ELECTIVE_BLOCK, this real row still belongs to exactly one real
+  // member classId (kept consistent with the existing per-class row
+  // shape every other scope already uses — the invigilator engine and
+  // every other downstream reader already expects one real classId per
+  // row), but the REAL sitting only ever includes the specific real
+  // students in that class who genuinely chose this subject — never the
+  // whole class. `electiveBlockId` traces this row back to the real
+  // ElectiveBlock it was generated from (never null for this scope, kept
+  // nullable here since every other scope leaves it unset). `studentIdsJson`
+  // is the real, honest per-student roster for marks/attendance-adjacent
+  // features that need to know EXACTLY who is sitting this specific real
+  // paper, not just which class it's nominally under.
+  electiveBlockId String?
+  studentIdsJson  String? @default("[]")
 
   @@unique([tenantId, classId, subjectId, examDate, startTime, paperName])
   @@index([tenantId, examDate])
