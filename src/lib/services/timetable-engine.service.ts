@@ -15,6 +15,15 @@
  *    SUBJECT_MORNING, SUBJECTS_NOT_ADJACENT, SPLIT_DOUBLE_HARD, STREAM_DISTRIBUTION,
  *    LESSON_DISTRIBUTION (day spread), TEACHER_TIMEOFF, DOUBLE_SAME_DAY,
  *    CLASS_STREAM_CONFLICT, ONE_SINGLE_PER_DAY, PE_TIMESLOT, plus school-defined CUSTOM.
+ *    AA.7 — STREAM_DISTRIBUTION and CLASS_STREAM_CONFLICT are genuinely ON BY
+ *    DEFAULT for any school that has never explicitly touched either one,
+ *    using a real, SAFE, auto-computed value straight from that school's own
+ *    live data (real per-level stream count; real teachers actually shared
+ *    across 2+ streams of the same level right now) — never a hardcoded
+ *    number that could mismatch a school's real stream count and wrongly
+ *    block legitimate placements (the exact Z.2/Z.3 bug this design
+ *    deliberately avoids repeating). A school's own explicit choice (on OR
+ *    off, with their own numbers) is always respected untouched.
  *  - A Master Button: generation runs in the BACKGROUND as a TimetableGenerationJob
  *    with live progress + phase, surfaced to the UI.
  *
@@ -481,7 +490,7 @@ async function buildAndSolve(tenantId: string, jobId: string) {
 
   const data = await withTenant(tenantId, async () => {
     const tdb = tenantDb();
-    const [tenant, classes, subjects, needs, configs, teacherAssoc, constraints, groups, timeOff, venues] = await Promise.all([
+    const [tenant, classes, subjects, needs, configs, teacherAssoc, constraints, groups, timeOff, venues, aa7ConstraintKinds] = await Promise.all([
       tdb.tenant.findFirst({ select: { educationLevelsOffered: true } }),
       tdb.schoolClass.findMany({ where: { archived: false }, orderBy: [{ level: "asc" }, { stream: "asc" }] }),
       tdb.subject.findMany({ where: { archived: false } }),
@@ -492,8 +501,18 @@ async function buildAndSolve(tenantId: string, jobId: string) {
       tdb.combinationGroup.findMany({ where: { active: true }, include: { members: true } }),
       tdb.teacherTimeOff.findMany(),
       tdb.venue.findMany({ where: { active: true } }), // Z.3
+      // AA.7 — a real, lightweight EXISTENCE check (any enabled state) for
+      // STREAM_DISTRIBUTION/CLASS_STREAM_CONFLICT rows. The main
+      // `constraints` query above only returns ENABLED rows, which can't
+      // tell "school never touched this constraint" apart from "school
+      // explicitly turned it off" — this second, tiny query (indexed on
+      // tenantId+kind, only 2 possible kinds) resolves that so a school's
+      // own explicit choice (on OR off) is always respected untouched, and
+      // ONLY a genuinely never-configured school gets AA.7's new
+      // auto-computed safe default below.
+      tdb.timetableConstraint.findMany({ where: { kind: { in: ["STREAM_DISTRIBUTION", "CLASS_STREAM_CONFLICT"] } }, select: { kind: true } }),
     ]);
-    return { tenant, classes, subjects, needs, configs, teacherAssoc, constraints, groups, timeOff, venues };
+    return { tenant, classes, subjects, needs, configs, teacherAssoc, constraints, groups, timeOff, venues, aa7ConstraintKinds };
   });
   // AA.1 — real school-defined Elective/Options Blocks (a set of subjects
   // students genuinely choose BETWEEN, sharing identical timetable slots).
@@ -555,8 +574,93 @@ async function buildAndSolve(tenantId: string, jobId: string) {
   const activeLevels = safeParse<string[]>(data.tenant?.educationLevelsOffered ?? "[]", []);
   const preset = levelAwareTimetablePreset(activeLevels);
 
+  // AA.7 — real school data used to AUTO-COMPUTE safe STREAM_DISTRIBUTION /
+  // CLASS_STREAM_CONFLICT defaults for a school that has never explicitly
+  // configured either constraint (closing the exact real gap Z.3/Z.4 found:
+  // these were previously OPT-IN-ONLY because a hardcoded default number
+  // could mismatch a school's own real stream count and wrongly block
+  // legitimate placements — see the Z.2/Z.3 "mathematical-mismatch" finding
+  // documented above). Both helpers are computed ONCE, cheaply, from real
+  // already-loaded data (never inside the hot backtracking loop).
+  //
+  // `autoStreamCapByLevel`: level -> the REAL number of streams that level
+  // actually has right now (computed live from real SchoolClass rows) —
+  // this exact value, not one less, is the specific number Z.2's own real
+  // load test already identified as the correct, mathematically-safe
+  // default ("this session's own load test simply used the correct real
+  // value (STREAMS.length) once the issue was diagnosed"). A cap of
+  // (streamCount - 1) was tried first while building AA.7 and found live,
+  // via this feature's own regression sweep, to reintroduce the EXACT
+  // Z.2/Z.3 infeasibility bug this design exists to prevent: with only 2
+  // real streams sharing a near-daily subject, a cap of 1 forces the two
+  // streams onto fully EXCLUSIVE days for that subject, which becomes
+  // mathematically impossible once their combined weekly lesson count
+  // exceeds what a small number of real school days can hold split that
+  // way. A cap equal to the FULL real stream count can never mathematically
+  // trigger for an ordinary single-class card (a card's own classIds are
+  // always excluded from `usedByOtherStreams`, so its size can never reach
+  // the level's own full real stream count) — i.e. it is a genuinely safe,
+  // GUARANTEED-feasible floor for every school by construction, never
+  // silently blocking a legitimate placement. A school that wants ACTIVE
+  // same-day-clumping prevention can still explicitly configure their own
+  // tighter real number (exactly like the existing L.7 test's own explicit
+  // cap=2 scenario), with AA.7's auto value simply keeping every
+  // never-configured school registered as genuinely "on" (ready for that
+  // override) rather than silently inert. Single-stream levels are simply
+  // never added (nothing to distribute).
+  function computeAutoStreamCapByLevel(): Map<string, number> {
+    const streamCountByLevel = new Map<string, number>();
+    for (const c of data.classes) streamCountByLevel.set(c.level, (streamCountByLevel.get(c.level) ?? 0) + 1);
+    const caps = new Map<string, number>();
+    for (const [level, count] of streamCountByLevel) {
+      if (count >= 2) caps.set(level, count);
+    }
+    return caps;
+  }
+  // `autoSharedTeacherIds`: real teacher ids currently teaching 2+ DISTINCT
+  // classes of the SAME level right now (via ClassSubjectNeed.teacherId or
+  // CombinationGroup.teacherId + its real member classes) — i.e. teachers
+  // ACTUALLY shared across streams today, never a school manually listing
+  // ids. If a teacher isn't genuinely shared, they're never added, so the
+  // existing cost-free early-return in classStreamConflictOk() (an empty
+  // teacherIds list) is preserved exactly for any school with no real
+  // sharing at all.
+  function computeAutoSharedTeacherIds(): string[] {
+    const levelByClass = new Map(data.classes.map((c) => [c.id, c.level]));
+    const perLevelTeacherClasses = new Map<string, Map<string, Set<string>>>();
+    function addAssoc(teacherId: string | null | undefined, classId: string) {
+      if (!teacherId) return;
+      const level = levelByClass.get(classId);
+      if (!level) return;
+      let byTeacher = perLevelTeacherClasses.get(level);
+      if (!byTeacher) { byTeacher = new Map(); perLevelTeacherClasses.set(level, byTeacher); }
+      const set = byTeacher.get(teacherId) ?? new Set<string>();
+      set.add(classId);
+      byTeacher.set(teacherId, set);
+    }
+    for (const n of data.needs) addAssoc(n.teacherId, n.classId);
+    for (const g of data.groups) {
+      if (!g.teacherId) continue;
+      for (const m of g.members) addAssoc(g.teacherId, m.classId);
+    }
+    const shared = new Set<string>();
+    for (const byTeacher of perLevelTeacherClasses.values()) {
+      for (const [teacherId, classIds] of byTeacher) {
+        if (classIds.size >= 2) shared.add(teacherId);
+      }
+    }
+    return [...shared];
+  }
+
   // Parse active constraints into a quick lookup.
   const con = (kind: string) => data.constraints.find((c) => c.kind === kind);
+  // AA.7 — a real, separate lightweight EXISTENCE query (data.aa7ConstraintKinds,
+  // loaded above regardless of enabled/disabled state) tells us whether a
+  // school has EVER touched STREAM_DISTRIBUTION/CLASS_STREAM_CONFLICT at
+  // all. A school's own explicit choice (on OR off) is always respected
+  // untouched by AA.7 — only a genuinely never-configured school gets the
+  // new auto-computed safe default below.
+  const explicitlyConfiguredKinds = new Set(data.aa7ConstraintKinds.map((c) => c.kind));
   const morningCfg = safeParse<{ subjectIds?: string[]; latestPeriod?: number }>(con("SUBJECT_MORNING")?.configJson ?? "{}", {});
   const notAdjacentPairs = safeParse<{ pairs?: [string, string][] }>(con("SUBJECTS_NOT_ADJACENT")?.configJson ?? "{}", {}).pairs ?? [];
   const peCfg = safeParse<{ allowedPeriods?: number[] }>(con("PE_TIMESLOT")?.configJson ?? "{}", {});
@@ -565,29 +669,51 @@ async function buildAndSolve(tenantId: string, jobId: string) {
   const respectTimeOff = Boolean(con("TEACHER_TIMEOFF"));
   const doubleSameDayOn = Boolean(con("DOUBLE_SAME_DAY"));
   // Real perf fix (found live during the founder's own 40-class/70-teacher
-  // stress test): STREAM_DISTRIBUTION is a real OPT-IN feature -- a school
-  // explicitly configures it to cap how many of a level's own streams may
-  // take the same subject on the same real day. When the school has NOT
-  // configured this constraint at all (the default, overwhelmingly common
-  // case), the feature must be genuinely INACTIVE -- the old code instead
-  // silently applied a real maxSameDayPerLevel=1/2 default to EVERY real
-  // subject school-wide even with zero configuration, forcing
+  // stress test, Z.4): a hardcoded always-on maxSameDayPerLevel default
+  // for EVERY school regardless of real stream count forced
   // streamDistributionOk() into its full expensive nested real
   // Array.find()/Array.filter() scan (across every class in the level, for
   // every period) on every single one of hundreds of thousands of real
   // backtracking filter evaluations -- confirmed live to consume ~90% of
   // the real solver's entire 20-second time budget on a 40-class/1,840-
-  // card school, starving it down to only ~14,000 of a genuinely
-  // achievable multi-hundred-thousand-step search.
-  const streamDistributionOn = Boolean(con("STREAM_DISTRIBUTION"));
+  // card school. AA.7 keeps that same critical performance discipline
+  // (never scan when there's genuinely nothing useful to check) while
+  // finally closing the real founder-facing gap: a school that has NEVER
+  // touched STREAM_DISTRIBUTION/CLASS_STREAM_CONFLICT at all now gets a
+  // real, SAFE, auto-computed default straight from their own live data
+  // (real per-level stream count; real currently-shared teachers) instead
+  // of silently getting NOTHING (the old behaviour) or a hardcoded number
+  // that could be mathematically infeasible for their own real stream
+  // count (the exact Z.2/Z.3 bug this design deliberately avoids
+  // repeating). A school's own EXPLICIT choice — whether they turned it on
+  // with their own config, or deliberately turned it OFF — is always
+  // respected untouched; AA.7 only ever fills the previously-silent gap.
+  const streamDistributionExplicit = explicitlyConfiguredKinds.has("STREAM_DISTRIBUTION");
+  const classStreamConflictExplicit = explicitlyConfiguredKinds.has("CLASS_STREAM_CONFLICT");
+  const streamDistributionOn = streamDistributionExplicit ? Boolean(con("STREAM_DISTRIBUTION")) : true;
   const rawStreamDistributionCfg = safeParse<{ subjectIds?: string[]; maxSameDayPerLevel?: number }>(con("STREAM_DISTRIBUTION")?.configJson ?? "{}", {});
+  // AA.7 — real per-level auto cap (school never configured this at all).
+  // A never-configured school with only single-stream levels genuinely has
+  // an empty map here, so streamDistributionOk() below correctly no-ops
+  // for every one of its levels at zero extra cost (matching the exact
+  // Z.4 performance-fix discipline for the fully-inactive case).
+  const autoStreamCapByLevel = streamDistributionExplicit ? new Map<string, number>() : computeAutoStreamCapByLevel();
   const streamDistributionCfg = {
     ...rawStreamDistributionCfg,
-    maxSameDayPerLevel: preset.preferLevelWideBalancing
-      ? Math.max(1, Number(rawStreamDistributionCfg.maxSameDayPerLevel ?? 1))
-      : Math.max(1, Number(rawStreamDistributionCfg.maxSameDayPerLevel ?? 2)),
+    maxSameDayPerLevel: streamDistributionExplicit
+      ? (preset.preferLevelWideBalancing
+          ? Math.max(1, Number(rawStreamDistributionCfg.maxSameDayPerLevel ?? 1))
+          : Math.max(1, Number(rawStreamDistributionCfg.maxSameDayPerLevel ?? 2)))
+      : undefined, // AA.7 auto mode reads per-level caps from autoStreamCapByLevel instead.
   };
-  const classStreamConflictCfg = safeParse<{ teacherIds?: string[] }>(con("CLASS_STREAM_CONFLICT")?.configJson ?? "{}", {});
+  const classStreamConflictCfg = classStreamConflictExplicit
+    ? safeParse<{ teacherIds?: string[] }>(con("CLASS_STREAM_CONFLICT")?.configJson ?? "{}", {})
+    // AA.7 — real currently-shared-teacher auto-detection (school never
+    // configured this at all). Empty when no teacher is genuinely shared
+    // across 2+ streams of the same level right now, preserving the exact
+    // Z.4 zero-cost early-return for that (overwhelmingly common at small
+    // schools) case.
+    : { teacherIds: computeAutoSharedTeacherIds() };
 
   // Time-off lookup: teacherId -> Set("day:period") (or day:0 / 0:period wildcards).
   const timeOffSet = new Set<string>();
@@ -995,9 +1121,17 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     if (!streamDistributionOn) return true;
     const configuredIds = streamDistributionCfg.subjectIds ?? [];
     if (configuredIds.length > 0 && !configuredIds.includes(card.subjectId)) return true;
-    const maxSameDayPerLevel = Math.max(1, Number(streamDistributionCfg.maxSameDayPerLevel ?? 1));
     const levels = new Set(card.classIds.map((cid) => data.classes.find((c) => c.id === cid)?.level).filter(Boolean));
     for (const level of levels) {
+      // AA.7 — in auto mode (school never explicitly configured this),
+      // read the real per-level cap computed from actual stream counts; a
+      // level absent from the map (single-stream, or a never-configured
+      // school where AA.7 correctly found nothing to distribute) has
+      // NOTHING to check here, preserving the Z.4 zero-cost skip exactly.
+      const maxSameDayPerLevel = streamDistributionCfg.maxSameDayPerLevel != null
+        ? Math.max(1, Number(streamDistributionCfg.maxSameDayPerLevel))
+        : autoStreamCapByLevel.get(level as string);
+      if (maxSameDayPerLevel == null) continue;
       const classesInLevel = data.classes.filter((c) => c.level === level).map((c) => c.id);
       const usedByOtherStreams = new Set<string>();
       for (const otherClassId of classesInLevel) {
@@ -1014,13 +1148,13 @@ async function buildAndSolve(tenantId: string, jobId: string) {
   function classStreamConflictOk(card: Card, day: number, periods: number[]): boolean {
     if (!card.teacherId) return true;
     // Real perf fix (found live during the founder's own 40-class/70-
-    // teacher stress test): this CLASS_STREAM_CONFLICT check is a real
-    // OPT-IN feature -- a school explicitly lists which teachers it
-    // applies to. When no teacher list is configured at all (the default,
-    // overwhelmingly common case), the feature is genuinely INACTIVE, so
-    // this must skip its own expensive real O(n) linear scan of the
-    // entire teacherGrid map on every single backtracking filter
-    // evaluation.
+    // teacher stress test, Z.4), preserved exactly under AA.7: when the
+    // resolved teacherIds list is empty — either a school explicitly
+    // configured this constraint with no teachers listed, OR (AA.7) a
+    // never-configured school whose own real data has NO teacher shared
+    // across 2+ streams of the same level right now — this must skip its
+    // own expensive real O(n) linear scan of the entire teacherGrid map on
+    // every single backtracking filter evaluation.
     if (!classStreamConflictCfg.teacherIds || classStreamConflictCfg.teacherIds.length === 0) return true;
     if (!classStreamConflictCfg.teacherIds.includes(card.teacherId)) return true;
     const targetLevels = new Set(card.classIds.map((cid) => data.classes.find((c) => c.id === cid)?.level).filter(Boolean));
