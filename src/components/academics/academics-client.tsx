@@ -2005,7 +2005,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const [venueForm, setVenueForm] = React.useState<any>({ id: "", name: "", shortCode: "", capacityPerPeriod: 1, supportsSubjectIds: [] as string[] });
   const [venueSaving, setVenueSaving] = React.useState(false);
   // AA.1 — real Elective/Options Block state.
-  const emptyBlockForm = { id: "", name: "", mode: "MULTI_SLOT" as "MULTI_SLOT" | "SINGLE_CHOICE", preferAfterBreak: false, classIds: [] as string[], slots: [{ label: "Slot A", isDouble: false, subjects: [{ subjectId: "", teacherId: "", venueId: "" }, { subjectId: "", teacherId: "", venueId: "" }] }] };
+  const emptyBlockForm = { id: "", name: "", mode: "MULTI_SLOT" as "MULTI_SLOT" | "SINGLE_CHOICE", preferAfterBreak: false, preferSplitExamSittings: false, classIds: [] as string[], slots: [{ label: "Slot A", isDouble: false, subjects: [{ subjectId: "", teacherId: "", venueId: "" }, { subjectId: "", teacherId: "", venueId: "" }] }] };
   const [electiveBlocks, setElectiveBlocks] = React.useState<any[]>([]);
   const [blockForm, setBlockForm] = React.useState<any>(emptyBlockForm);
   const [blockSaving, setBlockSaving] = React.useState(false);
@@ -2344,6 +2344,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
           name: blockForm.name,
           mode: blockForm.mode,
           preferAfterBreak: blockForm.preferAfterBreak,
+          preferSplitExamSittings: blockForm.preferSplitExamSittings,
           classIds: blockForm.classIds,
           slots: blockForm.slots.map((s: any) => ({
             label: s.label,
@@ -2387,6 +2388,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       name: block.name,
       mode: block.mode,
       preferAfterBreak: block.preferAfterBreak,
+      preferSplitExamSittings: block.preferSplitExamSittings ?? false,
       classIds: block.classIds,
       slots: block.slots.map((s: any) => ({
         label: s.label,
@@ -3105,6 +3107,13 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                 <input type="checkbox" checked={blockForm.preferAfterBreak} onChange={(e) => setBlockForm((p: any) => ({ ...p, preferAfterBreak: e.target.checked }))} className="h-4 w-4 rounded border-navy-300 text-purple-600 focus:ring-purple-500" />
                 Prefer scheduling right after a break (soft preference — never risks an unplaced lesson)
               </label>
+              <label className="flex items-start gap-2 text-xs text-navy-600 dark:text-navy-300">
+                <input type="checkbox" checked={blockForm.preferSplitExamSittings} onChange={(e) => setBlockForm((p: any) => ({ ...p, preferSplitExamSittings: e.target.checked }))} className="mt-0.5 h-4 w-4 rounded border-navy-300 text-purple-600 focus:ring-purple-500" />
+                <span>
+                  Keep this block&apos;s exam sittings separate, even when NEYO can combine them
+                  <span className="block text-[11px] text-navy-400 dark:text-navy-500">By default, when it&apos;s genuinely safe (a student only ever picks one subject), NEYO schedules this block&apos;s exam subjects at the same shared time to save exam days. Turn this on if your school prefers separate sittings for this block anyway.</span>
+                </span>
+              </label>
               <div>
                 <Label>Classes in this block</Label>
                 <div className="mt-2 max-h-28 overflow-y-auto rounded-xl border border-navy-100 p-3 dark:border-navy-800">
@@ -3195,7 +3204,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-bold text-navy-900 dark:text-white">{block.name} <Badge tone={block.mode === "SINGLE_CHOICE" ? "amber" : "blue"}>{block.mode === "SINGLE_CHOICE" ? "Single-Choice" : "Multi-Slot"}</Badge></p>
-                      <p className="mt-1 text-xs text-navy-500 dark:text-navy-400">{block.classIds.length} class{block.classIds.length === 1 ? "" : "es"} · {block.slots.length} slot{block.slots.length === 1 ? "" : "s"}{block.preferAfterBreak ? " · prefers after-break placement" : ""}</p>
+                      <p className="mt-1 text-xs text-navy-500 dark:text-navy-400">{block.classIds.length} class{block.classIds.length === 1 ? "" : "es"} · {block.slots.length} slot{block.slots.length === 1 ? "" : "s"}{block.preferAfterBreak ? " · prefers after-break placement" : ""}{block.preferSplitExamSittings ? " · exam sittings kept separate" : ""}</p>
                       <div className="mt-2 space-y-1">
                         {block.slots.map((slot: any) => (
                           <p key={slot.id} className="text-[11px] text-navy-500 dark:text-navy-400">

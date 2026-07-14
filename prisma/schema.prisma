@@ -5163,6 +5163,25 @@ model ElectiveBlock {
   // rooms for this block anyway. See design doc Part 8.
   preferAfterBreak Boolean @default(false)
 
+  // AA.10 follow-up — founder's own words: "a school can prefer split even
+  // if the system advices so that they choose what they want". By default
+  // (false) NEYO's exam generator auto-analyses this block and, when the
+  // block genuinely is SINGLE_CHOICE-shaped (one subject per student —
+  // combinable), it schedules all of the block's subjects at one shared
+  // real date/period ("the system's own advice"). Setting this true is a
+  // school's own explicit override that turns that auto-combine OFF for
+  // THIS block only — the block's subjects are always given genuinely
+  // independent exam sittings instead, even though the system would
+  // otherwise recommend combining them. Chosen per-block (not one
+  // school-wide switch) per the founder's own confirmed answer, since a
+  // school may want Technical subjects combined but Humanities kept
+  // split, or vice versa. Never affects the real lesson timetable (only
+  // exam-timetable-generator.service.ts reads this flag) and never
+  // affects a genuinely MULTI_SLOT block (those are already always
+  // scheduled independently — this flag only ever changes behaviour for
+  // SINGLE_CHOICE-shaped blocks).
+  preferSplitExamSittings Boolean @default(false)
+
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

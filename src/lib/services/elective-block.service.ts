@@ -40,6 +40,10 @@ export async function listElectiveBlocks(user: SessionUser) {
       name: b.name,
       mode: b.mode,
       preferAfterBreak: b.preferAfterBreak,
+      // AA.10 follow-up — a school's own real override of the exam
+      // generator's default combine-when-safe advice, surfaced to the
+      // Elective/Options Block editor UI (see academics-client.tsx).
+      preferSplitExamSittings: b.preferSplitExamSittings,
       classIds: b.classes.map((c) => c.classId),
       slots: b.slots.map((slot) => ({
         id: slot.id,
@@ -84,6 +88,7 @@ export async function saveElectiveBlock(user: SessionUser, input: ElectiveBlockS
       name: input.name.trim(),
       mode: input.mode,
       preferAfterBreak: input.preferAfterBreak ?? false,
+      preferSplitExamSittings: input.preferSplitExamSittings ?? false,
     };
 
     let block;
@@ -408,6 +413,16 @@ export type ElectiveExamPaper = {
   // Slot B), so those must NEVER be scheduled at the same real
   // date/period — the caller uses this field to enforce exactly that.
   slotId: string;
+  // AA.10 follow-up — true when this block's own school explicitly chose
+  // to keep exam sittings split (ElectiveBlock.preferSplitExamSittings)
+  // rather than accept the system's own default combine-when-safe advice.
+  // Carried through purely for honest UI/print labelling — the actual
+  // split behaviour itself is already fully encoded by `slotId` above
+  // (see getElectiveBlockExamPapers: a school's split preference makes
+  // every subject get its own unique synthetic slotId, so the generator's
+  // ordinary "same slotId = safe to combine" rule naturally never
+  // combines them, with no separate code path needed in the generator).
+  preferSplitExamSittings: boolean;
   subjectId: string;
   subjectName: string;
   // Real classIds this paper's own real roster is drawn from (the
@@ -471,6 +486,26 @@ export async function getElectiveBlockExamPapers(tenantId: string, classIds: str
           if (!slotIdBySubject.has(sub.subjectId)) slotIdBySubject.set(sub.subjectId, slot.id);
         }
       }
+
+      // AA.10 follow-up — founder's own words: "a school can prefer split
+      // even if the system advices so that they choose what they want".
+      // The system's own default advice combines a SINGLE_CHOICE block's
+      // subjects into one shared sitting (every subject naturally already
+      // shares one real slotId in that shape). When THIS block's own
+      // school has explicitly set preferSplitExamSittings, give every one
+      // of its subjects its own unique synthetic slotId instead — the
+      // generator's existing "same slotId = safe to combine" rule then
+      // naturally treats every subject as genuinely independent, with no
+      // separate branch needed downstream in exam-timetable-generator.
+      // A MULTI_SLOT block's subjects are already independent by slotId,
+      // so this override is a real no-op for that shape (matches the
+      // schema comment's documented scope).
+      if (block.preferSplitExamSittings) {
+        for (const subjectId of slotIdBySubject.keys()) {
+          slotIdBySubject.set(subjectId, `${slotIdBySubject.get(subjectId)}::split::${subjectId}`);
+        }
+      }
+
       const blockSubjectIds = [...slotIdBySubject.keys()];
       if (blockSubjectIds.length === 0) continue;
 
@@ -527,6 +562,7 @@ export async function getElectiveBlockExamPapers(tenantId: string, classIds: str
           blockName: block.name,
           blockMode: block.mode as "MULTI_SLOT" | "SINGLE_CHOICE",
           slotId: slotIdBySubject.get(subjectId)!,
+          preferSplitExamSittings: block.preferSplitExamSittings,
           subjectId,
           subjectName: subjectNameMap.get(subjectId) ?? "Unknown subject",
           classIds: blockClassIds,

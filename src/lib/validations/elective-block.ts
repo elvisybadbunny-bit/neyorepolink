@@ -62,6 +62,11 @@ export const electiveBlockSaveSchema = z.object({
   name: z.string().trim().min(2, "Name this block, e.g. \"Humanities Pair\".").max(120),
   mode: electiveBlockModeSchema.default("MULTI_SLOT"),
   preferAfterBreak: z.boolean().optional().default(false),
+  // AA.10 follow-up — a school's own override: keep this block's exam
+  // sittings genuinely independent even when the system would otherwise
+  // advise combining them (only ever changes anything for a SINGLE_CHOICE
+  // block — see prisma/schema.prisma for the full real design note).
+  preferSplitExamSittings: z.boolean().optional().default(false),
   classIds: z.array(z.string().min(1)).min(1, "Select at least one real class for this block."),
   slots: z.array(slotSchema).min(1, "A block needs at least one real slot."),
 }).refine(
