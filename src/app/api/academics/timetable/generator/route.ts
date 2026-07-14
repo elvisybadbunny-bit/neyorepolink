@@ -40,6 +40,10 @@ export async function POST(req: NextRequest) {
         venueId: body.venueId || null,
         // AA.4 — real, school-set "prefer right after a break" flag.
         requiresMovement: body.requiresMovement !== undefined ? Boolean(body.requiresMovement) : undefined,
+        // AA.8 — real, school-set "never gets a lab for this subject" flag
+        // and real soft lab-priority tier ("NORMAL" | "HIGH").
+        noLabAccess: body.noLabAccess !== undefined ? Boolean(body.noLabAccess) : undefined,
+        labPriority: typeof body.labPriority === "string" ? body.labPriority : undefined,
       });
       return ok(result);
     }

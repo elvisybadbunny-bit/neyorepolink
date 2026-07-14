@@ -451,6 +451,7 @@ model Tenant {
   TimetableConstraint          TimetableConstraint[]
   TeacherTimeOff               TeacherTimeOff[]
   TimetableGenerationJob       TimetableGenerationJob[]
+  VenueSessionHistory          VenueSessionHistory[]
   ClassGroupingRule            ClassGroupingRule[]
   TeacherWorkloadRule          TeacherWorkloadRule[]
   TeacherContinuityAssignment  TeacherContinuityAssignment[]
@@ -4931,9 +4932,69 @@ model ClassSubjectNeed {
   // Mathematics, have no real reason to sit near a break).
   requiresMovement Boolean @default(false)
 
+  // AA.8 — a real, school-set choice: this specific real class NEVER gets
+  // a real lab/venue booking for THIS specific real subject (always
+  // theory-only for this pairing), even if the subject is normally
+  // venue-pooled and a matching venue has spare capacity. Per docs/
+  // TEACHER-ALLOCATION-AND-ELECTIVES-ENGINE-DESIGN.md Part 13's "Per-class
+  // lab blocking" — scoped per class+subject (not the whole class or the
+  // whole venue), per the founder's own explicit choice, so e.g. "Form 2
+  // West never gets the Chemistry Lab for Chemistry" doesn't also block
+  // that same class's real Computer Studies lab sessions. Default false
+  // (the overwhelmingly common case: a class WANTS its real lab session
+  // when the subject needs one).
+  noLabAccess Boolean @default(false)
+
+  // AA.8 — a real, school-set soft priority for THIS class+subject pairing
+  // when real lab/venue capacity is genuinely scarce (not every class can
+  // get a session in one generation run). "HIGH" (e.g. a real exam-
+  // candidate class) is weighted ahead of "NORMAL" in the solver's own
+  // existing candidate-scoring step — a pure soft preference, NEVER a hard
+  // guarantee, so a school with tight lab capacity never ends up with a
+  // genuinely unplaced lesson purely because of this ordering preference.
+  // Scoped per class+subject (not the whole class), per the founder's own
+  // explicit choice, so a school can mark one class HIGH priority for
+  // Chemistry labs specifically while staying NORMAL for Computer Studies.
+  labPriority String @default("NORMAL") // NORMAL | HIGH
+
   @@unique([tenantId, classId, subjectId])
   @@index([tenantId])
   @@index([tenantId, venueId])
+}
+
+// AA.8 — Lab reshuffle / rotation memory (founder-requested via
+// docs/TEACHER-ALLOCATION-AND-ELECTIVES-ENGINE-DESIGN.md Part 13). When a
+// school's real lab/venue capacity is genuinely too tight to give every
+// eligible real class a session in one generation run, this real,
+// append-only history lets the solver fairly PRIORITIZE classes that were
+// actually skipped last time, rather than the same classes always losing
+// out cycle after cycle. One real row is written per class+subject EVERY
+// time a fresh Master Button generation resolves whether that pairing got
+// a real lab session or not — `gotSession=false` rows are what the next
+// run's own soft scoring reads back to give that pairing a real priority
+// boost, while `gotSession=true` rows reset that pairing's own "missed
+// last time" streak. Never a hard guarantee — a class that keeps missing
+// out due to genuinely severe capacity constraints is still reported
+// honestly via the existing `unplaced` mechanism, never silently forced.
+model VenueSessionHistory {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  classId   String
+  subjectId String // Subject.id
+
+  // The real generation run this row belongs to (for honest chronological
+  // ordering — "last time" always means the most recent real run, never
+  // an ambiguous timestamp race).
+  generationJobId String?
+
+  gotSession Boolean // true = this class+subject genuinely got a real lab/venue booking this run
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, classId, subjectId])
+  @@index([tenantId, classId, subjectId, createdAt])
 }
 
 // Z.3 — Real Venue/Lab pool (founder-requested 2026-07-10). A school adds

@@ -2131,6 +2131,10 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
         // AA.4 — real, school-set "prefer right after a break" flag for
         // subjects that genuinely involve student movement (labs, PE).
         requiresMovement: Boolean(patch.requiresMovement ?? current.requiresMovement ?? false),
+        // AA.8 — real, school-set "never use a lab for this subject" flag
+        // and real soft lab-priority tier ("NORMAL" | "HIGH").
+        noLabAccess: Boolean(patch.noLabAccess ?? current.noLabAccess ?? false),
+        labPriority: patch.labPriority ?? current.labPriority ?? "NORMAL",
       };
       const res = await fetch("/api/academics/timetable/generator", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const json = await res.json();
@@ -2741,6 +2745,38 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                           />
                           Movement-heavy (prefer right after a break)
                         </label>
+                        {/* AA.8 — real, school-set "this class never gets a
+                            real lab/venue for THIS subject" hard exclusion
+                            (always theory-only for this pairing) and a real
+                            soft lab-priority tier (e.g. exam-candidate
+                            classes) for when real lab capacity is genuinely
+                            scarce. Only shown when this subject actually
+                            has a real venue pool to compete for — a school
+                            with no labs at all never sees this, matching
+                            the existing venue-picker's own visibility rule. */}
+                        {venues.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-3 pl-1">
+                            <label className="flex items-center gap-2 text-[11px] text-navy-500 dark:text-navy-400">
+                              <input
+                                type="checkbox"
+                                defaultChecked={Boolean(current.noLabAccess)}
+                                onChange={(e) => saveNeed(cls.id, subject.id, { noLabAccess: e.target.checked })}
+                              />
+                              Never use a lab for this subject (theory-only)
+                            </label>
+                            <label className="flex items-center gap-2 text-[11px] text-navy-500 dark:text-navy-400">
+                              <span>Lab priority:</span>
+                              <select
+                                defaultValue={current.labPriority ?? "NORMAL"}
+                                onChange={(e) => saveNeed(cls.id, subject.id, { labPriority: e.target.value })}
+                                className="rounded-lg border border-navy-100 bg-white px-2 py-1 text-[11px] dark:border-navy-800 dark:bg-navy-900"
+                              >
+                                <option value="NORMAL">Normal</option>
+                                <option value="HIGH">High (e.g. exam candidates)</option>
+                              </select>
+                            </label>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

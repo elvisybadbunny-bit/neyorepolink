@@ -68,7 +68,7 @@ export async function getTeacherSubjects(user: SessionUser, teacherId: string) {
 /** Save subject weekly lessons need + assigned teacher (The Input Matrix). */
 export async function saveClassSubjectNeed(
   user: SessionUser,
-  input: { classId: string; subjectId: string; lessonsPerWeek: number; teacherId?: string | null; doubleCount?: number; allowSplitDouble?: boolean; venueId?: string | null; requiresMovement?: boolean }
+  input: { classId: string; subjectId: string; lessonsPerWeek: number; teacherId?: string | null; doubleCount?: number; allowSplitDouble?: boolean; venueId?: string | null; requiresMovement?: boolean; noLabAccess?: boolean; labPriority?: string }
 ) {
   return withTenant(user.tenantId, async () => {
     const tdb = tenantDb();
@@ -82,6 +82,11 @@ export async function saveClassSubjectNeed(
     const venueId = input.venueId || null;
     // AA.4 — real, school-set soft "prefer right after a break" flag.
     const requiresMovement = input.requiresMovement ?? false;
+    // AA.8 — real, school-set "this class never gets a real lab/venue for
+    // this specific subject" hard exclusion (theory-only pairing), and a
+    // real soft priority tier for when lab capacity is genuinely scarce.
+    const noLabAccess = input.noLabAccess ?? false;
+    const labPriority = input.labPriority === "HIGH" ? "HIGH" : "NORMAL";
 
     const row = await tdb.classSubjectNeed.upsert({
       where: { tenantId_classId_subjectId: { tenantId: user.tenantId, classId, subjectId } },
@@ -95,6 +100,8 @@ export async function saveClassSubjectNeed(
         allowSplitDouble,
         venueId,
         requiresMovement,
+        noLabAccess,
+        labPriority,
       },
       update: {
         teacherId: teacherId || null,
@@ -103,6 +110,8 @@ export async function saveClassSubjectNeed(
         allowSplitDouble,
         venueId,
         requiresMovement,
+        noLabAccess,
+        labPriority,
       },
     });
 

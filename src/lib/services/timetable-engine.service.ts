@@ -441,6 +441,20 @@ interface Card {
   // below) — a school with tight capacity never ends up with a genuinely
   // unplaced lesson purely because of this cosmetic preference.
   requiresMovement: boolean;
+  // AA.8 — real, school-set "this class never gets a real lab/venue for
+  // this specific subject" hard exclusion (from
+  // ClassSubjectNeed.noLabAccess — CombinationGroup members never carry
+  // this, since a combination already shares one real venue choice across
+  // every member class by design). When true, venueCandidateIds is forced
+  // empty at card-build time (see below) so this card is treated exactly
+  // like a normal classroom lesson, never attempting a real lab booking.
+  noLabAccess: boolean;
+  // AA.8 — real, school-set soft priority ("NORMAL" | "HIGH") for this
+  // class-subject's own real lab/venue booking when capacity is genuinely
+  // scarce (from ClassSubjectNeed.labPriority / CombinationGroup does not
+  // carry this — a combination's own shared venue choice is scored as
+  // NORMAL, since priority is a per-class-subject concept).
+  labPriority: string;
 }
 
 export async function runGeneration(tenantId: string, jobId: string, user: SessionUser) {
@@ -490,7 +504,7 @@ async function buildAndSolve(tenantId: string, jobId: string) {
 
   const data = await withTenant(tenantId, async () => {
     const tdb = tenantDb();
-    const [tenant, classes, subjects, needs, configs, teacherAssoc, constraints, groups, timeOff, venues, aa7ConstraintKinds] = await Promise.all([
+    const [tenant, classes, subjects, needs, configs, teacherAssoc, constraints, groups, timeOff, venues, aa7ConstraintKinds, aa8VenueHistory] = await Promise.all([
       tdb.tenant.findFirst({ select: { educationLevelsOffered: true } }),
       tdb.schoolClass.findMany({ where: { archived: false }, orderBy: [{ level: "asc" }, { stream: "asc" }] }),
       tdb.subject.findMany({ where: { archived: false } }),
@@ -511,8 +525,14 @@ async function buildAndSolve(tenantId: string, jobId: string) {
       // ONLY a genuinely never-configured school gets AA.7's new
       // auto-computed safe default below.
       tdb.timetableConstraint.findMany({ where: { kind: { in: ["STREAM_DISTRIBUTION", "CLASS_STREAM_CONFLICT"] } }, select: { kind: true } }),
+      // AA.8 — real lab-rotation-memory history, most recent first. A
+      // generous flat cap (2000 rows) keeps this cheap even for a
+      // long-lived tenant with many past generation runs — reduced down
+      // to "most recent row per class+subject" in JS immediately below,
+      // so only a small real Map survives into the hot solver path.
+      tdb.venueSessionHistory.findMany({ orderBy: { createdAt: "desc" }, take: 2000 }),
     ]);
-    return { tenant, classes, subjects, needs, configs, teacherAssoc, constraints, groups, timeOff, venues, aa7ConstraintKinds };
+    return { tenant, classes, subjects, needs, configs, teacherAssoc, constraints, groups, timeOff, venues, aa7ConstraintKinds, aa8VenueHistory };
   });
   // AA.1 — real school-defined Elective/Options Blocks (a set of subjects
   // students genuinely choose BETWEEN, sharing identical timetable slots).
@@ -545,6 +565,33 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     if (pinnedVenueId && venueById.has(pinnedVenueId)) return [pinnedVenueId];
     return venuesForSubject.get(subjectId) ?? [];
   }
+
+  // AA.8 — real lab reshuffle/rotation memory: `missedLastTime` is true
+  // for a real class+subject pairing whose MOST RECENT real
+  // VenueSessionHistory row (if any) recorded `gotSession=false` — i.e.
+  // real lab capacity was genuinely too tight last time to give this
+  // pairing a session. Read once per class+subject (first/most-recent row
+  // wins, since `aa8VenueHistory` was already loaded most-recent-first),
+  // never re-queried inside the hot backtracking loop. A pairing with NO
+  // history at all (first-ever run, or a pairing that has never needed a
+  // lab) is neither penalized nor boosted — this only ever helps a
+  // pairing that has a genuine, real, previously-recorded miss.
+  const mostRecentHistoryByPair = new Map<string, boolean>(); // classId::subjectId -> gotSession
+  for (const h of data.aa8VenueHistory) {
+    const key = `${h.classId}::${h.subjectId}`;
+    if (!mostRecentHistoryByPair.has(key)) mostRecentHistoryByPair.set(key, h.gotSession);
+  }
+  function missedLastTime(classId: string, subjectId: string): boolean {
+    return mostRecentHistoryByPair.get(`${classId}::${subjectId}`) === false;
+  }
+  // AA.8 — real, per-run tracking of whether each real venue-needing
+  // class+subject pairing GENUINELY got a real lab/venue booking this
+  // run, written back as fresh VenueSessionHistory rows at the very end
+  // of buildAndSolve() (after the real solve completes) so the NEXT run
+  // can read it back via `missedLastTime()` above. Only pairings that
+  // actually have real venue candidates at all are tracked (a normal
+  // classroom-only subject never needs lab rotation fairness).
+  const labSessionOutcomeThisRun = new Map<string, boolean>(); // classId::subjectId -> gotSession
 
   // P.5 — per-class day list and per-class-per-day period cap, driven entirely
   // by each class's own real TimetableConfig row (never a single global
@@ -1001,11 +1048,16 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     const comboVenueCandidates = venueCandidatesFor(g.subjectId, (g as any).venueId);
     // AA.4 — real school-set movement preference for this combined lesson.
     const comboRequiresMovement = Boolean((g as any).requiresMovement);
+    // AA.8 — a Combination Group shares ONE real venue choice across every
+    // member class by design, so per-class-subject lab blocking/priority
+    // (which is a real per-class-need concept) doesn't apply here — always
+    // NORMAL priority, never blocked (a school that genuinely wants a
+    // combined lesson to never use a lab simply doesn't pin/tag one).
     for (let i = 0; i < dbl; i++) {
-      cards.push({ id: `c${cardSeq++}`, classIds: memberClassIds, classLabel: labels, subjectId: g.subjectId, subjectCode: sub?.code ?? "?", teacherId: g.teacherId, size: 2, splitAllowed: false, isCombination: true, venueCandidateIds: comboVenueCandidates, requiresMovement: comboRequiresMovement });
+      cards.push({ id: `c${cardSeq++}`, classIds: memberClassIds, classLabel: labels, subjectId: g.subjectId, subjectCode: sub?.code ?? "?", teacherId: g.teacherId, size: 2, splitAllowed: false, isCombination: true, venueCandidateIds: comboVenueCandidates, requiresMovement: comboRequiresMovement, noLabAccess: false, labPriority: "NORMAL" });
     }
     for (let i = 0; i < singles; i++) {
-      cards.push({ id: `c${cardSeq++}`, classIds: memberClassIds, classLabel: labels, subjectId: g.subjectId, subjectCode: sub?.code ?? "?", teacherId: g.teacherId, size: 1, splitAllowed: false, isCombination: true, venueCandidateIds: comboVenueCandidates, requiresMovement: comboRequiresMovement });
+      cards.push({ id: `c${cardSeq++}`, classIds: memberClassIds, classLabel: labels, subjectId: g.subjectId, subjectCode: sub?.code ?? "?", teacherId: g.teacherId, size: 1, splitAllowed: false, isCombination: true, venueCandidateIds: comboVenueCandidates, requiresMovement: comboRequiresMovement, noLabAccess: false, labPriority: "NORMAL" });
     }
   }
 
@@ -1018,16 +1070,24 @@ async function buildAndSolve(tenantId: string, jobId: string) {
       if (!sub) continue;
       const dbl = Math.max(0, Math.min(n.doubleCount, Math.floor(n.lessonsPerWeek / 2)));
       const singles = n.lessonsPerWeek - dbl * 2;
+      // AA.8 — a real, school-set "this class never gets a real lab/venue
+      // for THIS subject" hard exclusion forces venueCandidateIds to an
+      // empty array at card-build time — the exact same code path an
+      // ordinary classroom-only subject already uses, so this card is
+      // never treated any differently by the rest of the solver.
+      const needNoLabAccess = Boolean((n as any).noLabAccess);
       // Z.3 — real venue candidates for this class-subject need (pinned
       // venue takes priority, else the school's real subject-tagged venue pool).
-      const needVenueCandidates = venueCandidatesFor(n.subjectId, (n as any).venueId);
+      const needVenueCandidates = needNoLabAccess ? [] : venueCandidatesFor(n.subjectId, (n as any).venueId);
       // AA.4 — real school-set movement preference for this class-subject.
       const needRequiresMovement = Boolean((n as any).requiresMovement);
+      // AA.8 — real, school-set soft lab-priority tier for this class-subject.
+      const needLabPriority = (n as any).labPriority === "HIGH" ? "HIGH" : "NORMAL";
       for (let i = 0; i < dbl; i++) {
-        cards.push({ id: `c${cardSeq++}`, classIds: [c.id], classLabel: classLabel(c), subjectId: n.subjectId, subjectCode: sub.code, teacherId: n.teacherId, size: 2, splitAllowed: n.allowSplitDouble, isCombination: false, venueCandidateIds: needVenueCandidates, requiresMovement: needRequiresMovement });
+        cards.push({ id: `c${cardSeq++}`, classIds: [c.id], classLabel: classLabel(c), subjectId: n.subjectId, subjectCode: sub.code, teacherId: n.teacherId, size: 2, splitAllowed: n.allowSplitDouble, isCombination: false, venueCandidateIds: needVenueCandidates, requiresMovement: needRequiresMovement, noLabAccess: needNoLabAccess, labPriority: needLabPriority });
       }
       for (let i = 0; i < singles; i++) {
-        cards.push({ id: `c${cardSeq++}`, classIds: [c.id], classLabel: classLabel(c), subjectId: n.subjectId, subjectCode: sub.code, teacherId: n.teacherId, size: 1, splitAllowed: false, isCombination: false, venueCandidateIds: needVenueCandidates, requiresMovement: needRequiresMovement });
+        cards.push({ id: `c${cardSeq++}`, classIds: [c.id], classLabel: classLabel(c), subjectId: n.subjectId, subjectCode: sub.code, teacherId: n.teacherId, size: 1, splitAllowed: false, isCombination: false, venueCandidateIds: needVenueCandidates, requiresMovement: needRequiresMovement, noLabAccess: needNoLabAccess, labPriority: needLabPriority });
       }
     }
   }
@@ -1348,7 +1408,38 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     candidateCache.set(card.id, placements);
     return placements;
   }
-  cards.sort((a, b) => candidatePlacements(a).length - candidatePlacements(b).length || (b.size - a.size));
+  // AA.8 — seed every real lab-needing pairing as "not yet gotten a
+  // session this run" BEFORE solving starts, so a card that never
+  // successfully places (either genuinely unplaced, or placed without
+  // securing a real venue) still ends up correctly recorded as a real
+  // miss, not silently absent from history.
+  for (const card of cards) {
+    if (card.venueCandidateIds.length === 0) continue;
+    for (const cid of card.classIds) {
+      const outcomeKey = `${cid}::${card.subjectId}`;
+      if (!labSessionOutcomeThisRun.has(outcomeKey)) labSessionOutcomeThisRun.set(outcomeKey, false);
+    }
+  }
+
+  // AA.8 — real soft lab-priority ordering: among cards that genuinely
+  // compete for the SAME limited real venue pool, a card whose own real
+  // class+subject pairing is either explicitly HIGH priority (e.g. a real
+  // exam-candidate class) OR was genuinely SKIPPED last real generation
+  // run gets first pick at placement (processed earlier), so scarce real
+  // lab capacity goes to the pairing that most needs it fairly this time
+  // — a pure ORDERING preference, never a hard rule, so a school's own
+  // real capacity constraints still honestly report any genuinely
+  // unplaced lesson via the existing `unplaced` mechanism exactly as
+  // before; this never changes WHETHER something can be placed, only WHO
+  // gets first choice of a scarce shared resource.
+  function labPriorityRank(card: Card): number {
+    if (card.venueCandidateIds.length === 0) return 0; // no real venue contention at all
+    let rank = 0;
+    if (card.labPriority === "HIGH") rank -= 2;
+    if (card.classIds.some((cid) => missedLastTime(cid, card.subjectId))) rank -= 1;
+    return rank;
+  }
+  cards.sort((a, b) => labPriorityRank(a) - labPriorityRank(b) || candidatePlacements(a).length - candidatePlacements(b).length || (b.size - a.size));
 
   // Z.2 — real step/time budget for the backtracking solver. An earlier
   // unbounded version could spin at 100% CPU indefinitely on a large real
@@ -1545,6 +1636,15 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     // is already displayed elsewhere, e.g. timetablePrintBundle()).
     const bookedVenueId = venueUsedAt.get(`${classId}:${dayStr}:${periodStr}`);
     const venueLabel = bookedVenueId ? (venueById.get(bookedVenueId)?.shortCode || venueById.get(bookedVenueId)?.name || null) : null;
+    // AA.8 — real lab-rotation-memory outcome tracking, read from the
+    // FINAL, fully-settled `venueUsedAt` map (never a mid-backtracking
+    // snapshot, which could include a placement that was later reversed).
+    // Only pairings that genuinely needed a real venue this run are
+    // tracked at all (seeded to false further up before solving began);
+    // finding even one real booked slot upgrades that pairing to a real
+    // "got a session" outcome for this run.
+    const outcomeKey = `${classId}::${subjectId}`;
+    if (labSessionOutcomeThisRun.has(outcomeKey) && bookedVenueId) labSessionOutcomeThisRun.set(outcomeKey, true);
     slotRows.push({
       tenantId, classId, subjectId,
       teacherId,
@@ -1585,6 +1685,18 @@ async function buildAndSolve(tenantId: string, jobId: string) {
         where: { id: slotSubjectId },
         data: { resolvedVenueId },
       }).catch(() => {}); // a slot-subject deleted mid-run (rare) is safely skipped, never a hard failure
+    }
+    // AA.8 — real lab-rotation-memory: write one fresh history row per
+    // real class+subject pairing that genuinely needed a venue this run,
+    // recording whether it actually got one. Append-only by design (never
+    // updates a prior row) so `missedLastTime()` on the NEXT run can
+    // always read the true, honest, most-recent real outcome.
+    if (labSessionOutcomeThisRun.size > 0) {
+      const historyRows = [...labSessionOutcomeThisRun.entries()].map(([key, gotSession]) => {
+        const [classId, subjectId] = key.split("::");
+        return { tenantId, classId, subjectId, generationJobId: jobId, gotSession };
+      });
+      await tdb.venueSessionHistory.createMany({ data: historyRows });
     }
   });
 
