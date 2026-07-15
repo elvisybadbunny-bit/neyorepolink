@@ -215,6 +215,176 @@ export async function saveTimetableConfig(
   });
 }
 
+// ---------------------------------------------------------------------------
+// DD.9/DD.10 — real, whole-GRADE (level) configuration, confirmed via
+// ask_user: NEYO's database still stores TimetableConfig/ClassSubjectNeed
+// per real class/stream underneath (unchanged — the timetable engine
+// genuinely needs that), but the SCREEN should show one shared "Grade 10"
+// form instead of "Grade 10 Blue"/"Grade 10 East" repeated separately,
+// since every real stream of a grade normally studies the same amount.
+// Confirmed via ask_user: NEVER silently overwrite streams whose real,
+// already-saved settings genuinely differ from each other today — that's
+// a real, honest signal a school already intentionally customised one
+// stream, and blindly overwriting it would destroy that real choice.
+// ---------------------------------------------------------------------------
+
+/**
+ * DD.9/DD.10 — real, honest "are every real stream of this level's own
+ * TimetableConfig rows currently IDENTICAL" check, used by the UI to
+ * decide whether it's safe to show ONE shared whole-grade form (they
+ * genuinely agree, or none exist yet) or must warn the school and let
+ * them resolve a genuine per-stream difference first. Compares every
+ * real field a school can actually edit — never assumes agreement.
+ */
+const TIMETABLE_CONFIG_COMPARABLE_FIELDS = [
+  "periodsPerDay", "freePeriodsPerWeek", "coCurricularCount", "coCurricularName",
+  "schoolDayStartTime", "saturdayStartTime", "saturdayEndTime", "lessonDurationMins",
+  "shortBreakStart", "shortBreakMins", "shortBreak2Start", "shortBreak2Mins",
+  "longBreakStart", "longBreakMins", "lunchStart", "lunchMins",
+  "hasRemedials", "hasPreps", "lunchShift", "hasSaturday", "lunchAfterPeriod",
+] as const;
+
+export async function getTimetableConfigAgreementForLevel(user: SessionUser, level: string) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const classes = await tdb.schoolClass.findMany({ where: { level, archived: false }, orderBy: { stream: "asc" } });
+    if (classes.length === 0) return { level, classIds: [] as string[], agrees: true, sharedConfig: null, perClassConfigs: [] as any[] };
+    const configs = await tdb.timetableConfig.findMany({ where: { classId: { in: classes.map((c) => c.id) } } });
+    const configByClassId = new Map(configs.map((c) => [c.classId, c]));
+
+    let agrees = true;
+    const reference = configs[0] ?? null;
+    if (configs.length > 0) {
+      // A class with NO config row yet is a real, honest "not yet
+      // configured" state — never treated as a disagreement with a
+      // sibling stream that already has one (the shared form simply
+      // creates that missing row too, once saved).
+      for (const cfg of configs) {
+        for (const field of TIMETABLE_CONFIG_COMPARABLE_FIELDS) {
+          if ((cfg as any)[field] !== (reference as any)[field]) { agrees = false; break; }
+        }
+        if (!agrees) break;
+      }
+    }
+
+    return {
+      level,
+      classIds: classes.map((c) => c.id),
+      agrees,
+      sharedConfig: agrees ? reference : null,
+      perClassConfigs: classes.map((c) => ({ classId: c.id, stream: c.stream, config: configByClassId.get(c.id) ?? null })),
+    };
+  });
+}
+
+/**
+ * DD.9/DD.10 — real, whole-grade save: writes the EXACT SAME real
+ * TimetableConfig values to every real class of this level in one action.
+ * Reuses saveTimetableConfig()'s own exact real upsert logic per class —
+ * never a second, drifting config-writing path. A school explicitly
+ * confirming this action (after the UI's own honest disagreement warning,
+ * if any) is a deliberate real choice to make every real stream match —
+ * this function itself never silently decides that on its own.
+ */
+export async function saveTimetableConfigForLevel(
+  user: SessionUser,
+  level: string,
+  input: Omit<Parameters<typeof saveTimetableConfig>[1], "classId">
+) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const classes = await tdb.schoolClass.findMany({ where: { level, archived: false }, select: { id: true } });
+    if (classes.length === 0) throw new TimetableSolverError("NOT_FOUND", "No real active classes found for that level.");
+    const rows = [];
+    for (const cls of classes) {
+      rows.push(await saveTimetableConfig(user, { ...input, classId: cls.id }));
+    }
+    return { level, classIds: classes.map((c) => c.id), updatedCount: rows.length };
+  });
+}
+
+/**
+ * DD.9 — the same real "do every real stream already agree" honesty
+ * check, applied to ClassSubjectNeed instead of TimetableConfig — one
+ * real row per (class, subject) pair, so agreement is checked PER
+ * SUBJECT: every real stream of the level must have the exact same real
+ * lessonsPerWeek/doubleCount/etc for a given real subject to be
+ * considered "in agreement" for that subject.
+ */
+const CLASS_SUBJECT_NEED_COMPARABLE_FIELDS = [
+  "lessonsPerWeek", "doubleCount", "allowSplitDouble", "venueId",
+  "requiresMovement", "noLabAccess", "labPriority", "rotateTeacherEachTerm",
+  // Deliberately EXCLUDES teacherId — a school may genuinely want a
+  // DIFFERENT real teacher per stream for the same subject (e.g. two
+  // Chemistry specialists splitting a grade's streams between them) even
+  // when every other real setting for that subject is identical, so
+  // teacherId is surfaced separately per-stream in the UI rather than
+  // blocking the whole-grade shared view over a real, legitimate
+  // per-stream difference.
+] as const;
+
+export async function getClassSubjectNeedAgreementForLevel(user: SessionUser, level: string) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const classes = await tdb.schoolClass.findMany({ where: { level, archived: false }, orderBy: { stream: "asc" } });
+    if (classes.length === 0) return { level, classIds: [] as string[], bySubject: {} as Record<string, { agrees: boolean; shared: any | null; perClass: any[] }> };
+    const classIds = classes.map((c) => c.id);
+    const needs = await tdb.classSubjectNeed.findMany({ where: { classId: { in: classIds } } });
+    const bySubjectId = new Map<string, typeof needs>();
+    for (const n of needs) {
+      const arr = bySubjectId.get(n.subjectId) ?? [];
+      arr.push(n);
+      bySubjectId.set(n.subjectId, arr);
+    }
+    const bySubject: Record<string, { agrees: boolean; shared: any | null; perClass: any[] }> = {};
+    for (const [subjectId, rows] of bySubjectId.entries()) {
+      let agrees = true;
+      const reference = rows[0];
+      for (const row of rows) {
+        for (const field of CLASS_SUBJECT_NEED_COMPARABLE_FIELDS) {
+          if ((row as any)[field] !== (reference as any)[field]) { agrees = false; break; }
+        }
+        if (!agrees) break;
+      }
+      bySubject[subjectId] = {
+        agrees,
+        shared: agrees ? reference : null,
+        perClass: classIds.map((classId) => ({ classId, need: rows.find((r) => r.classId === classId) ?? null })),
+      };
+    }
+    return { level, classIds, bySubject };
+  });
+}
+
+/**
+ * DD.9 — real, whole-grade save for a single real subject's own
+ * ClassSubjectNeed: writes the EXACT SAME real values to every real class
+ * of the level for that one real subject, reusing saveClassSubjectNeed()'s
+ * own exact real upsert logic per class. `teacherId` is intentionally the
+ * ONE real field callers may still vary per class even in this batch call
+ * (see CLASS_SUBJECT_NEED_COMPARABLE_FIELDS's own comment) — passed as an
+ * optional per-class override map, defaulting to the shared value.
+ */
+export async function saveClassSubjectNeedForLevel(
+  user: SessionUser,
+  level: string,
+  subjectId: string,
+  input: Omit<Parameters<typeof saveClassSubjectNeed>[1], "classId" | "subjectId" | "teacherId">,
+  teacherIdByClassId?: Record<string, string | null>
+) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const classes = await tdb.schoolClass.findMany({ where: { level, archived: false }, select: { id: true } });
+    if (classes.length === 0) throw new TimetableSolverError("NOT_FOUND", "No real active classes found for that level.");
+    const rows = [];
+    for (const cls of classes) {
+      const teacherId = teacherIdByClassId && cls.id in teacherIdByClassId ? teacherIdByClassId[cls.id] : null;
+      rows.push(await saveClassSubjectNeed(user, { ...input, classId: cls.id, subjectId, teacherId }));
+    }
+    return { level, subjectId, classIds: classes.map((c) => c.id), updatedCount: rows.length };
+  });
+}
+
 /** Fetch whole matrix of class subject needs and configs. */
 export async function getTimetableInputs(user: SessionUser) {
   return withTenant(user.tenantId, async () => {
