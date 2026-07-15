@@ -119,7 +119,33 @@ export async function runAutoGroupingPreview(user: SessionUser, level: string) {
     const tdb = tenantDb();
     const classes = await tdb.schoolClass.findMany({ where: { level, archived: false }, orderBy: [{ stream: "asc" }] });
     if (classes.length === 0) throw new AutoGroupingError("NOT_FOUND", "No active classes found for that level.");
-    const students = await tdb.student.findMany({ where: { classId: { in: classes.map((c) => c.id) }, status: "ACTIVE" }, orderBy: [{ lastName: "asc" }, { firstName: "asc" }], select: { id: true, firstName: true, lastName: true, classId: true } });
+    const alreadyPlacedStudents = await tdb.student.findMany({ where: { classId: { in: classes.map((c) => c.id) }, status: "ACTIVE" }, orderBy: [{ lastName: "asc" }, { firstName: "asc" }], select: { id: true, firstName: true, lastName: true, classId: true } });
+
+    // DD.6 — real, pre-existing gap found and fixed while wiring the
+    // founder's own real "confirm a combination -> auto-allocate class"
+    // request: this preview previously ONLY ever considered students
+    // already placed in one of the level's classes, so a genuinely
+    // classless student (e.g. a fresh intake just imported with a real
+    // confirmed Subjects choice, but not yet in any class) was silently
+    // invisible here even though this level's own real classes already
+    // exist — BB.4's own "Allocate Class" USE_EXISTING strategy delegates
+    // straight to this function, so that real student could never
+    // actually be placed via USE_EXISTING at all, only ever via the
+    // CREATE_NEW path (which makes no sense once classes already exist).
+    // Fixed: also include genuinely classless real students who have a
+    // real confirmed selection under a portal targeting this EXACT level
+    // — the same real signal findClasslessStudentsForLevel() (BB.4's own
+    // CREATE_NEW path) already trusts, applied here too so USE_EXISTING
+    // genuinely covers every real student who should be considered.
+    const classlessPortals = await tdb.subjectSelectionPortal.findMany({ where: { targetLevel: level }, select: { id: true } });
+    const classlessSelections = classlessPortals.length
+      ? await tdb.studentSubjectSelection.findMany({ where: { isConfirmed: true, portalId: { in: classlessPortals.map((p) => p.id) } }, select: { studentId: true } })
+      : [];
+    const classlessStudents = classlessSelections.length
+      ? await tdb.student.findMany({ where: { id: { in: classlessSelections.map((s) => s.studentId) }, classId: null, status: "ACTIVE" }, orderBy: [{ lastName: "asc" }, { firstName: "asc" }], select: { id: true, firstName: true, lastName: true, classId: true } })
+      : [];
+    const students = [...alreadyPlacedStudents, ...classlessStudents];
+
     const selections = await tdb.studentSubjectSelection.findMany({ where: { isConfirmed: true, studentId: { in: students.map((s) => s.id) } }, select: { studentId: true, selectedSubjectIds: true } });
     const selectionMap = new Map(selections.map((s) => [s.studentId, parseJson<string[]>(s.selectedSubjectIds, [])]));
     const rules = await tdb.classGroupingRule.findMany({ where: { active: true, OR: [{ targetLevel: null }, { targetLevel: level }] }, orderBy: [{ priority: "asc" }, { createdAt: "asc" }] });

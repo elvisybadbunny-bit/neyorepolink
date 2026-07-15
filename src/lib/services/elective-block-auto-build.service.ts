@@ -39,6 +39,7 @@ import { tenantDb } from "@/lib/core/tenant-db";
 import type { SessionUser } from "@/lib/core/session";
 import { recommendTeacherForSubject } from "@/lib/services/l7-continuity-engine.service";
 import { saveElectiveBlock } from "@/lib/services/elective-block.service";
+import { upsertCombinationGroup } from "@/lib/services/timetable-engine.service";
 import { CORE_ESSENTIAL_MATHEMATICS } from "@/lib/validations/pathways";
 import type { ConfirmAutoBuildInput } from "@/lib/validations/elective-block-auto-build";
 
@@ -331,15 +332,84 @@ export async function confirmElectiveBlockAutoBuild(user: SessionUser, input: Co
       data: { status: "CONFIRMED", createdElectiveBlockId: saved.id, confirmedAt: new Date() },
     });
 
+    // DD.7 — founder's own real words: once a subject combination/elective
+    // is confirmed, it should be "placed in the combination tab so that no
+    // manuall inputing is reauired same to electives they are placed in
+    // the electives tab as well". The real ElectiveBlock above already
+    // satisfies the "Electives tab" half. For the real "Combination tab"
+    // (the pre-existing manual CombinationGroup list in Smart Timetable),
+    // auto-create one real CombinationGroup PER confirmed subject here too
+    // — source: "SUBJECT_CHOICE" (the exact same real, pre-existing
+    // mechanism a school could otherwise only create by hand), so the
+    // solver's own `deriveClassesFromSubjectChoice()` keeps this group's
+    // real membership honestly in sync with actual student choices for as
+    // long as the school keeps it active, with zero manual re-entry.
+    // Reuses upsertCombinationGroup() unchanged — never a second, drifting
+    // combination-creation path.
+    const combinationGroupIds: string[] = [];
+    for (const s of input.subjects) {
+      const group = await upsertCombinationGroup(user, {
+        name: `${input.blockName} — ${preview.rows.find((r) => r.subjectId === s.subjectId)?.subjectName ?? "Subject"}`,
+        subjectId: s.subjectId,
+        teacherId: s.teacherId || null,
+        lessonsPerWeek: preview.rows.find((r) => r.subjectId === s.subjectId)?.defaultLessonsPerWeek ?? 4,
+        doubleCount: 0,
+        scope: "SELECTED",
+        source: "SUBJECT_CHOICE",
+        classIds: s.classIds,
+      });
+      combinationGroupIds.push(group.id);
+    }
+
+    // DD.6 — founder's own real confirmation (via ask_user): once a real
+    // combination is confirmed, NEYO should be allowed to allocate classes
+    // AND assign teachers automatically, reusing BB.4's own existing
+    // "Allocate Class" engine — never a second, competing allocation path.
+    // Only classless real students genuinely confirmed for THIS level are
+    // ever touched (findClasslessStudentsForLevel() inside
+    // class-allocation.service.ts's own real gate); a level where every
+    // student already has a real class is a genuine, honest no-op here.
+    let classAllocation: { attempted: boolean; allocated: number; reason?: string } = { attempted: false, allocated: 0 };
+    try {
+      const { previewClassAllocation, confirmClassAllocation, ClassAllocationError } = await import("@/lib/services/class-allocation.service");
+      const classPreview = await previewClassAllocation(user, { level: run.level });
+      if (classPreview.classStrategyAvailable === "USE_EXISTING") {
+        classAllocation.attempted = true;
+        const result = await confirmClassAllocation(user, {
+          level: run.level,
+          classStrategy: "USE_EXISTING",
+          seedSubjectNeeds: true,
+          generateTimetable: false,
+        });
+        classAllocation.allocated = result.totalStudents;
+      }
+      // CREATE_NEW is deliberately NEVER auto-triggered here — creating
+      // brand-new real classes (with a real chosen stream count/capacity)
+      // is a genuine, consequential school decision that must stay an
+      // explicit human action, exactly like BB.4's own standalone flow
+      // already requires. Only the USE_EXISTING path (placing already-
+      // classless students into a level's own already-existing classes)
+      // is safe to chain automatically here.
+    } catch (e) {
+      // A real, honest no-op is expected here whenever this level simply
+      // has no classless students left to place (e.g. every student was
+      // already in a class before this combination was even confirmed) —
+      // never treated as a failure of the confirm action itself.
+      classAllocation.reason = e instanceof Error ? e.message : String(e);
+    }
+
     await db.auditLog.create({
       data: {
         tenantId: user.tenantId, actorId: user.id, actorName: user.fullName,
         action: "elective_block_auto_build.confirmed", entityType: "electiveBlockAutoBuildRun", entityId: run.id,
-        metadata: JSON.stringify({ level: run.level, kind: run.kind, blockId: saved.id, subjectCount: input.subjects.length }),
+        metadata: JSON.stringify({
+          level: run.level, kind: run.kind, blockId: saved.id, subjectCount: input.subjects.length,
+          combinationGroupIds, classAllocationAttempted: classAllocation.attempted, classAllocationCount: classAllocation.allocated,
+        }),
       },
     });
 
-    return { blockId: saved.id };
+    return { blockId: saved.id, combinationGroupIds, classAllocation };
   });
 }
 
