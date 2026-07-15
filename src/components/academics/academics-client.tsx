@@ -873,6 +873,12 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
   const [cellFontSize, setCellFontSize] = React.useState(11);
   const [printBundle, setPrintBundle] = React.useState<TimetablePrintBundle | null>(null);
   const [printBusy, setPrintBusy] = React.useState<"classes" | "teachers" | "venues" | null>(null);
+  // DD.14 — real audit fix: this tab's own "Auto-fill week" and "Bulk
+  // Saturday Scheduler" dialogs both let a school pick a teacher for a
+  // real specific subject, but never actually filtered that list by the
+  // school's own real TeacherSubject links — fetched here once, alongside
+  // the rest of this tab's own real reference data.
+  const [teacherAssoc, setTeacherAssoc] = React.useState<{ teacherId: string; subjectId: string }[]>([]);
 
   const daysList = showSaturday ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
@@ -882,7 +888,19 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
     fetch("/api/academics/subjects").then((r) => r.json()).then((j) => j.ok && setSubjects(j.data.subjects));
     fetch("/api/timetable/activities").then((r) => r.json()).then((j) => j.ok && setActivities(j.data));
     fetch("/api/conversations/recipients").then((r) => r.json()).then((j) => j.ok && setStaff((j.data.recipients ?? []).filter((u: any) => ["TEACHER", "CLASS_TEACHER", "HOD", "DEPUTY_PRINCIPAL"].includes(u.role))));
+    fetch("/api/academics/timetable/generator").then((r) => r.json()).then((j) => j.ok && setTeacherAssoc(j.data.teacherAssoc ?? []));
   }, []);
+
+  // DD.14 — real audit fix: real teachers actually qualified for a given
+  // real subject. Falls back to the FULL real staff list when a subject
+  // genuinely has no qualified teacher linked yet (an honestly
+  // under-configured school should never see a dead-end empty dropdown).
+  function staffQualifiedFor(subjectId: string): any[] {
+    if (!subjectId) return staff;
+    const qualifiedIds = new Set(teacherAssoc.filter((ta) => ta.subjectId === subjectId).map((ta) => ta.teacherId));
+    if (qualifiedIds.size === 0) return staff;
+    return staff.filter((t: any) => qualifiedIds.has(t.id));
+  }
 
   const load = React.useCallback(async () => {
     if (!classId) return;
@@ -1161,6 +1179,7 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
           classId={classId} day={cell.day} period={cell.period}
           existing={grid.get(`${cell.day}|${cell.period}`) ?? null}
           subjects={subjects.filter((s) => !s.archived)} staff={staff} activities={activities}
+          teacherAssoc={teacherAssoc}
           showSaturday={showSaturday}
           onClose={() => setCell(null)}
           onDone={() => { setCell(null); load(); }}
@@ -1171,6 +1190,7 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
           classId={classId}
           subjects={subjects.filter((s) => !s.archived)}
           staff={staff}
+          teacherAssoc={teacherAssoc}
           onClose={() => setAutoOpen(false)}
           onDone={() => { setAutoOpen(false); load(); }}
         />
@@ -1180,6 +1200,7 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
           classes={classes}
           subjects={subjects.filter((s) => !s.archived)}
           staff={staff}
+          teacherAssoc={teacherAssoc}
           onClose={() => setBulkSatOpen(false)}
           onDone={(msg) => { setBulkSatOpen(false); toast({ title: msg, tone: "success" }); load(); }}
         />
@@ -1197,8 +1218,18 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
   );
 }
 
-function SlotDialog({ classId, day, period, existing, subjects, activities, staff, showSaturday, onClose, onDone }: any) {
+function SlotDialog({ classId, day, period, existing, subjects, activities, staff, teacherAssoc = [], showSaturday, onClose, onDone }: any) {
   const { toast } = useToast();
+  // DD.14 — real audit fix: real teachers actually qualified for the
+  // currently selected real subject, from the school's own real
+  // TeacherSubject links. Falls back to the FULL real staff list when a
+  // subject genuinely has no qualified teacher linked yet.
+  function staffQualifiedFor(subjectId: string): any[] {
+    if (!subjectId) return staff;
+    const qualifiedIds = new Set((teacherAssoc as { teacherId: string; subjectId: string }[]).filter((ta) => ta.subjectId === subjectId).map((ta) => ta.teacherId));
+    if (qualifiedIds.size === 0) return staff;
+    return staff.filter((t: any) => qualifiedIds.has(t.id));
+  }
   const [mode, setMode] = React.useState<"SUBJECT" | "ACTIVITY">(existing?.slotType === "ACTIVITY" ? "ACTIVITY" : "SUBJECT");
   const [subId, setSubId] = React.useState(existing?.subjectId ?? "");
   const [actId, setActId] = React.useState(existing?.activityCategoryId ?? "");
@@ -1265,7 +1296,7 @@ function SlotDialog({ classId, day, period, existing, subjects, activities, staf
           <div className="space-y-1"><Label>Teacher</Label>
             <select value={teacherId} onChange={(e)=>setStaffId(e.target.value)} className="w-full h-10 rounded-full border border-navy-200 bg-white px-3 text-sm dark:border-navy-700 dark:bg-navy-900 dark:text-navy-50">
               <option value="">Unassigned</option>
-              {staff.map((s: any)=><option key={s.id} value={s.id}>{s.fullName}</option>)}
+              {staffQualifiedFor(subId).map((s: any)=><option key={s.id} value={s.id}>{s.fullName}</option>)}
             </select>
           </div>
           <div className="space-y-1"><Label>Venue / Room</Label>
@@ -1306,11 +1337,21 @@ function SlotDialog({ classId, day, period, existing, subjects, activities, staf
   );
 }
 
-function AutoFillDialog({ classId, subjects, staff, onClose, onDone }: {
-  classId: string; subjects: Subject[]; staff: Staff[];
+function AutoFillDialog({ classId, subjects, staff, teacherAssoc = [], onClose, onDone }: {
+  classId: string; subjects: Subject[]; staff: Staff[]; teacherAssoc?: { teacherId: string; subjectId: string }[];
   onClose: () => void; onDone: (msg: string) => void;
 }) {
   const { toast } = useToast();
+  // DD.14 — real audit fix: real teachers actually qualified for a real
+  // subject, from the school's own real TeacherSubject links. Falls back
+  // to the FULL real staff list when a subject genuinely has no
+  // qualified teacher linked yet.
+  function staffQualifiedFor(subjectId: string): Staff[] {
+    if (!subjectId) return staff;
+    const qualifiedIds = new Set(teacherAssoc.filter((ta) => ta.subjectId === subjectId).map((ta) => ta.teacherId));
+    if (qualifiedIds.size === 0) return staff;
+    return staff.filter((t: any) => qualifiedIds.has(t.id));
+  }
   const [load, setLoad] = React.useState<Record<string, number>>({});
   const [teachers, setTeachers] = React.useState<Record<string, string>>({});
   const [clearExisting, setClear] = React.useState(true);
@@ -1346,7 +1387,7 @@ function AutoFillDialog({ classId, subjects, staff, onClose, onDone }: {
             <select value={teachers[s.id] ?? ""} onChange={(e) => setTeachers((p) => ({ ...p, [s.id]: e.target.value }))}
               className="flex-1 rounded-xl border border-navy-200 bg-white px-2 py-1.5 text-xs dark:border-navy-700 dark:bg-navy-800">
               <option value="">No teacher</option>
-              {staff.map((t) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+              {staffQualifiedFor(s.id).map((t) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
             </select>
           </div>
         ))}
@@ -2147,6 +2188,15 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const [classes, setClasses] = React.useState<any[]>([]);
   const [subjects, setSubjects] = React.useState<any[]>([]);
   const [teachers, setTeachers] = React.useState<any[]>([]);
+  // DD.14 — real audit fix: the backend's own getTimetableInputs() has
+  // always returned the school's real TeacherSubject links as
+  // `teacherAssoc`, but this tab never actually captured it into state,
+  // so several subject-specific teacher pickers here (Combination
+  // classes' own teacher field, Options Block's own per-subject teacher
+  // field) showed EVERY real teacher regardless of whether they're
+  // actually qualified for the selected subject. Now captured and used
+  // via teachersQualifiedFor() below.
+  const [teacherAssoc, setTeacherAssoc] = React.useState<{ teacherId: string; subjectId: string }[]>([]);
   const [classNeeds, setClassNeeds] = React.useState<Record<string, any[]>>({});
   // DD.8-DD.10 — a school configures a whole grade (e.g. "Grade 10") ONCE
   // instead of repeating the same setup per real stream. `openLevels`
@@ -2227,6 +2277,11 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       }
       setClassNeeds(needsByClassId);
       setTeachers((teacherJson.ok ? teacherJson.data.recipients : []).filter((u: any) => ["TEACHER", "CLASS_TEACHER", "HOD", "DEPUTY_PRINCIPAL", "PRINCIPAL", "SCHOOL_OWNER", "DEAN_OF_STUDIES"].includes(u.role)));
+      // DD.14 — real audit fix: capture the school's own real
+      // TeacherSubject links (already returned by the backend, never
+      // previously read here) so subject-specific teacher pickers can
+      // filter to genuinely qualified teachers.
+      setTeacherAssoc(generatorJson.data.teacherAssoc ?? []);
       setVenues(venueJson.ok ? venueJson.data.venues ?? [] : []);
       setElectiveBlocks(blockJson.ok ? blockJson.data.blocks ?? [] : []);
       setAllocationImportHistory(allocationImportJson.ok ? allocationImportJson.data.imports ?? [] : []);
@@ -2320,6 +2375,19 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
     }
     return order.map((level) => ({ level, levelClasses: byLevel[level] }));
   }, [classes]);
+
+  // DD.14 — real audit fix: real teachers actually qualified for a given
+  // real subject, from the school's own real TeacherSubject links. Falls
+  // back to the FULL real teacher list only when a subject genuinely has
+  // NO qualified teacher linked yet (an honestly under-configured school
+  // should never see an empty, dead-end dropdown — it should still be
+  // able to pick someone and later fix the TeacherSubject link).
+  function teachersQualifiedFor(subjectId: string): any[] {
+    if (!subjectId) return teachers;
+    const qualifiedIds = new Set(teacherAssoc.filter((ta) => ta.subjectId === subjectId).map((ta) => ta.teacherId));
+    if (qualifiedIds.size === 0) return teachers;
+    return teachers.filter((t: any) => qualifiedIds.has(t.id));
+  }
 
   async function saveNeed(classId: string, subjectId: string, patch: any) {
     setSaving(true);
@@ -3113,7 +3181,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                 </select>
                 <select value={combinationForm.teacherId} onChange={(e) => setCombinationForm((p: any) => ({ ...p, teacherId: e.target.value }))} className="rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
                   <option value="">Teacher…</option>
-                  {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+                  {teachersQualifiedFor(combinationForm.subjectId).map((t: any) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -3413,7 +3481,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                             </select>
                             <select value={sub.teacherId} onChange={(e) => setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, subjects: s.subjects.map((x: any, j: number) => j === subjectIndex ? { ...x, teacherId: e.target.value } : x) } : s) }))} className={`${selectClass} h-8 text-xs`}>
                               <option value="">Teacher (optional)</option>
-                              {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+                              {teachersQualifiedFor(sub.subjectId).map((t: any) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
                             </select>
                             <select value={sub.venueId} onChange={(e) => setBlockForm((p: any) => ({ ...p, slots: p.slots.map((s: any, i: number) => i === slotIndex ? { ...s, subjects: s.subjects.map((x: any, j: number) => j === subjectIndex ? { ...x, venueId: e.target.value } : x) } : s) }))} className={`${selectClass} h-8 text-xs`} title={isOverflow && !sub.venueId ? "More subjects than classes in this block — leave blank and NEYO will auto-pick a real spare venue (library/lab) when generating." : undefined}>
                               <option value="">{isOverflow ? "Venue (auto-pick if blank)" : "Venue (optional)"}</option>
@@ -4292,16 +4360,28 @@ function BulkSaturdayModal({
   classes,
   subjects,
   staff,
+  teacherAssoc = [],
   onClose,
   onDone,
 }: {
   classes: ClassOpt[];
   subjects: Subject[];
   staff: Staff[];
+  teacherAssoc?: { teacherId: string; subjectId: string }[];
   onClose: () => void;
   onDone: (msg: string) => void;
 }) {
   const { toast } = useToast();
+  // DD.14 — real audit fix: real teachers actually qualified for a real
+  // subject, from the school's own real TeacherSubject links. Falls back
+  // to the FULL real staff list when a subject genuinely has no
+  // qualified teacher linked yet.
+  function staffQualifiedFor(subjId: string): Staff[] {
+    if (!subjId) return staff;
+    const qualifiedIds = new Set(teacherAssoc.filter((ta) => ta.subjectId === subjId).map((ta) => ta.teacherId));
+    if (qualifiedIds.size === 0) return staff;
+    return staff.filter((t: any) => qualifiedIds.has(t.id));
+  }
   const [selectedClassIds, setSelectedClassIds] = React.useState<Set<string>>(new Set());
   const [selectedPeriods, setSelectedPeriods] = React.useState<Set<number>>(new Set());
   const [subjectId, setSubjectId] = React.useState("");
@@ -4530,7 +4610,7 @@ function BulkSaturdayModal({
             <select value={teacherId} onChange={(e) => setTeacherId(e.target.value)}
               className="mt-1.5 w-full rounded-2xl border border-navy-200 bg-white px-3 py-2.5 text-xs dark:border-navy-700 dark:bg-navy-900 text-navy-800 dark:text-navy-100">
               <option value="">No Teacher</option>
-              {staff.map((t) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+              {staffQualifiedFor(subjectId).map((t) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
             </select>
           </div>
           <div>
