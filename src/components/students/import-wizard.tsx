@@ -31,6 +31,11 @@ const FIELD_LABELS: Record<string, string> = {
   // BB.4 — a real, optional per-student subject-choice column, e.g. a
   // fresh Grade 10 intake arriving with real subjects already chosen.
   subjects: "Subjects (e.g. History;CRE)",
+  // DD.4 — a real, optional declared pathway column (STEM / Social
+  // Sciences / Arts & Sports Science) for a fresh Senior School intake —
+  // if left unmapped, NEYO infers pathway from the row's own real
+  // elective subjects instead.
+  pathway: "Pathway (STEM / Social Sciences / Arts & Sports)",
   custom: "Custom field (school-defined)…", ignore: "— Skip column —",
 };
 const FIELD_OPTIONS = Object.keys(FIELD_LABELS);

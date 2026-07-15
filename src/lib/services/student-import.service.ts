@@ -11,6 +11,7 @@ import { withTenant } from "@/lib/core/tenant-context";
 import { tenantDb } from "@/lib/core/tenant-db";
 import { nextTenantId } from "@/lib/services/identity.service";
 import { normalizeKePhone } from "@/lib/validations/auth";
+import { CORE_ESSENTIAL_MATHEMATICS, mathVariantForPathwayGroup, type PathwayGroup } from "@/lib/validations/pathways";
 import type { SessionUser } from "@/lib/core/session";
 import {
   HEADER_SYNONYMS,
@@ -286,6 +287,7 @@ export function buildCandidates(
       notes: rec.notes,
       openingBalanceKes: rec.openingBalanceKes ? Number(rec.openingBalanceKes) : undefined,
       subjects: rec.subjects,
+      pathway: rec.pathway,
     };
 
     const parsed = importedRowSchema.safeParse(candidate);
@@ -710,6 +712,115 @@ export async function commitImport(
     let subjectSelectionsCreated = 0;
     if (valid.length === 0) throw new ImportError("EMPTY", "No valid rows to import.");
 
+    // DD.4 — real, research-verified Kenyan CBE policy (Ministry of
+    // Education, PS Prof. Julius Bitok, August 2025): STEM pathway
+    // learners take Core Mathematics; Social Sciences and Arts & Sports
+    // Science learners take Essential Mathematics BY DEFAULT — but a
+    // non-STEM learner MAY take Core Mathematics instead when their own
+    // real career goals/assessment genuinely support it, with the
+    // school's own approval (confirmed real, official exception, not an
+    // assumption). There is no official allowance running the other way
+    // (a STEM learner taking Essential Mathematics instead of Core) — so
+    // that direction is never permitted here, even if a row's own
+    // Subjects column explicitly names it.
+    //
+    // Real pathway resolution, per row: (1) an explicit Pathway column
+    // value always wins when present (a school's own stated pathway is
+    // the most authoritative real signal); (2) otherwise, NEYO infers the
+    // pathway from the row's own real elective subjects via each
+    // subject's own real PathwaySubjectRequirement links — reusing the
+    // tenant's own already-configured official/CBE pathway data, never a
+    // second, drifting copy of that taxonomy.
+    const allPathways = await tenantDb().pathway.findMany({
+      where: { pathwayGroup: { not: null } },
+      select: { id: true, name: true, code: true, pathwayGroup: true },
+    });
+    const pathwayGroupByNameOrCode = new Map<string, PathwayGroup>();
+    for (const p of allPathways) {
+      if (!p.pathwayGroup) continue;
+      pathwayGroupByNameOrCode.set(p.name.trim().toLowerCase(), p.pathwayGroup as PathwayGroup);
+      pathwayGroupByNameOrCode.set(p.code.trim().toLowerCase(), p.pathwayGroup as PathwayGroup);
+    }
+    // A school's own declared pathway text may also directly spell out a
+    // real PathwayGroup constant (e.g. "STEM") without matching any of
+    // their own named Pathway rows — accept that too, case-insensitively.
+    for (const group of ["STEM", "SOCIAL_SCIENCES", "ARTS_SPORTS"] as PathwayGroup[]) {
+      pathwayGroupByNameOrCode.set(group.toLowerCase(), group);
+      pathwayGroupByNameOrCode.set(group.replace(/_/g, " ").toLowerCase(), group);
+    }
+    function resolveDeclaredPathwayGroup(pathwayText: string | undefined): PathwayGroup | null {
+      if (!pathwayText) return null;
+      return pathwayGroupByNameOrCode.get(pathwayText.trim().toLowerCase()) ?? null;
+    }
+
+    // Real subject -> pathwayGroup inference map, built once, from the
+    // tenant's own real PathwaySubjectRequirement links (the same real
+    // official-KICD-taxonomy data `seedOfficialPathways()` already
+    // creates) — never a hardcoded subject list of our own.
+    const pathwayReqs = await tenantDb().pathwaySubjectRequirement.findMany({
+      include: { pathway: { select: { pathwayGroup: true } } },
+    });
+    const pathwayGroupBySubjectId = new Map<string, PathwayGroup>();
+    for (const req of pathwayReqs) {
+      if (req.pathway.pathwayGroup) pathwayGroupBySubjectId.set(req.subjectId, req.pathway.pathwayGroup as PathwayGroup);
+    }
+    function inferPathwayGroupFromSubjectIds(subjectIds: string[]): PathwayGroup | null {
+      const counts = new Map<PathwayGroup, number>();
+      for (const id of subjectIds) {
+        const group = pathwayGroupBySubjectId.get(id);
+        if (group) counts.set(group, (counts.get(group) ?? 0) + 1);
+      }
+      if (counts.size === 0) return null;
+      // The pathway with the most real matching electives in this row wins
+      // (a student's own genuine combination is overwhelmingly one
+      // pathway's own subjects — this never needs to be perfect since an
+      // explicit Pathway column always overrides it when present).
+      return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    }
+
+    // Real Core/Essential Mathematics Subject ids, matched by their own
+    // real `mathVariant` tag (set by `seedOfficialPathways()`) — never
+    // matched by name/code alone, since a school may have renamed them.
+    const mathSubjectsByVariant = new Map<"CORE" | "ESSENTIAL", { id: string; name: string }>();
+    const taggedMathSubjects = await tenantDb().subject.findMany({ where: { mathVariant: { not: null } }, select: { id: true, name: true, mathVariant: true } });
+    for (const s of taggedMathSubjects) {
+      if (s.mathVariant === "CORE" || s.mathVariant === "ESSENTIAL") mathSubjectsByVariant.set(s.mathVariant, { id: s.id, name: s.name });
+    }
+    /** DD.4 — resolves the REAL Mathematics variant subject id this row's
+     * own student should actually get, given their resolved pathway and
+     * whichever Math-variant subject (if any) their own row explicitly
+     * named. Returns null when this school hasn't set up Core/Essential
+     * Mathematics subjects at all (an ordinary 8-4-4 school, or a CBE
+     * school that hasn't run "load official pathways" yet) — in which
+     * case DD.4 is a real no-op and existing behaviour is unaffected. */
+    function resolveMathVariantSubjectId(rowSubjectIds: string[], pathwayGroup: PathwayGroup | null): { addId: string | null; removeId: string | null } {
+      if (mathSubjectsByVariant.size === 0) return { addId: null, removeId: null };
+      const core = mathSubjectsByVariant.get("CORE");
+      const essential = mathSubjectsByVariant.get("ESSENTIAL");
+      const rowExplicitlyNamedCore = core ? rowSubjectIds.includes(core.id) : false;
+      const rowExplicitlyNamedEssential = essential ? rowSubjectIds.includes(essential.id) : false;
+
+      if (pathwayGroup === "STEM") {
+        // No official exception runs this direction — a STEM learner
+        // always gets Core Mathematics, even if their own row explicitly
+        // (and incorrectly) named Essential Mathematics instead.
+        return { addId: core?.id ?? null, removeId: essential?.id ?? null };
+      }
+      if (pathwayGroup === "SOCIAL_SCIENCES" || pathwayGroup === "ARTS_SPORTS") {
+        // Real, confirmed exception: a non-STEM learner MAY take Core
+        // Mathematics when their own row explicitly names it (their real
+        // school has already approved this for their real career goals —
+        // NEYO trusts an explicit, deliberate real declaration here,
+        // exactly like every other explicit-override-wins pattern in this
+        // codebase). Otherwise, default to Essential Mathematics.
+        if (rowExplicitlyNamedCore) return { addId: core?.id ?? null, removeId: essential?.id ?? null };
+        return { addId: essential?.id ?? null, removeId: core?.id ?? null };
+      }
+      // No real pathway resolved for this row at all — never guess; leave
+      // whatever the row's own Subjects column already said untouched.
+      return { addId: null, removeId: null };
+    }
+
     // M.4 — single-class-only import: every row goes into this ONE class.
     // No class resolution from the file, no auto-creation, no ambiguity.
     let forcedClassId: string | null = null;
@@ -797,11 +908,46 @@ export async function commitImport(
      * resolved Subjects with the run's own declared compulsory subjects,
      * skips entirely (returns null) when there is genuinely nothing to
      * write for this row, and reports any subject name that didn't match a
-     * real tenant Subject back to the school instead of silently dropping it. */
-    async function writeSubjectSelectionForRow(studentId: string, level: string | null, rawSubjects: string | undefined): Promise<string[]> {
+     * real tenant Subject back to the school instead of silently dropping it.
+     * DD.4 — also resolves the real Core/Essential Mathematics variant for
+     * this row (declared Pathway column, or inferred from the row's own
+     * real electives), swapping in the correct variant and swapping out
+     * the wrong one, per the real, research-confirmed KICD policy — see
+     * resolveMathVariantSubjectId()'s own full explanation above. Also
+     * writes a real StudentPathwayPreference row when a pathway was
+     * genuinely resolved (declared or inferred) and this tenant has a real
+     * matching official Pathway row, so this real placement is visible
+     * everywhere else in NEYO that already reads pathway data (readiness,
+     * reporting, BB.2's own auto-build), never a second, drifting copy. */
+    async function writeSubjectSelectionForRow(studentId: string, level: string | null, rawSubjects: string | undefined, rawPathway: string | undefined): Promise<string[]> {
       const rowNames = rawSubjects ? splitSubjectList(rawSubjects) : [];
       const { resolvedIds: rowSubjectIds, unresolved } = resolveSubjectNames(rowNames);
-      const allIds = [...new Set([...rowSubjectIds, ...compulsorySubjectIds])];
+
+      const declaredPathwayGroup = resolveDeclaredPathwayGroup(rawPathway);
+      const pathwayGroup = declaredPathwayGroup ?? inferPathwayGroupFromSubjectIds(rowSubjectIds);
+      const { addId: mathAddId, removeId: mathRemoveId } = resolveMathVariantSubjectId(rowSubjectIds, pathwayGroup);
+      let finalRowSubjectIds = rowSubjectIds;
+      if (mathRemoveId) finalRowSubjectIds = finalRowSubjectIds.filter((id) => id !== mathRemoveId);
+      if (mathAddId && !finalRowSubjectIds.includes(mathAddId)) finalRowSubjectIds = [...finalRowSubjectIds, mathAddId];
+
+      const allIds = [...new Set([...finalRowSubjectIds, ...compulsorySubjectIds])];
+
+      // DD.4 — real StudentPathwayPreference write, only when a real
+      // pathway was genuinely resolved AND this tenant has a real,
+      // matching official Pathway row for it (never invents one) — a
+      // school that hasn't run "load official pathways" yet sees zero
+      // behaviour change here, exactly like before DD.4.
+      if (pathwayGroup) {
+        const matchingPathway = allPathways.find((p) => p.pathwayGroup === pathwayGroup);
+        if (matchingPathway) {
+          await tenantDb().studentPathwayPreference.upsert({
+            where: { tenantId_studentId_pathwayId: { tenantId: user.tenantId, studentId, pathwayId: matchingPathway.id } },
+            create: { tenantId: user.tenantId, studentId, pathwayId: matchingPathway.id, choiceOrder: 1, isAllocated: true },
+            update: { isAllocated: true },
+          } as never);
+        }
+      }
+
       if (allIds.length === 0) return unresolved;
       if (!level) return unresolved; // no real class/level resolved for this row — nothing to attach a portal to
       const portalId = await getOrCreateImportPortal(level);
@@ -896,7 +1042,7 @@ export async function commitImport(
           // has a Subjects column or a declared compulsory list at all.
           const updateRowClassId = forcedClassId ?? (c.className ? byKey.get(classKey(c.className)) ?? null : match.classId);
           const updateRowLevel = updateRowClassId ? (forcedClassLevel ?? levelByClassId.get(updateRowClassId) ?? null) : (input.targetLevel ?? null);
-          const unresolvedSubjects = await writeSubjectSelectionForRow(match.id, updateRowLevel, c.subjects);
+          const unresolvedSubjects = await writeSubjectSelectionForRow(match.id, updateRowLevel, c.subjects, c.pathway);
           if (unresolvedSubjects.length > 0) {
             failed.push({ row: c._row, message: `Subject(s) not found for this school and skipped: ${unresolvedSubjects.join(", ")}.` });
           }
@@ -940,7 +1086,7 @@ export async function commitImport(
         // choices in Junior Secondary and arrive with them in the same
         // import, never needing a separate portal step.
         const createRowLevel = createRowClassId ? (forcedClassLevel ?? levelByClassId.get(createRowClassId) ?? null) : (input.targetLevel ?? null);
-        const unresolvedSubjects = await writeSubjectSelectionForRow(student.id, createRowLevel, c.subjects);
+        const unresolvedSubjects = await writeSubjectSelectionForRow(student.id, createRowLevel, c.subjects, c.pathway);
         if (unresolvedSubjects.length > 0) {
           failed.push({ row: c._row, message: `Subject(s) not found for this school and skipped: ${unresolvedSubjects.join(", ")}.` });
         }

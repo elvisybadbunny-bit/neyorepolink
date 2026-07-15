@@ -39,6 +39,16 @@ export const IMPORT_FIELDS = [
   // with no Subjects column behaves exactly as before (zero new
   // StudentSubjectSelection rows created).
   "subjects",
+  // DD.4 — a real, optional declared pathway column (STEM / Social
+  // Sciences / Arts & Sports Science), matched case-insensitively against
+  // the tenant's own real Pathway.name/Pathway.code/Pathway.pathwayGroup.
+  // Never required: a cell left blank makes NEYO infer the pathway from
+  // the row's own real elective subjects instead (via each subject's own
+  // real PathwaySubjectRequirement links) — an explicit column always
+  // wins over that inference when both are present, since a school's own
+  // stated pathway is the more authoritative real signal. Drives the
+  // real Core-vs-Essential Mathematics auto-selection below.
+  "pathway",
   // R.1 — smart create-or-update: a school can add or fix fee/opening-balance
   // info on a re-import without ever touching totals already paid, since
   // this only ever creates a real ARREARS invoice for the DIFFERENCE (see
@@ -67,6 +77,7 @@ export const HEADER_SYNONYMS: Record<Exclude<ImportField, "ignore">, string[]> =
   notes: ["notes", "remarks", "comment", "comments", "maelezo"],
   openingBalanceKes: ["openingbalance", "balance", "feebalance", "outstandingbalance", "arrears", "balancebroughtforward", "bbf", "salio"],
   subjects: ["subjects", "subjectchoices", "chosensubjects", "electives", "subjectselection", "masomo"],
+  pathway: ["pathway", "careerpathway", "pathwaygroup", "track", "cbepathway", "njia"],
   // "custom" is never auto-mapped by header text — a school always chooses it
   // explicitly and types its own label, so no synonym guessing applies here.
   custom: [],
@@ -237,5 +248,9 @@ export const importedRowSchema = z.object({
   // this schema has no DB access) — kept as a plain string, never parsed
   // into IDs at this layer.
   subjects: z.string().trim().max(500).optional(),
+  // DD.4 — raw declared pathway text (e.g. "STEM", "Social Sciences"),
+  // resolved against the tenant's real Pathway rows at preview/commit
+  // time — kept as a plain string here for the same reason as `subjects`.
+  pathway: z.string().trim().max(80).optional(),
 });
 export type ImportedRow = z.infer<typeof importedRowSchema>;
