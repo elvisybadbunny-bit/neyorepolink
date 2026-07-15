@@ -363,6 +363,83 @@ export async function getSubjectCombinationRosterPrint(user: SessionUser, level:
 }
 
 // ---------------------------------------------------------------------------
+// DD.4/DD.11 — Per-subject roster print: every real subject at a level with
+// its own real full student list AND each student's own real current
+// class, so a school can visually confirm and physically place students
+// into their real subject groups/classes from one print. Founder's own
+// real words (verbatim): "add also a print combined list of each subject
+// and the atudents doing them with their classes so that they can be
+// placed and the list is seen from their [sic]".
+//
+// Deliberately a DIFFERENT real shape from getSubjectCombinationRosterPrint
+// (which groups by a student's own FULL combination, e.g. "History + CRE
+// + Geography") — this print instead lists ONE row per real subject,
+// showing every real student who chose THAT subject regardless of their
+// other choices, since a school placing students into subject-specific
+// teaching groups (as opposed to a single fixed homeroom class) needs to
+// see each subject's own full real roster independently. Reuses the exact
+// same real StudentSubjectSelection data source as every other real
+// per-student subject-choice feature in NEYO (BB.2, BB.4, L.7, BB.7) —
+// never a second, drifting copy.
+export async function getSubjectRosterPrint(user: SessionUser, level: string) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const classes = await tdb.schoolClass.findMany({ where: { level, archived: false }, orderBy: [{ stream: "asc" }] });
+    if (classes.length === 0) return { level, subjects: [] as any[] };
+    const classMap = new Map(classes.map((c) => [c.id, c]));
+
+    const students = await tdb.student.findMany({
+      where: { classId: { in: classes.map((c) => c.id) }, status: "ACTIVE" },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      select: { id: true, firstName: true, lastName: true, admissionNo: true, classId: true },
+    });
+    if (students.length === 0) return { level, subjects: [] as any[] };
+
+    const selections = await tdb.studentSubjectSelection.findMany({
+      where: { isConfirmed: true, studentId: { in: students.map((s) => s.id) } },
+      select: { studentId: true, selectedSubjectIds: true },
+    });
+    if (selections.length === 0) return { level, subjects: [] as any[] };
+    const selectionMap = new Map(selections.map((s) => [s.studentId, safeParse<string[]>(s.selectedSubjectIds, [])]));
+
+    const allSubjectIds = [...new Set([...selectionMap.values()].flat())];
+    const subjects = allSubjectIds.length ? await tdb.subject.findMany({ where: { id: { in: allSubjectIds } }, select: { id: true, name: true, code: true } }) : [];
+    const subjectMap = new Map(subjects.map((s) => [s.id, s]));
+
+    const bySubject = new Map<string, typeof students>();
+    for (const student of students) {
+      const chosen = selectionMap.get(student.id) ?? [];
+      for (const subjectId of chosen) {
+        const arr = bySubject.get(subjectId) ?? [];
+        arr.push(student);
+        bySubject.set(subjectId, arr);
+      }
+    }
+
+    const rows = [...bySubject.entries()]
+      .map(([subjectId, members]) => {
+        const subject = subjectMap.get(subjectId);
+        return {
+          subjectId,
+          subjectName: subject?.name ?? "Unknown subject",
+          subjectCode: subject?.code ?? null,
+          studentCount: members.length,
+          students: members
+            .map((s) => ({
+              name: `${s.firstName} ${s.lastName}`,
+              admissionNo: s.admissionNo,
+              currentClass: s.classId ? [classMap.get(s.classId)?.level, classMap.get(s.classId)?.stream].filter(Boolean).join(" ") : level,
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        };
+      })
+      .sort((a, b) => b.studentCount - a.studentCount || a.subjectName.localeCompare(b.subjectName));
+
+    return { level, subjects: rows };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // AA.10 — Exam-generator Options-Block-awareness.
 //
 // Per docs/TEACHER-ALLOCATION-AND-ELECTIVES-ENGINE-DESIGN.md Part 15, the

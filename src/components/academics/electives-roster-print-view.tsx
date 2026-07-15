@@ -45,18 +45,33 @@ interface ComboRosterData {
   groups: ComboRosterGroup[];
 }
 
+interface SubjectRosterRow {
+  subjectId: string;
+  subjectName: string;
+  subjectCode: string | null;
+  studentCount: number;
+  students: { name: string; admissionNo: string; currentClass: string }[];
+}
+
+interface SubjectRosterData {
+  level: string;
+  subjects: SubjectRosterRow[];
+}
+
 export function ElectivesRosterPrintView({
   tenantName,
   tenantLogoUrl,
   kind,
   venueData,
   comboData,
+  subjectData,
 }: {
   tenantName?: string | null;
   tenantLogoUrl?: string | null;
-  kind: "venue_roster" | "combination_roster";
+  kind: "venue_roster" | "combination_roster" | "subject_roster";
   venueData?: VenueRosterData;
   comboData?: ComboRosterData;
+  subjectData?: SubjectRosterData;
 }) {
   return (
     <div className="print-roster-root">
@@ -88,6 +103,8 @@ export function ElectivesRosterPrintView({
           <p>
             {kind === "venue_roster"
               ? `Options Block — Venue & Teacher Roster${venueData?.level ? ` · ${venueData.level}` : " · All levels"}`
+              : kind === "subject_roster"
+              ? `Subject Roster — Students & Classes · ${subjectData?.level ?? ""}`
               : `Subject-Combination Roster · ${comboData?.level ?? ""}`}
           </p>
         </div>
@@ -159,6 +176,37 @@ export function ElectivesRosterPrintView({
                 </thead>
                 <tbody>
                   {group.students.map((s, si) => (
+                    <tr key={si}>
+                      <td>{s.name}</td>
+                      <td>{s.admissionNo}</td>
+                      <td>{s.currentClass}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))
+        )
+      )}
+
+      {kind === "subject_roster" && subjectData && (
+        subjectData.subjects.length === 0 ? (
+          <p className="pr-empty">No confirmed subject choices found for this level yet.</p>
+        ) : (
+          subjectData.subjects.map((subject) => (
+            <div className="pr-combo-group" key={subject.subjectId}>
+              <h3>{subject.subjectName}{subject.subjectCode ? ` (${subject.subjectCode})` : ""}</h3>
+              <p className="pr-count">{subject.studentCount} student{subject.studentCount === 1 ? "" : "s"}</p>
+              <table className="pr-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Admission No.</th>
+                    <th>Current Class</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {subject.students.map((s, si) => (
                     <tr key={si}>
                       <td>{s.name}</td>
                       <td>{s.admissionNo}</td>

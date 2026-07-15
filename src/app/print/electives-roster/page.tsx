@@ -11,10 +11,13 @@
  *     Block subject/teacher/venue breakdown (every class if level omitted).
  *   ?kind=combination_roster&level=<required level> — the real
  *     subject-combination groups the system generated from student choices.
+ *   ?kind=subject_roster&level=<required level> — DD.4/DD.11: every real
+ *     subject at a level with its own full real student roster and each
+ *     student's own real current class, for physically placing students.
  */
 import { requireUser } from "@/lib/core/session";
 import { db } from "@/lib/db";
-import { getOptionsBlockRosterPrint, getSubjectCombinationRosterPrint } from "@/lib/services/elective-block.service";
+import { getOptionsBlockRosterPrint, getSubjectCombinationRosterPrint, getSubjectRosterPrint } from "@/lib/services/elective-block.service";
 import { ElectivesRosterPrintView } from "@/components/academics/electives-roster-print-view";
 import { redirect } from "next/navigation";
 
@@ -49,6 +52,19 @@ export default async function ElectivesRosterPrintRoute({
         tenantLogoUrl={tenant?.logoUrl}
         kind="combination_roster"
         comboData={data}
+      />
+    );
+  }
+
+  if (searchParams.kind === "subject_roster") {
+    if (!searchParams.level) redirect("/academics");
+    const data = await getSubjectRosterPrint(user, searchParams.level);
+    return (
+      <ElectivesRosterPrintView
+        tenantName={tenant?.name}
+        tenantLogoUrl={tenant?.logoUrl}
+        kind="subject_roster"
+        subjectData={data}
       />
     );
   }

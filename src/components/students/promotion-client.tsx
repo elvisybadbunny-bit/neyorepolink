@@ -772,6 +772,18 @@ function AllocateClassPanel({ onDone, initialLevel }: { onDone: () => void; init
                 <ClipboardCheck className="h-4 w-4" /> Print subject-combination roster
               </Button>
             )}
+            {/* DD.4/DD.11 — real, dedicated per-subject roster print: every
+                real subject at this level with its own full real student
+                list and each student's own real current class, so a school
+                can physically place students from one print. */}
+            {level.trim() && (
+              <Button
+                variant="secondary"
+                onClick={() => window.open(`/print/electives-roster?kind=subject_roster&level=${encodeURIComponent(level.trim())}`, "_blank")}
+              >
+                <ClipboardCheck className="h-4 w-4" /> Print per-subject roster (with classes)
+              </Button>
+            )}
           </div>
 
           {previewError && (
