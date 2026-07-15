@@ -90,6 +90,7 @@ const SATURDAY = 6;
 // never a single hardcoded number for the whole school.
 const DEFAULT_PERIODS_PER_DAY = 8;
 const DEFAULT_SATURDAY_PERIODS = 4;
+const DEFAULT_LESSON_DURATION_MINS = 40;
 
 // CC.1 — real, direct "lunch is after period N" resolution. A school's own
 // explicit `lunchAfterPeriod` (any real period number, matching how their
@@ -104,6 +105,77 @@ function resolveLunchPeriod(cfg: { lunchAfterPeriod?: number | null; lunchShift?
   if (cfg?.lunchAfterPeriod != null && cfg.lunchAfterPeriod > 0) return cfg.lunchAfterPeriod;
   const shift = cfg?.lunchShift ?? 1;
   return shift === 1 ? 5 : shift === 2 ? 6 : shift === 3 ? 7 : 8;
+}
+
+// DD.10 (founder's own real correctness request) — REAL BUG FIX: a shared
+// teacher's own conflict check must compare GENUINE WALL-CLOCK TIME, never
+// raw period NUMBERS. Two real classes (e.g. Pre-Primary and Senior
+// Secondary) can legitimately have completely different period lengths,
+// start times, and break placements — the founder's own explicit example.
+// Under the OLD logic, `teacherGrid` was keyed purely on
+// `${teacherId}:${day}:${period}`, so "Period 2" of a 30-minute-period
+// class and "Period 2" of a 40-minute-period class were treated as the
+// SAME slot (even though they may not overlap in real time), while two
+// DIFFERENT period numbers that genuinely DO overlap in real time (e.g.
+// Period 1 of a slow class and Period 2 of a fast class) were treated as
+// completely unrelated. Both directions are real bugs: the first can
+// wrongly BLOCK a genuinely free slot; the second can genuinely DOUBLE-
+// BOOK a shared teacher in real time while the solver sees zero conflict.
+// Confirmed via a live adversarial regression test
+// (dd10-cross-level-teacher-conflict-test.ts) that reproduced a real
+// wall-clock overlap using the OLD logic before this fix.
+//
+// This computes the REAL start-of-period minute for a given class's own
+// TimetableConfig, mirroring the founder-facing UI's own
+// `timetablePeriodStartMinutes()` (academics-client.tsx) so both agree —
+// deliberately duplicated as a small, self-contained pure function here
+// (not imported cross-module) since one lives in a server-only service and
+// the other in a client component; keeping the exact same real formula in
+// both places is the actual contract, verified by the shared migration-
+// safe fallback defaults, and by direct comparison in code review.
+function realPeriodStartMinutes(p: number, cfg: { schoolDayStartTime?: string | null; lessonDurationMins?: number | null; shortBreakStart?: number | null; shortBreakMins?: number | null; shortBreak2Start?: number | null; shortBreak2Mins?: number | null; longBreakStart?: number | null; longBreakMins?: number | null; lunchAfterPeriod?: number | null; lunchShift?: number | null; lunchMins?: number | null } | undefined | null): number {
+  const raw = cfg?.schoolDayStartTime;
+  const [h, m] = /^\d{2}:\d{2}$/.test(raw ?? "") ? raw!.split(":").map(Number) : [8, 0];
+  const startTotal = h * 60 + m;
+  const duration = cfg?.lessonDurationMins ?? DEFAULT_LESSON_DURATION_MINS;
+  const shortBreakStart = cfg?.shortBreakStart ?? 0;
+  const shortBreakMins = cfg?.shortBreakMins ?? 0;
+  const shortBreak2Start = cfg?.shortBreak2Start ?? null;
+  const shortBreak2Mins = cfg?.shortBreak2Mins ?? 0;
+  const longBreakStart = cfg?.longBreakStart ?? 0;
+  const longBreakMins = cfg?.longBreakMins ?? 0;
+  const lunchPeriod = resolveLunchPeriod(cfg);
+  const lunchMins = cfg?.lunchMins ?? 0;
+  let total = 0;
+  for (let i = 1; i < p; i++) {
+    total += i === lunchPeriod ? lunchMins : duration;
+    if (i === shortBreakStart) total += shortBreakMins;
+    if (shortBreak2Start && i === shortBreak2Start) total += shortBreak2Mins;
+    if (i === longBreakStart) total += longBreakMins;
+  }
+  return startTotal + total;
+}
+
+// Real end-of-period minute — a normal lesson period is `lessonDurationMins`
+// long; the one real period that IS the lunch period is `lunchMins` long.
+function realPeriodEndMinutes(p: number, cfg: Parameters<typeof realPeriodStartMinutes>[1]): number {
+  const duration = resolveLunchPeriod(cfg) === p ? (cfg?.lunchMins ?? 0) : (cfg?.lessonDurationMins ?? DEFAULT_LESSON_DURATION_MINS);
+  return realPeriodStartMinutes(p, cfg) + duration;
+}
+
+// Real, honest "do these two (class, day, period) bookings genuinely
+// overlap in wall-clock time" check — the actual real-world question a
+// shared teacher's own conflict rule must answer, now that different
+// classes/levels can have genuinely different real period shapes.
+function realPeriodsOverlap(
+  cfgA: Parameters<typeof realPeriodStartMinutes>[1], periodA: number,
+  cfgB: Parameters<typeof realPeriodStartMinutes>[1], periodB: number
+): boolean {
+  const aStart = realPeriodStartMinutes(periodA, cfgA);
+  const aEnd = realPeriodEndMinutes(periodA, cfgA);
+  const bStart = realPeriodStartMinutes(periodB, cfgB);
+  const bEnd = realPeriodEndMinutes(periodB, cfgB);
+  return aStart < bEnd && bStart < aEnd;
 }
 
 function levelAwareTimetablePreset(levels: string[]) {
@@ -780,6 +852,39 @@ async function buildAndSolve(tenantId: string, jobId: string) {
   // Grids.
   const classGrid = new Map<string, string>(); // classId:day:period -> subjectId
   const teacherGrid = new Map<string, string>(); // teacherId:day:period -> classId(s)
+  // DD.10 (founder's own real correctness request) — REAL BUG FIX: a real,
+  // per-teacher list of every (day, period, classId) this teacher is
+  // currently booked into, so a genuine wall-clock overlap can be detected
+  // even when the OTHER class involved has a completely different real
+  // period structure (see realPeriodsOverlap()'s own doc comment above for
+  // the full story + how this was confirmed as a real, reproducible bug).
+  // `teacherGrid` above is kept for its OTHER real uses (CLASS_STREAM_
+  // CONFLICT's own iteration, elective-block bookkeeping) — this is a
+  // second, purpose-built index for the actual conflict CHECK.
+  const teacherBookingsByTeacher = new Map<string, Array<{ day: number; period: number; classId: string }>>();
+  function teacherHasRealTimeConflict(teacherId: string, day: number, period: number, candidateClassId: string): boolean {
+    const bookings = teacherBookingsByTeacher.get(teacherId);
+    if (!bookings || bookings.length === 0) return false;
+    const candidateCfg = configByClass.get(candidateClassId);
+    for (const b of bookings) {
+      if (b.day !== day) continue;
+      if (b.classId === candidateClassId) continue; // same class already covered by classGrid's own real check
+      const existingCfg = configByClass.get(b.classId);
+      if (realPeriodsOverlap(existingCfg, b.period, candidateCfg, period)) return true;
+    }
+    return false;
+  }
+  function addTeacherRealBooking(teacherId: string, day: number, period: number, classId: string) {
+    const arr = teacherBookingsByTeacher.get(teacherId) ?? [];
+    arr.push({ day, period, classId });
+    teacherBookingsByTeacher.set(teacherId, arr);
+  }
+  function removeTeacherRealBooking(teacherId: string, day: number, period: number, classId: string) {
+    const arr = teacherBookingsByTeacher.get(teacherId);
+    if (!arr) return;
+    const idx = arr.findIndex((b) => b.day === day && b.period === period && b.classId === classId);
+    if (idx >= 0) arr.splice(idx, 1);
+  }
   const subjectDayCount = new Map<string, number>(); // classId:subjectId:day -> count
   const singleDayCount = new Map<string, number>(); // classId:subjectId:day singles only
   // Z.2 — real memory of which PERIOD a class+subject already uses (any
@@ -908,8 +1013,16 @@ async function buildAndSolve(tenantId: string, jobId: string) {
           // Every real teacher this slot's subjects need must be free too
           // (a teacher covering 2 slots of the same block, or teaching a
           // completely different class elsewhere, is correctly blocked).
+          // DD.10 real bug fix — checks GENUINE wall-clock overlap against
+          // every OTHER real class this teacher is already booked into,
+          // not just an exact period-number match, since that other class
+          // may have a completely different real period structure (see
+          // realPeriodsOverlap()'s own doc comment).
           const teachersFree = slot.subjects.every((s) =>
-            !s.teacherId || periods.every((p) => !teacherGrid.has(`${s.teacherId}:${day}:${p}`))
+            !s.teacherId || periods.every((p) =>
+              !teacherGrid.has(`${s.teacherId}:${day}:${p}`) &&
+              !block.classIds.some((cid) => teacherHasRealTimeConflict(s.teacherId!, day, p, cid))
+            )
           );
           if (!teachersFree) continue;
           // Real venue availability: a PINNED venue is checked exactly as
@@ -955,7 +1068,17 @@ async function buildAndSolve(tenantId: string, jobId: string) {
         for (const p of chosen.periods) classGrid.set(`${cid}:${chosen.day}:${p}`, `ELECTIVE_BLOCK:${slot.id}`);
       }
       for (const s of slot.subjects) {
-        if (s.teacherId) for (const p of chosen.periods) teacherGrid.set(`${s.teacherId}:${chosen.day}:${p}`, s.classIds.join(","));
+        if (s.teacherId) {
+          for (const p of chosen.periods) {
+            teacherGrid.set(`${s.teacherId}:${chosen.day}:${p}`, s.classIds.join(","));
+            // DD.10 real bug fix — record this teacher's real booking
+            // against every real member class of the block so a LATER
+            // card (elsewhere in the school, on a class with a different
+            // real period structure) is correctly checked for a genuine
+            // wall-clock overlap, not just a matching period number.
+            for (const cid of block.classIds) addTeacherRealBooking(s.teacherId, chosen.day, p, cid);
+          }
+        }
         if (s.venueId) {
           // A school's own explicit pin — booked exactly as before.
           for (const p of chosen.periods) {
@@ -1162,6 +1285,14 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     }
     if (card.teacherId) {
       if (teacherGrid.has(`${card.teacherId}:${day}:${period}`)) return false;
+      // DD.10 real bug fix — a shared teacher already booked into a
+      // DIFFERENT real class at a DIFFERENT period number can still
+      // genuinely overlap in real wall-clock time if that other class has
+      // a different real period structure (see realPeriodsOverlap()'s own
+      // doc comment for the confirmed, reproduced bug this closes).
+      for (const cid of card.classIds) {
+        if (teacherHasRealTimeConflict(card.teacherId, day, period, cid)) return false;
+      }
       if (teacherUnavailable(card.teacherId, day, period)) return false;
     }
     if (!venueAvailableAt(card, day, period)) return false; // Z.3
@@ -1295,7 +1426,16 @@ async function buildAndSolve(tenantId: string, jobId: string) {
         subjectPeriodUsage.set(pk, (subjectPeriodUsage.get(pk) ?? 0) + 1);
       }
     }
-    if (card.teacherId) for (const p of periods) teacherGrid.set(`${card.teacherId}:${day}:${p}`, card.classIds.join(","));
+    if (card.teacherId) {
+      for (const p of periods) {
+        teacherGrid.set(`${card.teacherId}:${day}:${p}`, card.classIds.join(","));
+        // DD.10 real bug fix — record every real (day, period, classId)
+        // this teacher is now genuinely booked into, so a LATER card on a
+        // class with a different real period structure is correctly
+        // checked against actual wall-clock overlap by periodFree().
+        for (const cid of card.classIds) addTeacherRealBooking(card.teacherId, day, p, cid);
+      }
+    }
     // Z.3 — real venue booking: pick the first candidate venue with spare
     // capacity at this exact slot and reserve it for every period + class
     // this card spans.
@@ -1325,7 +1465,12 @@ async function buildAndSolve(tenantId: string, jobId: string) {
         subjectPeriodUsage.set(pk, Math.max(0, (subjectPeriodUsage.get(pk) ?? 0) - 1));
       }
     }
-    if (card.teacherId) for (const p of periods) teacherGrid.delete(`${card.teacherId}:${day}:${p}`);
+    if (card.teacherId) {
+      for (const p of periods) {
+        teacherGrid.delete(`${card.teacherId}:${day}:${p}`);
+        for (const cid of card.classIds) removeTeacherRealBooking(card.teacherId, day, p, cid);
+      }
+    }
     // Z.3 — real venue release: free the SAME venue this card actually
     // booked (read back from `cardVenueUsed`, not re-picked, since a pool
     // venue choice must be reversible on backtrack).
@@ -1509,6 +1654,7 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     // day+period pair rather than stopping at the first free day.
     classGrid.clear();
     teacherGrid.clear();
+    teacherBookingsByTeacher.clear();
     subjectDayCount.clear();
     singleDayCount.clear();
     subjectPeriodUsage.clear();
