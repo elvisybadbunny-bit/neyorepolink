@@ -2044,7 +2044,17 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       setJob(jobJson.ok ? jobJson.data.job : null);
       setClasses(generatorJson.data.classes ?? []);
       setSubjects((generatorJson.data.subjects ?? []).filter((s: any) => !s.archived));
-      setClassNeeds(generatorJson.data.needsByClassId ?? {});
+      // Real, pre-existing bug found and fixed while building DD.9/DD.10:
+      // the API has only ever returned a flat `needs` array (never a
+      // `needsByClassId` key), so this card's own saved values (lessons/
+      // week, doubles, teacher, etc.) never actually loaded back in after
+      // a save — every field silently always showed its own default.
+      // Fixed by grouping the real flat array here, once, by classId.
+      const needsByClassId: Record<string, any[]> = {};
+      for (const need of generatorJson.data.needs ?? []) {
+        (needsByClassId[need.classId] ??= []).push(need);
+      }
+      setClassNeeds(needsByClassId);
       setTeachers((teacherJson.ok ? teacherJson.data.recipients : []).filter((u: any) => ["TEACHER", "CLASS_TEACHER", "HOD", "DEPUTY_PRINCIPAL", "PRINCIPAL", "SCHOOL_OWNER", "DEAN_OF_STUDIES"].includes(u.role)));
       setVenues(venueJson.ok ? venueJson.data.venues ?? [] : []);
       setElectiveBlocks(blockJson.ok ? blockJson.data.blocks ?? [] : []);
