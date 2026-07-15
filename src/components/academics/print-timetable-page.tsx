@@ -46,6 +46,37 @@ interface RealConfig {
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+// DD.13 — real double-period merging for the printed timetable, mirroring
+// the exact same logic already applied to the live in-app timetable
+// (academics-client.tsx's computeDoubleSpanSecondHalves()): two real
+// CONSECUTIVE periods on the same real day that genuinely share every one
+// of the real fields that matter for THIS print mode should merge into
+// one printed cell, never print as two separate identical-looking boxes.
+// `mode === "teachers"` compares className (the teacher is covering the
+// SAME real class both periods); `mode === "classes"` compares
+// teacherName (the SAME real teacher covers both periods) — the two
+// fields that respectively make a genuine double honest in each context.
+// ELECTIVE_BLOCK cells already have their own distinct rendering and are
+// deliberately excluded here.
+function computeDoubleSpanSecondHalvesForPrint(grid: Map<string, RealSlot>, periodsPerDay: number, mode: "classes" | "teachers" | undefined): Set<string> {
+  const secondHalves = new Set<string>();
+  for (let d = 1; d <= 6; d++) {
+    for (let p = 1; p < periodsPerDay; p++) {
+      const a = grid.get(`${d}|${p}`);
+      const b = grid.get(`${d}|${p + 1}`);
+      if (!a || !b) continue;
+      if (a.slotType === "ELECTIVE_BLOCK" || b.slotType === "ELECTIVE_BLOCK") continue;
+      if ((a.slotType ?? "ACADEMIC") !== (b.slotType ?? "ACADEMIC")) continue;
+      if ((a.subjectCode ?? null) !== (b.subjectCode ?? null)) continue;
+      if (!a.subjectCode) continue;
+      const identityField = mode === "teachers" ? "className" : "teacherName";
+      if ((a as any)[identityField] !== (b as any)[identityField]) continue;
+      secondHalves.add(`${d}|${p + 1}`);
+    }
+  }
+  return secondHalves;
+}
+
 function parseTimeToMinutes(t?: string | null): number | null {
   if (!t) return null;
   const m = /^(\d{1,2}):(\d{2})/.exec(t.trim());
@@ -188,11 +219,13 @@ function Cell({
   fontSize,
   mode,
   bandW,
+  isDoubleMerged = false,
 }: {
   slot: RealSlot | undefined;
   fontSize: number;
   mode?: "classes" | "teachers";
   bandW: boolean;
+  isDoubleMerged?: boolean;
 }) {
   if (!slot) {
     return <div className="ptt-cell ptt-cell-empty" />;
@@ -214,6 +247,10 @@ function Cell({
          with the subject for visual weight. */}
       <div className="ptt-cell-main" style={{ fontSize: `${Math.round(fontSize * 1.35)}px` }}>
         {primaryLabel}
+        {/* DD.13 — real, printed confirmation that this merged cell is a
+            genuine double lesson (two real consecutive periods), not just
+            a visually tall single. */}
+        {isDoubleMerged && <span className="ptt-cell-double-badge">DOUBLE</span>}
       </div>
       <div className="ptt-cell-footer">
         <span className="ptt-cell-venue">{venueCode}</span>
@@ -259,6 +296,8 @@ export function PrintTimetablePage({
   const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
 
   const realLunchPeriods = realLunchPeriodsFromSlots(slots);
+  // DD.13 — real double-period merging (see the helper's own doc comment).
+  const doubleSecondHalves = computeDoubleSpanSecondHalvesForPrint(grid, periodsPerDay, mode);
 
   return (
     <div className={`ptt-page ${daysVertical ? "ptt-landscape" : "ptt-portrait"}`}>
@@ -307,11 +346,19 @@ export function PrintTimetablePage({
                     {p}
                     <div className="ptt-period-time">{periodTimeRange(p, config, realLunchPeriods)}</div>
                   </td>
-                  {days.map((_, dIdx) => (
-                    <td key={dIdx} className="ptt-td-cell">
-                      <Cell slot={grid.get(`${dIdx + 1}|${p}`)} fontSize={cellFontSize} mode={mode} bandW={bandW} />
-                    </td>
-                  ))}
+                  {days.map((_, dIdx) => {
+                    const d = dIdx + 1;
+                    // DD.13 — the second half of a real double lesson was
+                    // already printed (with rowSpan={2}) by its own first
+                    // period's row above.
+                    if (doubleSecondHalves.has(`${d}|${p}`)) return null;
+                    const isFirstHalfOfDouble = doubleSecondHalves.has(`${d}|${p + 1}`);
+                    return (
+                      <td key={dIdx} rowSpan={isFirstHalfOfDouble ? 2 : 1} className="ptt-td-cell">
+                        <Cell slot={grid.get(`${d}|${p}`)} fontSize={cellFontSize} mode={mode} bandW={bandW} isDoubleMerged={isFirstHalfOfDouble} />
+                      </td>
+                    );
+                  })}
                 </tr>
               );
               const nonLesson = nonLessonBreakRowsForPeriod(p, config).map((row) => (
@@ -363,6 +410,7 @@ export function PrintTimetablePage({
               <tr key={dName}>
                 <td className="ptt-day-name">{dName}</td>
                 {periods.flatMap((p) => {
+                  const d = dIdx + 1;
                   const cells = [];
                   if (realLunchPeriods.has(p)) {
                     // Real merged lunch column: rendered ONCE spanning every
@@ -376,10 +424,16 @@ export function PrintTimetablePage({
                         </td>
                       );
                     }
+                  } else if (doubleSecondHalves.has(`${d}|${p}`)) {
+                    // DD.13 — the second half of a real double lesson was
+                    // already printed (with colSpan={2}, since periods run
+                    // across as COLUMNS in this vertical layout) by its own
+                    // first period's cell just before it — skipped here.
                   } else {
+                    const isFirstHalfOfDouble = doubleSecondHalves.has(`${d}|${p + 1}`);
                     cells.push(
-                      <td key={`c-${p}`} className="ptt-td-cell">
-                        <Cell slot={grid.get(`${dIdx + 1}|${p}`)} fontSize={cellFontSize} mode={mode} bandW={bandW} />
+                      <td key={`c-${p}`} colSpan={isFirstHalfOfDouble ? 2 : 1} className="ptt-td-cell">
+                        <Cell slot={grid.get(`${d}|${p}`)} fontSize={cellFontSize} mode={mode} bandW={bandW} isDoubleMerged={isFirstHalfOfDouble} />
                       </td>
                     );
                   }
@@ -516,9 +570,19 @@ export function PrintTimetablePage({
           line-height: 1.1;
           flex: 1;
           display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
           word-break: break-word;
+        }
+        .ptt-cell-double-badge {
+          margin-top: 0.8mm;
+          font-size: 2mm;
+          font-weight: 800;
+          letter-spacing: 0.3mm;
+          padding: 0.3mm 1mm;
+          border-radius: 1mm;
+          background: rgba(37, 99, 235, 0.18);
         }
         .ptt-cell-footer {
           position: absolute;
