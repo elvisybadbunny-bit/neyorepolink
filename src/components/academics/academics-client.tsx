@@ -641,6 +641,38 @@ function nonLessonRowsForPeriod(p: number, config: any, realLunchPeriods?: Set<n
   return rows;
 }
 
+// DD.13 — real double-period merging: a genuine double lesson (the SAME
+// real class, SAME real subject, SAME real teacher, SAME real slotType,
+// booked on two real CONSECUTIVE periods of the same real day) should
+// render as ONE merged visual cell spanning both periods, instead of two
+// separate identical-looking cells stacked on top of each other. This is
+// deliberately computed from the real persisted slot data itself (never a
+// separate "isDouble" flag on the slot), since that's the actual honest
+// signal a school's own eyes would use to recognise a double — two
+// genuinely adjacent periods that really do share every one of those real
+// fields. A genuinely unassigned period never merges with its neighbour
+// just because both are empty. An ELECTIVE_BLOCK cell (which already has
+// its own distinct multi-subject rendering) is deliberately excluded —
+// it already occupies its own real 2-period reservation with its own
+// existing Options Block cell styling, never double-merged again on top
+// of that.
+function computeDoubleSpanSecondHalves(grid: Map<string, Slot>, periodsPerDay: number): Set<string> {
+  const secondHalves = new Set<string>();
+  for (let d = 1; d <= 6; d++) {
+    for (let p = 1; p < periodsPerDay; p++) {
+      const a = grid.get(`${d}|${p}`);
+      const b = grid.get(`${d}|${p + 1}`);
+      if (!a || !b) continue;
+      if (a.slotType === "ELECTIVE_BLOCK" || b.slotType === "ELECTIVE_BLOCK") continue;
+      if ((a.slotType ?? "ACADEMIC") !== (b.slotType ?? "ACADEMIC")) continue;
+      if (a.subjectId !== b.subjectId) continue;
+      if ((a.teacherId ?? null) !== (b.teacherId ?? null)) continue;
+      if (!a.subjectId) continue;
+      secondHalves.add(`${d}|${p + 1}`);
+    }
+  }
+  return secondHalves;
+}
 
 function getActivityStyle(color: string | null | undefined, isBandW: boolean) {
   if (isBandW) return "border border-navy-300 bg-white text-navy-950 font-bold dark:bg-navy-950 dark:text-white";
@@ -654,7 +686,7 @@ function getActivityStyle(color: string | null | undefined, isBandW: boolean) {
   }
 }
 
-function TimetableSlotCard({ slot, isBandW, fontSize, canManage, onClick, teacherFirst = false }: { slot?: Slot; isBandW: boolean; fontSize: number; canManage?: boolean; onClick?: () => void; teacherFirst?: boolean }) {
+function TimetableSlotCard({ slot, isBandW, fontSize, canManage, onClick, teacherFirst = false, isDoubleMerged = false }: { slot?: Slot; isBandW: boolean; fontSize: number; canManage?: boolean; onClick?: () => void; teacherFirst?: boolean; isDoubleMerged?: boolean }) {
   const isActivity = slot?.slotType === "ACTIVITY";
   // AA.1 — an Options Block cell has genuinely NO single subject/teacher
   // (different real students attend different parallel lessons at this
@@ -694,7 +726,7 @@ function TimetableSlotCard({ slot, isBandW, fontSize, canManage, onClick, teache
     <button
       disabled={!canManage}
       onClick={onClick}
-      className={`w-full min-h-[52px] rounded-xl p-2 text-left transition relative flex flex-col justify-between ${cellBgClass}`}
+      className={`w-full min-h-[52px] ${isDoubleMerged ? "h-full" : ""} rounded-xl p-2 text-left transition relative flex flex-col justify-between ${cellBgClass}`}
       style={{ fontSize: `${fontSize}px` }}
     >
       {slot ? (
@@ -703,6 +735,13 @@ function TimetableSlotCard({ slot, isBandW, fontSize, canManage, onClick, teache
             <span className="font-extrabold tracking-wide leading-tight line-clamp-2">
               {isActivity ? slot.activityCategoryName : getSubjectAbbreviation(slot.subjectName || "", slot.subjectCode || "")}
             </span>
+            {/* DD.13 — real, genuine double-lesson badge: two real
+                consecutive periods for the SAME class/subject/teacher now
+                render as ONE merged cell (rowSpan/colSpan={2} from the
+                caller) instead of two identical stacked cells. */}
+            {isDoubleMerged && !isActivity && (
+              <span className="text-[7.5px] uppercase font-black bg-blue-500/25 px-1 py-0.5 rounded">Double</span>
+            )}
             {slot.isCombined && !isActivity && (
               <span className="text-[7.5px] uppercase font-black bg-green-500/25 px-1 py-0.5 rounded">Combined</span>
             )}
@@ -861,6 +900,15 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
 
   const grid = new Map<string, Slot>();
   for (const s of slots ?? []) grid.set(`${s.dayOfWeek}|${s.period}`, s);
+
+  // DD.13 — real double-period merging: which real (day, period) cells are
+  // the SECOND half of a genuine double lesson, so the render loop below
+  // can skip drawing a separate cell for them (they're absorbed into the
+  // first period's own cell via rowSpan/colSpan={2}).
+  const doubleSecondHalves = React.useMemo(
+    () => computeDoubleSpanSecondHalves(grid, config?.periodsPerDay || 8),
+    [slots, config?.periodsPerDay]
+  );
 
   // Z.3/Z.4 bugfix — the single real source of truth for "which period is
   // genuinely lunch for THIS class", read directly from the real
@@ -1022,10 +1070,15 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
                         </td>
                         {Array.from({ length: daysList.length }, (_, dIdx) => {
                           const d = dIdx + 1;
+                          // DD.13 — the second half of a real double lesson
+                          // was already drawn (with rowSpan={2}) by its own
+                          // first period's row above — never re-drawn here.
+                          if (doubleSecondHalves.has(`${d}|${p}`)) return null;
                           const s = grid.get(`${d}|${p}`);
+                          const isFirstHalfOfDouble = doubleSecondHalves.has(`${d}|${p + 1}`);
                           return (
-                            <td key={d} className="border-b border-l border-navy-50 p-1 dark:border-navy-800">
-                              <TimetableSlotCard slot={s} isBandW={isBandW} fontSize={cellFontSize} canManage={canManage} onClick={() => setCell({ day: d, period: p })} />
+                            <td key={d} rowSpan={isFirstHalfOfDouble ? 2 : 1} className="border-b border-l border-navy-50 p-1 dark:border-navy-800">
+                              <TimetableSlotCard slot={s} isBandW={isBandW} fontSize={cellFontSize} canManage={canManage} onClick={() => setCell({ day: d, period: p })} isDoubleMerged={isFirstHalfOfDouble} />
                             </td>
                           );
                         })}
@@ -1064,10 +1117,18 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
                     return (
                       <tr key={dName}>
                         <td className="border-b border-navy-50 p-2.5 font-black text-navy-700 dark:border-navy-800 dark:text-navy-200">{dName}</td>
-                        {Array.from({ length: config?.periodsPerDay || 8 }, (_, i) => i + 1).map((p) => (
+                        {Array.from({ length: config?.periodsPerDay || 8 }, (_, i) => i + 1).map((p) => {
+                          // DD.13 — in vertical layout, days run down and
+                          // periods run across as COLUMNS, so a real double
+                          // lesson merges via colSpan={2} instead of
+                          // rowSpan — the second half's own column is
+                          // skipped entirely, absorbed into the first.
+                          if (doubleSecondHalves.has(`${d}|${p}`)) return null;
+                          const isFirstHalfOfDouble = doubleSecondHalves.has(`${d}|${p + 1}`);
+                          return (
                           <React.Fragment key={`${d}-${p}`}>
-                            <td className="border-b border-l border-navy-50 p-1 dark:border-navy-800">
-                              <TimetableSlotCard slot={grid.get(`${d}|${p}`)} isBandW={isBandW} fontSize={cellFontSize} canManage={canManage} onClick={() => setCell({ day: d, period: p })} />
+                            <td colSpan={isFirstHalfOfDouble ? 2 : 1} className="border-b border-l border-navy-50 p-1 dark:border-navy-800">
+                              <TimetableSlotCard slot={grid.get(`${d}|${p}`)} isBandW={isBandW} fontSize={cellFontSize} canManage={canManage} onClick={() => setCell({ day: d, period: p })} isDoubleMerged={isFirstHalfOfDouble} />
                             </td>
                             {nonLessonRowsForPeriod(p, config, realLunchPeriods).map((row) => (
                               <td key={`${d}-${row.key}`} className={`${row.tone === "lunch" ? "bg-green-500/10 text-green-800" : "bg-amber-500/10 text-amber-800"} border-b border-l border-navy-50 p-1 text-center font-black dark:border-navy-800`}>
@@ -1075,7 +1136,8 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
                               </td>
                             ))}
                           </React.Fragment>
-                        ))}
+                          );
+                        })}
                       </tr>
                     );
                   })}
