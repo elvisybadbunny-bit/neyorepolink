@@ -1125,6 +1125,7 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
       {configOpen && classId && (
         <ClassConfigModal
           classId={classId}
+          classes={classes}
           currentConfig={config}
           onClose={() => setConfigOpen(false)}
           onSaved={() => { setConfigOpen(false); load(); toast({ title: "Schedule rules saved", tone: "success" }); }}
@@ -3975,47 +3976,93 @@ function SubjectNeedsModal({ classId, subjects, teachers, currentNeeds, onClose,
   );
 }
 
-function ClassConfigModal({ classId, currentConfig, onClose, onSaved }: {
-  classId: string; currentConfig: any | null; onClose: () => void; onSaved: () => void;
-}) {
-  const { toast } = useToast();
-  const [saving, setSaving] = React.useState(false);
-  const [f, setF] = React.useState({
-    periodsPerDay: currentConfig?.periodsPerDay ?? 8,
-    freePeriodsPerWeek: currentConfig?.freePeriodsPerWeek ?? 4,
-    coCurricularCount: currentConfig?.coCurricularCount ?? 2,
-    coCurricularName: currentConfig?.coCurricularName ?? "Games",
-    schoolDayStartTime: currentConfig?.schoolDayStartTime ?? "08:00",
-    saturdayStartTime: currentConfig?.saturdayStartTime ?? "08:00",
-    saturdayEndTime: currentConfig?.saturdayEndTime ?? "12:40",
-    lessonDurationMins: currentConfig?.lessonDurationMins ?? 40,
-    shortBreakStart: currentConfig?.shortBreakStart ?? 2,
-    shortBreakMins: currentConfig?.shortBreakMins ?? 15,
-    longBreakStart: currentConfig?.longBreakStart ?? 4,
-    longBreakMins: currentConfig?.longBreakMins ?? 30,
-    lunchStart: currentConfig?.lunchStart ?? 6,
-    lunchMins: currentConfig?.lunchMins ?? 60,
-    hasRemedials: currentConfig?.hasRemedials ?? false,
-    hasPreps: currentConfig?.hasPreps ?? false,
-    lunchShift: currentConfig?.lunchShift ?? 1,
+function buildConfigFormState(cfg: any | null) {
+  return {
+    periodsPerDay: cfg?.periodsPerDay ?? 8,
+    freePeriodsPerWeek: cfg?.freePeriodsPerWeek ?? 4,
+    coCurricularCount: cfg?.coCurricularCount ?? 2,
+    coCurricularName: cfg?.coCurricularName ?? "Games",
+    schoolDayStartTime: cfg?.schoolDayStartTime ?? "08:00",
+    saturdayStartTime: cfg?.saturdayStartTime ?? "08:00",
+    saturdayEndTime: cfg?.saturdayEndTime ?? "12:40",
+    lessonDurationMins: cfg?.lessonDurationMins ?? 40,
+    shortBreakStart: cfg?.shortBreakStart ?? 2,
+    shortBreakMins: cfg?.shortBreakMins ?? 15,
+    longBreakStart: cfg?.longBreakStart ?? 4,
+    longBreakMins: cfg?.longBreakMins ?? 30,
+    lunchStart: cfg?.lunchStart ?? 6,
+    lunchMins: cfg?.lunchMins ?? 60,
+    hasRemedials: cfg?.hasRemedials ?? false,
+    hasPreps: cfg?.hasPreps ?? false,
+    lunchShift: cfg?.lunchShift ?? 1,
     // CC.1 — real, direct lunch period. Defaults to the class's own
     // already-saved value; if never explicitly set, resolves from the
     // legacy lunchShift enum so the UI honestly shows what's ACTUALLY
     // happening today rather than a blank/misleading field.
-    lunchAfterPeriod: currentConfig?.lunchAfterPeriod
-      ?? (currentConfig?.lunchShift === 2 ? 6 : currentConfig?.lunchShift === 3 ? 7 : currentConfig?.lunchShift === 4 ? 8 : 5),
-    hasSaturday: currentConfig?.hasSaturday ?? true, // Added for Saturday attendance control
-  });
+    lunchAfterPeriod: cfg?.lunchAfterPeriod
+      ?? (cfg?.lunchShift === 2 ? 6 : cfg?.lunchShift === 3 ? 7 : cfg?.lunchShift === 4 ? 8 : 5),
+    hasSaturday: cfg?.hasSaturday ?? true, // Added for Saturday attendance control
+  };
+}
+
+function ClassConfigModal({ classId, classes, currentConfig, onClose, onSaved }: {
+  classId: string; classes?: any[]; currentConfig: any | null; onClose: () => void; onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [saving, setSaving] = React.useState(false);
+
+  // DD.10 — real whole-grade Schedule Rules: the same real streams-of-a-
+  // grade agreement pattern already built for the Lesson Requirements
+  // card, applied to TimetableConfig. `scope` defaults to "grade" only
+  // when every real stream of the grade already agrees (or none have a
+  // config yet) — a real, already-customised stream is never silently
+  // overwritten; a school can still explicitly switch to "stream" to
+  // edit just the one class it opened this dialog from.
+  const currentClass = (classes ?? []).find((c: any) => c.id === classId);
+  const level: string | undefined = currentClass?.level;
+  const levelClasses = level ? (classes ?? []).filter((c: any) => c.level === level) : [];
+  const [agreement, setAgreement] = React.useState<{ agrees: boolean; sharedConfig: any | null } | null>(null);
+  const [agreementLoading, setAgreementLoading] = React.useState(levelClasses.length > 1);
+  const [scope, setScope] = React.useState<"grade" | "stream">("stream");
+  const [f, setF] = React.useState(buildConfigFormState(currentConfig));
+
+  React.useEffect(() => {
+    if (!level || levelClasses.length <= 1) { setAgreementLoading(false); return; }
+    setAgreementLoading(true);
+    fetch(`/api/academics/timetable/generator?level=${encodeURIComponent(level)}&agreement=config`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.ok) {
+          setAgreement({ agrees: json.data.agrees, sharedConfig: json.data.sharedConfig });
+          if (json.data.agrees) {
+            setScope("grade");
+            setF(buildConfigFormState(json.data.sharedConfig ?? currentConfig));
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => setAgreementLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level]);
 
   const set = (k: string, v: any) => setF((p) => ({ ...p, [k]: v }));
+
+  function switchScope(next: "grade" | "stream") {
+    setScope(next);
+    if (next === "grade" && agreement?.sharedConfig) setF(buildConfigFormState(agreement.sharedConfig));
+    if (next === "stream") setF(buildConfigFormState(currentConfig));
+  }
 
   async function save() {
     setSaving(true);
     try {
+      const body = scope === "grade" && level
+        ? { action: "save_config_for_level", level, ...f }
+        : { action: "save_config", classId, ...f };
       const res = await fetch("/api/academics/timetable/generator", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "save_config", classId, ...f }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (json.ok) onSaved();
@@ -4023,8 +4070,42 @@ function ClassConfigModal({ classId, currentConfig, onClose, onSaved }: {
     } finally { setSaving(false); }
   }
 
+  const streamLabel = currentClass ? [currentClass.level, currentClass.stream].filter(Boolean).join(" ") : "this class";
+
   return (
     <Modal title="Configure General Schedule Rules" onClose={onClose} wide>
+      {levelClasses.length > 1 && !agreementLoading && (
+        <div className="mb-4 rounded-2xl border border-navy-100 bg-navy-50/60 p-3 text-xs dark:border-navy-800 dark:bg-navy-900/40">
+          {agreement?.agrees ? (
+            scope === "grade" ? (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-navy-600 dark:text-navy-300">
+                  Editing for the whole of <span className="font-bold text-navy-900 dark:text-white">{level}</span> ({levelClasses.length} streams) — every stream currently shares the same rules.
+                </p>
+                <button type="button" onClick={() => switchScope("stream")} className="font-semibold text-blue-600 underline dark:text-blue-400">
+                  Edit only {streamLabel}
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-navy-600 dark:text-navy-300">
+                  Editing only <span className="font-bold text-navy-900 dark:text-white">{streamLabel}</span>.
+                </p>
+                <button type="button" onClick={() => switchScope("grade")} className="font-semibold text-blue-600 underline dark:text-blue-400">
+                  Edit the whole of {level} instead
+                </button>
+              </div>
+            )
+          ) : (
+            <div className="flex items-center gap-2">
+              <Badge tone="amber">Streams differ</Badge>
+              <p className="text-navy-600 dark:text-navy-300">
+                {level}&apos;s streams don&apos;t all share the same rules yet — editing only <span className="font-bold text-navy-900 dark:text-white">{streamLabel}</span>.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
       <div className="space-y-4 mb-4 max-h-96 overflow-y-auto pr-1">
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -4136,7 +4217,9 @@ function ClassConfigModal({ classId, currentConfig, onClose, onSaved }: {
       </div>
       <div className="flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-        <Button onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Config"}</Button>
+        <Button onClick={save} disabled={saving}>
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : (scope === "grade" && level ? `Save for all of ${level}` : "Save Config")}
+        </Button>
       </div>
     </Modal>
   );
