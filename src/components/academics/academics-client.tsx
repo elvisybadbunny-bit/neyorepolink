@@ -17,7 +17,7 @@ import {
   BookOpen, Building2, CalendarRange, Grid3X3, NotebookPen, Plus,
   AlertCircle, Loader2, X, Sparkles, Trash2, Check, Calendar, Printer, Palette, Sliders, Info, HelpCircle, Save, Trophy,
   Calculator, FileText, Clock3, Wand2, RefreshCw, Link2, Ban, Users, TimerReset, ShieldCheck, RotateCcw, ClipboardList,
-  GraduationCap, MapPin, Tag, Shuffle, Eye
+  GraduationCap, MapPin, Tag, Shuffle, Eye, ChevronDown
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1971,6 +1971,106 @@ function KicdSeniorTemplateCard({ canManage, classes, subjects, onApplied }: { c
   );
 }
 
+// DD.8-DD.10 — one real lesson-requirement row for a subject, reused
+// identically whether it's rendered ONCE for a whole grade (all real
+// streams agree, or none have any value yet) or once PER real stream
+// (streams disagree, or a school has explicitly opened the per-stream
+// view) — so this UI never has two drifting copies of the same fields.
+function SubjectNeedRow({ subject, current, teachers, venues, onSave, teacherLabel }: {
+  subject: any;
+  current: any;
+  teachers: any[];
+  venues: any[];
+  onSave: (patch: any) => void;
+  teacherLabel?: string;
+}) {
+  return (
+    <div className="space-y-1.5 rounded-xl border border-navy-50 p-2 text-xs dark:border-navy-800">
+      <div className="grid grid-cols-[minmax(120px,1.2fr)_84px_84px_130px_1fr_auto] items-center gap-2">
+        <div>
+          <p className="font-semibold text-navy-800 dark:text-navy-100">{subject.name}{teacherLabel ? <span className="ml-1 font-normal text-navy-400">· {teacherLabel}</span> : null}</p>
+          <p className="text-[10px] text-navy-400">{subject.code}</p>
+        </div>
+        <Input type="number" min={0} max={12} defaultValue={current.lessonsPerWeek ?? 0} onBlur={(e) => onSave({ lessonsPerWeek: e.target.value })} />
+        <Input type="number" min={0} max={6} defaultValue={current.doubleCount ?? 0} onBlur={(e) => onSave({ doubleCount: e.target.value })} />
+        <label className="flex items-center gap-2 text-xs text-navy-600 dark:text-navy-300"><input type="checkbox" defaultChecked={Boolean(current.allowSplitDouble)} onChange={(e) => onSave({ allowSplitDouble: e.target.checked })} /> Split double</label>
+        <select defaultValue={current.teacherId ?? ""} onChange={(e) => onSave({ teacherId: e.target.value || null })} className="rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
+          <option value="">Teacher…</option>
+          {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+        </select>
+        <Badge tone={(current.lessonsPerWeek ?? 0) > 0 ? "green" : "neutral"}>{(current.lessonsPerWeek ?? 0) > 0 ? "Saved" : "Empty"}</Badge>
+      </div>
+      {venues.length > 0 && (
+        <div className="flex items-center gap-2 pl-1">
+          <MapPin className="h-3 w-3 text-navy-400" />
+          <select defaultValue={current.venueId ?? ""} onChange={(e) => onSave({ venueId: e.target.value || null })} className="rounded-lg border border-navy-100 bg-white px-2 py-1 text-[11px] dark:border-navy-800 dark:bg-navy-900">
+            <option value="">Auto-pick from venue pool</option>
+            {venues.map((v: any) => <option key={v.id} value={v.id}>{v.name} ({v.shortCode})</option>)}
+          </select>
+        </div>
+      )}
+      {/* AA.4 — real, school-set soft preference: this subject
+          genuinely involves student movement (a lab session, workshop,
+          PE) and should be preferred right after a real break — never
+          a hard rule, so a school with limited slots never gets an
+          unplaced lesson because of this. */}
+      <label className="flex items-center gap-2 pl-1 text-[11px] text-navy-500 dark:text-navy-400">
+        <input
+          type="checkbox"
+          defaultChecked={Boolean(current.requiresMovement)}
+          onChange={(e) => onSave({ requiresMovement: e.target.checked })}
+        />
+        Movement-heavy (prefer right after a break)
+      </label>
+      {/* AA.8 — real, school-set "this class never gets a real
+          lab/venue for THIS subject" hard exclusion (always theory-only
+          for this pairing) and a real soft lab-priority tier (e.g.
+          exam-candidate classes) for when real lab capacity is
+          genuinely scarce. Only shown when this subject actually has a
+          real venue pool to compete for — a school with no labs at all
+          never sees this, matching the existing venue-picker's own
+          visibility rule. */}
+      {venues.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 pl-1">
+          <label className="flex items-center gap-2 text-[11px] text-navy-500 dark:text-navy-400">
+            <input
+              type="checkbox"
+              defaultChecked={Boolean(current.noLabAccess)}
+              onChange={(e) => onSave({ noLabAccess: e.target.checked })}
+            />
+            Never use a lab for this subject (theory-only)
+          </label>
+          <label className="flex items-center gap-2 text-[11px] text-navy-500 dark:text-navy-400">
+            <span>Lab priority:</span>
+            <select
+              defaultValue={current.labPriority ?? "NORMAL"}
+              onChange={(e) => onSave({ labPriority: e.target.value })}
+              className="rounded-lg border border-navy-100 bg-white px-2 py-1 text-[11px] dark:border-navy-800 dark:bg-navy-900"
+            >
+              <option value="NORMAL">Normal</option>
+              <option value="HIGH">High (e.g. exam candidates)</option>
+            </select>
+          </label>
+        </div>
+      )}
+      {/* AA.9 — real, school-set "deliberately re-roll this subject's
+          teacher assignment at the start of each new term" flag. Never
+          a hardcoded rule about which subject (a school picks this for
+          PE, or any subject with no dedicated specialist) or who covers
+          it — eligibility still comes entirely from the school's own
+          real Teacher ↔ Subject links below. */}
+      <label className="flex items-center gap-2 pl-1 text-[11px] text-navy-500 dark:text-navy-400">
+        <input
+          type="checkbox"
+          defaultChecked={Boolean(current.rotateTeacherEachTerm)}
+          onChange={(e) => onSave({ rotateTeacherEachTerm: e.target.checked })}
+        />
+        Rotate this subject&apos;s teacher every term (e.g. PE with no dedicated specialist)
+      </label>
+    </div>
+  );
+}
+
 function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: boolean; schoolLevelActivation?: { isSeniorSchool: boolean; isJuniorSchool: boolean; isMixedSchool: boolean; educationLevelsOffered: string[] } }) {
   const { toast } = useToast();
   const DRAFT_KEY = "neyo-smart-timetable-draft-v1";
@@ -1985,6 +2085,14 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const [subjects, setSubjects] = React.useState<any[]>([]);
   const [teachers, setTeachers] = React.useState<any[]>([]);
   const [classNeeds, setClassNeeds] = React.useState<Record<string, any[]>>({});
+  // DD.8-DD.10 — a school configures a whole grade (e.g. "Grade 10") ONCE
+  // instead of repeating the same setup per real stream. `openLevels`
+  // tracks which grade cards are expanded; `openStreamLevels` tracks
+  // which grades a school has explicitly opted into seeing/editing
+  // stream-by-stream (only offered when streams genuinely disagree, or
+  // a school deliberately wants to customise one stream).
+  const [openLevels, setOpenLevels] = React.useState<Set<string>>(new Set());
+  const [openStreamLevels, setOpenStreamLevels] = React.useState<Set<string>>(new Set());
   const [timeOffTeacherId, setTimeOffTeacherId] = React.useState("");
   const [timeOffWindows, setTimeOffWindows] = React.useState([{ dayOfWeek: 1, period: 1, note: "" }]);
   const [combinationForm, setCombinationForm] = React.useState<any>({
@@ -2127,6 +2235,29 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [job, load]);
 
+  // DD.8-DD.10 — real classes grouped by grade/level (e.g. "Grade 10"),
+  // preserving the original ordering `classes` arrives in. This is a
+  // hook (useMemo) so it MUST run on every render, unconditionally —
+  // placed here, before the component's early-return below, to keep
+  // React's Rules of Hooks intact (a real bug was found and fixed here
+  // during this exact build: an earlier version of this memo lived
+  // after the early return, so React saw a different number of hooks
+  // called between the first render, while still loading, and later
+  // renders once data arrived).
+  const classesByLevel = React.useMemo(() => {
+    const order: string[] = [];
+    const byLevel: Record<string, any[]> = {};
+    for (const cls of classes) {
+      const level = cls.level || "Unassigned";
+      if (!byLevel[level]) {
+        byLevel[level] = [];
+        order.push(level);
+      }
+      byLevel[level].push(cls);
+    }
+    return order.map((level) => ({ level, levelClasses: byLevel[level] }));
+  }, [classes]);
+
   async function saveNeed(classId: string, subjectId: string, patch: any) {
     setSaving(true);
     try {
@@ -2158,6 +2289,45 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       toast({ title: "Class subject need saved", tone: "success" });
     } catch (e: any) {
       toast({ title: e?.message || "Could not save class subject need.", tone: "error" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // DD.8-DD.10 — real whole-grade save: writes the SAME lesson
+  // requirement values to every real stream of `level` for one subject
+  // at once, so a school configures a grade genuinely ONCE. Only ever
+  // called after the UI's own honest agreement check confirms every
+  // real stream already agrees (or none have any value yet) — this
+  // never silently overwrites a stream a school has deliberately
+  // customised differently. `teacherIdByClassId` (optional) still lets
+  // a school pick a genuinely different teacher per stream for this
+  // same subject, since a school may legitimately want that even while
+  // everything else about the subject is shared.
+  async function saveNeedForLevel(level: string, subjectId: string, patch: any, sharedCurrent: any, teacherIdByClassId?: Record<string, string | null>) {
+    setSaving(true);
+    try {
+      const body: any = {
+        action: "save_need_for_level",
+        level,
+        subjectId,
+        lessonsPerWeek: Number(patch.lessonsPerWeek ?? sharedCurrent.lessonsPerWeek ?? 0),
+        doubleCount: Number(patch.doubleCount ?? sharedCurrent.doubleCount ?? 0),
+        allowSplitDouble: Boolean(patch.allowSplitDouble ?? sharedCurrent.allowSplitDouble ?? false),
+        venueId: patch.venueId !== undefined ? (patch.venueId || null) : (sharedCurrent.venueId ?? null),
+        requiresMovement: Boolean(patch.requiresMovement ?? sharedCurrent.requiresMovement ?? false),
+        noLabAccess: Boolean(patch.noLabAccess ?? sharedCurrent.noLabAccess ?? false),
+        labPriority: patch.labPriority ?? sharedCurrent.labPriority ?? "NORMAL",
+        rotateTeacherEachTerm: Boolean(patch.rotateTeacherEachTerm ?? sharedCurrent.rotateTeacherEachTerm ?? false),
+      };
+      if (teacherIdByClassId) body.teacherIdByClassId = teacherIdByClassId;
+      const res = await fetch("/api/academics/timetable/generator", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Failed");
+      await load();
+      toast({ title: `Saved for the whole of ${level}`, tone: "success" });
+    } catch (e: any) {
+      toast({ title: e?.message || "Could not save for the whole grade.", tone: "error" });
     } finally {
       setSaving(false);
     }
@@ -2504,6 +2674,48 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
 
   if (loading || !payload) return <Skeletons />;
 
+  // DD.8-DD.10 — real lesson-requirement fields compared across every
+  // real stream of a grade to decide whether they honestly agree.
+  // Deliberately excludes `teacherId`: a school may legitimately want a
+  // different teacher per stream for the same subject (confirmed as the
+  // founder's own real exception) while everything else stays shared.
+  const NEED_COMPARABLE_FIELDS = ["lessonsPerWeek", "doubleCount", "allowSplitDouble", "venueId", "requiresMovement", "noLabAccess", "labPriority", "rotateTeacherEachTerm"];
+
+  function needAgreementForLevelSubject(levelClasses: any[], subjectId: string) {
+    const perClass: Record<string, any> = {};
+    for (const cls of levelClasses) {
+      perClass[cls.id] = (classNeeds[cls.id] ?? []).find((n: any) => n.subjectId === subjectId) ?? {};
+    }
+    const values = Object.values(perClass);
+    let agrees = true;
+    const shared: any = values[0] ?? {};
+    for (const field of NEED_COMPARABLE_FIELDS) {
+      const firstVal = shared[field] ?? (field === "lessonsPerWeek" || field === "doubleCount" ? 0 : field === "labPriority" ? "NORMAL" : field === "venueId" ? null : false);
+      for (const v of values) {
+        const thisVal = (v as any)[field] ?? (field === "lessonsPerWeek" || field === "doubleCount" ? 0 : field === "labPriority" ? "NORMAL" : field === "venueId" ? null : false);
+        if (thisVal !== firstVal) { agrees = false; break; }
+      }
+      if (!agrees) break;
+    }
+    return { agrees, shared, perClass };
+  }
+
+  function toggleOpenLevel(level: string) {
+    setOpenLevels((prev) => {
+      const next = new Set(prev);
+      if (next.has(level)) next.delete(level); else next.add(level);
+      return next;
+    });
+  }
+
+  function toggleStreamLevel(level: string) {
+    setOpenStreamLevels((prev) => {
+      const next = new Set(prev);
+      if (next.has(level)) next.delete(level); else next.add(level);
+      return next;
+    });
+  }
+
   const constraintSummary = (c: any) => {
     const cfg = c.config ?? {};
     if (c.kind === "SUBJECT_MORNING") return `Subjects: ${(cfg.subjectIds ?? []).length} · up to period ${cfg.maxPeriod ?? 4}`;
@@ -2757,109 +2969,69 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base"><Grid3X3 className="h-5 w-5 text-blue-600" /> Class subject lesson requirements</CardTitle>
-            <p className="text-xs text-navy-400">For each class and subject, save lessons per week, number of doubles, split-double preference and teacher.</p>
+            <p className="text-xs text-navy-400">For each grade and subject, save lessons per week, number of doubles, split-double preference and teacher — set once for the whole grade, since every real stream studies the same subjects. Open a stream only when it genuinely needs to be different.</p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {classes.slice(0, 6).map((cls: any) => (
-              <div key={cls.id} className="rounded-2xl border border-navy-100 p-4 dark:border-navy-800">
-                <p className="text-sm font-bold text-navy-900 dark:text-white">{cls.level} {cls.stream}</p>
-                <div className="mt-3 space-y-2">
-                  {subjects.slice(0, 8).map((subject: any) => {
-                    const current = (classNeeds[cls.id] ?? []).find((n: any) => n.subjectId === subject.id) ?? {};
-                    return (
-                      <div key={subject.id} className="space-y-1.5 rounded-xl border border-navy-50 p-2 text-xs dark:border-navy-800">
-                        <div className="grid grid-cols-[minmax(120px,1.2fr)_84px_84px_130px_1fr_auto] items-center gap-2">
-                          <div>
-                            <p className="font-semibold text-navy-800 dark:text-navy-100">{subject.name}</p>
-                            <p className="text-[10px] text-navy-400">{subject.code}</p>
-                          </div>
-                          <Input type="number" min={0} max={12} defaultValue={current.lessonsPerWeek ?? 0} onBlur={(e) => saveNeed(cls.id, subject.id, { lessonsPerWeek: e.target.value })} />
-                          <Input type="number" min={0} max={6} defaultValue={current.doubleCount ?? 0} onBlur={(e) => saveNeed(cls.id, subject.id, { doubleCount: e.target.value })} />
-                          <label className="flex items-center gap-2 text-xs text-navy-600 dark:text-navy-300"><input type="checkbox" defaultChecked={Boolean(current.allowSplitDouble)} onChange={(e) => saveNeed(cls.id, subject.id, { allowSplitDouble: e.target.checked })} /> Split double</label>
-                          <select defaultValue={current.teacherId ?? ""} onChange={(e) => saveNeed(cls.id, subject.id, { teacherId: e.target.value || null })} className="rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
-                            <option value="">Teacher…</option>
-                            {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
-                          </select>
-                          <Badge tone={(current.lessonsPerWeek ?? 0) > 0 ? "green" : "neutral"}>{(current.lessonsPerWeek ?? 0) > 0 ? "Saved" : "Empty"}</Badge>
-                        </div>
-                        {venues.length > 0 && (
-                          <div className="flex items-center gap-2 pl-1">
-                            <MapPin className="h-3 w-3 text-navy-400" />
-                            <select defaultValue={current.venueId ?? ""} onChange={(e) => saveNeed(cls.id, subject.id, { venueId: e.target.value || null })} className="rounded-lg border border-navy-100 bg-white px-2 py-1 text-[11px] dark:border-navy-800 dark:bg-navy-900">
-                              <option value="">Auto-pick from venue pool</option>
-                              {venues.map((v: any) => <option key={v.id} value={v.id}>{v.name} ({v.shortCode})</option>)}
-                            </select>
-                          </div>
-                        )}
-                        {/* AA.4 — real, school-set soft preference: this
-                            subject genuinely involves student movement (a
-                            lab session, workshop, PE) and should be
-                            preferred right after a real break — never a
-                            hard rule, so a school with limited slots never
-                            gets an unplaced lesson because of this. */}
-                        <label className="flex items-center gap-2 pl-1 text-[11px] text-navy-500 dark:text-navy-400">
-                          <input
-                            type="checkbox"
-                            defaultChecked={Boolean(current.requiresMovement)}
-                            onChange={(e) => saveNeed(cls.id, subject.id, { requiresMovement: e.target.checked })}
-                          />
-                          Movement-heavy (prefer right after a break)
+          <CardContent className="space-y-3">
+            {classesByLevel.slice(0, 8).map(({ level, levelClasses }: { level: string; levelClasses: any[] }) => {
+              const isOpen = openLevels.has(level);
+              const showStreams = openStreamLevels.has(level);
+              return (
+                <div key={level} className="rounded-2xl border border-navy-100 dark:border-navy-800">
+                  <button
+                    type="button"
+                    onClick={() => toggleOpenLevel(level)}
+                    className="flex w-full items-center justify-between gap-2 rounded-2xl p-4 text-left"
+                  >
+                    <p className="text-sm font-bold text-navy-900 dark:text-white">{level} <span className="font-normal text-navy-400">({levelClasses.length} stream{levelClasses.length === 1 ? "" : "s"})</span></p>
+                    <ChevronDown className={cn("h-4 w-4 text-navy-400 transition", isOpen && "rotate-180")} />
+                  </button>
+                  {isOpen && (
+                    <div className="space-y-2 border-t border-navy-100 p-4 pt-3 dark:border-navy-800">
+                      {levelClasses.length > 1 && (
+                        <label className="mb-2 flex items-center gap-2 text-[11px] text-navy-500 dark:text-navy-400">
+                          <input type="checkbox" checked={showStreams} onChange={() => toggleStreamLevel(level)} />
+                          Set a specific stream differently (instead of the whole grade at once)
                         </label>
-                        {/* AA.8 — real, school-set "this class never gets a
-                            real lab/venue for THIS subject" hard exclusion
-                            (always theory-only for this pairing) and a real
-                            soft lab-priority tier (e.g. exam-candidate
-                            classes) for when real lab capacity is genuinely
-                            scarce. Only shown when this subject actually
-                            has a real venue pool to compete for — a school
-                            with no labs at all never sees this, matching
-                            the existing venue-picker's own visibility rule. */}
-                        {venues.length > 0 && (
-                          <div className="flex flex-wrap items-center gap-3 pl-1">
-                            <label className="flex items-center gap-2 text-[11px] text-navy-500 dark:text-navy-400">
-                              <input
-                                type="checkbox"
-                                defaultChecked={Boolean(current.noLabAccess)}
-                                onChange={(e) => saveNeed(cls.id, subject.id, { noLabAccess: e.target.checked })}
+                      )}
+                      {subjects.slice(0, 8).map((subject: any) => {
+                        const agreement = needAgreementForLevelSubject(levelClasses, subject.id);
+                        if (agreement.agrees && !showStreams) {
+                          return (
+                            <SubjectNeedRow
+                              key={subject.id}
+                              subject={subject}
+                              current={agreement.shared}
+                              teachers={teachers}
+                              venues={venues}
+                              onSave={(patch) => saveNeedForLevel(level, subject.id, patch, agreement.shared)}
+                            />
+                          );
+                        }
+                        return (
+                          <div key={subject.id} className="space-y-2">
+                            {!agreement.agrees && (
+                              <Badge tone="amber">Streams differ — showing each one</Badge>
+                            )}
+                            {levelClasses.map((cls: any) => (
+                              <SubjectNeedRow
+                                key={cls.id}
+                                subject={subject}
+                                current={agreement.perClass[cls.id] ?? {}}
+                                teachers={teachers}
+                                venues={venues}
+                                teacherLabel={`${level} ${cls.stream}`}
+                                onSave={(patch) => saveNeed(cls.id, subject.id, patch)}
                               />
-                              Never use a lab for this subject (theory-only)
-                            </label>
-                            <label className="flex items-center gap-2 text-[11px] text-navy-500 dark:text-navy-400">
-                              <span>Lab priority:</span>
-                              <select
-                                defaultValue={current.labPriority ?? "NORMAL"}
-                                onChange={(e) => saveNeed(cls.id, subject.id, { labPriority: e.target.value })}
-                                className="rounded-lg border border-navy-100 bg-white px-2 py-1 text-[11px] dark:border-navy-800 dark:bg-navy-900"
-                              >
-                                <option value="NORMAL">Normal</option>
-                                <option value="HIGH">High (e.g. exam candidates)</option>
-                              </select>
-                            </label>
+                            ))}
                           </div>
-                        )}
-                        {/* AA.9 — real, school-set "deliberately re-roll
-                            this subject's teacher assignment at the start
-                            of each new term" flag. Never a hardcoded rule
-                            about which subject (a school picks this for
-                            PE, or any subject with no dedicated
-                            specialist) or who covers it — eligibility
-                            still comes entirely from the school's own
-                            real Teacher ↔ Subject links below. */}
-                        <label className="flex items-center gap-2 pl-1 text-[11px] text-navy-500 dark:text-navy-400">
-                          <input
-                            type="checkbox"
-                            defaultChecked={Boolean(current.rotateTeacherEachTerm)}
-                            onChange={(e) => saveNeed(cls.id, subject.id, { rotateTeacherEachTerm: e.target.checked })}
-                          />
-                          Rotate this subject&apos;s teacher every term (e.g. PE with no dedicated specialist)
-                        </label>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
-            {classes.length > 6 && <p className="text-xs text-navy-400">Showing first 6 classes for speed. The same save flow works for the rest through the existing Timetable Generator tab.</p>}
+              );
+            })}
+            {classesByLevel.length > 8 && <p className="text-xs text-navy-400">Showing the first 8 grades for speed. The same save flow works for the rest through the existing Timetable Generator tab.</p>}
           </CardContent>
         </Card>
 
