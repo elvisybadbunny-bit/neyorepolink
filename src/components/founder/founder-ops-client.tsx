@@ -791,7 +791,12 @@ export function FounderOpsClient() {
           <ShellReleaseCard />
         </div>
       )}
-      {tab === "Feature Toggles" && <JFeatureTogglesTab />}
+      {tab === "Feature Toggles" && (
+        <div className="space-y-4">
+          <JFeatureTogglesTab />
+          <EeFeatureTogglesTab />
+        </div>
+      )}
       {tab === "Revenue Grants" && <RevenueGrantsOpsTab />}
       {tab === "Custom Feature Requests" && <CustomFeatureRequestsOpsTab />}
       {tab === "Team & Access" && <NeyoTeamOpsTab />}
@@ -2554,6 +2559,94 @@ function JFeatureTogglesTab() {
                   onClick={() => toggle(f.id, !f.enabled)}
                 >
                   {busyId === f.id ? "…" : f.enabled ? "Switch OFF" : "Switch ON"}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// EE — Part-EE feature toggles (founder 2026-07-16: "every idea must have a
+// release button to be fully released"). Deliberately opposite default to
+// the J-feature card above: every Part-EE feature ships OFF until NEYO Ops
+// explicitly releases it here.
+function EeFeatureTogglesTab() {
+  const { toast } = useToast();
+  const [features, setFeatures] = React.useState<any[] | null>(null);
+  const [busyId, setBusyId] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const load = React.useCallback(async () => {
+    setError(null);
+    try {
+      const res = await fetch("/api/ops/ee-features");
+      const json = await res.json();
+      if (json.ok) setFeatures(json.data.features);
+      else setError(json.error?.message || "Failed to load feature toggles");
+    } catch {
+      setError("Failed to load feature toggles");
+    }
+  }, []);
+
+  React.useEffect(() => { void load(); }, [load]);
+
+  async function toggle(id: string, enabled: boolean) {
+    setBusyId(id);
+    try {
+      const res = await fetch("/api/ops/ee-features", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, enabled }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        toast({ title: `${id} ${enabled ? "released" : "paused"}`, tone: "success" });
+        await load();
+      } else {
+        toast({ title: json.error?.message || "Failed", tone: "error" });
+      }
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Part-EE feature toggles (CBC/CBE, scanning, learning library)</CardTitle>
+        <p className="mt-1 text-xs text-navy-500 dark:text-navy-400">Every Part-EE idea ships OFF platform-wide by default. Release each one individually here when it's genuinely ready for schools. Changes are audit logged.</p>
+      </CardHeader>
+      <CardContent>
+        {error ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+            {error} <Button size="sm" variant="secondary" className="ml-2" onClick={() => void load()}>Retry</Button>
+          </div>
+        ) : features === null ? (
+          <div className="space-y-3">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-2xl" />)}</div>
+        ) : features.length === 0 ? (
+          <EmptyState icon={Sliders} title="No Part-EE features registered" description="Add features to the EE-feature registry first." />
+        ) : (
+          <div className="space-y-3">
+            {features.map((f) => (
+              <div key={f.id} className="flex items-center justify-between gap-3 rounded-2xl border border-navy-100 bg-white/70 p-4 dark:border-navy-800 dark:bg-navy-900/60">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-widest text-navy-500">{f.id}</span>
+                    <p className="font-semibold text-navy-900 dark:text-navy-50">{f.label}</p>
+                    <Badge tone={f.enabled ? "green" : "red"}>{f.enabled ? "RELEASED" : "NOT RELEASED"}</Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-navy-500 dark:text-navy-400">{f.description}</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant={f.enabled ? "secondary" : "primary"}
+                  disabled={busyId === f.id}
+                  onClick={() => toggle(f.id, !f.enabled)}
+                >
+                  {busyId === f.id ? "…" : f.enabled ? "Pause" : "Release"}
                 </Button>
               </div>
             ))}

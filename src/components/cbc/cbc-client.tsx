@@ -7,7 +7,7 @@
  */
 import * as React from "react";
 import {
-  Layers, Plus, AlertCircle, Loader2, X, Sparkles, Check, FileText, Search,
+  Layers, Plus, AlertCircle, Loader2, X, Sparkles, Check, FileText, Search, ChevronDown,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,9 @@ import { useToast } from "@/components/ui/toast";
 
 interface Subject { id: string; name: string; code: string; curriculum: string }
 interface Strand { id: string; name: string; learningOutcome: string | null; subjectId: string; subjectName: string; subjectCode: string; assessmentCount: number }
+interface Substrand { id: string; name: string; learningOutcome: string | null; strandId: string; assessmentCount: number }
 interface ClassOpt { id: string; name: string }
-interface SheetStudent { id: string; name: string; admissionNo: string; latest: { level: number; date: string } | null }
+interface SheetStudent { id: string; name: string; admissionNo: string; latest: { level: number; date: string; substrandId?: string | null } | null }
 interface Profile {
   student: { id: string; name: string; admissionNo: string; className: string | null };
   subjects: { subjectId: string; subject: string; code: string; avgLevel: number; overall: string; strands: { strand: string; code: string; label: string; parentFriendly: string; comment: string | null; date: string; teacherName: string }[] }[];
@@ -66,6 +67,13 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
   const [error, setError] = React.useState(false);
   const [dialog, setDialog] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+  // EE.1 — real sub-strands under each strand, keyed by strandId. Loaded
+  // lazily only for a strand the school actually expands, so a school with
+  // many strands never pays for every sub-strand list up front.
+  const [substrandsByStrand, setSubstrandsByStrand] = React.useState<Record<string, Substrand[]>>({});
+  const [openStrand, setOpenStrand] = React.useState<string | null>(null);
+  const [newSubstrandName, setNewSubstrandName] = React.useState("");
+  const [substrandBusy, setSubstrandBusy] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setError(false);
@@ -85,6 +93,44 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
       if (json.ok) { toast({ title: `${json.data.added} KICD strands added`, tone: "success" }); load(); }
       else toast({ title: json.error?.message || "Failed", tone: "error" });
     } finally { setBusy(false); }
+  }
+
+  async function loadSubstrands(strandId: string) {
+    try {
+      const res = await fetch(`/api/cbc/substrands?strandId=${strandId}`);
+      const json = await res.json();
+      if (json.ok) setSubstrandsByStrand((prev) => ({ ...prev, [strandId]: json.data.substrands }));
+    } catch {
+      // EE.1 not yet released by NEYO Ops, or a genuine network issue --
+      // either way, the strand-level UI above keeps working untouched.
+    }
+  }
+
+  function toggleStrand(strandId: string) {
+    if (openStrand === strandId) { setOpenStrand(null); return; }
+    setOpenStrand(strandId);
+    if (!substrandsByStrand[strandId]) loadSubstrands(strandId);
+  }
+
+  async function addSubstrand(strandId: string) {
+    if (newSubstrandName.trim().length < 2) return;
+    setSubstrandBusy(true);
+    try {
+      const res = await fetch("/api/cbc/substrands", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ strandId, name: newSubstrandName.trim() }) });
+      const json = await res.json();
+      if (json.ok) { setNewSubstrandName(""); toast({ title: "Sub-strand added", tone: "success" }); loadSubstrands(strandId); }
+      else toast({ title: json.error?.message || "Failed", tone: "error" });
+    } finally { setSubstrandBusy(false); }
+  }
+
+  async function deleteSubstrandRow(strandId: string, id: string) {
+    setSubstrandBusy(true);
+    try {
+      const res = await fetch("/api/cbc/substrands", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete", id }) });
+      const json = await res.json();
+      if (json.ok) loadSubstrands(strandId);
+      else toast({ title: json.error?.message || "Failed", tone: "error" });
+    } finally { setSubstrandBusy(false); }
   }
 
   if (error) return <LoadError onRetry={load} />;
@@ -118,15 +164,54 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
               <CardHeader><CardTitle>{subject}</CardTitle></CardHeader>
               <CardContent>
                 <ul className="divide-y divide-navy-50 dark:divide-navy-800">
-                  {list.map((st) => (
-                    <li key={st.id} className="py-2.5">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-navy-900 dark:text-navy-50">{st.name}</p>
-                        {st.assessmentCount > 0 && <Badge tone="neutral">{st.assessmentCount} obs</Badge>}
-                      </div>
-                      {st.learningOutcome && <p className="mt-0.5 text-xs text-navy-400">{st.learningOutcome}</p>}
-                    </li>
-                  ))}
+                  {list.map((st) => {
+                    const isOpen = openStrand === st.id;
+                    const subs = substrandsByStrand[st.id];
+                    return (
+                      <li key={st.id} className="py-2.5">
+                        <button type="button" className="flex w-full items-center justify-between text-left" onClick={() => toggleStrand(st.id)}>
+                          <div>
+                            <p className="text-sm font-medium text-navy-900 dark:text-navy-50">{st.name}</p>
+                            {st.learningOutcome && <p className="mt-0.5 text-xs text-navy-400">{st.learningOutcome}</p>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {st.assessmentCount > 0 && <Badge tone="neutral">{st.assessmentCount} obs</Badge>}
+                            <ChevronDown className={`h-4 w-4 text-navy-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                          </div>
+                        </button>
+                        {isOpen && (
+                          <div className="mt-2 space-y-2 rounded-xl bg-warm-50 p-3 dark:bg-navy-800/60">
+                            <p className="text-[11px] font-bold uppercase tracking-wider text-navy-400">Sub-strands</p>
+                            {subs === undefined ? (
+                              <p className="text-xs text-navy-400">Loading…</p>
+                            ) : subs.length === 0 ? (
+                              <p className="text-xs text-navy-400">No sub-strands yet — optional, a strand still works fine without them.</p>
+                            ) : (
+                              <ul className="space-y-1">
+                                {subs.map((sub) => (
+                                  <li key={sub.id} className="flex items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-1.5 text-xs dark:bg-navy-900">
+                                    <span className="text-navy-700 dark:text-navy-200">{sub.name}</span>
+                                    <div className="flex items-center gap-2">
+                                      {sub.assessmentCount > 0 && <Badge tone="neutral">{sub.assessmentCount}</Badge>}
+                                      {canManage && <button type="button" className="text-navy-300 hover:text-red-500" onClick={() => deleteSubstrandRow(st.id, sub.id)}><X className="h-3.5 w-3.5" /></button>}
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                            {canManage && (
+                              <div className="flex gap-2">
+                                <Input value={openStrand === st.id ? newSubstrandName : ""} onChange={(e) => setNewSubstrandName(e.target.value)} placeholder="e.g. Fractions" className="h-8 text-xs" />
+                                <Button size="sm" disabled={substrandBusy || newSubstrandName.trim().length < 2} onClick={() => addSubstrand(st.id)}>
+                                  <Plus className="h-3.5 w-3.5" /> Add
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </CardContent>
             </Card>
@@ -137,6 +222,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
     </div>
   );
 }
+
 
 function StrandDialog({ subjects, onClose, onDone }: { subjects: Subject[]; onClose: () => void; onDone: () => void }) {
   const { toast } = useToast();
@@ -181,14 +267,30 @@ function AssessTab({ classes }: { classes: ClassOpt[] }) {
   const [levels, setLevels] = React.useState<Map<string, number>>(new Map());
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+  // EE.1 — real sub-strands under the chosen strand, offered as an optional
+  // sheet-wide narrower target (a school not using sub-strands never sees
+  // this row at all — the list is simply empty).
+  const [substrands, setSubstrands] = React.useState<Substrand[]>([]);
+  const [substrandId, setSubstrandId] = React.useState("");
+  // EE.2 — rubric-driven auto-fill: a comment per student, filled the
+  // moment a level is tapped (never AI — a real deterministic lookup
+  // against the school's own comment bank). A teacher can still freely
+  // edit any of these before saving.
+  const [comments, setComments] = React.useState<Map<string, { text: string; fromBank: boolean }>>(new Map());
 
   React.useEffect(() => {
     fetch("/api/cbc/strands").then((r) => r.json()).then((j) => j.ok && setStrands(j.data.strands));
   }, []);
 
+  React.useEffect(() => {
+    setSubstrandId("");
+    if (!strandId) { setSubstrands([]); return; }
+    fetch(`/api/cbc/substrands?strandId=${strandId}`).then((r) => r.json()).then((j) => j.ok && setSubstrands(j.data.substrands)).catch(() => setSubstrands([]));
+  }, [strandId]);
+
   const loadSheet = React.useCallback(async () => {
     if (!strandId || !classId) { setStudents(null); return; }
-    setErrorMsg(null); setStudents(null); setLevels(new Map());
+    setErrorMsg(null); setStudents(null); setLevels(new Map()); setComments(new Map());
     try {
       const res = await fetch(`/api/cbc/assess?strandId=${strandId}&classId=${classId}`);
       const json = await res.json();
@@ -198,6 +300,46 @@ function AssessTab({ classes }: { classes: ClassOpt[] }) {
   }, [strandId, classId]);
   React.useEffect(() => { loadSheet(); }, [loadSheet]);
 
+  const strand = strands.find((s) => s.id === strandId);
+
+  async function setLevel(studentId: string, level: number) {
+    const current = levels.get(studentId);
+    setLevels((p) => {
+      const n = new Map(p);
+      if (current === level) n.delete(studentId); else n.set(studentId, level);
+      return n;
+    });
+    if (current === level) {
+      setComments((p) => { const n = new Map(p); n.delete(studentId); return n; });
+      return;
+    }
+    // EE.2 — real, deterministic auto-fill lookup (never AI). rotateKey
+    // includes the studentId so different learners at the SAME level can
+    // genuinely see a different phrase from a school's own bank of
+    // several equally-narrow options, while re-tapping the same level for
+    // the same student on the same visit always shows the same pick.
+    try {
+      const params = new URLSearchParams({
+        resolve: "1", subjectId: strand?.subjectId ?? "", level: String(level), rotateKey: studentId,
+      });
+      if (strandId) params.set("strandId", strandId);
+      if (substrandId) params.set("substrandId", substrandId);
+      const res = await fetch(`/api/cbc/comment-bank?${params.toString()}`);
+      const json = await res.json();
+      if (json.ok && json.data.text) {
+        setComments((p) => new Map(p).set(studentId, { text: json.data.text, fromBank: true }));
+      }
+    } catch {
+      // EE.2 not yet released, or a genuine network hiccup -- the tap-level
+      // rubric flow above still works exactly as before, just without an
+      // auto-filled comment this round.
+    }
+  }
+
+  function editComment(studentId: string, text: string) {
+    setComments((p) => new Map(p).set(studentId, { text, fromBank: false }));
+  }
+
   async function save() {
     if (!students) return;
     setSaving(true);
@@ -206,7 +348,13 @@ function AssessTab({ classes }: { classes: ClassOpt[] }) {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           strandId, classId, date: new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10),
-          entries: students.map((s) => ({ studentId: s.id, level: levels.get(s.id) ?? null })),
+          entries: students.map((s) => ({
+            studentId: s.id,
+            level: levels.get(s.id) ?? null,
+            substrandId: substrandId || undefined,
+            comment: comments.get(s.id)?.text || undefined,
+            commentFromBank: comments.get(s.id)?.fromBank ?? false,
+          })),
         }),
       });
       const json = await res.json();
@@ -215,7 +363,6 @@ function AssessTab({ classes }: { classes: ClassOpt[] }) {
     } finally { setSaving(false); }
   }
 
-  const strand = strands.find((s) => s.id === strandId);
   const marked = levels.size;
 
   return (
@@ -229,6 +376,12 @@ function AssessTab({ classes }: { classes: ClassOpt[] }) {
           <option value="">Strand…</option>
           {strands.map((s) => <option key={s.id} value={s.id}>{s.subjectCode}: {s.name}</option>)}
         </select>
+        {strandId && substrands.length > 0 && (
+          <select value={substrandId} onChange={(e) => setSubstrandId(e.target.value)} className="max-w-xs rounded-full border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900">
+            <option value="">Whole strand (no specific sub-strand)</option>
+            {substrands.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        )}
       </div>
       {strand?.learningOutcome && (
         <p className="rounded-xl bg-warm-50 px-3 py-2 text-xs text-navy-600 dark:bg-navy-800 dark:text-navy-300">{strand.learningOutcome}</p>
@@ -246,28 +399,42 @@ function AssessTab({ classes }: { classes: ClassOpt[] }) {
         <>
           <div className="rounded-2xl border border-navy-100 bg-white dark:border-navy-800 dark:bg-navy-900">
             <ul className="divide-y divide-navy-50 dark:divide-navy-800">
-              {students.map((s) => (
-                <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-navy-900 dark:text-navy-50">{s.name}</p>
-                    <p className="font-mono text-[10px] text-navy-400">
-                      {s.admissionNo}
-                      {s.latest && <span className="ml-1.5 text-navy-300">last: {LEVELS.find((l) => l.v === s.latest!.level)?.code} on {s.latest.date}</span>}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    {LEVELS.map((l) => {
-                      const on = levels.get(s.id) === l.v;
-                      return (
-                        <button key={l.v} onClick={() => setLevels((p) => { const n = new Map(p); if (on) n.delete(s.id); else n.set(s.id, l.v); return n; })}
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors duration-200 ease-apple ${on ? l.cls : "border border-navy-200 text-navy-400 dark:border-navy-700"}`}>
-                          {l.code}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </li>
-              ))}
+              {students.map((s) => {
+                const picked = comments.get(s.id);
+                return (
+                  <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-navy-900 dark:text-navy-50">{s.name}</p>
+                      <p className="font-mono text-[10px] text-navy-400">
+                        {s.admissionNo}
+                        {s.latest && <span className="ml-1.5 text-navy-300">last: {LEVELS.find((l) => l.v === s.latest!.level)?.code} on {s.latest.date}</span>}
+                      </p>
+                      {levels.has(s.id) && (
+                        <div className="mt-1.5 flex items-center gap-1.5">
+                          <Input
+                            value={picked?.text ?? ""}
+                            onChange={(e) => editComment(s.id, e.target.value)}
+                            placeholder="Comment (auto-filled from your rubric — edit freely)"
+                            className="h-7 text-xs"
+                          />
+                          {picked?.fromBank && <Badge tone="neutral">bank</Badge>}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      {LEVELS.map((l) => {
+                        const on = levels.get(s.id) === l.v;
+                        return (
+                          <button key={l.v} onClick={() => setLevel(s.id, l.v)}
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors duration-200 ease-apple ${on ? l.cls : "border border-navy-200 text-navy-400 dark:border-navy-700"}`}>
+                            {l.code}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </div>
           <div className="flex items-center justify-between">
@@ -277,6 +444,7 @@ function AssessTab({ classes }: { classes: ClassOpt[] }) {
             </Button>
           </div>
         </>
+
       )}
     </div>
   );
