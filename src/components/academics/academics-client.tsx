@@ -4153,7 +4153,17 @@ function ClassConfigModal({ classId, classes, currentConfig, onClose, onSaved }:
   const levelClasses = level ? (classes ?? []).filter((c: any) => c.level === level) : [];
   const [agreement, setAgreement] = React.useState<{ agrees: boolean; sharedConfig: any | null } | null>(null);
   const [agreementLoading, setAgreementLoading] = React.useState(levelClasses.length > 1);
-  const [scope, setScope] = React.useState<"grade" | "stream">("stream");
+  // DD.10 (final) — real, auto-detected wider scopes beyond a single
+  // grade: "school" (every real active grade genuinely agrees) or
+  // "group" (this grade is part of a real contiguous run of 2+ grades
+  // that genuinely agree with each other, e.g. Grade 1-3), confirmed via
+  // ask_user (auto-detect, no manual group-naming yet). Both are purely
+  // informational upgrades offered ON TOP of the existing grade/stream
+  // scopes — never silently pre-selected, since expanding a save's real
+  // blast radius is always the school's own deliberate choice.
+  const [scope, setScope] = React.useState<"grade" | "stream" | "school" | "group">("stream");
+  const [wholeSchoolInfo, setWholeSchoolInfo] = React.useState<{ agrees: boolean; levels: string[]; sharedConfig: any } | null>(null);
+  const [groupInfo, setGroupInfo] = React.useState<{ levels: string[]; sharedConfig: any } | null>(null);
   const [f, setF] = React.useState(buildConfigFormState(currentConfig));
 
   React.useEffect(() => {
@@ -4175,18 +4185,45 @@ function ClassConfigModal({ classId, classes, currentConfig, onClose, onSaved }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [level]);
 
+  // DD.10 (final) — real whole-school and contiguous-group agreement,
+  // fetched once per dialog open (cheap, tenant-wide queries) so the
+  // wider-scope offers below can appear alongside the existing per-grade
+  // banner without slowing down the common single-grade save.
+  React.useEffect(() => {
+    fetch(`/api/academics/timetable/generator?agreement=config-whole-school`)
+      .then((r) => r.json())
+      .then((json) => { if (json.ok) setWholeSchoolInfo(json.data); })
+      .catch(() => {});
+    fetch(`/api/academics/timetable/generator?agreement=config-groups`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.ok && level) {
+          const match = (json.data.groups ?? []).find((g: any) => g.levels.includes(level));
+          setGroupInfo(match ?? null);
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level]);
+
   const set = (k: string, v: any) => setF((p) => ({ ...p, [k]: v }));
 
-  function switchScope(next: "grade" | "stream") {
+  function switchScope(next: "grade" | "stream" | "school" | "group") {
     setScope(next);
     if (next === "grade" && agreement?.sharedConfig) setF(buildConfigFormState(agreement.sharedConfig));
     if (next === "stream") setF(buildConfigFormState(currentConfig));
+    if (next === "school" && wholeSchoolInfo?.sharedConfig) setF(buildConfigFormState(wholeSchoolInfo.sharedConfig));
+    if (next === "group" && groupInfo?.sharedConfig) setF(buildConfigFormState(groupInfo.sharedConfig));
   }
 
   async function save() {
     setSaving(true);
     try {
-      const body = scope === "grade" && level
+      const body = scope === "school" && wholeSchoolInfo
+        ? { action: "save_config_for_levels", levels: wholeSchoolInfo.levels, ...f }
+        : scope === "group" && groupInfo
+        ? { action: "save_config_for_levels", levels: groupInfo.levels, ...f }
+        : scope === "grade" && level
         ? { action: "save_config_for_level", level, ...f }
         : { action: "save_config", classId, ...f };
       const res = await fetch("/api/academics/timetable/generator", {
@@ -4201,6 +4238,12 @@ function ClassConfigModal({ classId, classes, currentConfig, onClose, onSaved }:
   }
 
   const streamLabel = currentClass ? [currentClass.level, currentClass.stream].filter(Boolean).join(" ") : "this class";
+  // A whole-school offer only makes real sense when the school genuinely
+  // has more than one real grade to begin with (a single-grade school's
+  // "whole school" IS its one grade — the existing grade scope already
+  // covers that, no separate banner needed).
+  const showWholeSchoolOffer = !!wholeSchoolInfo && wholeSchoolInfo.agrees && wholeSchoolInfo.levels.length > 1;
+  const showGroupOffer = !!groupInfo && groupInfo.levels.length > 1;
 
   return (
     <Modal title="Configure General Schedule Rules" onClose={onClose} wide>
@@ -4234,6 +4277,43 @@ function ClassConfigModal({ classId, classes, currentConfig, onClose, onSaved }:
               </p>
             </div>
           )}
+        </div>
+      )}
+      {/* DD.10 (final) — real, auto-detected wider-scope offers, shown
+          only when genuinely applicable (never presented as pre-selected
+          — a school always explicitly opts in). */}
+      {(showWholeSchoolOffer || showGroupOffer) && scope !== "school" && scope !== "group" && (
+        <div className="mb-4 space-y-2">
+          {showWholeSchoolOffer && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-xs dark:border-blue-900/40 dark:bg-blue-950/20">
+              <p className="text-navy-600 dark:text-navy-300">
+                Every real grade in the school ({wholeSchoolInfo!.levels.length} grades) currently shares the same schedule rules.
+              </p>
+              <button type="button" onClick={() => switchScope("school")} className="font-semibold text-blue-600 underline dark:text-blue-400">
+                Edit for the whole school instead
+              </button>
+            </div>
+          )}
+          {showGroupOffer && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-xs dark:border-blue-900/40 dark:bg-blue-950/20">
+              <p className="text-navy-600 dark:text-navy-300">
+                {groupInfo!.levels.join(", ")} currently share the same schedule rules.
+              </p>
+              <button type="button" onClick={() => switchScope("group")} className="font-semibold text-blue-600 underline dark:text-blue-400">
+                Edit for this whole group instead
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {(scope === "school" || scope === "group") && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-xs dark:border-blue-900/40 dark:bg-blue-950/20">
+          <p className="text-navy-600 dark:text-navy-300">
+            Editing for {scope === "school" ? "the whole school" : groupInfo!.levels.join(", ")} ({(scope === "school" ? wholeSchoolInfo!.levels : groupInfo!.levels).length} grades).
+          </p>
+          <button type="button" onClick={() => switchScope(levelClasses.length > 1 ? "grade" : "stream")} className="font-semibold text-blue-600 underline dark:text-blue-400">
+            Edit only {level ?? streamLabel} instead
+          </button>
         </div>
       )}
       <div className="space-y-4 mb-4 max-h-96 overflow-y-auto pr-1">
@@ -4348,7 +4428,12 @@ function ClassConfigModal({ classId, classes, currentConfig, onClose, onSaved }:
       <div className="flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
         <Button onClick={save} disabled={saving}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : (scope === "grade" && level ? `Save for all of ${level}` : "Save Config")}
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+            scope === "school" ? "Save for the whole school"
+            : scope === "group" ? `Save for ${groupInfo?.levels.length ?? 0} grades`
+            : scope === "grade" && level ? `Save for all of ${level}`
+            : "Save Config"
+          )}
         </Button>
       </div>
     </Modal>
