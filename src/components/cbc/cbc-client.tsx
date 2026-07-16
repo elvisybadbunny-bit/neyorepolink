@@ -131,6 +131,64 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
     }
   }
 
+  // EE.3 (Senior School phase) — same pattern as the Junior School library
+  // above, pointed at /api/cbc/senior-curriculum instead. Silently hidden
+  // (renders nothing) until NEYO Ops has released EE.3 — the SAME
+  // release-button flag covers both grade bands, so there is nothing extra
+  // to release separately.
+  const [seniorGrades, setSeniorGrades] = React.useState<string[]>([]);
+  const [seniorSubjectCodes, setSeniorSubjectCodes] = React.useState<string[]>([]);
+  const [seniorGrade, setSeniorGrade] = React.useState("");
+  const [seniorSubjectId, setSeniorSubjectId] = React.useState("");
+  const [seniorPreview, setSeniorPreview] = React.useState<{ name: string; learningOutcome: string; substrands: { name: string }[] }[] | null>(null);
+  const [seniorBusy, setSeniorBusy] = React.useState(false);
+  const [seniorAvailable, setSeniorAvailable] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch("/api/cbc/senior-curriculum").then((r) => r.json()).then((j) => {
+      if (j.ok) {
+        setSeniorGrades(j.data.grades ?? []);
+        setSeniorSubjectCodes(j.data.subjectCodes ?? []);
+        setSeniorAvailable(true);
+      }
+    }).catch(() => {
+      // EE.3 not yet released by NEYO Ops -- the card below simply never
+      // appears; every other Strands tab feature keeps working untouched.
+    });
+  }, []);
+
+  React.useEffect(() => {
+    setSeniorPreview(null);
+    if (!seniorGrade || !seniorSubjectId) return;
+    const subj = subjects.find((s) => s.id === seniorSubjectId);
+    if (!subj) return;
+    fetch(`/api/cbc/senior-curriculum?grade=${encodeURIComponent(seniorGrade)}&subjectCode=${subj.code}`)
+      .then((r) => r.json())
+      .then((j) => { if (j.ok) setSeniorPreview(j.data.strands ?? []); })
+      .catch(() => {});
+  }, [seniorGrade, seniorSubjectId, subjects]);
+
+  async function applySeniorCurriculum() {
+    if (!seniorGrade || !seniorSubjectId) return;
+    setSeniorBusy(true);
+    try {
+      const subj = subjects.find((s) => s.id === seniorSubjectId);
+      const res = await fetch("/api/cbc/senior-curriculum", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subjectId: seniorSubjectId, grade: seniorGrade, subjectCode: subj?.code }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        toast({ title: `${json.data.strandsAdded} strands and ${json.data.substrandsAdded} sub-strands added`, tone: "success" });
+        load();
+      } else {
+        toast({ title: json.error?.message || "Failed", tone: "error" });
+      }
+    } finally {
+      setSeniorBusy(false);
+    }
+  }
+
   const load = React.useCallback(async () => {
     setError(false);
     try {
@@ -245,6 +303,47 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
                   </div>
                   <Button size="sm" onClick={applyJuniorCurriculum} disabled={juniorBusy}>
                     {juniorBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Apply {juniorPreview.length} strands to {juniorGrade}
+                  </Button>
+                </>
+              )
+            )}
+          </CardContent>
+        </Card>
+      )}
+      {canManage && seniorAvailable && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Senior School curriculum library (Grade 10)</CardTitle>
+            <p className="text-xs text-navy-400">Real KICD strands and sub-strands for the compulsory Senior School core subjects — pick a grade and subject, preview what will be added, then apply.</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <select value={seniorGrade} onChange={(e) => setSeniorGrade(e.target.value)} className="rounded-full border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900">
+                <option value="">Grade…</option>
+                {seniorGrades.map((g) => <option key={g} value={g}>{g}</option>)}
+              </select>
+              <select value={seniorSubjectId} onChange={(e) => setSeniorSubjectId(e.target.value)} className="rounded-full border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900">
+                <option value="">Subject…</option>
+                {subjects.filter((s) => seniorSubjectCodes.includes(s.code)).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            {seniorGrade && seniorSubjectId && (
+              seniorPreview === null ? (
+                <p className="text-xs text-navy-400">Loading preview…</p>
+              ) : seniorPreview.length === 0 ? (
+                <p className="text-xs text-navy-400">No real KICD preset available yet for this grade/subject combination.</p>
+              ) : (
+                <>
+                  <div className="space-y-2 rounded-xl bg-warm-50 p-3 dark:bg-navy-800/60">
+                    {seniorPreview.map((s) => (
+                      <div key={s.name}>
+                        <p className="text-xs font-semibold text-navy-700 dark:text-navy-200">{s.name}</p>
+                        <p className="text-[11px] text-navy-400">{s.substrands.map((sub) => sub.name).join(" · ")}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <Button size="sm" onClick={applySeniorCurriculum} disabled={seniorBusy}>
+                    {seniorBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Apply {seniorPreview.length} strands to {seniorGrade}
                   </Button>
                 </>
               )
