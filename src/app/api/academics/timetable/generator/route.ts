@@ -12,6 +12,8 @@ import {
   rotateFlaggedTeacherAssignments,
   getTimetableConfigAgreementForLevel, saveTimetableConfigForLevel,
   getClassSubjectNeedAgreementForLevel, saveClassSubjectNeedForLevel,
+  getTimetableConfigAgreementForWholeSchool, getTimetableConfigContiguousGroups,
+  saveTimetableConfigForLevels,
 } from "@/lib/services/timetable-solver.service";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +31,18 @@ export async function GET(req: NextRequest) {
     }
     if (level && req.nextUrl.searchParams.get("agreement") === "needs") {
       const result = await getClassSubjectNeedAgreementForLevel(user, level);
+      return ok(result);
+    }
+    // DD.10 (continued) — real whole-school / contiguous-group agreement,
+    // auto-detected purely from each real grade's own already-saved
+    // TimetableConfig (confirmed via ask_user: auto-detect, no manual
+    // group-naming yet).
+    if (req.nextUrl.searchParams.get("agreement") === "config-whole-school") {
+      const result = await getTimetableConfigAgreementForWholeSchool(user);
+      return ok(result);
+    }
+    if (req.nextUrl.searchParams.get("agreement") === "config-groups") {
+      const result = await getTimetableConfigContiguousGroups(user);
       return ok(result);
     }
     const result = await getTimetableInputs(user);
@@ -104,6 +118,41 @@ export async function POST(req: NextRequest) {
     // check (or a school's own explicit "make every stream match" choice).
     if (action === "save_config_for_level") {
       const result = await saveTimetableConfigForLevel(user, body.level, {
+        periodsPerDay: Number(body.periodsPerDay || 8),
+        freePeriodsPerWeek: Number(body.freePeriodsPerWeek || 0),
+        coCurricularCount: Number(body.coCurricularCount || 0),
+        coCurricularName: body.coCurricularName || "Games",
+        schoolDayStartTime: typeof body.schoolDayStartTime === "string" ? body.schoolDayStartTime : "08:00",
+        saturdayStartTime: typeof body.saturdayStartTime === "string" ? body.saturdayStartTime : "08:00",
+        saturdayEndTime: typeof body.saturdayEndTime === "string" ? body.saturdayEndTime : "12:40",
+        lessonDurationMins: Number(body.lessonDurationMins || 40),
+        shortBreakStart: Number(body.shortBreakStart || 2),
+        shortBreakMins: Number(body.shortBreakMins || 15),
+        shortBreak2Start: body.shortBreak2Start ? Number(body.shortBreak2Start) : null,
+        shortBreak2Mins: body.shortBreak2Start ? Number(body.shortBreak2Mins || 10) : null,
+        longBreakStart: Number(body.longBreakStart || 4),
+        longBreakMins: Number(body.longBreakMins || 30),
+        lunchStart: Number(body.lunchStart || 6),
+        lunchMins: Number(body.lunchMins || 60),
+        hasRemedials: Boolean(body.hasRemedials),
+        hasPreps: Boolean(body.hasPreps),
+        lunchShift: Number(body.lunchShift || 1),
+        lunchAfterPeriod: body.lunchAfterPeriod !== undefined && body.lunchAfterPeriod !== null && body.lunchAfterPeriod !== ""
+          ? Number(body.lunchAfterPeriod)
+          : null,
+        hasSaturday: Boolean(body.hasSaturday !== undefined ? body.hasSaturday : true),
+      });
+      return ok(result);
+    }
+
+    // DD.10 (continued) — real whole-SCHOOL or real multi-grade GROUP
+    // save: the SAME real config write as save_config_for_level, just
+    // across every one of `body.levels` at once. Only ever called after
+    // the UI's own honest whole-school/group agreement check (or a
+    // school's own explicit "make every one of these grades match"
+    // choice).
+    if (action === "save_config_for_levels") {
+      const result = await saveTimetableConfigForLevels(user, Array.isArray(body.levels) ? body.levels : [], {
         periodsPerDay: Number(body.periodsPerDay || 8),
         freePeriodsPerWeek: Number(body.freePeriodsPerWeek || 0),
         coCurricularCount: Number(body.coCurricularCount || 0),

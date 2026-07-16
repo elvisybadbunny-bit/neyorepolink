@@ -303,6 +303,175 @@ export async function saveTimetableConfigForLevel(
   });
 }
 
+// ---------------------------------------------------------------------------
+// DD.10 (continued) — founder's own further request, beyond a single grade:
+// "if the whole school got the same method it renders whole school" and "if
+// a group has a certain same eg grade 1-3 it renders that to avoid
+// repeating". Confirmed via ask_user: auto-detected agreement is the
+// chosen approach (no school-defined named groups yet) — NEYO itself
+// checks whether every real grade currently agrees (whole school) or a
+// real CONTIGUOUS run of grades happens to already agree (a group), purely
+// computed live from each grade's own real saved TimetableConfig, using
+// the exact same honest per-field comparison already proven for a single
+// grade. Never assumes agreement across genuinely different real school
+// sections (Pre-Primary/Primary/Junior/Senior can each keep their own real
+// different setup with their own real different teachers) — a school
+// section that never agrees with its neighbours simply never gets grouped,
+// with zero special-casing required.
+// ---------------------------------------------------------------------------
+
+/**
+ * DD.10 (continued) — real, honest "does EVERY real active grade in the
+ * school currently agree on TimetableConfig" check, reusing the exact
+ * same per-grade agreement logic as getTimetableConfigAgreementForLevel()
+ * — computed once per real distinct level, in the school's own natural
+ * level order (first-seen order among active classes, ordered by level).
+ * A school with only ONE real grade honestly agrees with itself (nothing
+ * to disagree about) — the whole-school view still offers to configure
+ * that single grade, which is harmless and consistent with the per-grade
+ * behaviour.
+ */
+export async function getTimetableConfigAgreementForWholeSchool(user: SessionUser) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const classes = await tdb.schoolClass.findMany({ where: { archived: false }, orderBy: [{ level: "asc" }, { stream: "asc" }] });
+    const levelsInOrder: string[] = [];
+    for (const c of classes) if (!levelsInOrder.includes(c.level)) levelsInOrder.push(c.level);
+    if (levelsInOrder.length === 0) return { levels: [] as string[], agrees: true, sharedConfig: null };
+
+    const configs = await tdb.timetableConfig.findMany({ where: { classId: { in: classes.map((c) => c.id) } } });
+    if (configs.length === 0) return { levels: levelsInOrder, agrees: true, sharedConfig: null };
+
+    let agrees = true;
+    const reference = configs[0];
+    for (const cfg of configs) {
+      for (const field of TIMETABLE_CONFIG_COMPARABLE_FIELDS) {
+        if ((cfg as any)[field] !== (reference as any)[field]) { agrees = false; break; }
+      }
+      if (!agrees) break;
+    }
+    return { levels: levelsInOrder, agrees, sharedConfig: agrees ? reference : null };
+  });
+}
+
+/**
+ * DD.10 (continued) — real, honest "which CONTIGUOUS runs of real grades
+ * (in the school's own natural level order) currently share identical
+ * TimetableConfig settings" detection — e.g. Grade 1-3 all genuinely
+ * agreeing with each other while Grade 4 onward has its own different
+ * real setup. Only reports a group when it has 2+ real grades (a lone
+ * grade agreeing with nobody is just the existing per-grade view, not a
+ * new group) AND when it is NOT simply the entire school (that's already
+ * covered by getTimetableConfigAgreementForWholeSchool()) — this keeps
+ * the two real signals distinct so the UI never shows a redundant
+ * "Grade 1-9 group" banner on top of an identical "whole school" banner.
+ * A level with zero real classes or zero real config rows yet is treated
+ * as agreeing with an adjacent level's shared value ONLY if it has no
+ * config at all (nothing to disagree about) — mirroring the exact same
+ * single-grade honesty rule.
+ */
+export async function getTimetableConfigContiguousGroups(user: SessionUser) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const classes = await tdb.schoolClass.findMany({ where: { archived: false }, orderBy: [{ level: "asc" }, { stream: "asc" }] });
+    const levelsInOrder: string[] = [];
+    for (const c of classes) if (!levelsInOrder.includes(c.level)) levelsInOrder.push(c.level);
+    if (levelsInOrder.length < 2) return { groups: [] as { levels: string[]; sharedConfig: any }[] };
+
+    const configs = await tdb.timetableConfig.findMany({ where: { classId: { in: classes.map((c) => c.id) } } });
+    const configsByLevel = new Map<string, typeof configs>();
+    for (const c of classes) {
+      const cfg = configs.find((cf) => cf.classId === c.id);
+      if (!cfg) continue;
+      const arr = configsByLevel.get(c.level) ?? [];
+      arr.push(cfg);
+      configsByLevel.set(c.level, arr);
+    }
+
+    // Real per-level "representative" config: null if this level has zero
+    // real config rows yet (honestly nothing to compare), or if its own
+    // real streams don't even agree with EACH OTHER yet (a level that
+    // hasn't resolved its own internal per-stream agreement can never
+    // honestly be reported as agreeing with a neighbour either).
+    function representativeFor(level: string): any | null {
+      const rows = configsByLevel.get(level) ?? [];
+      if (rows.length === 0) return undefined; // undefined = "no data yet", genuinely compatible with anything
+      const ref = rows[0];
+      for (const r of rows) {
+        for (const field of TIMETABLE_CONFIG_COMPARABLE_FIELDS) {
+          if ((r as any)[field] !== (ref as any)[field]) return null; // internal disagreement — never groupable
+        }
+      }
+      return ref;
+    }
+
+    function configsMatch(a: any, b: any): boolean {
+      if (a === null || b === null) return false;
+      if (a === undefined || b === undefined) return true; // no-data levels never block a group
+      for (const field of TIMETABLE_CONFIG_COMPARABLE_FIELDS) {
+        if (a[field] !== b[field]) return false;
+      }
+      return true;
+    }
+
+    const groups: { levels: string[]; sharedConfig: any }[] = [];
+    let currentLevels: string[] = [];
+    let currentRef: any = undefined;
+
+    function flush() {
+      if (currentLevels.length >= 2 && currentLevels.length < levelsInOrder.length) {
+        const real = currentLevels.map((l) => representativeFor(l)).find((r) => r !== undefined && r !== null);
+        groups.push({ levels: [...currentLevels], sharedConfig: real ?? null });
+      }
+      currentLevels = [];
+      currentRef = undefined;
+    }
+
+    for (const level of levelsInOrder) {
+      const rep = representativeFor(level);
+      if (rep === null) { flush(); currentLevels = []; currentRef = undefined; continue; }
+      if (currentLevels.length === 0 || configsMatch(currentRef, rep)) {
+        currentLevels.push(level);
+        if (currentRef === undefined) currentRef = rep;
+      } else {
+        flush();
+        currentLevels = [level];
+        currentRef = rep;
+      }
+    }
+    flush();
+
+    return { groups };
+  });
+}
+
+/**
+ * DD.10 (continued) — real, whole-SCHOOL or real MULTI-GRADE save: writes
+ * the EXACT SAME real TimetableConfig values to every real class across
+ * every one of the given real levels in one action. Reuses
+ * saveTimetableConfig()'s own exact real upsert logic per class — the
+ * SAME real code path as the single-grade saveTimetableConfigForLevel(),
+ * just looping over more real levels. A school explicitly confirming this
+ * action is a deliberate real choice; this function never silently
+ * decides which levels to include on its own.
+ */
+export async function saveTimetableConfigForLevels(
+  user: SessionUser,
+  levels: string[],
+  input: Omit<Parameters<typeof saveTimetableConfig>[1], "classId">
+) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const classes = await tdb.schoolClass.findMany({ where: { level: { in: levels }, archived: false }, select: { id: true } });
+    if (classes.length === 0) throw new TimetableSolverError("NOT_FOUND", "No real active classes found for those levels.");
+    const rows = [];
+    for (const cls of classes) {
+      rows.push(await saveTimetableConfig(user, { ...input, classId: cls.id }));
+    }
+    return { levels, classIds: classes.map((c) => c.id), updatedCount: rows.length };
+  });
+}
+
 /**
  * DD.9 — the same real "do every real stream already agree" honesty
  * check, applied to ClassSubjectNeed instead of TimetableConfig — one
