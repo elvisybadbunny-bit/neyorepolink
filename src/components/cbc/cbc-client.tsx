@@ -74,6 +74,62 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
   const [openStrand, setOpenStrand] = React.useState<string | null>(null);
   const [newSubstrandName, setNewSubstrandName] = React.useState("");
   const [substrandBusy, setSubstrandBusy] = React.useState(false);
+  // EE.3 — real KICD Junior School (Grade 7-9) curriculum library: a
+  // school picks a real grade + subject, previews the exact strands/
+  // sub-strands NEYO will add, then applies them in one action. Silently
+  // hidden (renders nothing) until NEYO Ops has released EE.3.
+  const [juniorGrades, setJuniorGrades] = React.useState<string[]>([]);
+  const [juniorSubjectCodes, setJuniorSubjectCodes] = React.useState<string[]>([]);
+  const [juniorGrade, setJuniorGrade] = React.useState("");
+  const [juniorSubjectId, setJuniorSubjectId] = React.useState("");
+  const [juniorPreview, setJuniorPreview] = React.useState<{ name: string; learningOutcome: string; substrands: { name: string }[] }[] | null>(null);
+  const [juniorBusy, setJuniorBusy] = React.useState(false);
+  const [juniorAvailable, setJuniorAvailable] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch("/api/cbc/junior-curriculum").then((r) => r.json()).then((j) => {
+      if (j.ok) {
+        setJuniorGrades(j.data.grades ?? []);
+        setJuniorSubjectCodes(j.data.subjectCodes ?? []);
+        setJuniorAvailable(true);
+      }
+    }).catch(() => {
+      // EE.3 not yet released by NEYO Ops -- the card below simply never
+      // appears; every other Strands tab feature keeps working untouched.
+    });
+  }, []);
+
+  React.useEffect(() => {
+    setJuniorPreview(null);
+    if (!juniorGrade || !juniorSubjectId) return;
+    const subj = subjects.find((s) => s.id === juniorSubjectId);
+    if (!subj) return;
+    fetch(`/api/cbc/junior-curriculum?grade=${encodeURIComponent(juniorGrade)}&subjectCode=${subj.code}`)
+      .then((r) => r.json())
+      .then((j) => { if (j.ok) setJuniorPreview(j.data.strands ?? []); })
+      .catch(() => {});
+  }, [juniorGrade, juniorSubjectId, subjects]);
+
+  async function applyJuniorCurriculum() {
+    if (!juniorGrade || !juniorSubjectId) return;
+    setJuniorBusy(true);
+    try {
+      const subj = subjects.find((s) => s.id === juniorSubjectId);
+      const res = await fetch("/api/cbc/junior-curriculum", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subjectId: juniorSubjectId, grade: juniorGrade, subjectCode: subj?.code }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        toast({ title: `${json.data.strandsAdded} strands and ${json.data.substrandsAdded} sub-strands added`, tone: "success" });
+        load();
+      } else {
+        toast({ title: json.error?.message || "Failed", tone: "error" });
+      }
+    } finally {
+      setJuniorBusy(false);
+    }
+  }
 
   const load = React.useCallback(async () => {
     setError(false);
@@ -154,6 +210,47 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
             </Button>
           ))}
         </div>
+      )}
+      {canManage && juniorAvailable && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Junior School curriculum library (Grade 7-9)</CardTitle>
+            <p className="text-xs text-navy-400">Real KICD strands and sub-strands, researched and ready to load — pick a grade and subject, preview what will be added, then apply.</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <select value={juniorGrade} onChange={(e) => setJuniorGrade(e.target.value)} className="rounded-full border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900">
+                <option value="">Grade…</option>
+                {juniorGrades.map((g) => <option key={g} value={g}>{g}</option>)}
+              </select>
+              <select value={juniorSubjectId} onChange={(e) => setJuniorSubjectId(e.target.value)} className="rounded-full border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900">
+                <option value="">Subject…</option>
+                {subjects.filter((s) => juniorSubjectCodes.includes(s.code)).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            {juniorGrade && juniorSubjectId && (
+              juniorPreview === null ? (
+                <p className="text-xs text-navy-400">Loading preview…</p>
+              ) : juniorPreview.length === 0 ? (
+                <p className="text-xs text-navy-400">No real KICD preset available yet for this grade/subject combination.</p>
+              ) : (
+                <>
+                  <div className="space-y-2 rounded-xl bg-warm-50 p-3 dark:bg-navy-800/60">
+                    {juniorPreview.map((s) => (
+                      <div key={s.name}>
+                        <p className="text-xs font-semibold text-navy-700 dark:text-navy-200">{s.name}</p>
+                        <p className="text-[11px] text-navy-400">{s.substrands.map((sub) => sub.name).join(" · ")}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <Button size="sm" onClick={applyJuniorCurriculum} disabled={juniorBusy}>
+                    {juniorBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Apply {juniorPreview.length} strands to {juniorGrade}
+                  </Button>
+                </>
+              )
+            )}
+          </CardContent>
+        </Card>
       )}
       {strands.length === 0 ? (
         <EmptyState icon={Layers} title="No strands yet" description="Add the KICD strands for each learning area with one click, or create your own." />
