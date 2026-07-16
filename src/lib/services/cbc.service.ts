@@ -133,6 +133,64 @@ export async function addSubstrandPreset(user: SessionUser, strandId: string, pr
 }
 
 // ---------------------------------------------------------------------------
+// EE.3 — real KICD Junior School (Grade 7-9) curriculum content: applies a
+// full strand + sub-strand set for one grade + subject in a single action.
+// ---------------------------------------------------------------------------
+
+/**
+ * Applies the real, researched KICD Junior School curriculum preset for one
+ * grade + one subject: creates every strand for that grade (grade-prefixed
+ * in the strand's own name, e.g. "Grade 7 · Numbers", since a school's
+ * `Subject` row is shared across every grade that studies it and
+ * `CbcStrand.name` must stay unique per subject — this is the one honest
+ * way to keep Grade 7/8/9 Mathematics' own real, genuinely DIFFERENT
+ * "Numbers" strand content from silently colliding into a single strand
+ * row) together with all of that strand's own real sub-strands, in one
+ * step. Idempotent and additive: re-running never duplicates an
+ * already-created strand or sub-strand, and never touches a strand a
+ * school has already customised under a different name.
+ */
+export async function applyJuniorSchoolCurriculumPreset(
+  user: SessionUser,
+  input: { subjectId: string; grade: string; strands: { name: string; learningOutcome: string; substrands: { name: string; learningOutcome: string }[] }[] }
+) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const subject = await tdb.subject.findUnique({ where: { id: input.subjectId } });
+    if (!subject) throw new CbcError("NOT_FOUND", "Subject not found.");
+
+    let strandsAdded = 0;
+    let substrandsAdded = 0;
+    let strandsSkipped = 0;
+    let substrandsSkipped = 0;
+
+    for (const s of input.strands) {
+      const gradedName = `${input.grade} · ${s.name}`;
+      let strand = await tdb.cbcStrand.findFirst({ where: { subjectId: input.subjectId, name: gradedName } });
+      if (!strand) {
+        strand = await tdb.cbcStrand.create({ data: { subjectId: input.subjectId, name: gradedName, learningOutcome: s.learningOutcome } as never });
+        strandsAdded++;
+      } else {
+        strandsSkipped++;
+      }
+      const existingSubstrands = new Set(
+        (await tdb.cbcSubstrand.findMany({ where: { strandId: strand.id }, select: { name: true } })).map((r) => r.name)
+      );
+      for (const sub of s.substrands) {
+        if (existingSubstrands.has(sub.name)) { substrandsSkipped++; continue; }
+        await tdb.cbcSubstrand.create({ data: { strandId: strand.id, name: sub.name, learningOutcome: sub.learningOutcome } as never });
+        substrandsAdded++;
+      }
+    }
+
+    await audit(user, "cbc.junior_school_curriculum_preset_applied", input.subjectId, {
+      grade: input.grade, strandsAdded, strandsSkipped, substrandsAdded, substrandsSkipped,
+    });
+    return { strandsAdded, strandsSkipped, substrandsAdded, substrandsSkipped };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // EE.2 — Comment bank (rubric-driven auto-fill, never AI-generated)
 // ---------------------------------------------------------------------------
 
