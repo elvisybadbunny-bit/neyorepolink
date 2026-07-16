@@ -17,7 +17,7 @@ import {
   BookOpen, Building2, CalendarRange, Grid3X3, NotebookPen, Plus,
   AlertCircle, Loader2, X, Sparkles, Trash2, Check, Calendar, Printer, Palette, Sliders, Info, HelpCircle, Save, Trophy,
   Calculator, FileText, Clock3, Wand2, RefreshCw, Link2, Ban, Users, TimerReset, ShieldCheck, RotateCcw, ClipboardList,
-  GraduationCap, MapPin, Tag, Shuffle, Eye, ChevronDown
+  GraduationCap, MapPin, Tag, Shuffle, Eye, ChevronDown, Lock
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -2208,6 +2208,13 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const [openStreamLevels, setOpenStreamLevels] = React.useState<Set<string>>(new Set());
   const [timeOffTeacherId, setTimeOffTeacherId] = React.useState("");
   const [timeOffWindows, setTimeOffWindows] = React.useState([{ dayOfWeek: 1, period: 1, note: "" }]);
+  // AA.6 — real Hard BlockedTimetableSlot state (whole-school assembly,
+  // PPI, games afternoon, etc. — the Master Button always respects these,
+  // distinct from the soft co-curricular ClassSubjectNeed approach).
+  const [blockedSlots, setBlockedSlots] = React.useState<any[]>([]);
+  const [blockedSlotSaving, setBlockedSlotSaving] = React.useState(false);
+  const emptyBlockedSlotForm = { id: "", label: "", scope: "SCHOOL", level: "", classId: "", dayOfWeek: 1, period: 1, isDouble: false, enabled: true };
+  const [blockedSlotForm, setBlockedSlotForm] = React.useState<any>(emptyBlockedSlotForm);
   const [combinationForm, setCombinationForm] = React.useState<any>({
     id: "",
     name: "",
@@ -2248,7 +2255,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const [engineRes, generatorRes, jobRes, teacherRes, venueRes, blockRes, allocationImportRes] = await Promise.all([
+      const [engineRes, generatorRes, jobRes, teacherRes, venueRes, blockRes, allocationImportRes, blockedSlotRes] = await Promise.all([
         fetch("/api/academics/timetable/engine"),
         fetch("/api/academics/timetable/generator"),
         fetch("/api/academics/timetable/generate-job"),
@@ -2256,9 +2263,10 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
         fetch("/api/academics/timetable/venues"),
         fetch("/api/academics/timetable/elective-blocks"),
         fetch("/api/academics/teacher-allocation-import"),
+        fetch("/api/academics/timetable/engine?action=blocked_slots"),
       ]);
-      const [engineJson, generatorJson, jobJson, teacherJson, venueJson, blockJson, allocationImportJson] = await Promise.all([
-        engineRes.json(), generatorRes.json(), jobRes.json(), teacherRes.json(), venueRes.json(), blockRes.json(), allocationImportRes.json(),
+      const [engineJson, generatorJson, jobJson, teacherJson, venueJson, blockJson, allocationImportJson, blockedSlotJson] = await Promise.all([
+        engineRes.json(), generatorRes.json(), jobRes.json(), teacherRes.json(), venueRes.json(), blockRes.json(), allocationImportRes.json(), blockedSlotRes.json(),
       ]);
       if (!engineJson.ok || !generatorJson.ok) throw new Error("Failed to load timetable engine data.");
       setPayload(engineJson.data);
@@ -2285,6 +2293,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       setVenues(venueJson.ok ? venueJson.data.venues ?? [] : []);
       setElectiveBlocks(blockJson.ok ? blockJson.data.blocks ?? [] : []);
       setAllocationImportHistory(allocationImportJson.ok ? allocationImportJson.data.imports ?? [] : []);
+      setBlockedSlots(blockedSlotJson.ok ? blockedSlotJson.data.blockedSlots ?? [] : []);
     } catch {
       toast({ title: "Could not load smart timetable settings.", tone: "error" });
     } finally {
@@ -2505,6 +2514,87 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       toast({ title: e?.message || "Could not save teacher time-off.", tone: "error" });
     } finally {
       setSaving(false);
+    }
+  }
+
+  // AA.6 — real Hard BlockedTimetableSlot save/delete.
+  async function saveBlockedSlot() {
+    if (!blockedSlotForm.label.trim()) {
+      toast({ title: "Give this block a name.", tone: "error" });
+      return;
+    }
+    if (blockedSlotForm.scope === "LEVEL" && !blockedSlotForm.level) {
+      toast({ title: "Choose which grade this block applies to.", tone: "error" });
+      return;
+    }
+    if (blockedSlotForm.scope === "CLASS" && !blockedSlotForm.classId) {
+      toast({ title: "Choose which class this block applies to.", tone: "error" });
+      return;
+    }
+    setBlockedSlotSaving(true);
+    try {
+      const res = await fetch("/api/academics/timetable/engine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "upsert_blocked_slot",
+          id: blockedSlotForm.id || undefined,
+          label: blockedSlotForm.label,
+          scope: blockedSlotForm.scope,
+          level: blockedSlotForm.scope === "LEVEL" ? blockedSlotForm.level : undefined,
+          classId: blockedSlotForm.scope === "CLASS" ? blockedSlotForm.classId : undefined,
+          dayOfWeek: Number(blockedSlotForm.dayOfWeek),
+          period: Number(blockedSlotForm.period),
+          isDouble: !!blockedSlotForm.isDouble,
+          enabled: !!blockedSlotForm.enabled,
+        }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Failed");
+      await load();
+      setBlockedSlotForm(emptyBlockedSlotForm);
+      toast({ title: "Blocked slot saved", tone: "success" });
+    } catch (e: any) {
+      toast({ title: e?.message || "Could not save blocked slot.", tone: "error" });
+    } finally {
+      setBlockedSlotSaving(false);
+    }
+  }
+
+  async function deleteBlockedSlot(id: string) {
+    setBlockedSlotSaving(true);
+    try {
+      const res = await fetch("/api/academics/timetable/engine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete_blocked_slot", id }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Failed");
+      await load();
+      toast({ title: "Blocked slot removed", tone: "success" });
+    } catch (e: any) {
+      toast({ title: e?.message || "Could not remove blocked slot.", tone: "error" });
+    } finally {
+      setBlockedSlotSaving(false);
+    }
+  }
+
+  async function toggleBlockedSlotEnabled(row: any) {
+    setBlockedSlotSaving(true);
+    try {
+      const res = await fetch("/api/academics/timetable/engine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "upsert_blocked_slot", id: row.id, label: row.label, scope: row.scope, level: row.level, classId: row.classId, dayOfWeek: row.dayOfWeek, period: row.period, isDouble: row.isDouble, enabled: !row.enabled }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Failed");
+      await load();
+    } catch (e: any) {
+      toast({ title: e?.message || "Could not update blocked slot.", tone: "error" });
+    } finally {
+      setBlockedSlotSaving(false);
     }
   }
 
@@ -3092,6 +3182,89 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
               <Button size="sm" variant="secondary" onClick={() => setTimeOffWindows((prev) => [...prev, { dayOfWeek: 1, period: 1, note: "" }])}><Plus className="h-4 w-4" /> Add window</Button>
               <Button size="sm" onClick={saveTimeOff} disabled={saving || !canManage}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save time-off</Button>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><Lock className="h-5 w-5 text-rose-600" /> Blocked slots (assembly, PPI, games)</CardTitle>
+            <p className="text-xs text-navy-400">A genuinely fixed slot the Master Button always respects — no lesson is ever placed here, even under pressure. Different from an ordinary co-curricular subject, which the engine can still move.</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="col-span-2">
+                <Label>Name</Label>
+                <Input value={blockedSlotForm.label} onChange={(e) => setBlockedSlotForm((f: any) => ({ ...f, label: e.target.value }))} placeholder="e.g. Whole-School Assembly" />
+              </div>
+              <div>
+                <Label>Applies to</Label>
+                <select value={blockedSlotForm.scope} onChange={(e) => setBlockedSlotForm((f: any) => ({ ...f, scope: e.target.value, level: "", classId: "" }))} className="mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
+                  <option value="SCHOOL">Whole school</option>
+                  <option value="LEVEL">One grade</option>
+                  <option value="CLASS">One specific class</option>
+                </select>
+              </div>
+              {blockedSlotForm.scope === "LEVEL" && (
+                <div>
+                  <Label>Grade</Label>
+                  <select value={blockedSlotForm.level} onChange={(e) => setBlockedSlotForm((f: any) => ({ ...f, level: e.target.value }))} className="mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
+                    <option value="">Choose grade…</option>
+                    {classesByLevel.map(({ level }: { level: string }) => <option key={level} value={level}>{level}</option>)}
+                  </select>
+                </div>
+              )}
+              {blockedSlotForm.scope === "CLASS" && (
+                <div>
+                  <Label>Class</Label>
+                  <select value={blockedSlotForm.classId} onChange={(e) => setBlockedSlotForm((f: any) => ({ ...f, classId: e.target.value }))} className="mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
+                    <option value="">Choose class…</option>
+                    {classes.map((c: any) => <option key={c.id} value={c.id}>{c.level} {c.stream}</option>)}
+                  </select>
+                </div>
+              )}
+              <div>
+                <Label>Day</Label>
+                <select value={blockedSlotForm.dayOfWeek} onChange={(e) => setBlockedSlotForm((f: any) => ({ ...f, dayOfWeek: Number(e.target.value) }))} className="mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
+                  {[...DAY_NAMES, "Sat"].map((d, i) => <option key={d} value={i + 1}>{d}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label>Period</Label>
+                <select value={blockedSlotForm.period} onChange={(e) => setBlockedSlotForm((f: any) => ({ ...f, period: Number(e.target.value) }))} className="mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map((p) => <option key={p} value={p}>Period {p}</option>)}
+                </select>
+              </div>
+              <label className="col-span-2 flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
+                <input type="checkbox" checked={blockedSlotForm.isDouble} onChange={(e) => setBlockedSlotForm((f: any) => ({ ...f, isDouble: e.target.checked }))} />
+                Double period (also blocks the very next period)
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {blockedSlotForm.id && <Button size="sm" variant="ghost" onClick={() => setBlockedSlotForm(emptyBlockedSlotForm)}>Cancel edit</Button>}
+              <Button size="sm" onClick={saveBlockedSlot} disabled={blockedSlotSaving || !canManage}>{blockedSlotSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {blockedSlotForm.id ? "Update block" : "Add block"}</Button>
+            </div>
+            {blockedSlots.length === 0 ? (
+              <p className="text-xs text-navy-400">No hard-blocked slots yet.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {blockedSlots.map((row: any) => (
+                  <div key={row.id} className={cn("flex items-center justify-between gap-2 rounded-xl border border-navy-100 px-3 py-2 text-xs dark:border-navy-800", !row.enabled && "opacity-50")}>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-navy-900 dark:text-white">{row.label}</p>
+                      <p className="text-navy-400">
+                        {row.scope === "SCHOOL" ? "Whole school" : row.scope === "LEVEL" ? row.level : (classes.find((c: any) => c.id === row.classId)?.level ?? "Class") + " " + (classes.find((c: any) => c.id === row.classId)?.stream ?? "")}
+                        {" · "}{[...DAY_NAMES, "Sat"][row.dayOfWeek - 1]} P{row.period}{row.isDouble ? `-${row.period + 1}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => toggleBlockedSlotEnabled(row)} disabled={blockedSlotSaving || !canManage}>{row.enabled ? "Pause" : "Resume"}</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setBlockedSlotForm({ id: row.id, label: row.label, scope: row.scope, level: row.level ?? "", classId: row.classId ?? "", dayOfWeek: row.dayOfWeek, period: row.period, isDouble: row.isDouble, enabled: row.enabled })} disabled={blockedSlotSaving || !canManage}>Edit</Button>
+                      <Button size="sm" variant="ghost" onClick={() => deleteBlockedSlot(row.id)} disabled={blockedSlotSaving || !canManage}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
