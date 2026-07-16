@@ -13,6 +13,7 @@ import {
   listConstraints, upsertConstraint, deleteConstraint, saveTeacherTimeOff,
   listCombinationGroups, upsertCombinationGroup, deleteCombinationGroup,
   applyKicdSeniorSchoolTemplate, getPreGenerationSummary,
+  listBlockedTimetableSlots, upsertBlockedTimetableSlot, deleteBlockedTimetableSlot,
   TimetableEngineError,
 } from "@/lib/services/timetable-engine.service";
 
@@ -35,6 +36,10 @@ export async function GET(req: NextRequest) {
     // combinations fetch above).
     if (req.nextUrl.searchParams.get("action") === "pre_generation_summary") {
       return ok(await getPreGenerationSummary(user));
+    }
+    // AA.6 — real hard-blocked timetable slots list.
+    if (req.nextUrl.searchParams.get("action") === "blocked_slots") {
+      return ok({ blockedSlots: await listBlockedTimetableSlots(user) });
     }
     const [constraints, combinations] = await Promise.all([listConstraints(user), listCombinationGroups(user)]);
     return ok({ constraints, combinations });
@@ -60,6 +65,10 @@ export async function POST(req: NextRequest) {
         return ok(await deleteCombinationGroup(user, body.id));
       case "apply_kicd_senior_template":
         return ok(await applyKicdSeniorSchoolTemplate(user, { classId: body.classId, electiveSubjectIds: body.electiveSubjectIds ?? [] }));
+      case "upsert_blocked_slot":
+        return ok(await upsertBlockedTimetableSlot(user, body));
+      case "delete_blocked_slot":
+        return ok(await deleteBlockedTimetableSlot(user, body.id));
       default:
         return fail("INVALID", "Unknown action.", 400);
     }

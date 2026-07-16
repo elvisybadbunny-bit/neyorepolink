@@ -450,6 +450,7 @@ model Tenant {
   ElectiveBlock                ElectiveBlock[]
   TimetableConstraint          TimetableConstraint[]
   TeacherTimeOff               TeacherTimeOff[]
+  BlockedTimetableSlot         BlockedTimetableSlot[]
   TimetableGenerationJob       TimetableGenerationJob[]
   VenueSessionHistory          VenueSessionHistory[]
   ClassGroupingRule            ClassGroupingRule[]
@@ -5409,6 +5410,39 @@ model TeacherTimeOff {
   note      String?
 
   @@index([tenantId, teacherId])
+}
+
+// AA.6 — Hard-blocked timetable slots (assembly, PPI, whole-school games
+// afternoon, etc.) that the solver must treat as an absolute exclusion,
+// distinct from the SOFT ClassSubjectNeed-based co-curricular approach
+// (which the backtracking solver is still allowed to move/skip under
+// pressure). Stackable with the soft approach; scoped exactly like
+// TimetableConstraint's own conventions: SCHOOL, LEVEL, or CLASS.
+model BlockedTimetableSlot {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  label String // school-facing name, e.g. "Whole-School Assembly", "Games Afternoon"
+
+  scope   String // SCHOOL | LEVEL | CLASS
+  level   String?
+  classId String?
+
+  dayOfWeek Int // 1=Mon..6=Sat
+  period    Int // specific real period number this slot occupies
+  isDouble  Boolean @default(false) // true = this AND period+1 are both hard-blocked
+
+  activityName  String?
+  activityColor String?
+
+  enabled Boolean @default(true) // a school can pause a block without deleting it
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, scope])
+  @@index([tenantId, classId])
 }
 
 // L.7 — Master timetable generation job (the Master Button): runs in the

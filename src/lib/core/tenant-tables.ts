@@ -227,6 +227,14 @@ export const TENANT_OWNED_MODELS = [
   "teacherAllocationImport",
   "timetableConstraint",
   "teacherTimeOff",
+  // AA.6 — Hard-blocked timetable slots. CRITICAL LESSON (re-learned live via
+  // this feature's own regression test): forgetting to register a new
+  // tenant-owned model here is a genuine cross-tenant data leak, not a
+  // theoretical one — a debug script confirmed tenant B could read tenant
+  // A's rows back through tenantDb() before this line was added. Same exact
+  // bug class previously found for pathway/pathwaySubjectRequirement/
+  // studentPathwayPreference/subjectSelectionPortal (BB.4) and AA.1/AA.2.
+  "blockedTimetableSlot",
   "timetableGenerationJob",
   // AA.8 — lab reshuffle/rotation-memory history. Same lesson as AA.1/
   // AA.2's own cross-tenant-leak finding: never skip registering a new

@@ -247,6 +247,80 @@ export async function saveTeacherTimeOff(user: SessionUser, teacherId: string, w
   });
 }
 
+// ---------------------------------------------------------------------------
+// AA.6 — Hard BlockedTimetableSlot CRUD. A genuinely fixed, always-respected
+// co-curricular/PPI/assembly slot the solver treats as a HARD exclusion,
+// distinct from (and stackable with) the existing SOFT ClassSubjectNeed-
+// based co-curricular approach.
+// ---------------------------------------------------------------------------
+
+export async function listBlockedTimetableSlots(user: SessionUser) {
+  return withTenant(user.tenantId, async () => {
+    return tenantDb().blockedTimetableSlot.findMany({ orderBy: [{ dayOfWeek: "asc" }, { period: "asc" }] });
+  });
+}
+
+export async function upsertBlockedTimetableSlot(
+  user: SessionUser,
+  input: {
+    id?: string;
+    label: string;
+    scope: string;
+    level?: string | null;
+    classId?: string | null;
+    dayOfWeek: number;
+    period: number;
+    isDouble?: boolean;
+    activityName?: string | null;
+    activityColor?: string | null;
+    enabled?: boolean;
+  }
+) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    if (!["SCHOOL", "LEVEL", "CLASS"].includes(input.scope)) {
+      throw new TimetableEngineError("INVALID", "Scope must be SCHOOL, LEVEL, or CLASS.");
+    }
+    if (input.scope === "LEVEL" && !input.level) {
+      throw new TimetableEngineError("INVALID", "A LEVEL-scoped block requires a level.");
+    }
+    if (input.scope === "CLASS" && !input.classId) {
+      throw new TimetableEngineError("INVALID", "A CLASS-scoped block requires a classId.");
+    }
+    if (!Number.isInteger(input.dayOfWeek) || input.dayOfWeek < 1 || input.dayOfWeek > 6) {
+      throw new TimetableEngineError("INVALID", "dayOfWeek must be 1 (Mon) through 6 (Sat).");
+    }
+    if (!Number.isInteger(input.period) || input.period < 1) {
+      throw new TimetableEngineError("INVALID", "period must be a positive integer.");
+    }
+    const data = {
+      label: input.label,
+      scope: input.scope,
+      level: input.scope === "LEVEL" ? input.level ?? null : null,
+      classId: input.scope === "CLASS" ? input.classId ?? null : null,
+      dayOfWeek: input.dayOfWeek,
+      period: input.period,
+      isDouble: input.isDouble ?? false,
+      activityName: input.activityName ?? null,
+      activityColor: input.activityColor ?? null,
+      enabled: input.enabled ?? true,
+    };
+    if (input.id) {
+      const found = await tdb.blockedTimetableSlot.findUnique({ where: { id: input.id } });
+      if (!found) throw new TimetableEngineError("NOT_FOUND", "Blocked slot not found.");
+      return tdb.blockedTimetableSlot.update({ where: { id: input.id }, data });
+    }
+    return tdb.blockedTimetableSlot.create({ data: { tenantId: user.tenantId, ...data } });
+  });
+}
+
+export async function deleteBlockedTimetableSlot(user: SessionUser, id: string) {
+  return withTenant(user.tenantId, async () => {
+    await tenantDb().blockedTimetableSlot.delete({ where: { id } }).catch(() => {});
+    return { success: true };
+  });
+}
+
 export async function listCombinationGroups(user: SessionUser) {
   return withTenant(user.tenantId, async () => {
     const groups = await tenantDb().combinationGroup.findMany({ include: { members: true }, orderBy: { createdAt: "desc" } });
@@ -576,7 +650,7 @@ async function buildAndSolve(tenantId: string, jobId: string) {
 
   const data = await withTenant(tenantId, async () => {
     const tdb = tenantDb();
-    const [tenant, classes, subjects, needs, configs, teacherAssoc, constraints, groups, timeOff, venues, aa7ConstraintKinds, aa8VenueHistory] = await Promise.all([
+    const [tenant, classes, subjects, needs, configs, teacherAssoc, constraints, groups, timeOff, venues, aa7ConstraintKinds, aa8VenueHistory, blockedSlots] = await Promise.all([
       tdb.tenant.findFirst({ select: { educationLevelsOffered: true } }),
       tdb.schoolClass.findMany({ where: { archived: false }, orderBy: [{ level: "asc" }, { stream: "asc" }] }),
       tdb.subject.findMany({ where: { archived: false } }),
@@ -603,8 +677,13 @@ async function buildAndSolve(tenantId: string, jobId: string) {
       // to "most recent row per class+subject" in JS immediately below,
       // so only a small real Map survives into the hot solver path.
       tdb.venueSessionHistory.findMany({ orderBy: { createdAt: "desc" }, take: 2000 }),
+      // AA.6 — real, school-set HARD-blocked timetable slots (assembly,
+      // PPI, whole-school games afternoon, etc.) the solver must always
+      // respect. Only `enabled` rows are loaded — a school can pause a
+      // block without deleting its own real history.
+      tdb.blockedTimetableSlot.findMany({ where: { enabled: true } }),
     ]);
-    return { tenant, classes, subjects, needs, configs, teacherAssoc, constraints, groups, timeOff, venues, aa7ConstraintKinds, aa8VenueHistory };
+    return { tenant, classes, subjects, needs, configs, teacherAssoc, constraints, groups, timeOff, venues, aa7ConstraintKinds, aa8VenueHistory, blockedSlots };
   });
   // AA.1 — real school-defined Elective/Options Blocks (a set of subjects
   // students genuinely choose BETWEEN, sharing identical timetable slots).
@@ -932,6 +1011,32 @@ async function buildAndSolve(tenantId: string, jobId: string) {
       if (lunchPeriod > maxPeriodsForClass(c.id, day)) continue;
       classGrid.set(`${c.id}:${day}:${lunchPeriod}`, lunchSubject.id);
       lunchSlots.push({ tenantId, classId: c.id, subjectId: lunchSubject.id, teacherId: null, dayOfWeek: day, period: lunchPeriod, slotType: "ACADEMIC" });
+    }
+  }
+
+  // AA.6 — real HARD-blocked timetable slots (whole-school assembly, PPI,
+  // games afternoon, etc.). Reserved right after lunch, BEFORE any normal
+  // lesson card or Elective Block is placed, so nothing can ever land on
+  // top of a school's own genuinely fixed slot. A SCHOOL-scoped row
+  // expands to every real active class; a LEVEL-scoped row expands to
+  // every real class of that grade; a CLASS-scoped row expands to exactly
+  // one real class. `isDouble` reserves period+1 too, but only if that
+  // second period genuinely exists for the target class that day.
+  const blockedSlotRows: any[] = [];
+  for (const b of data.blockedSlots) {
+    let targetClassIds: string[] = [];
+    if (b.scope === "SCHOOL") targetClassIds = data.classes.map((c) => c.id);
+    else if (b.scope === "LEVEL") targetClassIds = data.classes.filter((c) => c.level === b.level).map((c) => c.id);
+    else if (b.scope === "CLASS" && b.classId) targetClassIds = [b.classId];
+
+    for (const cid of targetClassIds) {
+      const periods = b.isDouble && b.period + 1 <= maxPeriodsForClass(cid, b.dayOfWeek) ? [b.period, b.period + 1] : [b.period];
+      for (const p of periods) {
+        const key = `${cid}:${b.dayOfWeek}:${p}`;
+        if (classGrid.has(key)) continue; // never overwrite lunch or an earlier block
+        classGrid.set(key, `BLOCKED:${b.id}`);
+        blockedSlotRows.push({ tenantId, classId: cid, subjectId: null, teacherId: null, dayOfWeek: b.dayOfWeek, period: p, slotType: "BLOCKED", activityCategoryId: null });
+      }
     }
   }
 
@@ -1667,6 +1772,9 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     venueUsedAt.clear();
     // re-reserve lunch
     for (const s of lunchSlots) classGrid.set(`${s.classId}:${s.dayOfWeek}:${s.period}`, lunchSubject.id);
+    // AA.6 — re-reserve real hard-blocked slots too, so a fallback-triggered
+    // full re-solve can never place an ordinary lesson on top of a block.
+    for (const b of blockedSlotRows) classGrid.set(`${b.classId}:${b.dayOfWeek}:${b.period}`, `BLOCKED:${b.classId}`);
     for (const card of cards) {
       let done = false;
       let best: { day: number; periods: number[]; score: number } | null = null;
@@ -1769,6 +1877,11 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     // the REAL persisted row for this period comes from
     // `electiveBlockSlotRows` below, not this normal single-subject path.
     if (subjectId.startsWith("ELECTIVE_BLOCK:")) continue;
+    // AA.6 — skip the synthetic `BLOCKED:<slotId>` classGrid marker used
+    // only to keep ordinary cards from double-booking a hard-blocked
+    // period; the REAL persisted row for this period comes from
+    // `blockedSlotRows` above, not this normal single-subject path.
+    if (subjectId.startsWith("BLOCKED:")) continue;
     const [classId, dayStr, periodStr] = key.split(":");
     const teacherId = teacherForClassSubject.get(`${classId}::${subjectId}`) ?? null;
     const classExists = data.classes.some((c) => c.id === classId);
@@ -1812,6 +1925,11 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     // AA.1 — the Master Button also fully owns/regenerates its own real
     // ELECTIVE_BLOCK rows every run, same scoping discipline as ACADEMIC.
     await tdb.timetableSlot.deleteMany({ where: { slotType: "ELECTIVE_BLOCK" } });
+    // AA.6 — the Master Button also fully owns/regenerates its own real
+    // BLOCKED rows every run, same scoping discipline as ACADEMIC/
+    // ELECTIVE_BLOCK — never touches a school's own REMEDIAL/PREP/ACTIVITY
+    // rows (see the P.5 audit comment above).
+    await tdb.timetableSlot.deleteMany({ where: { slotType: "BLOCKED" } });
     const validTeacherIds = new Set((await tdb.user.findMany({ where: { isActive: true }, select: { id: true } })).map((u) => u.id));
     const validClassIds = new Set(data.classes.map((c) => c.id));
     const validSubjectIds = new Set(data.subjects.map((s) => s.id).concat([lunchSubject.id]));
@@ -1821,6 +1939,11 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     // ids only; subjectId/teacherId are intentionally null on these rows).
     const safeBlockRows = electiveBlockSlotRows.filter((row) => validClassIds.has(row.classId));
     if (safeBlockRows.length > 0) await tdb.timetableSlot.createMany({ data: safeBlockRows });
+    // AA.6 — real hard-blocked rows validated the same way (real class ids
+    // only; subjectId/teacherId are intentionally null on these rows, same
+    // pattern as electiveBlockSlotRows above).
+    const safeBlockedRows = blockedSlotRows.filter((row) => validClassIds.has(row.classId));
+    if (safeBlockedRows.length > 0) await tdb.timetableSlot.createMany({ data: safeBlockedRows });
     // BB.1 — persist every real venue-overflow auto-pick (or honest clear)
     // this generation run computed, back onto the real
     // ElectiveBlockSlotSubject row it belongs to. Never touches a school's
