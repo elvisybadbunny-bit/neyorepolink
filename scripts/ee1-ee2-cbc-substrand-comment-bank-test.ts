@@ -47,6 +47,18 @@ async function main() {
   if (!superAdmin) superAdmin = await db.user.create({ data: { tenantId: t.id, neyoLoginId: await generateNeyoLoginId(), email: "ee12-ops@neyo.local", fullName: "NEYO Ops", role: "SUPER_ADMIN", isActive: true } as any });
   const opsUser = { id: superAdmin.id, tenantId: superAdmin.tenantId, role: superAdmin.role, fullName: superAdmin.fullName } as any;
 
+  // REAL BUG regression check: a real FOUNDER account (a strict superset of
+  // SUPER_ADMIN everywhere else in this codebase) must ALSO be able to
+  // release/pause a Part-EE feature -- this exact case was found broken
+  // live (a literal `role !== "SUPER_ADMIN"` string check inside
+  // setEeFeatureReleased() rejected a genuine FOUNDER account) and fixed.
+  let founder = await db.user.findFirst({ where: { role: "FOUNDER" } });
+  if (!founder) founder = await db.user.create({ data: { tenantId: t.id, neyoLoginId: await generateNeyoLoginId(), email: "ee12-founder@neyo.local", fullName: "NEYO Founder", role: "FOUNDER", isActive: true } as any });
+  const founderUser = { id: founder.id, tenantId: founder.tenantId, role: founder.role, fullName: founder.fullName } as any;
+
+  // And an ordinary, non-ops role must still be genuinely REJECTED.
+  const teacherUser = { id: principal.id, tenantId: t.id, role: "TEACHER", fullName: "Not Ops" } as any;
+
   await withTenant(t.id, async () => {
     const tdb = tenantDb();
     await tdb.cbcAssessment.deleteMany({});
@@ -74,7 +86,24 @@ async function main() {
   }
   check("1. CRITICAL: assertEeFeatureReleased() genuinely throws while OFF", blockedCorrectly);
 
-  // NEYO Ops releases it.
+  // A real ordinary TEACHER account must be genuinely REJECTED from
+  // releasing a feature -- never just "not shown the button", a real
+  // service-level rejection.
+  let teacherRejected = false;
+  try {
+    await setEeFeatureReleased(teacherUser, "EE.1", true);
+  } catch (e) {
+    teacherRejected = e instanceof FlagError;
+  }
+  check("1b. CRITICAL: an ordinary TEACHER account is genuinely rejected from releasing a Part-EE feature", teacherRejected);
+
+  // A real FOUNDER account (this exact bug was found live: a literal
+  // `role !== "SUPER_ADMIN"` string check wrongly rejected FOUNDER too).
+  await setEeFeatureReleased(founderUser, "EE.1", true, "Test release via FOUNDER");
+  const releasedByFounder = await isEeFeatureReleased("EE.1");
+  check("1c. CRITICAL REGRESSION: a real FOUNDER account can genuinely release a Part-EE feature (found broken live, now fixed)", releasedByFounder === true);
+
+  // NEYO Ops releases it (the normal path).
   await setEeFeatureReleased(opsUser, "EE.1", true, "Test release");
   await setEeFeatureReleased(opsUser, "EE.2", true, "Test release");
   const onAfter = await isEeFeatureReleased("EE.1");

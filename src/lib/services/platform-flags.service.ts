@@ -178,7 +178,14 @@ export async function assertEeFeatureReleased(featureId: string) {
 
 /** NEYO Ops action: release or re-pause one Part-EE feature platform-wide. */
 export async function setEeFeatureReleased(user: SessionUser, featureId: string, released: boolean, note?: string) {
-  if (user.role !== "SUPER_ADMIN") throw new FlagError("FORBIDDEN", "Only NEYO Ops can release or pause a Part-EE feature.");
+  // REAL BUG FIX (found live while screenshotting this feature): FOUNDER is
+  // a strict superset of SUPER_ADMIN everywhere else in this codebase (see
+  // permissionsForRole()'s own comment above) because the API route's own
+  // requireRole("SUPER_ADMIN") call already expands to allow FOUNDER too --
+  // but this function's own internal check compared the literal string
+  // "SUPER_ADMIN" and rejected a real FOUNDER account. Fixed to match the
+  // same allowed-roles list the route itself was already relying on.
+  if (!["SUPER_ADMIN", "FOUNDER"].includes(user.role)) throw new FlagError("FORBIDDEN", "Only NEYO Ops can release or pause a Part-EE feature.");
   if (!EE_FEATURES.some((f) => f.id === featureId)) throw new FlagError("NOT_FOUND", "Unknown Part-EE feature.");
   const moduleKey = eeFeatureKey(featureId);
   const row = await db.platformFlag.upsert({
@@ -188,3 +195,4 @@ export async function setEeFeatureReleased(user: SessionUser, featureId: string,
   });
   return row;
 }
+
