@@ -4097,10 +4097,36 @@ Per `docs/TEACHER-ALLOCATION-AND-ELECTIVES-ENGINE-DESIGN.md` Part 9: the underly
 
 `tsc --noEmit`: 0 errors. Full zero-regression sweep all green (see the CC.1 section below for the shared, more recent sweep run covering both items together).
 
-## AA.6 — Remaining Part AA Work Items — **NOT YET STARTED**
+## AA.6 — Hard `BlockedTimetableSlot` Concept — **FULLY BUILT, TESTED & VERIFIED (2026-07-16)**
 
-The 1 remaining genuinely new, smaller, clearly-scoped work item identified by the original design audit remains open, in the founder's own stated priority order (AA.1 through AA.5 and AA.7-AA.10 are now complete; this is the last item in the original Part AA backlog):
-- [ ] **AA.6 — Hard `BlockedTimetableSlot` concept**: a genuinely fixed, always-respected co-curricular/PPI slot (whole-school/level/class scoped) the solver treats as a hard exclusion, distinct from (and stackable with) the existing PPI-as-a-subject approach.
+This was the sole remaining item in the original Part AA backlog. **Part AA (AA.1 through AA.10) is now entirely closed.**
+
+**The real gap closed**: the existing co-curricular approach (a `ClassSubjectNeed` row with a subject like "Games"/"PPI") is genuinely a SOFT placement — the backtracking solver can still move it, split it, or in a tight-capacity scenario even leave it partially unplaced. A school needs a genuinely different, HARD concept for slots that must NEVER move under any circumstance — a whole-school assembly, a fixed PPI slot, a games afternoon — stackable with the existing soft approach, not a replacement for it.
+
+**Design**: new `BlockedTimetableSlot` model, scoped exactly like `TimetableConstraint`'s own conventions — `SCHOOL` (every real active class), `LEVEL` (one real grade), or `CLASS` (one real specific class/stream). Fields: `label`, `scope`/`level`/`classId`, `dayOfWeek` (1-6), `period`, `isDouble` (also hard-blocks period+1, only if it genuinely exists for the target class that day), `enabled` (a school can pause a block without deleting its own history).
+
+**Solver wiring** in `buildAndSolve()` (`timetable-engine.service.ts`):
+1. Enabled blocked-slot rows loaded alongside the rest of the generation data.
+2. Reserved right after the existing lunch-reservation loop, BEFORE any ordinary lesson card or AA.1 Elective Block placement, so nothing can ever be placed on top of a genuinely fixed slot. SCHOOL scope expands to every real active class, LEVEL to every real class of that grade, CLASS to exactly one real class.
+3. Re-reserved in the greedy-fallback path too (which clears and rebuilds the whole grid), so a fallback-triggered full re-solve can never place an ordinary lesson over a hard block either.
+4. Persisted through its own dedicated path (`blockedSlotRows`), mirroring exactly how AA.1's `electiveBlockSlotRows` are handled — NOT pushed into the generic `slotRows` array, since the generic `safeRows` filter requires `validSubjectIds.has(row.subjectId)`, which a `null` subjectId (by design, same as `ELECTIVE_BLOCK` rows) never satisfies.
+5. The Master Button fully owns/regenerates `BLOCKED` rows every run (its own `deleteMany` scoped to `slotType: "BLOCKED"` only), same discipline as `ACADEMIC`/`ELECTIVE_BLOCK` — never touches `REMEDIAL`/`PREP`/`ACTIVITY` rows (the P.5 audit's own established pattern).
+
+**REAL SECURITY FIX found via this feature's own regression test**: `BlockedTimetableSlot` was initially missing from `tenant-tables.ts`'s `TENANT_OWNED_MODELS` array, meaning it was completely unscoped — a genuine cross-tenant data leak, confirmed live via a debug script (tenant B could read tenant A's rows back through `tenantDb()` before the fix). Same exact bug class as AA.1/AA.2/BB.4's own prior findings in this project's history. Fixed by registering `"blockedTimetableSlot"` in the array.
+
+**Backend**: `listBlockedTimetableSlots()`, `upsertBlockedTimetableSlot()` (validates scope is SCHOOL/LEVEL/CLASS, requires `level` for LEVEL and `classId` for CLASS, validates `dayOfWeek` 1-6 and `period` ≥ 1 — matching `upsertConstraint()`'s exact validation pattern), `deleteBlockedTimetableSlot()`.
+
+**API**: new actions on the existing `/api/academics/timetable/engine` route — `GET ?action=blocked_slots`, `POST upsert_blocked_slot` / `delete_blocked_slot`.
+
+**Frontend**: new "Blocked slots (assembly, PPI, games)" card in the Smart Timetable tab (`TimetableEngineTab`), right next to the existing Teacher time-off card — scope selector (whole school / one grade / one specific class, conditionally showing the grade or class picker), day/period selects, isDouble checkbox, and a list of existing blocks each with Pause/Resume (toggles `enabled` without deleting), Edit, and Delete. Verified live via Playwright: card renders correctly in both the empty state ("No hard-blocked slots yet") and populated state, and a full create → appear-in-list → delete round-trip was confirmed end-to-end against the real API (toast confirmations for both actions).
+
+**Migration**: `20260716073212_aa6_blocked_timetable_slot` — additive only.
+
+**Regression test** `scripts/aa6-blocked-timetable-slot-test.ts` — 15/15 passing, run twice consecutively for stability. Real scenario: 3 classes across 2 grades, 5 real `BlockedTimetableSlot` rows (SCHOOL, LEVEL, CLASS, `isDouble`, and a disabled one), run against the REAL production `startGeneration()`/`buildAndSolve()` path. Proves: SCHOOL scope reserves every real class; LEVEL scope reserves only that grade's classes, leaving other grades genuinely free; CLASS scope reserves only that one class, leaving its own sibling stream genuinely untouched; `isDouble` reserves both periods; a disabled block is honestly never applied; cross-tenant isolation; clean delete. One real test-setup bug found and fixed along the way (not a service bug): the test tried to disable lunch via `lunchStart: 99`, but the real solver resolves the lunch period from `lunchAfterPeriod`/`lunchShift` (`lunchShift` defaults to 1 → period 5), so lunch was silently claiming Wednesday P5 for every class and colliding with the CLASS-scoped block assertion — fixed by also setting `lunchAfterPeriod: 99` in the test's own `TimetableConfig`.
+
+`tsc --noEmit`: 0 errors (both the backend/API commit and the frontend UI commit). Full zero-regression sweep confirmed green after the backend change: `dd10-whole-school-and-group-config-test`, `dd10-cross-level-teacher-conflict-test`, `dd9-dd10-whole-grade-config-test`, `l7-timetable-engine-test`, `dd13-double-period-merge-test`, `dd14-teacher-subject-filter-audit-test`, `aa4-movement-preference-test`, `aa8-lab-rotation-priority-blocking-test` (21/21), `aa9-scope-fix-class-teacher-rotation-test` (14/14), `cc1-flexible-lunch-period-test` (7/7), `bb1-venue-overflow-test` (12/12), `bb2-elective-auto-build-test` (18/18).
+
+**Not solved / deliberately out of scope**: none — this closes the entire original Part AA backlog (AA.1 through AA.10, all fully built, tested and verified).
 
 ## AA.10 — Exam-Generator Options-Block-Awareness, Plus a School's Own Prefer-Split Override — **FULLY BUILT, TESTED & VERIFIED (2026-07-14)**
 
@@ -4127,7 +4153,7 @@ The 1 remaining genuinely new, smaller, clearly-scoped work item identified by t
 - `scripts/aa10-followup-prefer-split-exam-sittings-test.ts`: 13/13 passing, stable across multiple re-runs. Real scenario: two real SINGLE_CHOICE blocks in the same class — one left at its real default (no override, still combines) and one with `preferSplitExamSittings` explicitly true (Creative Arts: Art/Music/Drama) which gets 3 genuinely independent real sittings despite being just as technically combinable. Confirms the flag is honestly persisted/read per block (never globally), the override is respected in both preview and persisted rows, real rosters stay honest, and cross-tenant isolation holds.
 - Full regression sweep green: `z6-exam-combo-priority-test`, `z6-exam-stream-group-test`, `exam-timetable-invigilator-test`, `i28-exam-timetable-test`, `aa8-lab-rotation-priority-blocking-test` (21/21), `aa9-scope-fix-class-teacher-rotation-test` (14/14), `cc1-flexible-lunch-period-test` (7/7), `test-roles` (27/27), `teacher-portal-test`, `aa1-elective-block-test` (12/12), `bb7-electives-roster-print-test` (14/14).
 
-**Not solved / deliberately out of scope**: none — both the original AA.10 gap and the founder's same-day follow-up instruction are fully closed. Only **AA.6** (see above) remains open in the original Part AA backlog.
+**Not solved / deliberately out of scope**: none — both the original AA.10 gap and the founder's same-day follow-up instruction are fully closed. (AA.6 was the last remaining item in the original Part AA backlog at the time this was written — it is now also fully closed, see the AA.6 section above.)
 
 ## AA.9 — Real Class-Teacher Assignment UI, Real Teacher-Rotation Flag (Never Hardcoded), and a Critical `scopeWhere()` Row-Scoping Bug Fix — **FULLY BUILT, TESTED & VERIFIED (2026-07-14)**
 
