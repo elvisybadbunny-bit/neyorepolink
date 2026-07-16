@@ -191,6 +191,12 @@ export const TENANT_OWNED_MODELS = [
   "learnerJourneyPin",
   "cbcStrand",
   "cbcAssessment",
+  // EE.1/EE.2 — real CBC sub-strands and the rubric-driven comment bank.
+  // Registered the MOMENT the models exist, before any service code uses
+  // them, per the standing lesson from AA.1/AA.2/AA.6/BB.4's own prior
+  // cross-tenant-leak findings in this project's history.
+  "cbcSubstrand",
+  "cbcCommentBankEntry",
   "feeStructure",
   "invoice",
   "staffSalary",

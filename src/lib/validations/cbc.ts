@@ -10,17 +10,47 @@ export const strandSchema = z.object({
   learningOutcome: z.string().trim().max(300).optional().or(z.literal("")),
 });
 
+// EE.1 — real KICD sub-strand under a strand (e.g. "Numbers" -> "Whole
+// Numbers", "Fractions", "Money").
+export const substrandSchema = z.object({
+  strandId: z.string().min(1),
+  name: z.string().trim().min(2).max(80),
+  learningOutcome: z.string().trim().max(300).optional().or(z.literal("")),
+});
+
+// EE.2 — a school's own comment-bank entry: one ready-made phrasing for one
+// rubric level, scoped to a subject and optionally narrowed to a strand/
+// sub-strand. Never AI-generated — always a school-authored (or seeded
+// human-written starter) sentence.
+export const commentBankEntrySchema = z.object({
+  id: z.string().optional(),
+  subjectId: z.string().min(1),
+  strandId: z.string().min(1).optional().or(z.literal("")),
+  substrandId: z.string().min(1).optional().or(z.literal("")),
+  level: z.coerce.number().int().min(1).max(4),
+  text: z.string().trim().min(3).max(300),
+  enabled: z.boolean().optional(),
+});
+
 export const assessSchema = z.object({
   strandId: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   entries: z.array(
     z.object({
       studentId: z.string().min(1),
+      // EE.1 — optional real sub-strand this specific entry is scored
+      // against (nullable: a school not yet using sub-strands is
+      // completely unaffected).
+      substrandId: z.string().min(1).optional().or(z.literal("")),
       level: z.coerce.number().int().min(1).max(4).nullable(), // null = skip
       comment: z.string().trim().max(200).optional().or(z.literal("")),
+      // EE.2 — true when `comment` above was chosen via the rubric-driven
+      // comment-bank auto-fill rather than freely typed by the teacher.
+      commentFromBank: z.boolean().optional(),
     })
   ).min(1).max(200),
 });
+
 
 export const LEVEL_LABELS: Record<number, { code: string; label: string; parent: string }> = {
   4: { code: "EE", label: "Exceeding Expectations", parent: "is going beyond what is expected — keep encouraging this" },

@@ -366,7 +366,9 @@ model Tenant {
   goals                        StudentGoal[]
   portfolioItems               PortfolioItem[]
   cbcStrands                   CbcStrand[]
+  cbcSubstrands                CbcSubstrand[]
   cbcAssessments               CbcAssessment[]
+  cbcCommentBankEntries        CbcCommentBankEntry[]
   feeStructures                FeeStructure[]
   invoices                     Invoice[]
   staffSalaries                StaffSalary[]
@@ -830,30 +832,94 @@ model CbcStrand {
   learningOutcome String?
   assessments     CbcAssessment[]
   lessonPlans     LessonPlan[]
+  substrands      CbcSubstrand[]
 
   @@unique([tenantId, subjectId, name])
   @@index([tenantId, subjectId])
 }
 
+// EE.1 — real KICD sub-strand under a strand (e.g. strand "Numbers" ->
+// sub-strands "Whole Numbers", "Fractions", "Money"). Nullable link from
+// CbcAssessment (backward compatible — an assessment can still be recorded
+// at the strand level alone, exactly as before this feature).
+model CbcSubstrand {
+  id              String          @id @default(cuid())
+  tenantId        String
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  strandId        String
+  strand          CbcStrand       @relation(fields: [strandId], references: [id], onDelete: Cascade)
+  name            String
+  learningOutcome String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  assessments     CbcAssessment[]
+
+  @@unique([tenantId, strandId, name])
+  @@index([tenantId, strandId])
+}
+
 // B.6 formative assessment: one observation of one learner on one strand.
 // level: 4=EE 3=ME 2=AE 1=BE (KICD 4-point rubric).
 model CbcAssessment {
-  id          String    @id @default(cuid())
+  id          String        @id @default(cuid())
   tenantId    String
-  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   studentId   String
   strandId    String
-  strand      CbcStrand @relation(fields: [strandId], references: [id], onDelete: Cascade)
+  strand      CbcStrand     @relation(fields: [strandId], references: [id], onDelete: Cascade)
+  // EE.1 — optional real sub-strand this specific observation is scored
+  // against. Nullable: a school not yet using sub-strands keeps working
+  // exactly as before (strand-level only).
+  substrandId String?
+  substrand   CbcSubstrand? @relation(fields: [substrandId], references: [id], onDelete: SetNull)
   level       Int // 1..4
   comment     String?
+  // EE.2 — true when `comment` was chosen by the rubric-driven comment
+  // bank auto-fill (never AI-generated — a school-authored phrase picked
+  // deterministically by level/subject/strand/sub-strand match) rather
+  // than freely typed by the teacher. Purely informational (lets a
+  // report/print distinguish "teacher's own words" from "bank phrase"
+  // later if ever wanted) — never blocks editing either way.
+  commentFromBank Boolean @default(false)
   date        String // YYYY-MM-DD
   teacherId   String
+
   teacherName String
   createdAt   DateTime  @default(now())
 
   @@index([tenantId, studentId])
   @@index([tenantId, strandId, date])
+  @@index([tenantId, substrandId])
 }
+
+// EE.2 — a school's own bank of ready-made comment phrasings per rubric
+// level, scoped to a subject and optionally narrowed to one specific
+// strand/sub-strand (a narrower match always wins over a subject-wide
+// generic one — see resolveAutoComment() in cbc.service.ts). Never
+// AI-generated: every phrase here is authored by the school itself (or
+// seeded from a real, human-written KICD-style starter set) and picked by
+// simple deterministic lookup + weighted random rotation so repeat
+// comments don't feel robotic — this is data + a picker, not a language
+// model, matching the founder's explicit "never AI powered" instruction.
+model CbcCommentBankEntry {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subjectId   String
+  strandId    String? // null = applies to the whole subject at this level
+  substrandId String? // null = applies to the whole strand at this level
+  level       Int // 1..4, matches CbcAssessment.level / KICD rubric
+  text        String
+  enabled     Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, subjectId, level])
+  @@index([tenantId, strandId])
+  @@index([tenantId, substrandId])
+}
+
 
 // B.5 exam (e.g. "End of Term 2", "CAT 1"). Subjects mapped via ExamSubject.
 model Exam {

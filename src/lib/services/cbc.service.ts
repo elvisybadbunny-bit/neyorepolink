@@ -77,6 +77,205 @@ export async function addStrandPreset(user: SessionUser, subjectId: string, pres
 }
 
 // ---------------------------------------------------------------------------
+// EE.1 — Sub-strands (real KICD sub-strand under a strand)
+// ---------------------------------------------------------------------------
+
+export async function listSubstrands(user: SessionUser, strandId?: string) {
+  return withTenant(user.tenantId, async () => {
+    const rows = await tenantDb().cbcSubstrand.findMany({
+      where: strandId ? { strandId } : {},
+      orderBy: { name: "asc" },
+      include: { _count: { select: { assessments: true } } },
+    });
+    return rows.map((r) => ({
+      id: r.id, name: r.name, learningOutcome: r.learningOutcome,
+      strandId: r.strandId, assessmentCount: r._count.assessments,
+    }));
+  });
+}
+
+export async function createSubstrand(user: SessionUser, input: { strandId: string; name: string; learningOutcome?: string }) {
+  return withTenant(user.tenantId, async () => {
+    const strand = await tenantDb().cbcStrand.findUnique({ where: { id: input.strandId } });
+    if (!strand) throw new CbcError("NOT_FOUND", "Strand not found.");
+    const dup = await tenantDb().cbcSubstrand.findFirst({ where: { strandId: input.strandId, name: input.name } });
+    if (dup) throw new CbcError("DUPLICATE", `Sub-strand "${input.name}" already exists for this strand.`);
+    const s = await tenantDb().cbcSubstrand.create({
+      data: { strandId: input.strandId, name: input.name, learningOutcome: input.learningOutcome || null } as never,
+    });
+    await audit(user, "cbc.substrand_created", s.id, { name: input.name, strandId: input.strandId });
+    return s;
+  });
+}
+
+export async function deleteSubstrand(user: SessionUser, id: string) {
+  return withTenant(user.tenantId, async () => {
+    await tenantDb().cbcSubstrand.delete({ where: { id } }).catch(() => {});
+    return { success: true };
+  });
+}
+
+/** Quick-add real KICD sub-strand presets for a strand (skips existing names). */
+export async function addSubstrandPreset(user: SessionUser, strandId: string, preset: { name: string; learningOutcome: string }[]) {
+  return withTenant(user.tenantId, async () => {
+    const strand = await tenantDb().cbcStrand.findUnique({ where: { id: strandId } });
+    if (!strand) throw new CbcError("NOT_FOUND", "Strand not found.");
+    const existing = new Set((await tenantDb().cbcSubstrand.findMany({ where: { strandId }, select: { name: true } })).map((s) => s.name));
+    let added = 0;
+    for (const p of preset) {
+      if (existing.has(p.name)) continue;
+      await tenantDb().cbcSubstrand.create({ data: { strandId, name: p.name, learningOutcome: p.learningOutcome } as never });
+      added++;
+    }
+    await audit(user, "cbc.substrand_preset_added", strandId, { added });
+    return { added, skipped: preset.length - added };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// EE.2 — Comment bank (rubric-driven auto-fill, never AI-generated)
+// ---------------------------------------------------------------------------
+
+export async function listCommentBank(user: SessionUser, subjectId?: string) {
+  return withTenant(user.tenantId, async () => {
+    return tenantDb().cbcCommentBankEntry.findMany({
+      where: subjectId ? { subjectId } : {},
+      orderBy: [{ subjectId: "asc" }, { level: "desc" }],
+    });
+  });
+}
+
+export async function upsertCommentBankEntry(
+  user: SessionUser,
+  input: { id?: string; subjectId: string; strandId?: string | null; substrandId?: string | null; level: number; text: string; enabled?: boolean }
+) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const data = {
+      subjectId: input.subjectId,
+      strandId: input.strandId || null,
+      substrandId: input.substrandId || null,
+      level: input.level,
+      text: input.text,
+      enabled: input.enabled ?? true,
+    };
+    if (input.id) {
+      const found = await tdb.cbcCommentBankEntry.findUnique({ where: { id: input.id } });
+      if (!found) throw new CbcError("NOT_FOUND", "Comment bank entry not found.");
+      const row = await tdb.cbcCommentBankEntry.update({ where: { id: input.id }, data });
+      await audit(user, "cbc.comment_bank_updated", row.id, { level: row.level });
+      return row;
+    }
+    const row = await tdb.cbcCommentBankEntry.create({ data: { tenantId: user.tenantId, createdById: user.id, ...data } });
+    await audit(user, "cbc.comment_bank_created", row.id, { level: row.level });
+    return row;
+  });
+}
+
+export async function deleteCommentBankEntry(user: SessionUser, id: string) {
+  return withTenant(user.tenantId, async () => {
+    await tenantDb().cbcCommentBankEntry.delete({ where: { id } }).catch(() => {});
+    return { success: true };
+  });
+}
+
+/**
+ * Real, deterministic, ZERO-AI auto-fill: given a level a teacher just
+ * tapped/typed for a specific student, and the subject/strand/sub-strand
+ * that observation belongs to, pick a school-authored comment-bank phrase.
+ * Narrower matches always win over broader ones (sub-strand+level beats
+ * strand+level beats subject-wide+level), and when more than one phrase
+ * ties at the same narrowness, one is genuinely rotated (deterministic hash
+ * of studentId+date, not Math.random(), so re-opening the same sheet on the
+ * same day shows the same pick rather than flickering) so repeat comments
+ * across a class don't all read identically — never an AI model, purely a
+ * real lookup + a real, explainable selection rule.
+ */
+export async function resolveAutoComment(
+  user: SessionUser,
+  input: { subjectId: string; strandId?: string | null; substrandId?: string | null; level: number; rotateKey?: string }
+) {
+  return withTenant(user.tenantId, async () => {
+    const candidates = await tenantDb().cbcCommentBankEntry.findMany({
+      where: { subjectId: input.subjectId, level: input.level, enabled: true },
+    });
+    if (candidates.length === 0) return { text: null, matchedScope: null as null | "substrand" | "strand" | "subject" };
+
+    function pick(rows: typeof candidates) {
+      if (rows.length === 0) return null;
+      if (rows.length === 1) return rows[0];
+      const key = input.rotateKey ?? "default";
+      let hash = 0;
+      for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+      return rows[hash % rows.length];
+    }
+
+    if (input.substrandId) {
+      const narrow = candidates.filter((c) => c.substrandId === input.substrandId);
+      const picked = pick(narrow);
+      if (picked) return { text: picked.text, matchedScope: "substrand" as const };
+    }
+    if (input.strandId) {
+      const mid = candidates.filter((c) => !c.substrandId && c.strandId === input.strandId);
+      const picked = pick(mid);
+      if (picked) return { text: picked.text, matchedScope: "strand" as const };
+    }
+    const wide = candidates.filter((c) => !c.substrandId && !c.strandId);
+    const picked = pick(wide);
+    if (picked) return { text: picked.text, matchedScope: "subject" as const };
+    return { text: null, matchedScope: null };
+  });
+}
+
+/** Real, human-written starter phrasings per KICD 4-point level — a school
+ * can seed these once then edit/add its own; NEVER AI-generated. */
+const DEFAULT_COMMENT_BANK: Record<number, string[]> = {
+  4: [
+    "Consistently exceeds expectations and shows real initiative on this strand.",
+    "Goes beyond the basics with confidence and creativity.",
+    "Demonstrates exceptional understanding well beyond the expected level.",
+  ],
+  3: [
+    "Meets expectations for this strand and works independently.",
+    "Confidently applies the skill as expected at this level.",
+    "Shows a solid, reliable grasp of this strand.",
+  ],
+  2: [
+    "Is approaching expectations; a little more guided practice will help.",
+    "Attempts the task well but still needs some support to complete it fully.",
+    "Making steady progress toward the expected level with continued practice.",
+  ],
+  1: [
+    "Is below expectations and needs close support to build this skill.",
+    "Requires focused, guided practice to catch up on this strand.",
+    "Still developing this skill; needs regular one-on-one support.",
+  ],
+};
+
+export async function seedDefaultCommentBank(user: SessionUser, subjectId: string) {
+  return withTenant(user.tenantId, async () => {
+    const existing = await tenantDb().cbcCommentBankEntry.findMany({ where: { subjectId, strandId: null, substrandId: null } });
+    const existingByLevel = new Map<number, Set<string>>();
+    for (const e of existing) {
+      if (!existingByLevel.has(e.level)) existingByLevel.set(e.level, new Set());
+      existingByLevel.get(e.level)!.add(e.text);
+    }
+    let added = 0;
+    for (const [levelStr, phrases] of Object.entries(DEFAULT_COMMENT_BANK)) {
+      const level = Number(levelStr);
+      const already = existingByLevel.get(level) ?? new Set();
+      for (const text of phrases) {
+        if (already.has(text)) continue;
+        await tenantDb().cbcCommentBankEntry.create({ data: { tenantId: user.tenantId, subjectId, level, text, createdById: user.id } });
+        added++;
+      }
+    }
+    await audit(user, "cbc.comment_bank_seeded", subjectId, { added });
+    return { added };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Formative assessments (B.6.5) — teacher row-scoped
 // ---------------------------------------------------------------------------
 
@@ -85,6 +284,10 @@ export async function getAssessSheet(user: SessionUser, strandId: string, classI
   return withTenant(user.tenantId, async () => {
     const strand = await tenantDb().cbcStrand.findUnique({ where: { id: strandId } });
     if (!strand) throw new CbcError("NOT_FOUND", "Strand not found.");
+    // EE.1 — real sub-strands under this strand, offered alongside the
+    // strand-level sheet so a teacher can optionally score at the finer
+    // sub-strand grain without it ever being required.
+    const substrands = await tenantDb().cbcSubstrand.findMany({ where: { strandId }, orderBy: { name: "asc" } });
     const scope = await scopeWhere(user);
     const students = await tenantDb().student.findMany({
       where: { AND: [scope, { classId, status: "ACTIVE" }] },
@@ -96,10 +299,11 @@ export async function getAssessSheet(user: SessionUser, strandId: string, classI
       where: { strandId, studentId: { in: students.map((s) => s.id) } },
       orderBy: { createdAt: "desc" },
     });
-    const seen = new Map<string, { level: number; date: string; comment: string | null }>();
-    for (const a of latest) if (!seen.has(a.studentId)) seen.set(a.studentId, { level: a.level, date: a.date, comment: a.comment });
+    const seen = new Map<string, { level: number; date: string; comment: string | null; substrandId: string | null }>();
+    for (const a of latest) if (!seen.has(a.studentId)) seen.set(a.studentId, { level: a.level, date: a.date, comment: a.comment, substrandId: a.substrandId });
     return {
-      strand: { id: strand.id, name: strand.name, learningOutcome: strand.learningOutcome },
+      strand: { id: strand.id, name: strand.name, learningOutcome: strand.learningOutcome, subjectId: strand.subjectId },
+      substrands: substrands.map((s) => ({ id: s.id, name: s.name, learningOutcome: s.learningOutcome })),
       students: students.map((s) => ({
         id: s.id,
         name: [s.firstName, s.middleName, s.lastName].filter(Boolean).join(" "),
@@ -111,7 +315,11 @@ export async function getAssessSheet(user: SessionUser, strandId: string, classI
 }
 
 /** Record a round of observations (one row per student per save — history kept). */
-export async function saveAssessments(user: SessionUser, input: { strandId: string; date: string; entries: { studentId: string; level: number | null; comment?: string }[] }, classId: string) {
+export async function saveAssessments(
+  user: SessionUser,
+  input: { strandId: string; date: string; entries: { studentId: string; level: number | null; comment?: string; substrandId?: string | null; commentFromBank?: boolean }[] },
+  classId: string
+) {
   return withTenant(user.tenantId, async () => {
     const strand = await tenantDb().cbcStrand.findUnique({ where: { id: input.strandId } });
     if (!strand) throw new CbcError("NOT_FOUND", "Strand not found.");
@@ -125,7 +333,8 @@ export async function saveAssessments(user: SessionUser, input: { strandId: stri
       await tenantDb().cbcAssessment.create({
         data: {
           studentId: e.studentId, strandId: input.strandId, level: e.level,
-          comment: e.comment || null, date: input.date,
+          substrandId: e.substrandId || null,
+          comment: e.comment || null, commentFromBank: !!e.commentFromBank, date: input.date,
           teacherId: user.id, teacherName: user.fullName,
         } as never,
       });
@@ -139,6 +348,7 @@ export async function saveAssessments(user: SessionUser, input: { strandId: stri
 // ---------------------------------------------------------------------------
 // Competency tracking + reports (B.6.1/3/6)
 // ---------------------------------------------------------------------------
+
 
 /** Per-learner competency profile: latest level per strand, grouped by subject. */
 export async function studentCompetencies(user: SessionUser, studentId: string) {

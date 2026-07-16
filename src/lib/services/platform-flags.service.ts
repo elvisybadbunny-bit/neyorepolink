@@ -11,6 +11,7 @@ import { db } from "@/lib/db";
 import { MODULES, isModuleKey } from "@/lib/core/modules";
 import { NAVIGATION } from "@/lib/core/navigation";
 import { J_FEATURES, jFeatureKey, isJFeatureKey, J_FEATURE_PREFIX } from "@/lib/core/j-features";
+import { EE_FEATURES, eeFeatureKey, EE_FEATURE_PREFIX } from "@/lib/core/ee-features";
 import type { SessionUser } from "@/lib/core/session";
 
 export class FlagError extends Error {
@@ -128,4 +129,62 @@ export async function assertJFeatureEnabled(featureId: string) {
   if (await isJFeaturePaused(featureId)) {
     throw new FlagError("FORBIDDEN", "This feature is currently switched off by NEYO Ops. Please check back soon.");
   }
+}
+
+// =============================================================================
+// Part-EE feature toggles (founder 2026-07-16: "every idea must have a
+// release button to be fully released"). Deliberately OPPOSITE default to
+// Part-J above: a Part-EE feature is OFF (not released) until NEYO Ops
+// explicitly flips it on — no flag row at all means "not yet released",
+// never "on by default". Same PlatformFlag table, same `paused` column,
+// just read the other way: here `paused=true` OR "no row yet" both mean
+// disabled; only an explicit `paused=false` row means released.
+// =============================================================================
+
+/** All Part-EE feature toggles for the NEYO Ops console (ON = explicitly released). */
+export async function listEeFeatureFlags() {
+  const rows = await db.platformFlag.findMany({ where: { moduleKey: { startsWith: EE_FEATURE_PREFIX } } });
+  const map = new Map(rows.map((r) => [r.moduleKey, r]));
+  return EE_FEATURES.map((f) => {
+    const key = eeFeatureKey(f.id);
+    const row = map.get(key);
+    return {
+      id: f.id,
+      moduleKey: key,
+      label: f.label,
+      description: f.description,
+      // Released = explicitly NOT paused. No row yet = not released
+      // (default OFF) — the founder's own "off before launch" requirement.
+      enabled: row ? !row.paused : false,
+      note: row?.note ?? null,
+      updatedBy: row?.updatedBy ?? null,
+      updatedAt: row?.updatedAt ?? null,
+    };
+  });
+}
+
+/** Is a given Part-EE feature currently released? Default: NOT released (OFF). */
+export async function isEeFeatureReleased(featureId: string): Promise<boolean> {
+  const row = await db.platformFlag.findUnique({ where: { moduleKey: eeFeatureKey(featureId) } });
+  return Boolean(row && !row.paused);
+}
+
+/** Throw a typed error if a Part-EE feature has not yet been released by NEYO Ops. Default: blocked. */
+export async function assertEeFeatureReleased(featureId: string) {
+  if (!(await isEeFeatureReleased(featureId))) {
+    throw new FlagError("FORBIDDEN", "This feature has not been released yet. Please check back soon.");
+  }
+}
+
+/** NEYO Ops action: release or re-pause one Part-EE feature platform-wide. */
+export async function setEeFeatureReleased(user: SessionUser, featureId: string, released: boolean, note?: string) {
+  if (user.role !== "SUPER_ADMIN") throw new FlagError("FORBIDDEN", "Only NEYO Ops can release or pause a Part-EE feature.");
+  if (!EE_FEATURES.some((f) => f.id === featureId)) throw new FlagError("NOT_FOUND", "Unknown Part-EE feature.");
+  const moduleKey = eeFeatureKey(featureId);
+  const row = await db.platformFlag.upsert({
+    where: { moduleKey },
+    create: { moduleKey, paused: !released, note: note ?? null, updatedBy: user.fullName },
+    update: { paused: !released, note: note ?? null, updatedBy: user.fullName },
+  });
+  return row;
 }
