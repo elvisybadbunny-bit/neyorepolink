@@ -333,6 +333,19 @@ export const TENANT_OWNED_MODELS = [
   "storageArchiveTier",
   "bundiOcrTelemetryAndQuota",
   "bundiScanTopUpOrder",
+  "moeStatutoryReturn",
+  "treasuryCheckAndBankSlip",
+  "studentPocketWallet",
+  "pocketWalletTransaction",
+  "boardingExeatPass",
+  "infirmaryDosageLog",
+  "knecCandidateRegistration",
+  "schoolTournamentTrip",
+  "tournamentParticipant",
+  "teacherRecordOfWork",
+  "ptaConsultationSlot",
+  "bomGovernanceDocument",
+  "lostAndFoundItem",
   // NOTE: "complianceRequest" is DELIBERATELY NOT tenant-owned — NEYO Ops's
   // own real compliance queue (`listComplianceRequests()` in
   // founder-dashboard.service.ts) genuinely lists EVERY tenant's requests

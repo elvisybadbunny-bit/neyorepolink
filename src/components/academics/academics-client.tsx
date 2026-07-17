@@ -17,7 +17,7 @@ import {
   BookOpen, Building2, CalendarRange, Grid3X3, NotebookPen, Plus,
   AlertCircle, Loader2, X, Sparkles, Trash2, Check, Calendar, Printer, Palette, Sliders, Info, HelpCircle, Save, Trophy,
   Calculator, FileText, Clock3, Wand2, RefreshCw, Link2, Ban, Users, TimerReset, ShieldCheck, RotateCcw, ClipboardList,
-  GraduationCap, MapPin, Tag, Shuffle, Eye, ChevronDown, Lock
+  GraduationCap, MapPin, Tag, Shuffle, Eye, ChevronDown, Lock, Award
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,8 @@ import { useToast } from "@/components/ui/toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { cn, curriculumLabel } from "@/lib/utils";
 import { BundiIntelligentWizard } from "@/components/bundi/bundi-intelligent-wizard";
+import { KnecCandidateStudio } from "@/components/academics/knec-candidate-studio";
+import { MoeReturnsClientTab } from "@/components/academics/moe-returns-client-tab";
 
 interface Subject { id: string; name: string; code: string; curriculum: string; departmentId: string | null; departmentName: string | null; archived: boolean }
 interface Dept { id: string; name: string; hodId: string | null; hodName: string | null; subjectCount: number }
@@ -46,7 +48,7 @@ const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurriculumEngineEnabled = false, schoolLevelActivation }: { canManage: boolean; canAppointHod: boolean; isScopedHod: boolean; isCurriculumEngineEnabled?: boolean; schoolLevelActivation?: { shouldShowPathwayTools: boolean; shouldShowSubjectSelectionTools: boolean; isJuniorSchool: boolean; isSeniorSchool: boolean; isMixedSchool: boolean; educationLevelsOffered: string[] } }) {
   const [subjects, setSubjects] = React.useState<Subject[]>([]);
-  const [tab, setTab] = React.useState<"subjects" | "departments" | "cocurricular" | "terms" | "timetable" | "exam-timetable" | "exam-auto-generator" | "lessons" | "generator" | "smart-timetable" | "roster" | "reports" | "curriculum-versions" | "pathways" | "computation" | "subject-selection">("subjects");
+  const [tab, setTab] = React.useState<"subjects" | "departments" | "cocurricular" | "terms" | "timetable" | "exam-timetable" | "exam-auto-generator" | "lessons" | "generator" | "smart-timetable" | "roster" | "reports" | "curriculum-versions" | "pathways" | "computation" | "subject-selection" | "knec-studio" | "moe-returns">("subjects");
 
   React.useEffect(() => {
     fetch("/api/academics/subjects")
@@ -67,6 +69,8 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
     { key: "timetable" as const, label: "Timetable", icon: Grid3X3 },
     { key: "exam-timetable" as const, label: "Exam Timetable", icon: ClipboardList },
     { key: "exam-auto-generator" as const, label: "Exam Auto-Generator", icon: Sparkles },
+    { key: "knec-studio" as const, label: "KNEC Candidate Studio (`Idea 7`)", icon: Award },
+    { key: "moe-returns" as const, label: "MOE Statutory Returns (`Idea 2`)", icon: FileText },
     { key: "lessons" as const, label: "Lesson plans", icon: NotebookPen },
     ...(isCurriculumEngineEnabled ? [
       { key: "computation" as const, label: "Grading Engine", icon: Calculator },
@@ -118,6 +122,8 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
       {tab === "timetable" && <TimetableTab canManage={canManage} />}
       {tab === "exam-timetable" && <ExamTimetableTab canManage={canManage} />}
       {tab === "exam-auto-generator" && <ExamAutoGeneratorTab canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
+      {tab === "knec-studio" && <KnecCandidateStudio canManage={canManage} />}
+      {tab === "moe-returns" && <MoeReturnsClientTab canManage={canManage} />}
       {tab === "lessons" && <LessonsTab />}
       {tab === "computation" && <ComputationDashboardClient canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
       {tab === "reports" && <ReportBuilderClient canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}

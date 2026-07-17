@@ -477,6 +477,17 @@ model Tenant {
   storageArchiveTiers          StorageArchiveTier[]   @relation("StorageArchiveTiers")
   bundiOcrQuotas               BundiOcrTelemetryAndQuota[] @relation("BundiOcrQuotas")
   bundiScanOrders              BundiScanTopUpOrder[]  @relation("BundiScanOrders")
+  moeReturns                   MoeStatutoryReturn[]   @relation("MoeReturns")
+  treasuryChecks               TreasuryCheckAndBankSlip[] @relation("TreasuryChecks")
+  studentPocketWallets         StudentPocketWallet[]  @relation("StudentPocketWallets")
+  boardingExeatPasses          BoardingExeatPass[]    @relation("BoardingExeatPasses")
+  infirmaryDosageLogs          InfirmaryDosageLog[]   @relation("InfirmaryDosageLogs")
+  knecCandidateRegistrations   KnecCandidateRegistration[] @relation("KnecCandidateRegistrations")
+  schoolTournamentTrips        SchoolTournamentTrip[] @relation("SchoolTournamentTrips")
+  teacherRecordsOfWork         TeacherRecordOfWork[]  @relation("TeacherRecordsOfWork")
+  ptaConsultationSlots         PtaConsultationSlot[]  @relation("PtaConsultationSlots")
+  bomGovernanceDocuments       BomGovernanceDocument[] @relation("BomGovernanceDocuments")
+  lostAndFoundItems            LostAndFoundItem[]     @relation("LostAndFoundItems")
 
   @@index([osKey])
 }
@@ -490,6 +501,8 @@ model StaffProfile {
   tscNumber        String? // Teachers Service Commission no.
   nationalId       String?
   kraPin           String?
+  nssfNo           String? // NSSF statutory number
+  nhifNo           String? // SHIF / NHIF statutory number
   qualifications   String? // "B.Ed (Maths/Physics), Kenyatta University"
   employmentDate   String? // YYYY-MM-DD
   contractType     String   @default("PERMANENT") // PERMANENT | CONTRACT | BOM | INTERN
@@ -4607,6 +4620,8 @@ model Student {
   // Government/registration identifiers (Kenya).
   upiNumber          String? // NEMIS/UPI assessment number
   birthCertNo        String?
+  specialNeedsCode   String? // MOE special needs code
+  pocketWallet       StudentPocketWallet? @relation("StudentPocketWallet")
 
   classId      String?
   schoolClass  SchoolClass? @relation(fields: [classId], references: [id], onDelete: SetNull)
@@ -8468,5 +8483,261 @@ model FeatureReleaseControl {
   updatedAt                DateTime @updatedAt
 
   @@index([status, featureKey])
+}
+
+// ---------------------------------------------------------------------------
+// 12 Next-Gen Kenyan School Management Extension Models (2026-07-18)
+// ---------------------------------------------------------------------------
+
+// Idea 2: Statutory MOE Termly Statistical Returns (`Form A / Form B`)
+model MoeStatutoryReturn {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation("MoeReturns", fields: [tenantId], references: [id], onDelete: Cascade)
+  termKey          String   // e.g. "2026-T2"
+  returnType       String   // FORM_A | FORM_B
+  totalBoys        Int      @default(0)
+  totalGirls       Int      @default(0)
+  totalTeachers    Int      @default(0)
+  classroomCount   Int      @default(0)
+  textbookCount    Int      @default(0)
+  crowdingIndexPct Int      @default(0) // percentage crowding vs ideal 45/class
+  textbookRatioStr String   @default("1:1") // e.g. "1:2"
+  status           String   @default("DRAFT") // DRAFT | SUBMITTED
+  submittedAt      DateTime?
+  createdAt        DateTime @default(now())
+
+  @@unique([tenantId, termKey, returnType])
+  @@index([tenantId])
+}
+
+// Idea 3: Post-Dated Checks & Bank Deposit Clearing Grid
+model TreasuryCheckAndBankSlip {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation("TreasuryChecks", fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId       String?
+  guardianId      String?
+  checkOrSlipNo   String   // unique per tenant
+  bankName        String   // KCB | Equity | Cooperative | Family
+  maturityDate    DateTime
+  amountKes       Int
+  status          String   @default("PENDING_CLEARANCE") // PENDING_CLEARANCE | CLEARED | BOUNCED
+  reminderSentAt  DateTime?
+  clearedAt       DateTime?
+  clearedBy       String?
+  createdAt       DateTime @default(now())
+
+  @@unique([tenantId, checkOrSlipNo])
+  @@index([tenantId, status, maturityDate])
+}
+
+// Idea 4: Student Tuck-Shop Pocket Money Wallet
+model StudentPocketWallet {
+  id                String   @id @default(cuid())
+  tenantId          String
+  tenant            Tenant   @relation("StudentPocketWallets", fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId         String   @unique
+  student           Student  @relation("StudentPocketWallet", fields: [studentId], references: [id], onDelete: Cascade)
+  balanceKes        Int      @default(0)
+  totalDepositedKes Int      @default(0)
+  totalSpentKes     Int      @default(0)
+  isFrozen          Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+  transactions      PocketWalletTransaction[]
+
+  @@index([tenantId])
+}
+
+model PocketWalletTransaction {
+  id          String              @id @default(cuid())
+  walletId    String
+  wallet      StudentPocketWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  tenantId    String
+  studentId   String
+  type        String              // DEPOSIT | SPEND | REFUND
+  amountKes   Int
+  description String
+  performedBy String
+  createdAt   DateTime            @default(now())
+
+  @@index([walletId, createdAt])
+  @@index([tenantId, studentId])
+}
+
+// Idea 5: Digital Boarding Exeat & Weekend Outing Pass
+model BoardingExeatPass {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  tenant             Tenant   @relation("BoardingExeatPasses", fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId          String
+  studentName        String
+  passNo             String   @unique // e.g. EXP-0012
+  reason             String
+  departureTime      DateTime
+  expectedReturnTime DateTime
+  actualDepartureTime DateTime?
+  actualReturnTime    DateTime?
+  status             String   @default("PENDING") // PENDING | APPROVED | REJECTED | OFF_CAMPUS | RETURNED | OVERSTAYED
+  approvedBy         String?
+  gateCheckedOutBy   String?
+  gateCheckedInBy    String?
+  qrDataUrl          String?
+  createdAt          DateTime @default(now())
+
+  @@index([tenantId, status])
+  @@index([studentId, status])
+}
+
+// Idea 6: Infirmary Nurse Daily Medication Roll-Call Ledger
+model InfirmaryDosageLog {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation("InfirmaryDosageLogs", fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId        String
+  studentName      String
+  medicationPlanId String?
+  doseName         String   // e.g. "Amoxicillin 500mg" or "Paracetamol"
+  scheduledTime    String   // Morning (8:00 AM) | Lunch (1:00 PM) | Evening (6:00 PM)
+  administeredAt   DateTime?
+  administeredBy   String?
+  status           String   @default("PENDING") // PENDING | ADMINISTERED | MISSED | REFUSED
+  notes            String?
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId, createdAt, status])
+  @@index([studentId])
+}
+
+// Idea 7: KNEC / KJSEA National Candidate Index Studio (`By Admission or Exam Merit`)
+model KnecCandidateRegistration {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation("KnecCandidateRegistrations", fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId        String
+  studentName      String
+  admissionNo      String
+  knecCentreCode   String   // e.g. "20401001"
+  candidateType    String   // KCSE | KJSEA
+  indexNumber      String   // e.g. "20401001/001"
+  photo300x300Url  String?
+  placementExamId  String?  // when ordered by exam merit
+  meritRank        Int?     // rank in the placement exam
+  status           String   @default("REGISTERED") // REGISTERED | EXPORTED
+  createdAt        DateTime @default(now())
+
+  @@unique([tenantId, knecCentreCode, indexNumber])
+  @@index([tenantId, candidateType, indexNumber])
+}
+
+// Idea 8: Co-Curricular Sports & Tournament Trip Organizer
+model SchoolTournamentTrip {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation("SchoolTournamentTrips", fields: [tenantId], references: [id], onDelete: Cascade)
+  title            String   // e.g. "County Rugby Championship at Nakuru High"
+  venue            String
+  eventDate        DateTime
+  transportRouteId String?
+  perDiemKes       Int      @default(0)
+  status           String   @default("PLANNED") // PLANNED | IN_PROGRESS | COMPLETED
+  createdAt        DateTime @default(now())
+  participants     TournamentParticipant[]
+
+  @@index([tenantId, eventDate])
+}
+
+model TournamentParticipant {
+  id                 String               @id @default(cuid())
+  tripId             String
+  trip               SchoolTournamentTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tenantId           String
+  studentId          String
+  studentName        String
+  feeClearanceOk     Boolean              @default(true)
+  parentConsentStatus String              @default("PENDING") // PENDING | CONSENTED | DENIED
+  busSeatNo          String?
+  createdAt          DateTime             @default(now())
+
+  @@unique([tripId, studentId])
+  @@index([tenantId, tripId])
+}
+
+// Idea 9: Teacher Record of Work Covered (`MOE QASO Inspection Tracker`)
+model TeacherRecordOfWork {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation("TeacherRecordsOfWork", fields: [tenantId], references: [id], onDelete: Cascade)
+  teacherId        String
+  teacherName      String
+  subjectId        String
+  classId          String
+  strandName       String
+  substrandName    String
+  weekNumber       Int
+  dateCovered      DateTime
+  status           String   @default("COVERED") // COVERED | BEHIND_SCHEDULE
+  supervisorComment String?
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId, teacherId, weekNumber])
+  @@index([tenantId, subjectId, classId])
+}
+
+// Idea 10: Academic Consultation / PTA Day Slot Booking Portal
+model PtaConsultationSlot {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  tenant               Tenant   @relation("PtaConsultationSlots", fields: [tenantId], references: [id], onDelete: Cascade)
+  teacherId            String
+  teacherName          String
+  slotDate             DateTime
+  startTime            String   // e.g. "10:00 AM"
+  endTime              String   // e.g. "10:15 AM"
+  isBooked             Boolean  @default(false)
+  bookedByGuardianId   String?
+  bookedByStudentId    String?
+  bookedTopic          String?
+  createdAt            DateTime @default(now())
+
+  @@unique([tenantId, teacherId, slotDate, startTime])
+  @@index([tenantId, isBooked, slotDate])
+}
+
+// Idea 11: BOM & PA Board of Management Document Room
+model BomGovernanceDocument {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation("BomGovernanceDocuments", fields: [tenantId], references: [id], onDelete: Cascade)
+  title            String   // e.g. "Term 2 Master Budget & CAPEX Proposal"
+  category         String   // FINANCIAL_REPORT | AUDIT | CAPEX_PROPOSAL | MINUTES
+  fileUrl          String
+  uploadedBy       String
+  requiresVote     Boolean  @default(false)
+  votesYes         Int      @default(0)
+  votesNo          Int      @default(0)
+  status           String   @default("OPEN") // OPEN | APPROVED | REJECTED
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId, category, status])
+}
+
+// Idea 12: Campus Lost & Found Photo Register
+model LostAndFoundItem {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  tenant               Tenant   @relation("LostAndFoundItems", fields: [tenantId], references: [id], onDelete: Cascade)
+  title                String   // e.g. "Blue school sweater, Size M"
+  description          String
+  category             String   // UNIFORM | BOOK | ELECTRONIC | OTHER
+  locationFound        String   // e.g. "Form 2 East classroom"
+  photoUrl             String?
+  status               String   @default("UNCLAIMED") // UNCLAIMED | CLAIMED
+  foundBy              String
+  claimedByStudentId   String?
+  claimedAt            DateTime?
+  createdAt            DateTime @default(now())
+
+  @@index([tenantId, status, createdAt])
 }
 
