@@ -331,6 +331,8 @@ export const TENANT_OWNED_MODELS = [
   "supportImpersonationLog",
   "tenantSmsTelemetry",
   "storageArchiveTier",
+  "bundiOcrTelemetryAndQuota",
+  "bundiScanTopUpOrder",
   // NOTE: "complianceRequest" is DELIBERATELY NOT tenant-owned — NEYO Ops's
   // own real compliance queue (`listComplianceRequests()` in
   // founder-dashboard.service.ts) genuinely lists EVERY tenant's requests

@@ -314,7 +314,7 @@ export function ExamPaperTidyingModal({
                   Bundi Intelligent Engine scanning and structuring handwritten exam…
                 </p>
                 <p className="text-xs text-navy-500">
-                  Enhancing contrast → Running local Tesseract OCR → Segmenting numbering → Extracting mark values
+                  Enhancing contrast → Running local Bundi OCR Engine → Segmenting numbering → Extracting mark values
                 </p>
               </div>
             )}

@@ -345,7 +345,7 @@ export function MarkSheetModal({
                   Bundi Intelligent Engine scanning sheet & detecting deltas…
                 </p>
                 <p className="text-xs text-navy-500">
-                  Enhancing contrast → Running local Tesseract OCR → Aligning columns → Matching admission numbers
+                  Enhancing contrast → Running local Bundi OCR Engine → Aligning columns → Matching admission numbers
                 </p>
               </div>
             )}
