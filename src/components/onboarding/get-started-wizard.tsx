@@ -291,14 +291,23 @@ export function GetStartedWizard({ fromDemo = false, osKey = "school", quoteRequ
                   </div>
                 </div>
                 {(instantPriceLoading || instantPrice) && (
-                  <div className="mt-2 rounded-2xl border border-green-200/70 bg-green-50/60 px-4 py-3 text-sm dark:border-green-900 dark:bg-green-900/10">
+                  <div className="mt-2 rounded-2xl border border-green-200/70 bg-green-50/60 p-4 text-sm dark:border-green-900 dark:bg-green-900/10 transition-all">
                     {instantPriceLoading ? (
-                      <span className="text-navy-500 dark:text-navy-400">Calculating your real price…</span>
+                      <span className="text-navy-500 dark:text-navy-400">Calculating custom capacity &amp; modular estimates…</span>
                     ) : (
-                      <>
-                        <span className="font-bold text-green-700 dark:text-green-400">{formatKES(instantPrice!.monthlyPriceKes)}/month</span>
-                        <span className="ml-1 text-navy-500 dark:text-navy-400">— every NEYO feature included, no setup fee.</span>
-                      </>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold uppercase tracking-wider text-green-800 dark:text-green-300">
+                            Custom Pricing Estimated &amp; Locked (1-Month Free Trial)
+                          </span>
+                          <span className="select-none blur-sm font-black text-green-800 dark:text-green-300 font-mono text-base">
+                            {formatKES(instantPrice!.monthlyPriceKes)}/term
+                          </span>
+                        </div>
+                        <p className="text-xs text-navy-600 dark:text-navy-300 leading-relaxed">
+                          Your custom Capacity Complete ({formatKES(instantPrice!.monthlyPriceKes)}) and Modular User/Module quotes are calculated and preserved! Launch your <strong>1-Month Free Trial</strong> to experience all modules. Once inside your dashboard, go to <strong>Settings → Billing</strong> to unblur your pricing and choose which model suits your school best.
+                        </p>
+                      </div>
                     )}
                   </div>
                 )}

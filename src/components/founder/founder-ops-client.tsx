@@ -61,8 +61,9 @@ import { PlatformMaintenanceOpsTab } from "@/components/founder/platform-mainten
 import { StorageArchiveTiersOpsTab } from "@/components/founder/storage-archive-tiers-ops-tab";
 import { FeatureReleaseControlsTab } from "@/components/founder/feature-release-controls-tab";
 import { BundiOcrConfigTab } from "@/components/founder/bundi-ocr-config-tab";
+import { TrialLimitsOpsTab } from "@/components/founder/trial-limits-ops-tab";
 
-const TABS = ["Overview", "Founder Dashboard", "Demo Requests", "Diagnostic Replay", "Maintenance Ops", "Release Whitelists", "Bundi OCR Quotas", "Unit Economics", "Build log", "Metrics", "Cadence", "Interviews", "Platform Flags", "Feature Toggles", "Revenue Grants", "Custom Feature Requests", "Discount Campaigns", "Influencer Codes", "Pathway Guide", "Revenue Ops", "Pricing Engine", "Storage Intelligence", "Storage Archive Tiers", "Developer Center", "Bundi Import", "Curriculum Library", "Business Operations", "Ecosystem Trends", "Team & Access"] as const;
+const TABS = ["Overview", "Founder Dashboard", "Demo Requests", "Diagnostic Replay", "Maintenance Ops", "Trial Limits", "Release Whitelists", "Bundi OCR Quotas", "Unit Economics", "Build log", "Metrics", "Cadence", "Interviews", "Platform Flags", "Feature Toggles", "Revenue Grants", "Custom Feature Requests", "Discount Campaigns", "Influencer Codes", "Pathway Guide", "Revenue Ops", "Pricing Engine", "Storage Intelligence", "Storage Archive Tiers", "Developer Center", "Bundi Import", "Curriculum Library", "Business Operations", "Ecosystem Trends", "Team & Access"] as const;
 type Tab = (typeof TABS)[number];
 
 type Dashboard = {
@@ -807,6 +808,7 @@ export function FounderOpsClient() {
       {tab === "Demo Requests" && <DemoRequestsOpsTab />}
       {tab === "Diagnostic Replay" && <SupportImpersonationOpsTab />}
       {tab === "Maintenance Ops" && <PlatformMaintenanceOpsTab />}
+      {tab === "Trial Limits" && <TrialLimitsOpsTab />}
       {tab === "Release Whitelists" && <FeatureReleaseControlsTab />}
       {tab === "Bundi OCR Quotas" && <BundiOcrConfigTab />}
       {tab === "Storage Archive Tiers" && <StorageArchiveTiersOpsTab />}

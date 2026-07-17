@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { DEFAULT_PLAN_KEY, type PlanLimits } from "@/lib/core/plans";
 import { getPlanFromCatalog, getPricingCatalog } from "@/lib/services/pricing-catalog.service";
 import { ensureSubscription } from "@/lib/services/billing.service";
+import { getTrialLimitsConfig } from "@/lib/services/trial-limits.service";
 
 /** Current billing period key, e.g. "2026-T2" (rough term mapping). */
 export function currentPeriodKey(now = new Date()): string {
@@ -48,6 +49,22 @@ async function getLimits(tenantId: string) {
     }
   } catch {
     smsTopUpLimit = 0;
+  }
+
+  // If subscription is in 30-Day Free Trial (`sub.status === "TRIAL"`), enforce live NEYO Ops trial limits (`Requirement 3`)
+  if (sub.status === "TRIAL") {
+    const trialCfg = await getTrialLimitsConfig();
+    return {
+      plan: {
+        ...plan,
+        limits: {
+          students: trialCfg.students,
+          staff: trialCfg.staff,
+          smsPerTerm: smsTopUpLimit,
+        },
+      },
+      sub,
+    };
   }
 
   return { plan: { ...plan, limits: { ...plan.limits, smsPerTerm: smsTopUpLimit } }, sub };

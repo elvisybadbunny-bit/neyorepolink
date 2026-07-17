@@ -637,8 +637,12 @@ export async function setDiscretionaryDecreaseDelegate(
   return { userId: target.id, canApplyDiscretionaryDecrease };
 }
 
-/** Recalculate and update the exact active term price for a school on MODULAR_USERS_V1 when modules or users change. */
-export async function recalculateTenantModularPricing(tenantId: string) {
+/** Recalculate and update the exact active term price for a school on MODULAR_USERS_V1 when modules or users change, enforcing midpoint 50% vs 100% end-month proration. */
+export async function recalculateTenantModularPricing(
+  tenantId: string,
+  toggledModuleKey?: string,
+  toggledEnabled?: boolean
+) {
   const sub = await db.subscription.findUnique({ where: { tenantId } });
   if (!sub || sub.pricingMode !== "MODULAR_USERS_V1") return sub;
 
@@ -657,6 +661,35 @@ export async function recalculateTenantModularPricing(tenantId: string) {
     where: { tenantId },
     data: { sizeBasedPriceKes: res.termTotalKes },
   });
+
+  // If a module was enabled mid-term/mid-month, calculate 50% vs 100% end-month ledger proration
+  if (toggledModuleKey && toggledEnabled && sub.status === "ACTIVE") {
+    const now = new Date();
+    const start = sub.currentPeriodStart || now;
+    const end = sub.currentPeriodEnd || new Date(now.getTime() + 120 * 24 * 3600_000);
+    const totalDuration = end.getTime() - start.getTime();
+    const elapsed = now.getTime() - start.getTime();
+    const isPastMidpoint = totalDuration > 0 && elapsed > (totalDuration / 2);
+
+    const moduleRate = config.modularPerModuleRateKes || 1500;
+    const prorationChargeKes = isPastMidpoint ? Math.round(moduleRate / 2) : moduleRate;
+
+    // Stamp line item on the active end-month / term invoice ledger
+    const currentInvoice = await db.invoice.findFirst({
+      where: { tenantId, status: { in: ["UNPAID", "PARTIAL", "PAID"] } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (currentInvoice) {
+      await db.invoice.update({
+        where: { id: currentInvoice.id },
+        data: {
+          totalKes: currentInvoice.totalKes + prorationChargeKes,
+          description: `${currentInvoice.description} + [Module Unlock: ${toggledModuleKey.toUpperCase()} (${isPastMidpoint ? "50% Mid-Period Charge" : "100% Full Period Charge"}) @ KES ${prorationChargeKes}]`,
+        },
+      });
+    }
+  }
+
   return updated;
 }
 
