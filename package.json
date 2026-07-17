@@ -10,9 +10,10 @@
     "lint": "next lint",
     "prisma:generate": "./node_modules/.bin/prisma generate",
     "prisma:migrate": "./node_modules/.bin/prisma migrate dev",
-    "migrate:deploy": "./node_modules/.bin/prisma migrate deploy",
+    "migrate:deploy": "node scripts/auto-resolve-failed-migrations.js && ./node_modules/.bin/prisma migrate deploy",
+    "db:heal": "node scripts/auto-resolve-failed-migrations.js",
     "db:seed": "tsx prisma/seed.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit",
     "worker": "tsx scripts/worker.ts",
     "test": "npm run test:roles",
     "test:roles": "tsx scripts/test-roles.ts"
