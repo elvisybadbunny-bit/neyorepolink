@@ -38,7 +38,7 @@ export async function listSavedLearningVideos(user: SessionUser, q?: string) {
   return withTenant(user.tenantId, async () => {
     const s = q?.trim();
     const rows = await tenantDb().learningVideo.findMany({
-      where: s ? { OR: [{ title: { contains: s } }, { description: { contains: s } }, { channelTitle: { contains: s } }] } : {},
+      where: s ? { OR: [{ title: { contains: s, mode: "insensitive" } }, { description: { contains: s, mode: "insensitive" } }, { channelTitle: { contains: s, mode: "insensitive" } }] } : {},
       orderBy: { updatedAt: "desc" },
       take: 80,
     });

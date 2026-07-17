@@ -23,9 +23,26 @@ export const syllabusUpdateSchema = z.object({
   notes: z.string().trim().max(500).optional().or(z.literal("")),
 });
 
+export const syllabusDeleteSchema = z.object({
+  action: z.literal("delete"),
+  id: z.string().min(1),
+});
+
+export const syllabusSyncSchema = z.object({
+  action: z.literal("sync"),
+  classId: z.string().min(1),
+  subjectId: z.string().min(1),
+  strandId: z.string().optional().or(z.literal("")),
+  substrandId: z.string().optional().or(z.literal("")),
+  topicName: z.string().optional().or(z.literal("")),
+  lessonPlanId: z.string().optional().or(z.literal("")),
+});
+
 export const syllabusActionSchema = z.discriminatedUnion("action", [
   syllabusCreateSchema,
   syllabusUpdateSchema,
+  syllabusDeleteSchema,
+  syllabusSyncSchema,
 ]);
 
 export type SyllabusCreateInput = z.infer<typeof syllabusCreateSchema>;

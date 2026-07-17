@@ -64,6 +64,13 @@ const STAFF: Array<{
     role: "PRINCIPAL",
   },
   {
+    neyoLoginId: "KHU10",
+    fullName: "Karibu Founder",
+    phone: phone("0712 345 670"),
+    email: "founder@karibuhigh.ac.ke",
+    role: "FOUNDER",
+  },
+  {
     neyoLoginId: "KHU2",
     fullName: "Achieng Mary",
     phone: phone("0733 221 100"),
@@ -208,6 +215,13 @@ async function main() {
       email: "bursar@uhuruacademy.ac.ke",
       role: "BURSAR",
     },
+    {
+      neyoLoginId: "UA-U-000003",
+      fullName: "Uhuru Founder",
+      phone: phone("0790 111 223"),
+      email: "founder@uhuruacademy.ac.ke",
+      role: "FOUNDER",
+    },
   ];
 
   for (const s of tenant2Staff) {
@@ -217,12 +231,61 @@ async function main() {
       create: { tenantId: tenant2.id, passwordHash, ...s },
     });
   }
-  // Uhuru is a day school -> defaults (Hostel/Transport/LMS off).
   await initialiseModules(tenant2.id);
 
-  // A.2.7: ensure both schools have a per-tenant encryption key.
+  // ---- Tenant 3: Mji Mpya Secondary School ----
+  const tenant3 = await db.tenant.upsert({
+    where: { slug: "mji-mpya-secondary" },
+    update: { name: "Mji Mpya Secondary School", county: "Kiambu" },
+    create: {
+      name: "Mji Mpya Secondary School",
+      slug: "mji-mpya-secondary",
+      county: "Kiambu",
+      phone: phone("0711 999 888"),
+      email: "office@mjimpya.ac.ke",
+    },
+  });
+  await db.user.upsert({
+    where: { neyoLoginId: "MM-U-000001" },
+    update: { fullName: "Mji Mpya Principal", phone: phone("0711 999 888"), email: "principal@mjimpya.ac.ke", role: "PRINCIPAL", passwordHash },
+    create: { tenantId: tenant3.id, neyoLoginId: "MM-U-000001", fullName: "Mji Mpya Principal", phone: phone("0711 999 888"), email: "principal@mjimpya.ac.ke", role: "PRINCIPAL", passwordHash },
+  });
+  await db.user.upsert({
+    where: { neyoLoginId: "MM-U-000002" },
+    update: { fullName: "Mji Mpya Founder", phone: phone("0711 999 889"), email: "founder@mjimpya.ac.ke", role: "FOUNDER", passwordHash },
+    create: { tenantId: tenant3.id, neyoLoginId: "MM-U-000002", fullName: "Mji Mpya Founder", phone: phone("0711 999 889"), email: "founder@mjimpya.ac.ke", role: "FOUNDER", passwordHash },
+  });
+  await initialiseModules(tenant3.id);
+
+  // ---- Tenant 4: Mombasa Coast Senior School ----
+  const tenant4 = await db.tenant.upsert({
+    where: { slug: "mombasa-coast-senior" },
+    update: { name: "Mombasa Coast Senior School", county: "Mombasa" },
+    create: {
+      name: "Mombasa Coast Senior School",
+      slug: "mombasa-coast-senior",
+      county: "Mombasa",
+      phone: phone("0722 888 777"),
+      email: "office@mombasacoast.ac.ke",
+    },
+  });
+  await db.user.upsert({
+    where: { neyoLoginId: "MC-U-000001" },
+    update: { fullName: "Mombasa Coast Principal", phone: phone("0722 888 777"), email: "principal@mombasacoast.ac.ke", role: "PRINCIPAL", passwordHash },
+    create: { tenantId: tenant4.id, neyoLoginId: "MC-U-000001", fullName: "Mombasa Coast Principal", phone: phone("0722 888 777"), email: "principal@mombasacoast.ac.ke", role: "PRINCIPAL", passwordHash },
+  });
+  await db.user.upsert({
+    where: { neyoLoginId: "MC-U-000002" },
+    update: { fullName: "Mombasa Coast Founder", phone: phone("0722 888 778"), email: "founder@mombasacoast.ac.ke", role: "FOUNDER", passwordHash },
+    create: { tenantId: tenant4.id, neyoLoginId: "MC-U-000002", fullName: "Mombasa Coast Founder", phone: phone("0722 888 778"), email: "founder@mombasacoast.ac.ke", role: "FOUNDER", passwordHash },
+  });
+  await initialiseModules(tenant4.id);
+
+  // A.2.7: ensure all schools have a per-tenant encryption key.
   await ensureTenantDek(tenant.id);
   await ensureTenantDek(tenant2.id);
+  await ensureTenantDek(tenant3.id);
+  await ensureTenantDek(tenant4.id);
 
   // T.4 — one-time, idempotent backfill: stamp every real existing tenant's
   // idPrefix from its current prefixFromSlug(slug) value (Karibu -> "KH",
@@ -372,11 +435,11 @@ async function main() {
   // A.5: put schools on plans + seed some usage so the billing page has data.
   const sysActor = { id: "seed", fullName: "Seed" };
   await subscribeToPlan(tenant.id, sysActor, "pro"); // Karibu = Pro
-  await subscribeToPlan(tenant2.id, sysActor, "free_karibu"); // Uhuru = Free
+  await subscribeToPlan(tenant2.id, sysActor, "msingi"); // Uhuru = Msingi (TRIAL)
   await recordUsage(tenant.id, "smsPerTerm", 1240);
   await recordUsage(tenant.id, "students", 312);
   await recordUsage(tenant.id, "staff", 28);
-  console.log("✓ Seeded subscriptions: Karibu=Pro, Uhuru=Free Karibu");
+  console.log("✓ Seeded subscriptions: Karibu=Pro, Uhuru=Msingi (30-Day Free Trial)");
 
   // Part V — Capacity-Based Pricing 2.0 (founder-confirmed 2026-07-06,
   // "migrate everyone now"). Real, idempotent: ensures the live NEYO Ops

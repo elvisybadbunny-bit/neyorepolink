@@ -52,13 +52,13 @@ export function DialogContent({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[90] flex min-h-screen items-center justify-center overflow-y-auto p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
     >
       {/* Frosted backdrop */}
       <div
-        className="absolute inset-0 bg-navy-950/40 backdrop-blur-sm transition-opacity duration-200"
+        className="fixed inset-0 bg-navy-950/60 backdrop-blur-sm transition-opacity duration-200"
         onClick={() => onOpenChange?.(false)}
         aria-hidden="true"
       />

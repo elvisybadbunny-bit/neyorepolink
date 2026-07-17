@@ -37,7 +37,7 @@ export default async function TermsPage() {
 
       <h2 className="text-lg font-semibold text-navy-900 dark:text-navy-50">Plans &amp; payments</h2>
       <p>
-        NEYO offers Free Karibu, Pro and Elite plans. Paid plans are billed per term in KES via
+        NEYO offers a 30-Day Free Trial (1-Month Free Trial) across the operational system for new signups, after which schools continue on our capacity-based or Msingi / Pro subscription plans if they feel the system is operational to them. Paid plans are billed per term in KES via
         M-Pesa. Soft usage limits apply; exceeding them may prompt an upgrade. We honour the price
         agreed at sign-up (price grandfathering). Missing a payment starts a grace period during
         which your data is preserved.

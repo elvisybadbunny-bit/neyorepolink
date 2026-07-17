@@ -7,7 +7,7 @@ import { NextRequest } from "next/server";
 import { requirePermission } from "@/lib/core/session";
 import { ok, fail, handleError } from "@/lib/api/respond";
 import { lessonObservationSchema } from "@/lib/validations/academics";
-import { recordLessonObservation, listLessonObservations } from "@/lib/services/academics.service";
+import { recordLessonObservation, listLessonObservations, deleteLessonObservation } from "@/lib/services/academics.service";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +24,21 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requirePermission("academics.view"); // teachers have view; own-scoped in service
-    const input = lessonObservationSchema.parse(await req.json());
+    const user = await requirePermission("academics.view");
+    const body = await req.json().catch(() => ({}));
+    if (body.action === "delete") return ok(await deleteLessonObservation(user, body.id || ""));
+    const input = lessonObservationSchema.parse(body);
     return ok(await recordLessonObservation(user, input));
+  } catch (e) {
+    return handleError(e);
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const user = await requirePermission("academics.view");
+    const id = req.nextUrl.searchParams.get("id") || "";
+    return ok(await deleteLessonObservation(user, id));
   } catch (e) {
     return handleError(e);
   }

@@ -31,22 +31,36 @@ const COLUMNS = 3;
 const ROWS = 6;
 const PER_PAGE = COLUMNS * ROWS;
 
+// A4 = 595.28 x 841.89 pt. With 20pt padding, height = 801.89pt.
+// Fixed row height = Math.floor(801.89 / 6) = 133pt per label cell.
 const s = StyleSheet.create({
-  page: { padding: 16, fontFamily: "Helvetica" },
-  grid: { flexDirection: "row", flexWrap: "wrap" },
+  page: { padding: 20, fontFamily: "Helvetica", flexDirection: "column" },
+  grid: { flexDirection: "row", flexWrap: "wrap", width: "100%", height: 133 * ROWS },
   label: {
-    width: `${100 / COLUMNS}%`,
-    height: `${100 / ROWS}%`,
-    borderWidth: 1,
+    width: "33.33%",
+    height: 133,
+    borderWidth: 0.75,
     borderColor: "#cbd5e1",
     borderStyle: "dashed",
     alignItems: "center",
     justifyContent: "center",
-    padding: 6,
+    padding: 8,
+    boxSizing: "border-box",
   },
-  qr: { width: 46, height: 46, marginBottom: 3 },
-  title: { fontSize: 6.5, textAlign: "center", color: "#1c2740", fontFamily: "Helvetica-Bold" },
-  meta: { fontSize: 6, textAlign: "center", color: "#677fab", marginTop: 1 },
+  qrWrapper: {
+    width: 54,
+    height: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  qr: {
+    width: 54,
+    height: 54,
+    objectFit: "contain", // guarantees aspect ratio 1:1 square is never deformed or stretched
+  },
+  title: { fontSize: 7, textAlign: "center", color: "#1c2740", fontFamily: "Helvetica-Bold", maxHeight: 20, overflow: "hidden" },
+  meta: { fontSize: 6.5, textAlign: "center", color: "#677fab", marginTop: 2 },
 });
 
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -64,7 +78,9 @@ export async function renderLibraryLabelsPdf(labels: LibraryLabel[]): Promise<Bu
           <View style={s.grid}>
             {pageLabels.map((l, i) => (
               <View key={i} style={s.label}>
-                <Image style={s.qr} src={l.qrDataUrl} />
+                <View style={s.qrWrapper}>
+                  <Image style={s.qr} src={l.qrDataUrl} />
+                </View>
                 <Text style={s.title}>{l.bookTitle.length > 28 ? `${l.bookTitle.slice(0, 26)}…` : l.bookTitle}</Text>
                 <Text style={s.meta}>Copy {l.copyNo} · {l.code}</Text>
               </View>

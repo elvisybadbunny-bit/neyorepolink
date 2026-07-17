@@ -9,6 +9,7 @@ import { HelpOverlay } from "./help-overlay";
 import { PwaProvider } from "@/components/offline/pwa-provider";
 import { SeasonalThemeBanner } from "./seasonal-theme-banner";
 import { AliveModeLayer } from "./alive-mode-layer";
+import { PlatformMaintenanceAndDiagnosticBanner } from "./maintenance-banner";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,6 +48,7 @@ export function AppShell({
       <HelpOverlay />
       <PwaProvider />
       <AliveModeLayer />
+      <PlatformMaintenanceAndDiagnosticBanner />
       <Topbar
         tenantName={tenantName}
         tenantLogoUrl={tenantLogoUrl}

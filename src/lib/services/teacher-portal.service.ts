@@ -45,11 +45,18 @@ async function audit(user: SessionUser, action: string, entityType: string, enti
  */
 export async function teacherClassIds(user: SessionUser): Promise<string[] | null> {
   if (!isTeachingRole(user)) return null; // leadership: unrestricted
-  const [own, slots] = await Promise.all([
-    tenantDb().schoolClass.findMany({ where: { classTeacherId: user.id }, select: { id: true } }),
-    tenantDb().timetableSlot.findMany({ where: { teacherId: user.id }, select: { classId: true } }),
+  const tdb = tenantDb();
+  const [own, slots, needs] = await Promise.all([
+    tdb.schoolClass.findMany({ where: { classTeacherId: user.id }, select: { id: true } }),
+    tdb.timetableSlot.findMany({ where: { teacherId: user.id }, select: { classId: true } }),
+    tdb.classSubjectNeed.findMany({ where: { teacherId: user.id }, select: { classId: true } }),
   ]);
-  const ids = new Set<string>([...own.map((c) => c.id), ...slots.map((s) => s.classId)]);
+
+  const ids = new Set<string>([
+    ...own.map((c) => c.id),
+    ...slots.map((s) => s.classId),
+    ...needs.map((n) => n.classId),
+  ]);
   return ids.size ? [...ids] : ["__none__"];
 }
 
@@ -80,16 +87,29 @@ export async function teacherHome(user: SessionUser) {
       orderBy: [{ level: "asc" }, { stream: "asc" }],
     });
 
-    // Subjects this teacher teaches per class (from the timetable).
-    const slots = await tenantDb().timetableSlot.findMany({
-      where: { teacherId: user.id },
-      include: { subject: true },
-    });
+    const [slots, needs, allSubjects] = await Promise.all([
+      tenantDb().timetableSlot.findMany({
+        where: { teacherId: user.id },
+        include: { subject: true },
+      }),
+      tenantDb().classSubjectNeed.findMany({
+        where: { teacherId: user.id },
+      }),
+      tenantDb().subject.findMany({ select: { id: true, name: true } }),
+    ]);
+
+    const subjectNameMap = new Map(allSubjects.map((s) => [s.id, s.name]));
     const subjByClass = new Map<string, Set<string>>();
     for (const s of slots) {
       const set = subjByClass.get(s.classId) ?? new Set<string>();
       if (s.subject) set.add(s.subject.name);
       subjByClass.set(s.classId, set);
+    }
+    for (const n of needs) {
+      const set = subjByClass.get(n.classId) ?? new Set<string>();
+      const sName = subjectNameMap.get(n.subjectId);
+      if (sName) set.add(sName);
+      subjByClass.set(n.classId, set);
     }
 
     // Today's lessons (Nairobi) from the teacher's timetable.

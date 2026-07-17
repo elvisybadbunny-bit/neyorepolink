@@ -106,6 +106,10 @@ function moneyShort(n: number) {
 export default async function DashboardPage() {
   const currentUser = await getCurrentUser();
   if (!currentUser) return null;
+  if (currentUser.role === "FOUNDER" || currentUser.role === "SUPER_ADMIN") {
+    const { redirect } = await import("next/navigation");
+    redirect("/founder");
+  }
 
   const firstName = currentUser.fullName.split(" ")[0] ?? "there";
   const greeting = getTimeOfDayGreeting();

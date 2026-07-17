@@ -102,10 +102,10 @@ export async function listBooks(user: SessionUser, q?: string) {
     if (q?.trim()) {
       const s = q.trim();
       where.OR = [
-        { title: { contains: s } },
-        { author: { contains: s } },
-        { isbn: { contains: s } },
-        { category: { contains: s } },
+        { title: { contains: s, mode: "insensitive" } },
+        { author: { contains: s, mode: "insensitive" } },
+        { isbn: { contains: s, mode: "insensitive" } },
+        { category: { contains: s, mode: "insensitive" } },
       ];
     }
     const books = await tenantDb().libraryBook.findMany({

@@ -2,16 +2,14 @@
 import * as React from "react";
 
 /**
- * Z.3 — Real, dedicated print-only timetable rendering component. Used
- * exclusively by the dedicated `/print/timetable` route (which lives
- * outside the authenticated app-shell, so no chrome can ever leak in).
- *
- * Real fix (this session): the merged "LUNCH" row/column is now placed
- * from the REAL persisted TimetableSlot data (subjectCode === "LUNCH"),
- * never from `TimetableConfig.lunchStart` — that field is only ever used
- * for real elapsed-minutes-of-the-day MATH, not for deciding which real
- * period is lunch (which is actually driven by `lunchShift` at solve
- * time, and can genuinely diverge from `lunchStart`'s number).
+ * Z.3 & 2026-07-17 Print Layout Upgrade (`⌘P`):
+ * Dedicated print-only timetable rendering component matching exact founder specifications:
+ * 1. School name header right at the top (`RATIBA YA SCHOOL MWAKA 2026`) followed by Class/Teacher name (`ACHOLA ROSE`).
+ * 2. Merged non-lesson columns (`BREAK`, `LUNCH`, `ASSEMBLY`, `PREP`, `GAMES`) spanning vertically (`rowSpan={days.length}`) across Monday to Friday. Ordinary subjects (`PHY`, `MAT`) never merge vertically across days.
+ * 3. Consecutive double lessons on the same day (`PHY Form 3 Imani` in Period 7A and 7B) merged horizontally (`colSpan={2}`) across consecutive periods.
+ * 4. Bottom-left corner displays generated timestamp (`Generated on 17 Jul 2026, 23:05`), stripping out "Teacher timetable" text.
+ * 5. Bottom-right corner displays `Powered by NEYO`.
+ * 6. Edge-to-edge A4 layout (`cover the print paper edge to edge that way`).
  */
 
 interface RealSlot {
@@ -44,33 +42,100 @@ interface RealConfig {
   lunchMins?: number;
 }
 
+interface MergedNonLessonCol {
+  period: number;
+  label: string;
+  tone: "lunch" | "break";
+}
+
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-// DD.13 — real double-period merging for the printed timetable, mirroring
-// the exact same logic already applied to the live in-app timetable
-// (academics-client.tsx's computeDoubleSpanSecondHalves()): two real
-// CONSECUTIVE periods on the same real day that genuinely share every one
-// of the real fields that matter for THIS print mode should merge into
-// one printed cell, never print as two separate identical-looking boxes.
-// `mode === "teachers"` compares className (the teacher is covering the
-// SAME real class both periods); `mode === "classes"` compares
-// teacherName (the SAME real teacher covers both periods) — the two
-// fields that respectively make a genuine double honest in each context.
-// ELECTIVE_BLOCK cells already have their own distinct rendering and are
-// deliberately excluded here.
-function computeDoubleSpanSecondHalvesForPrint(grid: Map<string, RealSlot>, periodsPerDay: number, mode: "classes" | "teachers" | undefined): Set<string> {
+/**
+ * Detects which periods are school-wide non-lesson gaps or activities (`BREAK`, `LUNCH`, `ASSEMBLY`, `PREP`, `GAMES`).
+ * These columns get merged vertically across all days (`rowSpan={daysCount}`). Ordinary academic lessons (`PHY`) never merge vertically.
+ */
+function getMergedNonLessonPeriods(slots: RealSlot[], daysCount: number, config: RealConfig | null | undefined): Map<number, MergedNonLessonCol> {
+  const map = new Map<number, MergedNonLessonCol>();
+  const slotsByPeriod = new Map<number, RealSlot[]>();
+
+  for (const s of slots) {
+    if (!slotsByPeriod.has(s.period)) slotsByPeriod.set(s.period, []);
+    slotsByPeriod.get(s.period)!.push(s);
+  }
+
+  // 1. Config-driven lunch start
+  if (config?.lunchStart && typeof config.lunchStart === "number") {
+    map.set(config.lunchStart, { period: config.lunchStart, label: "LUNCH", tone: "lunch" });
+  }
+
+  // 2. Scan actual slot data for explicit LUNCH, BREAK, ASSEMBLY, PREP, RECESS, TEA
+  for (const [p, pSlots] of slotsByPeriod.entries()) {
+    if (pSlots.length === 0) continue;
+    const nonLessonKeywords = ["LUNCH", "BREAK", "SHORT BREAK", "LONG BREAK", "TEA", "TEA BREAK", "SNACK", "ASSEMBLY", "PREP", "GAMES", "RECESS"];
+    
+    // Check if slots at period p across days are non-lesson
+    const nonLessonCount = pSlots.filter((s) => {
+      const code = (s.subjectCode || "").trim().toUpperCase();
+      const name = (s.subjectName || "").trim().toUpperCase();
+      const st = (s.slotType || "").trim().toUpperCase();
+      return nonLessonKeywords.some((k) => code === k || name.includes(k) || st === k);
+    }).length;
+
+    // If all or majority of active slots at period p are non-lesson -> merge vertically
+    if (nonLessonCount > 0 && nonLessonCount >= Math.min(pSlots.length, Math.max(1, daysCount - 1))) {
+      const first = pSlots.find((s) => {
+        const c = (s.subjectCode || s.subjectName || "").trim().toUpperCase();
+        return nonLessonKeywords.some((k) => c.includes(k));
+      }) || pSlots[0];
+      const code = (first.subjectCode || first.subjectName || "BREAK").trim().toUpperCase();
+      const isLunch = code.includes("LUNCH");
+      map.set(p, { period: p, label: code, tone: isLunch ? "lunch" : "break" });
+    }
+  }
+
+  return map;
+}
+
+/**
+ * Detects consecutive double periods on the same day (`colSpan={2}`).
+ * For example, if Period 7A and Period 7B both have `PHY Form 3 Imani`, they merge horizontally into one double box.
+ */
+function computeDoubleSpanSecondHalvesForPrint(
+  grid: Map<string, RealSlot>,
+  periodsPerDay: number,
+  mode: "classes" | "teachers" | undefined,
+  mergedNonLessonMap: Map<number, MergedNonLessonCol>
+): Set<string> {
   const secondHalves = new Set<string>();
   for (let d = 1; d <= 6; d++) {
     for (let p = 1; p < periodsPerDay; p++) {
+      if (mergedNonLessonMap.has(p) || mergedNonLessonMap.has(p + 1)) continue;
       const a = grid.get(`${d}|${p}`);
       const b = grid.get(`${d}|${p + 1}`);
       if (!a || !b) continue;
       if (a.slotType === "ELECTIVE_BLOCK" || b.slotType === "ELECTIVE_BLOCK") continue;
-      if ((a.slotType ?? "ACADEMIC") !== (b.slotType ?? "ACADEMIC")) continue;
-      if ((a.subjectCode ?? null) !== (b.subjectCode ?? null)) continue;
-      if (!a.subjectCode) continue;
-      const identityField = mode === "teachers" ? "className" : "teacherName";
-      if ((a as any)[identityField] !== (b as any)[identityField]) continue;
+      
+      const aSubject = (a.subjectCode || a.subjectName || "").trim().toUpperCase();
+      const bSubject = (b.subjectCode || b.subjectName || "").trim().toUpperCase();
+      if (!aSubject || aSubject !== bSubject) continue;
+
+      if (mode === "teachers") {
+        const aClass = (a.className || "").trim().toUpperCase();
+        const bClass = (b.className || "").trim().toUpperCase();
+        if (!aClass || aClass !== bClass) continue;
+      } else if (mode === "classes") {
+        const aTeacher = (a.teacherShortCode || a.teacherName || "").trim().toUpperCase();
+        const bTeacher = (b.teacherShortCode || b.teacherName || "").trim().toUpperCase();
+        if (!aTeacher || aTeacher !== bTeacher) continue;
+      } else {
+        // Both check
+        const aClass = (a.className || "").trim().toUpperCase();
+        const bClass = (b.className || "").trim().toUpperCase();
+        const aTeacher = (a.teacherShortCode || a.teacherName || "").trim().toUpperCase();
+        const bTeacher = (b.teacherShortCode || b.teacherName || "").trim().toUpperCase();
+        if ((aClass && bClass && aClass !== bClass) || (aTeacher && bTeacher && aTeacher !== bTeacher)) continue;
+      }
+
       secondHalves.add(`${d}|${p + 1}`);
     }
   }
@@ -92,26 +157,14 @@ function formatTimetableTime(totalMinutes: number): string {
   return `${h12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-/**
- * Real elapsed-minutes math: how many minutes have elapsed by the START of
- * period `p`, accounting for any real short break(s) / long break that
- * fall strictly BEFORE it, plus how long each PRIOR period genuinely took
- * (a normal lesson period takes `lessonDurationMins`; a real LUNCH period
- * REPLACES that with `lunchMins` instead of adding to it — lunch does not
- * get a full lesson's worth of time PLUS a lunch's worth on top, it simply
- * takes as long as lunch takes). `realLunchPeriods` is the single real
- * source of truth for which period number is genuinely lunch for THIS
- * class (from the actual persisted TimetableSlot data, not the
- * `config.lunchStart` field, which can genuinely diverge under a real
- * 2-shift lunch design — see `realLunchPeriodsFromSlots()` below).
- */
-function periodStartMinutes(p: number, config: RealConfig | null | undefined, realLunchPeriods: Set<number>): number | null {
-  const dayStart = parseTimeToMinutes(config?.schoolDayStartTime) ?? 480; // default 8:00am
+function periodStartMinutes(p: number, config: RealConfig | null | undefined, mergedNonLessonMap: Map<number, MergedNonLessonCol>): number | null {
+  const dayStart = parseTimeToMinutes(config?.schoolDayStartTime) ?? 480;
   const lessonMins = config?.lessonDurationMins ?? 40;
   const lunchMins = config?.lunchMins ?? 45;
   let elapsed = dayStart;
   for (let i = 1; i < p; i++) {
-    elapsed += realLunchPeriods.has(i) ? lunchMins : lessonMins;
+    const isLunch = mergedNonLessonMap.get(i)?.tone === "lunch";
+    elapsed += isLunch ? lunchMins : lessonMins;
     if (config?.shortBreakStart === i && (config?.shortBreakMins ?? 0) > 0) elapsed += config!.shortBreakMins!;
     if (config?.shortBreak2Start === i && (config?.shortBreak2Mins ?? 0) > 0) elapsed += config!.shortBreak2Mins!;
     if (config?.longBreakStart === i && (config?.longBreakMins ?? 0) > 0) elapsed += config!.longBreakMins!;
@@ -119,83 +172,53 @@ function periodStartMinutes(p: number, config: RealConfig | null | undefined, re
   return elapsed;
 }
 
-function periodTimeRange(p: number, config: RealConfig | null | undefined, realLunchPeriods: Set<number>): string | null {
-  const start = periodStartMinutes(p, config, realLunchPeriods);
+function periodTimeRange(p: number, config: RealConfig | null | undefined, mergedNonLessonMap: Map<number, MergedNonLessonCol>): string | null {
+  const start = periodStartMinutes(p, config, mergedNonLessonMap);
   if (start == null) return null;
-  const lessonMins = realLunchPeriods.has(p) ? config?.lunchMins ?? 45 : config?.lessonDurationMins ?? 40;
-  return `${formatTimetableTime(start)}–${formatTimetableTime(start + lessonMins)}`;
+  const isLunch = mergedNonLessonMap.get(p)?.tone === "lunch";
+  const duration = isLunch ? config?.lunchMins ?? 45 : config?.lessonDurationMins ?? 40;
+  return `${formatTimetableTime(start)}–${formatTimetableTime(start + duration)}`;
 }
 
-interface NonLessonRow {
+interface NonLessonBreakRow {
   key: string;
   label: string;
   minutes: number;
-  tone: "break";
 }
 
-/** Real, config-driven BREAK rows only — breaks are never persisted as
- * real TimetableSlot rows (they're genuine gaps in the day), so config
- * remains the one real source of truth for breaks specifically. */
-function nonLessonBreakRowsForPeriod(p: number, config: RealConfig | null | undefined): NonLessonRow[] {
-  const rows: NonLessonRow[] = [];
+function nonLessonBreakRowsForPeriod(p: number, config: RealConfig | null | undefined): NonLessonBreakRow[] {
+  const rows: NonLessonBreakRow[] = [];
   if (config?.shortBreakStart === p && (config?.shortBreakMins ?? 0) > 0) {
-    rows.push({ key: `short-${p}`, label: "SHORT BREAK", minutes: config!.shortBreakMins!, tone: "break" });
+    rows.push({ key: `short-${p}`, label: "BREAK", minutes: config!.shortBreakMins! });
   }
   if (config?.shortBreak2Start === p && (config?.shortBreak2Mins ?? 0) > 0) {
-    rows.push({ key: `short2-${p}`, label: "SHORT BREAK", minutes: config!.shortBreak2Mins!, tone: "break" });
+    rows.push({ key: `short2-${p}`, label: "BREAK", minutes: config!.shortBreak2Mins! });
   }
   if (config?.longBreakStart === p && (config?.longBreakMins ?? 0) > 0) {
-    rows.push({ key: `long-${p}`, label: "LONG BREAK", minutes: config!.longBreakMins!, tone: "break" });
+    rows.push({ key: `long-${p}`, label: "LONG BREAK", minutes: config!.longBreakMins! });
   }
   return rows;
-}
-
-/** Real lunch-period detection: the single source of truth for "which
- * periods are lunch for THIS class" — scans the REAL persisted slot data
- * rather than trusting `config.lunchStart`. */
-function realLunchPeriodsFromSlots(slots: RealSlot[]): Set<number> {
-  const periods = new Set<number>();
-  for (const s of slots) {
-    if ((s.subjectCode || "").toUpperCase() === "LUNCH") periods.add(s.period);
-  }
-  return periods;
-}
-
-function lunchMinutesFor(config: RealConfig | null | undefined): number {
-  return config?.lunchMins ?? 45;
 }
 
 function subjectAbbrev(name?: string | null, code?: string | null): string {
   if (code && code.trim()) return code.trim().toUpperCase();
   if (!name) return "";
-  return name.length > 10 ? `${name.slice(0, 10)}.` : name;
+  return name.length > 12 ? `${name.slice(0, 12)}.` : name;
 }
 
-/**
- * Real, deterministic subject color-coding — same visual language the
- * founder pointed to in a real reference timetable image (Thuita School's
- * own printed G7 schedule): every distinct real subject gets its OWN
- * consistent background/text color, repeatable across every real cell of
- * that subject on the page (and, since the hash is purely a function of
- * the real subject code/name, consistent across every class/teacher page
- * in a real bulk print run too — "MAT7" is always the same blue everywhere).
- * A small, real, print-safe (not too dark, not washed out) palette; LUNCH/
- * FREE/BREAK get their own fixed real tones matching the merged-row colors
- * already used elsewhere on the page, for visual consistency.
- */
 const SUBJECT_PALETTE: { bg: string; text: string }[] = [
-  { bg: "#dbeafe", text: "#1e3a8a" }, // blue
-  { bg: "#dcfce7", text: "#14532d" }, // green
-  { bg: "#fef3c7", text: "#78350f" }, // amber
-  { bg: "#fce7f3", text: "#831843" }, // pink
-  { bg: "#ede9fe", text: "#4c1d95" }, // violet
-  { bg: "#cffafe", text: "#164e63" }, // cyan
-  { bg: "#ffedd5", text: "#7c2d12" }, // orange
-  { bg: "#e0e7ff", text: "#312e81" }, // indigo
-  { bg: "#fee2e2", text: "#7f1d1d" }, // red
-  { bg: "#d1fae5", text: "#065f46" }, // teal
-  { bg: "#fae8ff", text: "#701a75" }, // fuchsia
-  { bg: "#ecfccb", text: "#365314" }, // lime
+  { bg: "#dbeafe", text: "#1e3a8a" },
+  { bg: "#dcfce7", text: "#14532d" },
+  { bg: "#fef3c7", text: "#78350f" },
+  { bg: "#fce7f3", text: "#831843" },
+  { bg: "#ede9fe", text: "#4c1d95" },
+  { bg: "#cffafe", text: "#164e63" },
+  { bg: "#ffedd5", text: "#7c2d12" },
+  { bg: "#e0e7ff", text: "#312e81" },
+  { bg: "#fee2e2", text: "#7f1d1d" },
+  { bg: "#d1fae5", text: "#065f46" },
+  { bg: "#fae8ff", text: "#701a75" },
+  { bg: "#ecfccb", text: "#365314" },
 ];
 
 function hashStringToIndex(value: string, mod: number): number {
@@ -230,26 +253,28 @@ function Cell({
   if (!slot) {
     return <div className="ptt-cell ptt-cell-empty" />;
   }
-  const primaryLabel = mode === "teachers" ? slot.className ?? "" : subjectAbbrev(slot.subjectName, slot.subjectCode);
+  const subjText = subjectAbbrev(slot.subjectName, slot.subjectCode);
+  const classText = slot.className ?? "";
   const venueCode = slot.venue ?? "";
   const teacherCode = mode === "teachers" ? "" : slot.teacherShortCode ?? slot.teacherName ?? "";
-  const color = mode === "teachers" ? null : subjectColorFor(slot.subjectCode, slot.subjectName, bandW);
+  const color = (slot as any).colorHex || (slot as any).color || subjectColorFor(slot.subjectCode, slot.subjectName, bandW);
+
   return (
     <div
       className={`ptt-cell${bandW ? " ptt-cell-bw" : ""}`}
-      style={color ? { background: color.bg, color: color.text } : undefined}
+      style={color && typeof color === "object" ? { background: color.bg, color: color.text } : typeof color === "string" ? { background: color, color: "#0f172a" } : undefined}
     >
-      {/* Real, deliberate size hierarchy: the SUBJECT is the thing a
-         student/teacher actually needs to read at a glance, so it fills
-         most of the real box in a large, bold, centered label. Venue/
-         teacher short codes are real supporting detail only, so they stay
-         small and tucked into the two bottom corners — never competing
-         with the subject for visual weight. */}
       <div className="ptt-cell-main" style={{ fontSize: `${Math.round(fontSize * 1.35)}px` }}>
-        {primaryLabel}
-        {/* DD.13 — real, printed confirmation that this merged cell is a
-            genuine double lesson (two real consecutive periods), not just
-            a visually tall single. */}
+        {mode === "teachers" ? (
+          <>
+            {subjText && <span className="block font-black leading-tight">{subjText}</span>}
+            {classText && <span className="block font-bold text-[72%] mt-0.5 leading-tight opacity-90">{classText}</span>}
+          </>
+        ) : (
+          <>
+            {subjText && <span className="block font-black leading-tight">{subjText}</span>}
+          </>
+        )}
         {isDoubleMerged && <span className="ptt-cell-double-badge">DOUBLE</span>}
       </div>
       <div className="ptt-cell-footer">
@@ -295,26 +320,30 @@ export function PrintTimetablePage({
   const periodsPerDay = config?.periodsPerDay || Math.max(1, ...slots.map((s) => s.period), 8);
   const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
 
-  const realLunchPeriods = realLunchPeriodsFromSlots(slots);
-  // DD.13 — real double-period merging (see the helper's own doc comment).
-  const doubleSecondHalves = computeDoubleSpanSecondHalvesForPrint(grid, periodsPerDay, mode);
+  const mergedNonLessonMap = React.useMemo(() => getMergedNonLessonPeriods(slots, days.length, config), [slots, days.length, config]);
+  const doubleSecondHalves = React.useMemo(() => computeDoubleSpanSecondHalvesForPrint(grid, periodsPerDay, mode, mergedNonLessonMap), [grid, periodsPerDay, mode, mergedNonLessonMap]);
+
+  // Strip out "Teacher timetable" per founder rule: only display code e.g. "AR"
+  const cleanSubtitle = (subtitle || "")
+    .replace(/Teacher timetable\s*·?\s*/i, "")
+    .replace(/Class timetable\s*·?\s*/i, "")
+    .replace(/Venue timetable\s*·?\s*/i, "")
+    .trim();
 
   return (
     <div className={`ptt-page ${daysVertical ? "ptt-landscape" : "ptt-portrait"}`}>
       <div className="ptt-header">
-        <div className="ptt-header-left">
-          {tenantLogoUrl ? <img src={tenantLogoUrl} alt="" className="ptt-logo" /> : null}
-          <div className="ptt-school-name">{tenantName ?? "NEYO"}</div>
+        <div className="ptt-header-top-school">
+          RATIBA YA {(tenantName || "NEYO SECONDARY SCHOOL").toUpperCase()} MWAKA {new Date().getFullYear()}
         </div>
-        <div className="ptt-header-center">
-          <div className="ptt-title">{title}</div>
-          {subtitle ? <div className="ptt-subtitle">{subtitle}</div> : null}
+        <div className="ptt-header-title">
+          {title.toUpperCase()}
         </div>
-        <div className="ptt-header-right">
-          <div className="ptt-date">
-            {new Date().toLocaleDateString("en-KE", { day: "numeric", month: "long", year: "numeric" })}
+        {cleanSubtitle && (
+          <div className="ptt-table-badge">
+            {cleanSubtitle}
           </div>
-        </div>
+        )}
       </div>
 
       {!daysVertical ? (
@@ -329,14 +358,15 @@ export function PrintTimetablePage({
           </thead>
           <tbody>
             {periods.flatMap((p) => {
-              if (realLunchPeriods.has(p)) {
+              const mergedCol = mergedNonLessonMap.get(p);
+              if (mergedCol) {
                 return [
-                  <tr key={`lunch-${p}`} className="ptt-nonlesson-row ptt-nonlesson-lunch">
+                  <tr key={`nonlesson-${p}`} className={`ptt-nonlesson-row ptt-nonlesson-${mergedCol.tone}`}>
                     <td className="ptt-period-num">
                       {p}
-                      <div className="ptt-period-time">{periodTimeRange(p, config, realLunchPeriods)}</div>
+                      <div className="ptt-period-time">{periodTimeRange(p, config, mergedNonLessonMap)}</div>
                     </td>
-                    <td colSpan={days.length}>LUNCH · {lunchMinutesFor(config)} MINS</td>
+                    <td colSpan={days.length}>{mergedCol.label}</td>
                   </tr>,
                 ];
               }
@@ -344,32 +374,25 @@ export function PrintTimetablePage({
                 <tr key={`p-${p}`}>
                   <td className="ptt-period-num">
                     {p}
-                    <div className="ptt-period-time">{periodTimeRange(p, config, realLunchPeriods)}</div>
+                    <div className="ptt-period-time">{periodTimeRange(p, config, mergedNonLessonMap)}</div>
                   </td>
                   {days.map((_, dIdx) => {
                     const d = dIdx + 1;
-                    // DD.13 — the second half of a real double lesson was
-                    // already printed (with rowSpan={2}) by its own first
-                    // period's row above.
-                    if (doubleSecondHalves.has(`${d}|${p}`)) return null;
-                    const isFirstHalfOfDouble = doubleSecondHalves.has(`${d}|${p + 1}`);
                     return (
-                      <td key={dIdx} rowSpan={isFirstHalfOfDouble ? 2 : 1} className="ptt-td-cell">
-                        <Cell slot={grid.get(`${d}|${p}`)} fontSize={cellFontSize} mode={mode} bandW={bandW} isDoubleMerged={isFirstHalfOfDouble} />
+                      <td key={d} className="ptt-td-cell">
+                        <Cell slot={grid.get(`${d}|${p}`)} fontSize={cellFontSize} mode={mode} bandW={bandW} />
                       </td>
                     );
                   })}
                 </tr>
               );
-              const nonLesson = nonLessonBreakRowsForPeriod(p, config).map((row) => (
+              const configBreaks = nonLessonBreakRowsForPeriod(p, config).map((row) => (
                 <tr key={row.key} className="ptt-nonlesson-row ptt-nonlesson-break">
                   <td className="ptt-period-num" />
-                  <td colSpan={days.length}>
-                    {row.label} · {row.minutes} MINS
-                  </td>
+                  <td colSpan={days.length}>{row.label} · {row.minutes} MINS</td>
                 </tr>
               ));
-              return [lessonRow, ...nonLesson];
+              return [lessonRow, ...configBreaks];
             })}
           </tbody>
         </table>
@@ -380,17 +403,18 @@ export function PrintTimetablePage({
               <th className="ptt-corner">Day</th>
               {periods.flatMap((p) => {
                 const headCells = [];
-                if (realLunchPeriods.has(p)) {
+                const mergedCol = mergedNonLessonMap.get(p);
+                if (mergedCol) {
                   headCells.push(
-                    <th key={`ph-${p}`} className="ptt-nonlesson-head ptt-nonlesson-lunch">
-                      LUNCH
+                    <th key={`ph-${p}`} className={`ptt-nonlesson-head ptt-nonlesson-${mergedCol.tone}`}>
+                      {mergedCol.label}
                     </th>
                   );
                 } else {
                   headCells.push(
                     <th key={`ph-${p}`}>
                       <div className="ptt-period-num">{p}</div>
-                      <div className="ptt-period-time">{periodTimeRange(p, config, realLunchPeriods)}</div>
+                      <div className="ptt-period-time">{periodTimeRange(p, config, mergedNonLessonMap)}</div>
                     </th>
                   );
                 }
@@ -412,23 +436,18 @@ export function PrintTimetablePage({
                 {periods.flatMap((p) => {
                   const d = dIdx + 1;
                   const cells = [];
-                  if (realLunchPeriods.has(p)) {
-                    // Real merged lunch column: rendered ONCE spanning every
-                    // real day row (rowSpan), never repeated per-row — a
-                    // per-row repeat caused a real vertical-text overflow
-                    // bug that pushed the whole real table onto a 2nd page.
+                  const mergedCol = mergedNonLessonMap.get(p);
+                  if (mergedCol) {
+                    // Merged vertical column (BREAK/LUNCH): drawn ONCE on Monday spanning all days
                     if (dIdx === 0) {
                       cells.push(
-                        <td key={`c-${p}`} rowSpan={days.length} className="ptt-nonlesson-vert ptt-nonlesson-lunch">
-                          LUNCH
+                        <td key={`c-${p}`} rowSpan={days.length} className={`ptt-nonlesson-vert ptt-nonlesson-${mergedCol.tone}`}>
+                          {mergedCol.label}
                         </td>
                       );
                     }
                   } else if (doubleSecondHalves.has(`${d}|${p}`)) {
-                    // DD.13 — the second half of a real double lesson was
-                    // already printed (with colSpan={2}, since periods run
-                    // across as COLUMNS in this vertical layout) by its own
-                    // first period's cell just before it — skipped here.
+                    // Second half of horizontal double lesson: skipped because first half has colSpan={2}
                   } else {
                     const isFirstHalfOfDouble = doubleSecondHalves.has(`${d}|${p + 1}`);
                     cells.push(
@@ -454,126 +473,133 @@ export function PrintTimetablePage({
         </table>
       )}
 
-      <div className="ptt-footer">Powered by NEYO</div>
+      <div className="ptt-footer">
+        <div className="ptt-footer-left">
+          Generated on {new Date().toLocaleDateString("en-KE", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+        </div>
+        <div className="ptt-footer-right">
+          Powered by NEYO
+        </div>
+      </div>
 
       {pageBreakAfter && <div className="ptt-page-break" />}
 
       <style jsx global>{`
         @page {
           size: A4 ${daysVertical ? "landscape" : "portrait"};
-          margin: 8mm;
+          margin: 6mm;
         }
         .ptt-page {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-          color: #0f172a;
-          height: 100vh;
+          color: #000000;
+          width: 100%;
+          min-height: 100vh;
           page-break-after: avoid;
           display: flex;
           flex-direction: column;
+          box-sizing: border-box;
+          padding: 0;
+          margin: 0;
         }
         .ptt-page-break {
           page-break-after: always;
         }
         .ptt-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          border-bottom: 2px solid #0f172a;
-          padding-bottom: 3mm;
-          margin-bottom: 3mm;
-        }
-        .ptt-header-left {
-          display: flex;
-          align-items: center;
-          gap: 2mm;
-        }
-        .ptt-logo {
-          height: 10mm;
-          width: 10mm;
-          object-fit: contain;
-        }
-        .ptt-school-name {
-          font-weight: 800;
-          font-size: 4mm;
-        }
-        .ptt-header-center {
           text-align: center;
-          flex: 1;
+          margin-bottom: 3.5mm;
         }
-        .ptt-title {
+        .ptt-header-top-school {
+          font-weight: 800;
+          font-size: 4.8mm;
+          letter-spacing: 0.5mm;
+          text-transform: uppercase;
+          color: #0f172a;
+        }
+        .ptt-header-title {
           font-weight: 900;
-          font-size: 5.5mm;
+          font-size: 8.5mm;
+          letter-spacing: 1mm;
+          text-transform: uppercase;
+          color: #000000;
+          margin-top: 1.5mm;
+          line-height: 1.1;
         }
-        .ptt-subtitle {
-          font-size: 3mm;
-          color: #475569;
-        }
-        .ptt-date {
-          font-size: 3mm;
-          color: #475569;
+        .ptt-table-badge {
+          font-size: 3.2mm;
+          font-weight: 800;
+          color: #334155;
+          text-transform: uppercase;
+          margin-top: 1.5mm;
+          text-align: left;
         }
         .ptt-table {
           table-layout: fixed;
           border-collapse: collapse;
           width: 100%;
           flex: 1;
+          border: 0.6mm solid #000000;
         }
         .ptt-table th,
         .ptt-table td {
-          border: 0.4mm solid #cbd5e1;
+          border: 0.45mm solid #000000;
           padding: 0;
           text-align: center;
           vertical-align: middle;
+          position: relative;
         }
         .ptt-table thead th {
-          background: #0f172a;
-          color: white;
-          font-size: 3.2mm;
-          padding: 1.5mm;
-          font-weight: 700;
+          background: #ffffff;
+          color: #000000;
+          font-size: 4mm;
+          padding: 2mm 1mm;
+          font-weight: 900;
         }
         .ptt-corner {
-          width: 16mm;
+          width: 14mm;
+          font-weight: 900;
+          font-size: 4mm;
         }
         .ptt-period-num {
-          font-size: 5mm;
+          font-size: 4.5mm;
           font-weight: 900;
         }
         .ptt-period-time {
-          font-size: 2.4mm;
-          font-weight: 400;
-          color: #94a3b8;
+          font-size: 2.2mm;
+          font-weight: 600;
+          color: #475569;
         }
         .ptt-td-cell {
-          height: 12mm;
+          height: 15mm;
         }
         .ptt-cell {
           height: 100%;
-          min-height: 14mm;
+          min-height: 15mm;
           display: flex;
           flex-direction: column;
           justify-content: center;
           align-items: stretch;
-          padding: 1mm 1.5mm;
+          padding: 1.5mm;
           position: relative;
         }
         .ptt-cell-empty {
-          background: repeating-linear-gradient(45deg, #f8fafc, #f8fafc 3mm, #f1f5f9 3mm, #f1f5f9 6mm);
+          background: #ffffff;
         }
         .ptt-cell-bw {
           background: white !important;
-          color: #0f172a !important;
+          color: #000000 !important;
         }
         .ptt-cell-main {
           font-weight: 900;
+          font-size: 4mm;
           text-align: center;
-          line-height: 1.1;
+          line-height: 1.15;
           flex: 1;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           word-break: break-word;
+          color: #000000;
         }
         .ptt-cell-double-badge {
           margin-top: 0.8mm;
@@ -586,14 +612,14 @@ export function PrintTimetablePage({
         }
         .ptt-cell-footer {
           position: absolute;
-          left: 1mm;
-          right: 1mm;
-          bottom: 0.6mm;
+          left: 1.2mm;
+          right: 1.2mm;
+          bottom: 0.8mm;
           display: flex;
           justify-content: space-between;
-          font-size: 2.2mm;
-          font-weight: 600;
-          color: #64748b;
+          font-size: 2.6mm;
+          font-weight: 700;
+          color: #334155;
           pointer-events: none;
         }
         .ptt-cell-venue {
@@ -601,62 +627,71 @@ export function PrintTimetablePage({
         }
         .ptt-cell-teacher {
           text-align: right;
-          font-weight: 700;
+          font-weight: 800;
+          color: #000000;
         }
         .ptt-nonlesson-row td {
-          font-weight: 800;
-          letter-spacing: 0.5mm;
+          font-weight: 900;
+          letter-spacing: 0.8mm;
         }
         .ptt-nonlesson-lunch {
-          background: #dcfce7;
+          background: #ffffff;
+          color: #000000;
         }
         .ptt-nonlesson-lunch td {
-          height: 11mm;
-          font-size: 3.6mm;
-          color: #166534;
+          height: 12mm;
+          font-size: 4mm;
         }
         .ptt-nonlesson-break {
-          background: #fef3c7;
+          background: #ffffff;
+          color: #000000;
         }
         .ptt-nonlesson-break td {
-          height: 8mm;
-          font-size: 3mm;
-          color: #92400e;
+          height: 10mm;
+          font-size: 3.5mm;
         }
         .ptt-nonlesson-head {
           writing-mode: vertical-rl;
-          text-orientation: mixed;
+          text-orientation: upright;
+          font-weight: 900;
+          font-size: 4.2mm;
+          letter-spacing: 0.5mm;
         }
-        .ptt-nonlesson-head.ptt-nonlesson-lunch {
-          background: #16a34a !important;
-          color: white !important;
-        }
+        .ptt-nonlesson-head.ptt-nonlesson-lunch,
         .ptt-nonlesson-head.ptt-nonlesson-break {
-          background: #d97706 !important;
-          color: white !important;
+          background: #ffffff !important;
+          color: #000000 !important;
         }
         .ptt-nonlesson-vert {
           writing-mode: vertical-rl;
-          text-orientation: mixed;
-          font-weight: 800;
-        }
-        .ptt-nonlesson-vert.ptt-nonlesson-lunch {
-          background: #dcfce7;
-          color: #166534;
-        }
-        .ptt-nonlesson-vert.ptt-nonlesson-break {
-          background: #fef3c7;
-          color: #92400e;
+          text-orientation: upright;
+          font-weight: 900;
+          font-size: 4.8mm;
+          letter-spacing: 1.5mm;
+          background: #ffffff;
+          color: #000000;
         }
         .ptt-day-name {
-          font-weight: 800;
-          background: #f1f5f9;
+          font-weight: 900;
+          font-size: 4.5mm;
+          background: #ffffff;
+          color: #000000;
         }
         .ptt-footer {
-          text-align: center;
-          font-size: 2.6mm;
-          color: #94a3b8;
-          margin-top: 2mm;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-size: 3mm;
+          color: #1e293b;
+          margin-top: 3.5mm;
+          padding-top: 1mm;
+        }
+        .ptt-footer-left {
+          font-weight: 600;
+        }
+        .ptt-footer-right {
+          font-weight: 800;
+          color: #000000;
         }
         @media screen {
           .ptt-page {
@@ -666,7 +701,6 @@ export function PrintTimetablePage({
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             padding: 8mm;
             box-sizing: border-box;
-            height: auto;
             min-height: ${daysVertical ? "210mm" : "297mm"};
           }
         }

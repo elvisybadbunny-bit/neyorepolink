@@ -10,7 +10,7 @@
  * if NEYO Ops switches the whole feature OFF platform-wide, NOBODY gets it
  * (FlagError → 403), regardless of payment.
  */
-import { PLANS } from "@/lib/core/plans";
+import { PLANS, DEFAULT_PLAN_KEY } from "@/lib/core/plans";
 import { db } from "@/lib/db";
 import { getRevenueFeature } from "@/lib/core/revenue-features";
 import { hasFeatureGrant } from "@/lib/services/feature-grants.service";
@@ -59,10 +59,10 @@ export async function hasEntitlement(tenantId: string, featureKey: string): Prom
   // subscription that has not been migrated (pricingMode !== "SIZE_BASED_V2").
   if (tenant.subscription?.pricingMode === "SIZE_BASED_V2") return true;
 
-  const planKey = tenant.subscription?.planKey || "free_karibu";
+  const planKey = tenant.subscription?.planKey || DEFAULT_PLAN_KEY;
   const planDef = PLANS.find((p) => p.key === planKey);
 
-  // 1. plan includes it (e.g. Elite bundles all premium features)
+  // 1. plan includes it (all remaining plans / capacity-based bundle all premium features)
   if (planDef && planDef.includedModules.includes(featureKey)) return true;
 
   // 2. school bought the matching add-on à la carte

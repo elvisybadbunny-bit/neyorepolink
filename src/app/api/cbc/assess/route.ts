@@ -7,7 +7,7 @@ import { z } from "zod";
 import { requirePermission } from "@/lib/core/session";
 import { ok, handleError, fail } from "@/lib/api/respond";
 import { assessSchema } from "@/lib/validations/cbc";
-import { getAssessSheet, saveAssessments } from "@/lib/services/cbc.service";
+import { getAssessSheet, saveAssessments, deleteCbcAssessment } from "@/lib/services/cbc.service";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +26,20 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await requirePermission("exam.enter_marks");
-    const body = assessSchema.extend({ classId: z.string().min(1) }).parse(await req.json());
-    return ok(await saveAssessments(user, body, body.classId));
+    const body = await req.json().catch(() => ({}));
+    if (body.action === "delete") return ok(await deleteCbcAssessment(user, body.id || ""));
+    const parsed = assessSchema.extend({ classId: z.string().min(1) }).parse(body);
+    return ok(await saveAssessments(user, parsed, parsed.classId));
+  } catch (e) {
+    return handleError(e);
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const user = await requirePermission("exam.enter_marks");
+    const id = req.nextUrl.searchParams.get("id") || "";
+    return ok(await deleteCbcAssessment(user, id));
   } catch (e) {
     return handleError(e);
   }

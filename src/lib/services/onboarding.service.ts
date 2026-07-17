@@ -14,6 +14,7 @@ import { generateNeyoLoginId, computeUniqueIdPrefix } from "@/lib/services/ident
 import { SESSION_TTL_DAYS } from "@/lib/core/session";
 import type { SignupInput } from "@/lib/validations/onboarding";
 import { getPricingEngineConfig, quotePriceForCounts, estimateParentCountForSchool } from "@/lib/services/pricing-engine.service";
+import { DEFAULT_PLAN_KEY } from "@/lib/core/plans";
 
 export class OnboardingError extends Error {
   constructor(public code: "EMAIL_TAKEN" | "SLUG_TAKEN", message: string) {
@@ -125,11 +126,11 @@ export async function signupSchool(
     where: { tenantId: tenant.id },
     create: {
       tenantId: tenant.id,
-      planKey: "free_karibu",
-      status: "ACTIVE",
+      planKey: DEFAULT_PLAN_KEY,
+      status: "TRIAL",
       pricingMode: "SIZE_BASED_V2",
       sizeBasedPriceKes: initialQuote.monthlyPriceKes,
-      currentPeriodEnd: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000),
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // exactly 1 free month (30 days) for new signups
     },
     update: {
       pricingMode: "SIZE_BASED_V2",

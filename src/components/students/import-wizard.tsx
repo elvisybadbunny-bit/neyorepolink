@@ -66,6 +66,9 @@ interface PreviewData {
   sample: Record<string, unknown>[];
   issues: { row: number; message: string }[];
   unknownClasses: string[];
+  unknownSubjects?: string[];
+  rowsWithSubjectsCount?: number;
+  hasCompulsorySubjects?: boolean;
   duplicateInFileRows: number[];
   possibleExistingRows: number[];
   matchedRows: MatchedRow[];
@@ -230,21 +233,46 @@ export function ImportWizard() {
     } finally { setBusy(false); }
   }
 
-  async function remap(column: number, field: string, customLabel?: string) {
+  async function remap(column: number, field: string, customLabel?: string, newCompulsoryIds?: string[]) {
     if (!preview) return;
     const mapping = preview.mapping.map((m) => (m.column === column ? { ...m, field, customLabel } : m));
     setBusy(true);
+    const idsToUse = newCompulsoryIds ?? compulsorySubjectIds;
+    const compulsorySubjects = idsToUse
+      .map((id) => subjects?.find((s) => s.id === id)?.name)
+      .filter((n): n is string => Boolean(n));
     try {
       const res = await fetch("/api/students/import/preview", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           source: preview.source, fileName: preview.fileName, rows: preview.rows, hasHeader: preview.hasHeader,
           mapping, targetClassId: preview.targetClass?.id ?? activeTargetClassId, updateExisting,
+          ...(compulsorySubjects.length > 0 ? { compulsorySubjects } : {}),
         }),
       });
       const json = await res.json();
       if (json.ok) setPreview(json.data);
       else toast({ title: json.error?.message ?? "Mapping failed.", tone: "error" });
+    } finally { setBusy(false); }
+  }
+
+  async function refreshPreviewSubjects(newCompulsoryIds: string[]) {
+    if (!preview) return;
+    setBusy(true);
+    const compulsorySubjects = newCompulsoryIds
+      .map((id) => subjects?.find((s) => s.id === id)?.name)
+      .filter((n): n is string => Boolean(n));
+    try {
+      const res = await fetch("/api/students/import/preview", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: preview.source, fileName: preview.fileName, rows: preview.rows, hasHeader: preview.hasHeader,
+          mapping: preview.mapping, targetClassId: preview.targetClass?.id ?? activeTargetClassId, updateExisting,
+          ...(compulsorySubjects.length > 0 ? { compulsorySubjects } : {}),
+        }),
+      });
+      const json = await res.json();
+      if (json.ok) setPreview(json.data);
     } finally { setBusy(false); }
   }
 
@@ -604,10 +632,29 @@ export function ImportWizard() {
             </CardContent>
           </Card>
 
-          {/* BB.4 — only surfaced when a real Subjects column is actually
-              mapped, since a compulsory-subjects declaration is meaningless
-              otherwise. Optional: leaving it blank changes nothing. */}
-          {preview.mapping.some((m) => m.field === "subjects") && (
+          {/* BB.4 / DD.4 — Subject & Pathway Allocation Summary Card */}
+          {((preview.rowsWithSubjectsCount ?? 0) > 0 || preview.hasCompulsorySubjects || chosenCompulsorySubjects.length > 0) && (
+            <div className="rounded-2xl border border-green-200 bg-green-50/80 p-4 shadow-sm backdrop-blur-sm dark:border-green-900/50 dark:bg-green-950/30">
+              <div className="flex items-center gap-2 text-sm font-bold text-green-800 dark:text-green-200">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                Subject & Pathway Allocation Enabled (`BB.4` / `DD.4`)
+              </div>
+              <p className="mt-1 text-xs font-medium text-green-700 dark:text-green-300">
+                {(preview.rowsWithSubjectsCount ?? 0) > 0 && `Your sheet specifies subjects or pathways for ${preview.rowsWithSubjectsCount} learner(s). `}
+                {chosenCompulsorySubjects.length > 0 && `Plus ${chosenCompulsorySubjects.length} compulsory subject(s) (${chosenCompulsorySubjects.map(s => s.name).join(", ")}) will be assigned to every learner in this batch. `}
+                A `SubjectSelectionPortal` will be automatically linked (`status = FINALIZED`) so their choices appear instantly across Timetabling (`BB.2`), Groupings (`L.7`), and Exam Sittings (`AA.10`).
+              </p>
+              {(preview.unknownSubjects && preview.unknownSubjects.length > 0) && (
+                <div className="mt-2.5 rounded-xl border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+                  <span className="font-bold flex items-center gap-1 mb-1"><AlertCircle className="h-3.5 w-3.5 shrink-0" /> Warning — {preview.unknownSubjects.length} unmapped subject name(s):</span>
+                  The following subject names from your sheet or compulsory list were not found in this school&apos;s subject catalog (`Academics &gt; Subjects`) and will be skipped unless created first: <span className="font-mono font-semibold">{preview.unknownSubjects.join(", ")}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* BB.4 — Surfaced when a real Subjects or Pathway column is mapped, or for any intake */}
+          {(preview.mapping.some((m) => m.field === "subjects" || m.field === "pathway") || true) && (
             <Card>
               <CardHeader><CardTitle>Compulsory subjects for this intake (optional)</CardTitle></CardHeader>
               <CardContent className="space-y-4">
@@ -621,7 +668,11 @@ export function ImportWizard() {
                         <button
                           key={s.id}
                           type="button"
-                          onClick={() => setCompulsorySubjectIds((ids) => ids.filter((id) => id !== s.id))}
+                          onClick={() => {
+                            const next = compulsorySubjectIds.filter((id) => id !== s.id);
+                            setCompulsorySubjectIds(next);
+                            refreshPreviewSubjects(next);
+                          }}
                           className="flex items-center gap-1.5 rounded-full border border-green-300 bg-green-50 px-3 py-1 text-xs font-medium text-green-800 hover:bg-green-100 dark:border-green-800 dark:bg-green-950/30 dark:text-green-300"
                           title="Click to remove"
                         >
@@ -642,7 +693,11 @@ export function ImportWizard() {
                         <button
                           key={s.id}
                           type="button"
-                          onClick={() => setCompulsorySubjectIds((ids) => [...ids, s.id])}
+                          onClick={() => {
+                            const next = [...compulsorySubjectIds, s.id];
+                            setCompulsorySubjectIds(next);
+                            refreshPreviewSubjects(next);
+                          }}
                           className="rounded-full border border-navy-200 bg-white px-3 py-1 text-xs font-medium text-navy-700 hover:border-green-400 hover:bg-green-50 hover:text-green-800 dark:border-navy-700 dark:bg-navy-800 dark:text-navy-200 dark:hover:bg-green-950/30"
                         >
                           + {s.name}

@@ -7,6 +7,7 @@
 import { db } from "@/lib/db";
 import { withTenant } from "@/lib/core/tenant-context";
 import { tenantDb } from "@/lib/core/tenant-db";
+import { can } from "@/lib/core/permissions";
 import type { SessionUser } from "@/lib/core/session";
 import type { Role } from "@/lib/core/roles";
 
@@ -658,6 +659,16 @@ export async function setLessonStatus(user: SessionUser, id: string, status: str
     if ((user.role === "TEACHER" || user.role === "CLASS_TEACHER") && plan.teacherId !== user.id)
       throw new AcademicsError("FORBIDDEN", "You can only update your own lesson plans.");
     await tenantDb().lessonPlan.update({ where: { id }, data: { status } });
+    if (status === "DELIVERED" || status === "TAUGHT") {
+      const { syncSyllabusFromAssessment } = await import("@/lib/services/syllabus.service");
+      await syncSyllabusFromAssessment(user, {
+        classId: plan.classId,
+        subjectId: plan.subjectId,
+        strandId: plan.strandId || null,
+        topicName: plan.topic,
+        lessonPlanId: plan.id,
+      }).catch(() => {});
+    }
     return { id, status };
   });
 }
@@ -908,7 +919,35 @@ export async function recordLessonObservation(
     await audit(user, "academics.lesson_observation_recorded", "lessonObservation", obs.id, {
       lessonPlanId: input.lessonPlanId, studentId: input.studentId || null, level: input.level ?? null,
     });
+    const { syncSyllabusFromAssessment } = await import("@/lib/services/syllabus.service");
+    await syncSyllabusFromAssessment(user, {
+      classId: plan.classId,
+      subjectId: plan.subjectId,
+      strandId: input.strandId || plan.strandId || null,
+      lessonPlanId: plan.id,
+    }).catch(() => {});
     return obs;
+  });
+}
+
+/**
+ * Immutability Guard (`cant be deleted anyhowly`):
+ * Lesson observations and student academic evaluations cannot be deleted arbitrarily by ordinary teachers.
+ * Requires Academics Leadership (`academics.manage`), Principal, Deputy Principal, or Founder authorization.
+ */
+export async function deleteLessonObservation(user: SessionUser, id: string) {
+  return withTenant(user.tenantId, async () => {
+    const primaryCanManage = can(user.role as Role, "academics.manage");
+    const secondaryCanManage = user.secondaryRole ? can(user.secondaryRole as Role, "academics.manage") : false;
+    const isLeadership = ["PRINCIPAL", "DEPUTY_PRINCIPAL", "FOUNDER", "SUPER_ADMIN", "SCHOOL_OWNER"].includes(user.role);
+    if (!primaryCanManage && !secondaryCanManage && !isLeadership) {
+      throw new AcademicsError("FORBIDDEN", "Lesson observations and academic records cannot be deleted arbitrarily by teachers (\"cant be deleted anyhowly\"). Only the Principal or Academics HOD can authorize deleting or voiding recorded observations.");
+    }
+    const row = await tenantDb().lessonObservation.findUnique({ where: { id } });
+    if (!row) throw new AcademicsError("NOT_FOUND", "Observation record not found.");
+    await tenantDb().lessonObservation.delete({ where: { id } });
+    await audit(user, "academics.lesson_observation_deleted", "lessonObservation", id, { lessonPlanId: row.lessonPlanId, studentId: row.studentId });
+    return { success: true, deletedId: id };
   });
 }
 

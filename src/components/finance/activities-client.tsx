@@ -177,33 +177,33 @@ function CreateActivityDialog({ onClose, onDone }: { onClose: () => void; onDone
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="max-h-[min(92dvh,42rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-navy-100 bg-white p-6 shadow-card dark:border-navy-800 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="flex items-center gap-2 text-lg font-semibold text-navy-900 dark:text-navy-50"><Plane className="h-5 w-5 text-green-600" /> New trip / activity</h3>
-          <button onClick={onClose} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-4 w-4" /></button>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-950/40 p-3 backdrop-blur-sm sm:items-center" onClick={onClose}>
+      <div className="flex flex-col max-h-[88vh] w-full max-w-lg overflow-hidden rounded-3xl border border-navy-100 bg-white shadow-card dark:border-navy-800 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+        <div className="flex shrink-0 items-center justify-between border-b border-navy-100 p-5 dark:border-navy-800">
+          <h3 className="flex items-center gap-2 text-lg font-bold text-navy-900 dark:text-navy-50"><Plane className="h-5 w-5 text-green-600" /> New trip / activity</h3>
+          <button onClick={onClose} className="rounded-full p-1.5 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
-        <div className="space-y-3">
-          <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Form 4 Mombasa Trip" /></div>
-          <div><Label>Description (optional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Includes bus, meals, entry fees" /></div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-3.5">
+          <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Form 4 Mombasa Trip" className="rounded-xl" /></div>
+          <div><Label>Description (optional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Includes bus, meals, entry fees" className="rounded-xl" /></div>
           <div className="grid grid-cols-3 gap-3">
-            <div><Label>Amount per student (KES)</Label><Input type="number" min={1} value={amountKes} onChange={(e) => setAmountKes(e.target.value)} placeholder="3500" /></div>
-            <div><Label>Year</Label><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} /></div>
-            <div><Label>Term</Label><Input type="number" min={1} max={3} value={term} onChange={(e) => setTerm(e.target.value)} /></div>
+            <div><Label>Amount (KES)</Label><Input type="number" min={1} value={amountKes} onChange={(e) => setAmountKes(e.target.value)} placeholder="3500" className="rounded-xl" /></div>
+            <div><Label>Year</Label><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} className="rounded-xl" /></div>
+            <div><Label>Term</Label><Input type="number" min={1} max={3} value={term} onChange={(e) => setTerm(e.target.value)} className="rounded-xl" /></div>
           </div>
-          <div><Label>Event date (optional)</Label><Input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} /></div>
+          <div><Label>Event date (optional)</Label><Input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} className="rounded-xl" /></div>
           <div>
-            <Label>Classes going (every real student in these classes is added to the roster)</Label>
+            <Label>Classes going (every student added to roster)</Label>
             {classes === null ? (
               <div className="mt-2 h-20 animate-pulse rounded-xl bg-navy-100 dark:bg-navy-800" />
             ) : (
-              <div className="mt-2 grid max-h-48 grid-cols-2 gap-1.5 overflow-y-auto rounded-xl border border-navy-100 p-2 dark:border-navy-800">
+              <div className="mt-2 grid max-h-36 grid-cols-2 gap-1.5 overflow-y-auto rounded-xl border border-navy-100 p-2.5 dark:border-navy-800">
                 {classes.map((c) => {
                   const label = [c.level, c.stream].filter(Boolean).join(" ");
                   const checked = classIds.includes(c.id);
                   return (
-                    <label key={c.id} className={"flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm " + (checked ? "bg-green-50 dark:bg-green-900/20" : "hover:bg-navy-50 dark:hover:bg-navy-800")}>
-                      <input type="checkbox" checked={checked} onChange={() => toggleClass(c.id)} />
+                    <label key={c.id} className={"flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold " + (checked ? "bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "hover:bg-navy-50 dark:hover:bg-navy-800")}>
+                      <input type="checkbox" checked={checked} onChange={() => toggleClass(c.id)} className="rounded text-green-600 focus:ring-green-500" />
                       {label}
                     </label>
                   );
@@ -211,8 +211,10 @@ function CreateActivityDialog({ onClose, onDone }: { onClose: () => void; onDone
               </div>
             )}
           </div>
-          <Button onClick={save} disabled={saving || !name.trim() || !amountKes || classIds.length === 0} className="w-full">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Create activity &amp; build roster
+        </div>
+        <div className="shrink-0 sticky bottom-0 bg-white p-4 border-t border-navy-100 dark:bg-navy-900 dark:border-navy-800 flex items-center justify-end z-10 shadow-lg">
+          <Button onClick={save} disabled={saving || !name.trim() || !amountKes || classIds.length === 0} className="w-full rounded-full h-12 font-extrabold text-base shadow-md">
+            {saving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Check className="h-5 w-5 mr-2" />} Create activity &amp; build roster
           </Button>
         </div>
       </div>

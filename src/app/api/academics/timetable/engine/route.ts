@@ -9,6 +9,7 @@
 import { NextRequest } from "next/server";
 import { requirePermission } from "@/lib/core/session";
 import { ok, fail, handleError } from "@/lib/api/respond";
+import { db } from "@/lib/db";
 import {
   listConstraints, upsertConstraint, deleteConstraint, saveTeacherTimeOff,
   listCombinationGroups, upsertCombinationGroup, deleteCombinationGroup,
@@ -69,6 +70,41 @@ export async function POST(req: NextRequest) {
         return ok(await upsertBlockedTimetableSlot(user, body));
       case "delete_blocked_slot":
         return ok(await deleteBlockedTimetableSlot(user, body.id));
+      case "publish_timetable": {
+        const teacherSlots = await db.timetableSlot.findMany({
+          where: { tenantId: user.tenantId },
+          select: { teacherId: true },
+        });
+        const teacherIds = [...new Set(teacherSlots.map((s) => s.teacherId).filter(Boolean) as string[])];
+        for (const tId of teacherIds) {
+          await db.notification.create({
+            data: {
+              tenantId: user.tenantId,
+              recipientId: tId,
+              title: "🚀 Official Timetable Published (`Smart Timetable`)",
+              body: "The school timetable has been officially published. Check your schedule under Timetable / My Classes.",
+              href: "/academics?tab=timetable",
+            },
+          }).catch(() => {});
+        }
+        await db.auditLog.create({
+          data: {
+            tenantId: user.tenantId, actorId: user.id, actorName: user.fullName,
+            action: "academics.timetable_published", entityType: "timetable", entityId: user.tenantId,
+            metadata: JSON.stringify({ teacherCountNotified: teacherIds.length }),
+          },
+        });
+        return ok({ status: "PUBLISHED", notifiedTeachersCount: teacherIds.length });
+      }
+      case "draft_timetable": {
+        await db.auditLog.create({
+          data: {
+            tenantId: user.tenantId, actorId: user.id, actorName: user.fullName,
+            action: "academics.timetable_drafted", entityType: "timetable", entityId: user.tenantId,
+          },
+        });
+        return ok({ status: "DRAFT" });
+      }
       default:
         return fail("INVALID", "Unknown action.", 400);
     }

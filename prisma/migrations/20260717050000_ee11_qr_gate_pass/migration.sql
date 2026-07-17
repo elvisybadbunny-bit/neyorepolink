@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "GatePass" ADD COLUMN IF NOT EXISTS "returnedAt" TIMESTAMP(3);

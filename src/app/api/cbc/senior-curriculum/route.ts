@@ -1,8 +1,8 @@
 /**
- * EE.3 (Senior School phase) — real KICD Grade 10 Senior School curriculum
- * content library (English, Kiswahili, Core Mathematics, Essential
- * Mathematics, Community Service Learning — the 4 real compulsory Senior
- * School core learning areas, per P.2/P.3's own existing Subject codes).
+ * EE.3 (Senior School phase complete) — real KICD Grade 10, Grade 11, and Grade 12
+ * Senior School curriculum content library (Core Mathematics, Essential Mathematics,
+ * English, Kiswahili, Community Service Learning, plus STEM and pathway electives
+ * like Physics, Chemistry, Biology, Computer Studies, Business, Agriculture, etc.).
  *
  * GET ?grade=&subjectCode= -> the real strand/sub-strand preset for that
  *     grade+subject (for preview before applying).
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     if (!grade || !subjectCode) {
       return ok({ grades: SENIOR_SCHOOL_GRADES, subjectCodes: SENIOR_SCHOOL_SUBJECT_CODES });
     }
-    if (!isSeniorGrade(grade)) return fail("INVALID", "Unknown Senior School grade (only Grade 10 has a real published preset today).", 400);
+    if (!isSeniorGrade(grade)) return fail("INVALID", "Unknown Senior School grade (must be Grade 10, Grade 11, or Grade 12).", 400);
     const strands = SENIOR_SCHOOL_CURRICULUM[grade][subjectCode] ?? [];
     return ok({ grade, subjectCode, strands });
   } catch (e) {
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       grade: z.string().min(1),
       subjectCode: z.string().min(1),
     }).parse(await req.json());
-    if (!isSeniorGrade(body.grade)) return fail("INVALID", "Unknown Senior School grade (only Grade 10 has a real published preset today).", 400);
+    if (!isSeniorGrade(body.grade)) return fail("INVALID", "Unknown Senior School grade (must be Grade 10, Grade 11, or Grade 12).", 400);
     const strands = SENIOR_SCHOOL_CURRICULUM[body.grade][body.subjectCode];
     if (!strands) return fail("NOT_FOUND", "No real KICD preset available yet for this grade/subject combination.", 404);
     return ok(await applyJuniorSchoolCurriculumPreset(user, { subjectId: body.subjectId, grade: body.grade, strands }));

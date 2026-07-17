@@ -7,8 +7,13 @@
  */
 import * as React from "react";
 import {
-  Layers, Plus, AlertCircle, Loader2, X, Sparkles, Check, FileText, Search, ChevronDown,
+  Layers, Plus, AlertCircle, Loader2, X, Sparkles, Check, FileText, Search, ChevronDown, Video, Trophy,
 } from "lucide-react";
+import { YouTubeLearningLibraryModal } from "@/components/academics/youtube-learning-library-modal";
+import { QuestionBankModal } from "@/components/academics/question-bank-modal";
+import { PaperQuizFormativeModal } from "@/components/academics/paper-quiz-formative-modal";
+import { InterSchoolContestModal } from "@/components/academics/inter-school-contest-modal";
+import { UniversalPresetsModal } from "@/components/cbc/universal-presets-modal";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +59,7 @@ export function CbcClient({ canManage, canAssess }: { canManage: boolean; canAss
         <button onClick={() => setTab("report")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "report" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>Learner report</button>
       </div>
       {tab === "strands" && <StrandsTab subjects={subjects} canManage={canManage} />}
-      {tab === "assess" && <AssessTab classes={classes} />}
+      {tab === "assess" && <AssessTab classes={classes} subjects={subjects} />}
       {tab === "report" && <ReportTab />}
     </div>
   );
@@ -86,6 +91,40 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
   const [juniorBusy, setJuniorBusy] = React.useState(false);
   const [juniorAvailable, setJuniorAvailable] = React.useState(false);
 
+  // EE.3 (continued) — Primary & Pre-Primary (PP1-Grade 6) curriculum library
+  const [primaryGrades, setPrimaryGrades] = React.useState<string[]>([]);
+  const [primarySubjectCodes, setPrimarySubjectCodes] = React.useState<string[]>([]);
+  const [primaryGrade, setPrimaryGrade] = React.useState("");
+  const [primarySubjectId, setPrimarySubjectId] = React.useState("");
+  const [primaryPreview, setPrimaryPreview] = React.useState<{ name: string; learningOutcome: string; substrands: { name: string }[] }[] | null>(null);
+  const [primaryBusy, setPrimaryBusy] = React.useState(false);
+  const [primaryAvailable, setPrimaryAvailable] = React.useState(false);
+
+  // EE.3 (continued) — Senior School Grade 10 curriculum library
+  const [seniorGrades, setSeniorGrades] = React.useState<string[]>([]);
+  const [seniorSubjectCodes, setSeniorSubjectCodes] = React.useState<string[]>([]);
+  const [seniorGrade, setSeniorGrade] = React.useState("");
+  const [seniorSubjectId, setSeniorSubjectId] = React.useState("");
+  const [seniorPreview, setSeniorPreview] = React.useState<{ name: string; learningOutcome: string; substrands: { name: string }[] }[] | null>(null);
+  const [seniorBusy, setSeniorBusy] = React.useState(false);
+  const [seniorAvailable, setSeniorAvailable] = React.useState(false);
+
+  // EE.7 — YouTube learning library modal state
+  const [videoModalOpen, setVideoModalOpen] = React.useState(false);
+  const [activeVideoStrandId, setActiveVideoStrandId] = React.useState("");
+  const [activeVideoSubjectId, setActiveVideoSubjectId] = React.useState("");
+
+  // EE.8 — Question bank & self-marking practice state
+  const [questionBankModalOpen, setQuestionBankModalOpen] = React.useState(false);
+  const [activeQuestionStrandId, setActiveQuestionStrandId] = React.useState("");
+  const [activeQuestionSubjectId, setActiveQuestionSubjectId] = React.useState("");
+
+  // EE.10 — Inter-School Contests modal state
+  const [contestModalOpen, setContestModalOpen] = React.useState(false);
+
+  // EE.15 — Universal Presets modal state
+  const [universalPresetsOpen, setUniversalPresetsOpen] = React.useState(false);
+
   React.useEffect(() => {
     fetch("/api/cbc/junior-curriculum").then((r) => r.json()).then((j) => {
       if (j.ok) {
@@ -93,10 +132,23 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
         setJuniorSubjectCodes(j.data.subjectCodes ?? []);
         setJuniorAvailable(true);
       }
-    }).catch(() => {
-      // EE.3 not yet released by NEYO Ops -- the card below simply never
-      // appears; every other Strands tab feature keeps working untouched.
-    });
+    }).catch(() => {});
+
+    fetch("/api/cbc/primary-curriculum").then((r) => r.json()).then((j) => {
+      if (j.ok) {
+        setPrimaryGrades(j.data.grades ?? []);
+        setPrimarySubjectCodes(j.data.subjectCodes ?? []);
+        setPrimaryAvailable(true);
+      }
+    }).catch(() => {});
+
+    fetch("/api/cbc/senior-curriculum").then((r) => r.json()).then((j) => {
+      if (j.ok) {
+        setSeniorGrades(j.data.grades ?? []);
+        setSeniorSubjectCodes(j.data.subjectCodes ?? []);
+        setSeniorAvailable(true);
+      }
+    }).catch(() => {});
   }, []);
 
   React.useEffect(() => {
@@ -109,6 +161,28 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
       .then((j) => { if (j.ok) setJuniorPreview(j.data.strands ?? []); })
       .catch(() => {});
   }, [juniorGrade, juniorSubjectId, subjects]);
+
+  React.useEffect(() => {
+    setPrimaryPreview(null);
+    if (!primaryGrade || !primarySubjectId) return;
+    const subj = subjects.find((s) => s.id === primarySubjectId);
+    if (!subj) return;
+    fetch(`/api/cbc/primary-curriculum?grade=${encodeURIComponent(primaryGrade)}&subjectCode=${subj.code}`)
+      .then((r) => r.json())
+      .then((j) => { if (j.ok) setPrimaryPreview(j.data.strands ?? []); })
+      .catch(() => {});
+  }, [primaryGrade, primarySubjectId, subjects]);
+
+  React.useEffect(() => {
+    setSeniorPreview(null);
+    if (!seniorGrade || !seniorSubjectId) return;
+    const subj = subjects.find((s) => s.id === seniorSubjectId);
+    if (!subj) return;
+    fetch(`/api/cbc/senior-curriculum?grade=${encodeURIComponent(seniorGrade)}&subjectCode=${subj.code}`)
+      .then((r) => r.json())
+      .then((j) => { if (j.ok) setSeniorPreview(j.data.strands ?? []); })
+      .catch(() => {});
+  }, [seniorGrade, seniorSubjectId, subjects]);
 
   async function applyJuniorCurriculum() {
     if (!juniorGrade || !juniorSubjectId) return;
@@ -131,6 +205,26 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
     }
   }
 
+  async function applyPrimaryCurriculum() {
+    if (!primaryGrade || !primarySubjectId) return;
+    setPrimaryBusy(true);
+    try {
+      const subj = subjects.find((s) => s.id === primarySubjectId);
+      const res = await fetch("/api/cbc/primary-curriculum", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subjectId: primarySubjectId, grade: primaryGrade, subjectCode: subj?.code }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        toast({ title: `${json.data.strandsAdded} strands and ${json.data.substrandsAdded} sub-strands added`, tone: "success" });
+        load();
+      } else {
+        toast({ title: json.error?.message || "Failed", tone: "error" });
+      }
+    } finally {
+      setPrimaryBusy(false);
+    }
+  }
   // EE.3 (Senior School phase) — same pattern as the Junior School library
   // above, pointed at /api/cbc/senior-curriculum instead. Silently hidden
   // (renders nothing) until NEYO Ops has released EE.3 — the SAME
@@ -267,7 +361,88 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
               <Sparkles className="h-3.5 w-3.5" /> KICD {s.code}
             </Button>
           ))}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setActiveVideoStrandId("");
+              setActiveVideoSubjectId("");
+              setVideoModalOpen(true);
+            }}
+            className="rounded-full gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/60"
+          >
+            <Video className="h-3.5 w-3.5 fill-current" /> YouTube Video Library (`EE.7`)
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setActiveQuestionStrandId("");
+              setActiveQuestionSubjectId("");
+              setQuestionBankModalOpen(true);
+            }}
+            className="rounded-full gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/60"
+          >
+            <FileText className="h-3.5 w-3.5" /> Question Bank & Book Scan (`EE.8`)
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setContestModalOpen(true)}
+            className="rounded-full gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900/60"
+          >
+            <Trophy className="h-3.5 w-3.5 text-amber-500" /> Inter-School Contests (`EE.10`)
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setUniversalPresetsOpen(true)}
+            className="rounded-full gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-blue-500" /> Universal Presets (`EE.15`)
+          </Button>
         </div>
+      )}
+      {canManage && primaryAvailable && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Primary & Pre-Primary curriculum library (PP1–Grade 6)</CardTitle>
+            <p className="text-xs text-navy-400">Real KICD strands and sub-strands for Pre-Primary (PP1-PP2) and Lower/Upper Primary (Grade 1-6) — select grade and learning area to load.</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <select value={primaryGrade} onChange={(e) => setPrimaryGrade(e.target.value)} className="rounded-full border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900">
+                <option value="">Grade…</option>
+                {primaryGrades.map((g) => <option key={g} value={g}>{g}</option>)}
+              </select>
+              <select value={primarySubjectId} onChange={(e) => setPrimarySubjectId(e.target.value)} className="rounded-full border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900">
+                <option value="">Subject…</option>
+                {subjects.filter((s) => primarySubjectCodes.includes(s.code)).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            {primaryGrade && primarySubjectId && (
+              primaryPreview === null ? (
+                <p className="text-xs text-navy-400">Loading preview…</p>
+              ) : primaryPreview.length === 0 ? (
+                <p className="text-xs text-navy-400">No real KICD preset available yet for this grade/subject combination.</p>
+              ) : (
+                <>
+                  <div className="space-y-2 rounded-xl bg-warm-50 p-3 dark:bg-navy-800/60">
+                    {primaryPreview.map((s) => (
+                      <div key={s.name}>
+                        <p className="text-xs font-semibold text-navy-700 dark:text-navy-200">{s.name}</p>
+                        <p className="text-[11px] text-navy-400">{s.substrands.map((sub) => sub.name).join(" · ")}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <Button size="sm" onClick={applyPrimaryCurriculum} disabled={primaryBusy}>
+                    {primaryBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Apply {primaryPreview.length} strands to {primaryGrade}
+                  </Button>
+                </>
+              )
+            )}
+          </CardContent>
+        </Card>
       )}
       {canManage && juniorAvailable && (
         <Card>
@@ -313,6 +488,8 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
       {canManage && seniorAvailable && (
         <Card>
           <CardHeader>
+            <CardTitle className="text-base">Senior School curriculum library (Grade 10–12)</CardTitle>
+            <p className="text-xs text-navy-400">Real KICD Grade 10, 11, and 12 core and pathway strands/sub-strands (STEM electives, Applied/Business, Social Sciences, Languages, and Core Mathematics/English/Kiswahili/CSL).</p>
             <CardTitle className="text-base">Senior School curriculum library (Grade 10)</CardTitle>
             <p className="text-xs text-navy-400">Real KICD strands and sub-strands for the compulsory Senior School core subjects — pick a grade and subject, preview what will be added, then apply.</p>
           </CardHeader>
@@ -372,6 +549,30 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
                           </div>
                           <div className="flex items-center gap-2">
                             {st.assessmentCount > 0 && <Badge tone="neutral">{st.assessmentCount} obs</Badge>}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveVideoStrandId(st.id);
+                                setActiveVideoSubjectId(st.subjectId);
+                                setVideoModalOpen(true);
+                              }}
+                              className="flex items-center gap-1 rounded-full bg-red-50 hover:bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-950/60 dark:hover:bg-red-900 dark:text-red-300 transition-colors"
+                            >
+                              <Video className="h-3 w-3 fill-current" /> Videos (`EE.7`)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveQuestionStrandId(st.id);
+                                setActiveQuestionSubjectId(st.subjectId);
+                                setQuestionBankModalOpen(true);
+                              }}
+                              className="flex items-center gap-1 rounded-full bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:bg-emerald-950/60 dark:hover:bg-emerald-900 dark:text-emerald-300 transition-colors"
+                            >
+                              <FileText className="h-3 w-3" /> Practice (`EE.8`)
+                            </button>
                             <ChevronDown className={`h-4 w-4 text-navy-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                           </div>
                         </button>
@@ -415,6 +616,33 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
         </div>
       )}
       {dialog && <StrandDialog subjects={subjects} onClose={() => setDialog(false)} onDone={() => { setDialog(false); load(); }} />}
+      <YouTubeLearningLibraryModal
+        open={videoModalOpen}
+        onOpenChange={setVideoModalOpen}
+        subjects={subjects}
+        strands={strands || []}
+        defaultSubjectId={activeVideoSubjectId}
+        defaultStrandId={activeVideoStrandId}
+      />
+      <QuestionBankModal
+        open={questionBankModalOpen}
+        onOpenChange={setQuestionBankModalOpen}
+        subjects={subjects}
+        strands={strands || []}
+        defaultSubjectId={activeQuestionSubjectId}
+        defaultStrandId={activeQuestionStrandId}
+      />
+      <InterSchoolContestModal
+        open={contestModalOpen}
+        onOpenChange={setContestModalOpen}
+        subjects={subjects || []}
+        canManage={canManage}
+      />
+      <UniversalPresetsModal
+        open={universalPresetsOpen}
+        onOpenChange={setUniversalPresetsOpen}
+        onApplied={load}
+      />
     </div>
   );
 }
@@ -454,7 +682,7 @@ function StrandDialog({ subjects, onClose, onDone }: { subjects: Subject[]; onCl
 }
 
 // ---- Assess ---------------------------------------------------------------------
-function AssessTab({ classes }: { classes: ClassOpt[] }) {
+function AssessTab({ classes, subjects }: { classes: ClassOpt[]; subjects: Subject[] }) {
   const { toast } = useToast();
   const [strands, setStrands] = React.useState<Strand[]>([]);
   const [strandId, setStrandId] = React.useState("");
@@ -463,6 +691,7 @@ function AssessTab({ classes }: { classes: ClassOpt[] }) {
   const [levels, setLevels] = React.useState<Map<string, number>>(new Map());
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [paperQuizFormativeOpen, setPaperQuizFormativeOpen] = React.useState(false);
   // EE.1 — real sub-strands under the chosen strand, offered as an optional
   // sheet-wide narrower target (a school not using sub-strands never sees
   // this row at all — the list is simply empty).
@@ -578,6 +807,17 @@ function AssessTab({ classes }: { classes: ClassOpt[] }) {
             {substrands.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         )}
+        {strandId && classId && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => setPaperQuizFormativeOpen(true)}
+            className="rounded-full gap-1.5 border-emerald-300 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300"
+          >
+            <FileText className="h-3.5 w-3.5" /> Paper Quiz to Rubrics (`EE.9`)
+          </Button>
+        )}
       </div>
       {strand?.learningOutcome && (
         <p className="rounded-xl bg-warm-50 px-3 py-2 text-xs text-navy-600 dark:bg-navy-800 dark:text-navy-300">{strand.learningOutcome}</p>
@@ -642,6 +882,17 @@ function AssessTab({ classes }: { classes: ClassOpt[] }) {
         </>
 
       )}
+      <PaperQuizFormativeModal
+        open={paperQuizFormativeOpen}
+        onOpenChange={setPaperQuizFormativeOpen}
+        subjects={subjects || []}
+        classes={classes || []}
+        strands={strands || []}
+        defaultSubjectId={strand?.subjectId ?? ""}
+        defaultClassId={classId}
+        defaultStrandId={strandId}
+        onApplied={loadSheet}
+      />
     </div>
   );
 }

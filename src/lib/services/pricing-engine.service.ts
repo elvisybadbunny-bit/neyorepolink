@@ -17,6 +17,7 @@
  * hardcoded in a way that would require a code change to adjust.
  */
 import { db } from "@/lib/db";
+import { DEFAULT_PLAN_KEY } from "@/lib/core/plans";
 import type { SessionUser } from "@/lib/core/session";
 import { isFounderTier } from "@/lib/core/roles";
 import {
@@ -222,6 +223,21 @@ export function quotePriceForCounts(
   return { ...result, estimatedStorageGb, estimatedAiOcrUsage, alumniStorageGbAdded, alumniFactorApplied };
 }
 
+/** Compute exact per-term pricing under the Modular User & Module Based model (MODULAR_USERS_V1). */
+export function computeModularUserModulePrice(
+  studentCount: number,
+  staffCount: number,
+  enabledOptionalModulesCount: number,
+  config: PricingEngineConfig
+): { baseCoreFeeKes: number; studentFeeKes: number; staffFeeKes: number; modulesFeeKes: number; termTotalKes: number } {
+  const baseCoreFeeKes = config.modularBaseCoreFeeKes;
+  const studentFeeKes = studentCount * config.modularPerStudentRateKes;
+  const staffFeeKes = staffCount * config.modularPerStaffRateKes;
+  const modulesFeeKes = enabledOptionalModulesCount * config.modularPerModuleRateKes;
+  const termTotalKes = Math.round(baseCoreFeeKes + studentFeeKes + staffFeeKes + modulesFeeKes);
+  return { baseCoreFeeKes, studentFeeKes, staffFeeKes, modulesFeeKes, termTotalKes };
+}
+
 // ---------------------------------------------------------------------------
 // Real, live counts for an ALREADY-ONBOARDED school (used by the repricing
 // job — never estimates, these are exact real numbers).
@@ -285,11 +301,11 @@ export async function migrateTenantToSizeBasedPricing(tenantId: string): Promise
     where: { tenantId },
     create: {
       tenantId,
-      planKey: "free_karibu",
-      status: "ACTIVE",
+      planKey: DEFAULT_PLAN_KEY,
+      status: "TRIAL",
       pricingMode: "SIZE_BASED_V2",
       sizeBasedPriceKes: quote.monthlyPriceKes,
-      currentPeriodEnd: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000),
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // exactly 1 free month (30 days) for new users
     },
     update: {
       pricingMode: "SIZE_BASED_V2",
@@ -619,4 +635,182 @@ export async function setDiscretionaryDecreaseDelegate(
     },
   });
   return { userId: target.id, canApplyDiscretionaryDecrease };
+}
+
+/** Recalculate and update the exact active term price for a school on MODULAR_USERS_V1 when modules or users change, enforcing midpoint 50% vs 100% end-month proration. */
+export async function recalculateTenantModularPricing(
+  tenantId: string,
+  toggledModuleKey?: string,
+  toggledEnabled?: boolean
+) {
+  const sub = await db.subscription.findUnique({ where: { tenantId } });
+  if (!sub || sub.pricingMode !== "MODULAR_USERS_V1") return sub;
+
+  const config = await getPricingEngineConfig();
+  const counts = await getRealCurrentCounts(tenantId);
+  const optionalModulesCount = await db.tenantModule.count({
+    where: {
+      tenantId,
+      enabled: true,
+      moduleKey: { notIn: ["students", "attendance", "finance", "bundi"] },
+    },
+  });
+
+  const res = computeModularUserModulePrice(counts.studentCount, counts.staffCount, optionalModulesCount, config);
+  const updated = await db.subscription.update({
+    where: { tenantId },
+    data: { sizeBasedPriceKes: res.termTotalKes },
+  });
+
+  // If a module was enabled mid-term/mid-month, calculate 50% vs 100% end-month ledger proration
+  if (toggledModuleKey && toggledEnabled && sub.status === "ACTIVE") {
+    const now = new Date();
+    const start = sub.currentPeriodStart || now;
+    const end = sub.currentPeriodEnd || new Date(now.getTime() + 120 * 24 * 3600_000);
+    const totalDuration = end.getTime() - start.getTime();
+    const elapsed = now.getTime() - start.getTime();
+    const isPastMidpoint = totalDuration > 0 && elapsed > (totalDuration / 2);
+
+    const moduleRate = config.modularPerModuleRateKes || 1500;
+    const prorationChargeKes = isPastMidpoint ? Math.round(moduleRate / 2) : moduleRate;
+
+    // Stamp line item on the active end-month / term invoice ledger
+    const currentInvoice = await db.invoice.findFirst({
+      where: { tenantId, status: { in: ["UNPAID", "PARTIAL", "PAID"] } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (currentInvoice) {
+      await db.invoice.update({
+        where: { id: currentInvoice.id },
+        data: {
+          totalKes: currentInvoice.totalKes + prorationChargeKes,
+          description: `${currentInvoice.description} + [Module Unlock: ${toggledModuleKey.toUpperCase()} (${isPastMidpoint ? "50% Mid-Period Charge" : "100% Full Period Charge"}) @ KES ${prorationChargeKes}]`,
+        },
+      });
+    }
+  }
+
+  return updated;
+}
+
+export interface PricingOptimizationAdvisorResult {
+  tenantId: string;
+  shouldSwitchToCapacity: boolean;
+  currentModularKes: number;
+  capacityQuoteKes: number;
+  potentialSavingsKes: number;
+  enabledOptionalModulesCount: number;
+  advisoryTitle: string | null;
+  advisoryMessage: string | null;
+}
+
+/** Check whether a school on MODULAR_USERS_V1 has opened enough optional modules that switching to Capacity Complete (SIZE_BASED_V2) is cheaper and better for them. */
+export async function checkPricingOptimizationAdvisor(tenantId: string): Promise<PricingOptimizationAdvisorResult> {
+  const sub = await db.subscription.findUnique({ where: { tenantId } });
+  const config = await getPricingEngineConfig();
+  const counts = await getRealCurrentCounts(tenantId);
+  const alumniRecordCount = await getRealAlumniCount(tenantId);
+
+  const optionalModulesCount = await db.tenantModule.count({
+    where: {
+      tenantId,
+      enabled: true,
+      moduleKey: { notIn: ["students", "attendance", "finance", "bundi"] },
+    },
+  });
+
+  const modular = computeModularUserModulePrice(counts.studentCount, counts.staffCount, optionalModulesCount, config);
+  const capacity = quotePriceForCounts(counts.studentCount, counts.staffCount, counts.parentCount, config, alumniRecordCount);
+
+  const currentModularKes = sub?.pricingMode === "MODULAR_USERS_V1" ? (sub.sizeBasedPriceKes || modular.termTotalKes) : modular.termTotalKes;
+  const capacityQuoteKes = capacity.monthlyPriceKes;
+  const potentialSavingsKes = Math.max(0, currentModularKes - capacityQuoteKes);
+
+  const shouldSwitchToCapacity = Boolean(
+    sub?.pricingMode === "MODULAR_USERS_V1" && (
+      (currentModularKes > capacityQuoteKes) ||
+      (optionalModulesCount >= 4 && potentialSavingsKes > 0)
+    )
+  );
+
+  let advisoryTitle: string | null = null;
+  let advisoryMessage: string | null = null;
+
+  if (shouldSwitchToCapacity) {
+    advisoryTitle = `💡 Smart Pricing Advice: Switch to Capacity Complete & Save KES ${potentialSavingsKes.toLocaleString("en-KE")}/term`;
+    advisoryMessage = `Your school has opened ${optionalModulesCount} optional modules under the pay-per-module model (` +
+      `KES ${currentModularKes.toLocaleString("en-KE")}/term). ` +
+      `We advise switching to our Capacity Complete model (SIZE_BASED_V2) inside Settings → Billing. ` +
+      `You will unlock EVERY single NEYO module immediately (` +
+      `Library, LMS, Hostel, Transport, Cafeteria, Inventory, Analytics, etc.) ` +
+      `for one flat capacity quote of KES ${capacityQuoteKes.toLocaleString("en-KE")}/term — saving your school KES ${potentialSavingsKes.toLocaleString("en-KE")} every term!`;
+  }
+
+  return {
+    tenantId,
+    shouldSwitchToCapacity,
+    currentModularKes,
+    capacityQuoteKes,
+    potentialSavingsKes,
+    enabledOptionalModulesCount: optionalModulesCount,
+    advisoryTitle,
+    advisoryMessage,
+  };
+}
+
+/** Switch a tenant between Capacity-Based V2 and Modular User & Module V1 right inside settings. */
+export async function switchTenantPricingModel(
+  tenantId: string,
+  actor: SessionUserLike,
+  newPricingMode: "SIZE_BASED_V2" | "MODULAR_USERS_V1"
+) {
+  const config = await getPricingEngineConfig();
+  const counts = await getRealCurrentCounts(tenantId);
+  const alumniRecordCount = await getRealAlumniCount(tenantId);
+
+  let newPriceKes = 0;
+  if (newPricingMode === "MODULAR_USERS_V1") {
+    const optionalModulesCount = await db.tenantModule.count({
+      where: {
+        tenantId,
+        enabled: true,
+        moduleKey: { notIn: ["students", "attendance", "finance", "bundi"] },
+      },
+    });
+    const modular = computeModularUserModulePrice(counts.studentCount, counts.staffCount, optionalModulesCount, config);
+    newPriceKes = modular.termTotalKes;
+  } else {
+    const quote = quotePriceForCounts(counts.studentCount, counts.staffCount, counts.parentCount, config, alumniRecordCount);
+    newPriceKes = quote.monthlyPriceKes;
+  }
+
+  const updated = await db.subscription.upsert({
+    where: { tenantId },
+    create: {
+      tenantId,
+      planKey: DEFAULT_PLAN_KEY,
+      status: "TRIAL",
+      pricingMode: newPricingMode,
+      sizeBasedPriceKes: newPriceKes,
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+    update: {
+      pricingMode: newPricingMode,
+      sizeBasedPriceKes: newPriceKes,
+    },
+  });
+
+  await db.auditLog.create({
+    data: {
+      tenantId,
+      actorId: actor.id,
+      actorName: actor.fullName,
+      action: "billing.pricing_model_switched",
+      entityType: "Subscription",
+      entityId: updated.id,
+      metadata: JSON.stringify({ newPricingMode, newPriceKes }),
+    },
+  });
+
+  return updated;
 }

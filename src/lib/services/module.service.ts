@@ -4,6 +4,10 @@
  */
 import { db } from "@/lib/db";
 import { MODULES, getModuleDef, isModuleKey } from "@/lib/core/modules";
+import { recalculateTenantModularPricing, checkPricingOptimizationAdvisor } from "@/lib/services/pricing-engine.service";
+import { isPaused } from "@/lib/services/platform-flags.service";
+import { checkFeatureReleaseAccess } from "@/lib/services/early-access-release.service";
+import { createInApp } from "@/lib/services/notification.service";
 
 export class ModuleError extends Error {
   constructor(
@@ -73,6 +77,26 @@ export async function setModule(
     );
   }
 
+  if (enabled) {
+    const pausedCheck = await isPaused(moduleKey);
+    if (pausedCheck.paused) {
+      throw new ModuleError(
+        "MODULE_LOCKED",
+        `🚧 Module Not Released Yet: The [${def.label}] module is currently under active enhancement by NEYO Engineering and is not yet released (` +
+          (pausedCheck.note || "coming soon") +
+          `). Please choose another module from your sidebar to continue.`
+      );
+    }
+    await checkFeatureReleaseAccess(tenantId, `module:${moduleKey}`).catch((err) => {
+      throw new ModuleError(
+        "MODULE_LOCKED",
+        `🚧 Module Not Released Yet: The [${def.label}] module is currently restricted (` +
+          err.message +
+          `). Please choose another module from your sidebar to continue.`
+      );
+    });
+  }
+
   await db.$transaction([
     db.tenantModule.upsert({
       where: { tenantId_moduleKey: { tenantId, moduleKey } },
@@ -91,6 +115,24 @@ export async function setModule(
     }),
   ]);
 
+  await recalculateTenantModularPricing(tenantId).catch(() => {});
+
+  // Smart Pricing Optimization Advisor check right upon module activation
+  if (enabled && !def.core) {
+    await checkPricingOptimizationAdvisor(tenantId).then(async (adv) => {
+      if (adv.shouldSwitchToCapacity && adv.advisoryMessage) {
+        await createInApp({
+          tenantId,
+          recipientId: actor.id,
+          title: adv.advisoryTitle || "💡 Smart Pricing Advice: Switch to Capacity Complete",
+          body: adv.advisoryMessage,
+          category: "billing",
+          href: "/settings/billing",
+        });
+      }
+    }).catch(() => {});
+  }
+
   return getModuleStates(tenantId);
 }
 
@@ -103,5 +145,21 @@ export async function initialiseModules(tenantId: string): Promise<void> {
       update: {},
       create: { tenantId, moduleKey: m.key, enabled: m.defaultOn },
     });
+  }
+}
+
+/**
+ * Enforce that a school has switched on the required prerequisite module before using a dependent feature.
+ * e.g., assertModuleDependency(tenantId, "hostel", "Dormitory Bed Allocation")
+ */
+export async function assertModuleDependency(tenantId: string, requiredModuleKey: string, featureLabel: string): Promise<void> {
+  const enabledKeys = await getEnabledModuleKeys(tenantId);
+  if (!enabledKeys.has(requiredModuleKey)) {
+    const def = getModuleDef(requiredModuleKey);
+    const moduleLabel = def?.label || requiredModuleKey.toUpperCase();
+    throw new ModuleError(
+      "MODULE_LOCKED",
+      `🔒 Prerequisite Module Required: The feature '${featureLabel}' requires the [${moduleLabel}] module to be active. Your school has not switched on [${moduleLabel}] in Settings → Modules. Please ask your Principal to enable [${moduleLabel}] first to unlock this capability.`
+    );
   }
 }

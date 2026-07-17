@@ -4,8 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import {
   Plus, Search, LayoutGrid, List as ListIcon, Loader2, AlertCircle,
-  GraduationCap, Users, UserCheck, X, Printer,
+  GraduationCap, Users, UserCheck, X, Printer, CalendarRange,
 } from "lucide-react";
+import { StudentDutiesModal } from "@/components/students/student-duties-modal";
 import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +59,7 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
   const [status, setStatus] = React.useState("");
   const [gender, setGender] = React.useState("");
   const [dialog, setDialog] = React.useState(false);
+  const [dutiesModalOpen, setDutiesModalOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
@@ -418,6 +420,9 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
               <Button variant="secondary" onClick={() => window.print()}>
                 <Printer className="h-4 w-4 text-green-600" /> Print Class List
               </Button>
+              <Button variant="secondary" onClick={() => setDutiesModalOpen(true)}>
+                <CalendarRange className="h-4 w-4 text-amber-600" /> Student Duties (`K.2`)
+              </Button>
             </>
           )}
         </div>
@@ -585,6 +590,7 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
       )}
 
       {dialog && <NewStudentDialog classes={classes} onClose={()=>setDialog(false)} onSaved={(adm)=>{ setDialog(false); toast({title:`Student registered · ${adm}`, tone:"success"}); load(); }} />}
+      {dutiesModalOpen && <StudentDutiesModal open={dutiesModalOpen} onOpenChange={setDutiesModalOpen} classes={classes} currentClassId={classId} canManage={canCreate} />}
       </div>
 
       {/* Print-only Class List Table (H.3) */}

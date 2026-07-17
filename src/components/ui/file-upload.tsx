@@ -20,6 +20,59 @@ export interface UploadedFile {
  * It posts the file to NEYO first, so the server can encrypt the bytes with the
  * tenant key before any external provider receives the object.
  */
+async function calculateFileSha256(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function downsampleImageToWebP(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || typeof document === "undefined") return file;
+  if (file.size <= 200_000) return file;
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1600;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(file); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob || blob.size >= file.size) { resolve(file); return; }
+            const newName = file.name.replace(/\.[^.]+$/, "") + ".webp";
+            const newFile = new File([blob], newName, { type: "image/webp", lastModified: Date.now() });
+            resolve(newFile);
+          },
+          "image/webp",
+          0.82
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
 export function FileUpload({
   category = "attachment",
   accept = "image/*,application/pdf",
@@ -41,12 +94,47 @@ export function FileUpload({
   const captureValue = capture === false || !canCapturePhoto ? undefined : (capture ?? "environment");
   const buttonLabel = canCapturePhoto ? `${label} / take photo` : label;
 
-  async function handleFile(file: File) {
+  async function handleFile(rawFile: File) {
     setUploading(true);
     try {
+      // 1. In-Browser WebWorker/Canvas Downsampling for large images (`Idea 2.1`)
+      const file = await downsampleImageToWebP(rawFile);
+      const originalSizeBytes = rawFile.size;
+
+      // 2. Pre-Upload SHA-256 CAS Deduplication Check (`Idea 2.2`)
+      try {
+        const sha256 = await calculateFileSha256(file);
+        const casRes = await fetch("/api/storage/check-hash", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sha256 }),
+        });
+        const casJson = await casRes.json().catch(() => ({}));
+        if (casJson.ok && (casJson.data?.exists || casJson.exists)) {
+          const matchedUrl = casJson.data?.url || casJson.url;
+          toast({
+            title: "⚡ CAS Deduplication Hit!",
+            description: `Instant 0-byte upload for '${file.name}' — saved ${Math.round(file.size / 1024)} KB cloud storage.`,
+            tone: "success",
+          });
+          onUploaded({
+            id: matchedUrl,
+            url: matchedUrl,
+            fileName: file.name,
+            contentType: file.type,
+            encrypted: true,
+          });
+          return;
+        }
+      } catch {
+        // Fall back gracefully to full upload if CAS check fails
+      }
+
+      // 3. Proceed with standard encrypted upload
       const form = new FormData();
       form.append("file", file);
       form.append("category", category);
+      form.append("originalSizeBytes", String(originalSizeBytes));
 
       const res = await fetch("/api/files/encrypted", {
         method: "POST",

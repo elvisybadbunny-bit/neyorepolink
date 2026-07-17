@@ -55,8 +55,15 @@ import { InfluencerCodesOpsTab } from "@/components/founder/influencer-codes-ops
 import { NeyoTeamOpsTab } from "@/components/founder/neyo-team-ops-tab";
 import { FounderMorningDashboardTab } from "@/components/founder/founder-morning-dashboard-tab";
 import { UnitEconomicsTab } from "@/components/founder/unit-economics-tab";
+import { DemoRequestsOpsTab } from "@/components/founder/demo-requests-ops-tab";
+import { SupportImpersonationOpsTab } from "@/components/founder/support-impersonation-ops-tab";
+import { PlatformMaintenanceOpsTab } from "@/components/founder/platform-maintenance-ops-tab";
+import { StorageArchiveTiersOpsTab } from "@/components/founder/storage-archive-tiers-ops-tab";
+import { FeatureReleaseControlsTab } from "@/components/founder/feature-release-controls-tab";
+import { BundiOcrConfigTab } from "@/components/founder/bundi-ocr-config-tab";
+import { TrialLimitsOpsTab } from "@/components/founder/trial-limits-ops-tab";
 
-const TABS = ["Overview", "Founder Dashboard", "Unit Economics", "Build log", "Metrics", "Cadence", "Interviews", "Platform Flags", "Feature Toggles", "Revenue Grants", "Custom Feature Requests", "Discount Campaigns", "Influencer Codes", "Pathway Guide", "Revenue Ops", "Pricing Engine", "Storage Intelligence", "Developer Center", "Bundi Import", "Curriculum Library", "Business Operations", "Ecosystem Trends", "Team & Access"] as const;
+const TABS = ["Overview", "Founder Dashboard", "Demo Requests", "Diagnostic Replay", "Maintenance Ops", "Trial Limits", "Release Whitelists", "Bundi OCR Quotas", "Unit Economics", "Build log", "Metrics", "Cadence", "Interviews", "Platform Flags", "Feature Toggles", "Revenue Grants", "Custom Feature Requests", "Discount Campaigns", "Influencer Codes", "Pathway Guide", "Revenue Ops", "Pricing Engine", "Storage Intelligence", "Storage Archive Tiers", "Developer Center", "Bundi Import", "Curriculum Library", "Business Operations", "Ecosystem Trends", "Team & Access"] as const;
 type Tab = (typeof TABS)[number];
 
 type Dashboard = {
@@ -224,10 +231,8 @@ const DEFAULT_PRICING_CATALOG = {
   termLabel: "term",
   smsPolicy: "SMS is not included inside NEYO packages. Schools buy SMS as a separate top-up bundle.",
   plans: [
-    { key: "free_karibu", name: "Free Karibu", tagline: "For small schools getting started", pricePerTerm: 0, perStudentPerTerm: 0, limits: { students: 50, staff: 10, smsPerTerm: 0 }, includedModules: ["students", "attendance", "finance", "academics", "staff"], maxAddOns: 0, overageAllowance: 1, support: "Community support", highlights: ["Up to 50 students", "Core modules: students, attendance, finance, academics, staff", "M-Pesa fee collection included"] },
-    { key: "msingi", name: "Msingi", tagline: "Day schools that want the full academic suite", pricePerTerm: 4500, perStudentPerTerm: 0, limits: { students: 250, staff: 35, smsPerTerm: 0 }, includedModules: ["students", "attendance", "finance", "academics", "staff", "library", "lms"], maxAddOns: 2, overageAllowance: 1.1, support: "Email support (48h)", highlights: ["Up to 250 students", "Library + Learning (LMS) included", "Up to 2 add-ons"] },
-    { key: "pro", name: "Pro", tagline: "Growing schools, day or boarding", pricePerTerm: 9000, perStudentPerTerm: 0, limits: { students: 600, staff: 80, smsPerTerm: 0 }, includedModules: ["students", "attendance", "finance", "academics", "staff", "library", "lms", "hostel", "transport"], maxAddOns: 3, overageAllowance: 1.1, support: "Email + WhatsApp support (24h)", highlights: ["Up to 600 students", "Hostel + Transport included", "Up to 3 add-ons"] },
-    { key: "elite", name: "Elite", tagline: "Large schools and group academies", pricePerTerm: 22000, perStudentPerTerm: 0, limits: { students: 5000, staff: 500, smsPerTerm: 0 }, includedModules: ["students", "attendance", "finance", "academics", "staff", "library", "lms", "hostel", "transport", "inventory", "cafeteria"], maxAddOns: 10, overageAllowance: 1.25, support: "Priority support + onboarding", highlights: ["Up to 5,000 students", "Every module included", "Custom domain", "Priority support & up to 10 add-ons"] },
+    { key: "msingi", name: "Msingi", tagline: "Standard school plan with 1-Month Free Trial for new signups", pricePerTerm: 4500, perStudentPerTerm: 0, limits: { students: 500, staff: 50, smsPerTerm: 0 }, includedModules: ["students", "attendance", "finance", "academics", "staff", "library", "lms", "hostel", "transport", "inventory", "cafeteria", "extra_storage", "skills_passport", "custom_reports", "advanced_analytics", "pathway_guidance", "transfer_passport"], maxAddOns: 10, overageAllowance: 1.15, support: "Email + WhatsApp support (24h)", highlights: ["1-Month Free Trial for new users", "All modules unlocked (Neyo Complete)", "Up to 500 students"] },
+    { key: "pro", name: "Pro", tagline: "Large and growing schools, day or boarding", pricePerTerm: 9000, perStudentPerTerm: 0, limits: { students: 5000, staff: 500, smsPerTerm: 0 }, includedModules: ["students", "attendance", "finance", "academics", "staff", "library", "lms", "hostel", "transport", "inventory", "cafeteria", "extra_storage", "skills_passport", "custom_reports", "advanced_analytics", "pathway_guidance", "transfer_passport"], maxAddOns: 15, overageAllowance: 1.25, support: "Priority support + onboarding", highlights: ["1-Month Free Trial for new users", "Up to 5,000 students", "All modules unlocked (Neyo Complete)", "Priority support + custom onboarding"] },
   ],
   addOns: [
     { key: "sms_topup_1000", name: "SMS top-up (1,000)", pricePerTerm: 800, description: "Out-of-package bundle: 1,000 SMS for school messages this term." },
@@ -309,7 +314,7 @@ export function FounderOpsClient() {
 
   // Business Ops sub-states
   const [selectedSchoolId, setSelectedSchoolId] = React.useState("");
-  const [subPlan, setSubPlan] = React.useState("free_karibu");
+  const [subPlan, setSubPlan] = React.useState("msingi");
   const [subStatus, setSubStatus] = React.useState("ACTIVE");
   const [subPrice, setSubPrice] = React.useState("0");
   const [subGraceDays, setSubGraceDays] = React.useState("14");
@@ -800,6 +805,13 @@ export function FounderOpsClient() {
       {tab === "Revenue Grants" && <RevenueGrantsOpsTab />}
       {tab === "Custom Feature Requests" && <CustomFeatureRequestsOpsTab />}
       {tab === "Team & Access" && <NeyoTeamOpsTab />}
+      {tab === "Demo Requests" && <DemoRequestsOpsTab />}
+      {tab === "Diagnostic Replay" && <SupportImpersonationOpsTab />}
+      {tab === "Maintenance Ops" && <PlatformMaintenanceOpsTab />}
+      {tab === "Trial Limits" && <TrialLimitsOpsTab />}
+      {tab === "Release Whitelists" && <FeatureReleaseControlsTab />}
+      {tab === "Bundi OCR Quotas" && <BundiOcrConfigTab />}
+      {tab === "Storage Archive Tiers" && <StorageArchiveTiersOpsTab />}
       {tab === "Pathway Guide" && <PathwayGuideOpsTab />}
       {tab === "Discount Campaigns" && <DiscountCampaignsOpsTab />}
       {tab === "Influencer Codes" && <InfluencerCodesOpsTab />}
@@ -1654,7 +1666,7 @@ function PricingCatalogEditor({ catalog, onSave, saving }: { catalog: any; onSav
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-black text-navy-950 dark:text-white">Out-of-package SMS bundles</p>
-              <p className="text-xs text-navy-500 dark:text-navy-400">Schools buy these separately; they are not part of Free Karibu, Msingi, Pro or Elite.</p>
+              <p className="text-xs text-navy-500 dark:text-navy-400">Schools buy these separately; they are not part of Msingi or Pro.</p>
             </div>
             <Badge tone="amber">{smsAddOns.length} SMS top-up option{smsAddOns.length === 1 ? "" : "s"}</Badge>
           </div>
@@ -2154,7 +2166,7 @@ function BusinessOperationsTab({
                         <span className="font-semibold text-navy-800 dark:text-navy-100">{s.name}</span>
                         <div className="flex items-center gap-1.5">
                           <Badge tone={s.subscription ? statusTone(s.subscription.status) : "neutral"}>
-                            {s.subscription ? `${s.subscription.planKey} | ${s.subscription.status}` : "free_karibu"}
+                            {s.subscription ? `${s.subscription.planKey} | ${s.subscription.status}` : "msingi"}
                           </Badge>
                           <span className="font-mono text-navy-500">
                             {s.subscription ? formatKES(s.subscription.grandfatheredPrice) : "KES 0"}

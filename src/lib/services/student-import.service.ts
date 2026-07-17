@@ -31,6 +31,22 @@ function splitSubjectList(raw: string): string[] {
   return raw.split(/[;,]/).map((s) => s.trim()).filter(Boolean);
 }
 
+function populateSubjectMap(allSubjects: { id: string; name: string; code: string }[], map: Map<string, string>) {
+  for (const s of allSubjects) {
+    const nameLower = s.name.trim().toLowerCase().replace(/\s+/g, " ");
+    const codeLower = s.code.trim().toLowerCase().replace(/\s+/g, " ");
+    map.set(nameLower, s.id);
+    map.set(codeLower, s.id);
+    map.set(nameLower.replace(/&/g, "and").replace(/\s+/g, " "), s.id);
+    map.set(nameLower.replace(/\band\b/g, "&").replace(/\s+/g, " "), s.id);
+  }
+}
+
+function lookupSubjectId(map: Map<string, string>, rawName: string): string | undefined {
+  const norm = rawName.trim().toLowerCase().replace(/\s+/g, " ");
+  return map.get(norm) ?? map.get(norm.replace(/&/g, "and")) ?? map.get(norm.replace(/\band\b/g, "&"));
+}
+
 export class ImportError extends Error {
   constructor(public code: "EMPTY" | "TOO_MANY_ROWS" | "BAD_FILE" | "NO_NAME_MAPPING" | "ABORTED" | "DUPLICATE", message: string) {
     super(message);
@@ -558,7 +574,8 @@ export async function previewImport(
   hasHeader: boolean,
   mapping?: ColumnMapping,
   targetClassId?: string,
-  updateExisting = true
+  updateExisting = true,
+  compulsorySubjects?: string[]
 ) {
   return withTenant(user.tenantId, async () => {
     if (rows.length === 0) throw new ImportError("EMPTY", "The file has no rows.");
@@ -628,6 +645,33 @@ export async function previewImport(
     }
     const possibleExisting = matchedRows.map((m) => m.row);
 
+    // BB.4 / DD.4 — check subject resolution during preview so any unknown subject names
+    // or compulsory subject mis-matches are reported before the user clicks Commit.
+    const allTenantSubjects = await tenantDb().subject.findMany({ where: { archived: false }, select: { id: true, name: true, code: true } });
+    const subjectByKey = new Map<string, string>();
+    populateSubjectMap(allTenantSubjects, subjectByKey);
+    const unknownSubjects = new Set<string>();
+    let rowsWithSubjectsCount = 0;
+    for (const name of (compulsorySubjects ?? [])) {
+      if (!lookupSubjectId(subjectByKey, name)) unknownSubjects.add(name);
+    }
+    for (const c of candidates) {
+      if (c.subjects && c.subjects.trim()) {
+        rowsWithSubjectsCount++;
+        for (const name of splitSubjectList(c.subjects)) {
+          if (!lookupSubjectId(subjectByKey, name)) unknownSubjects.add(name);
+        }
+      } else if (c.pathway && c.pathway.trim()) {
+        rowsWithSubjectsCount++;
+      }
+    }
+    if (unknownSubjects.size > 0) {
+      issues.push({
+        row: 0,
+        message: `Warning: ${unknownSubjects.size} subject name(s) in your sheet or compulsory list (${[...unknownSubjects].slice(0, 5).join(", ")}) were not found in this school's catalog (Academics -> Subjects). They will be skipped during import unless added first.`,
+      });
+    }
+
     const validCount = candidates.filter((c) => c._issues.length === 0).length;
     return {
       header,
@@ -638,6 +682,9 @@ export async function previewImport(
       sample: candidates.slice(0, 12),
       issues: issues.slice(0, 50),
       unknownClasses: [...unknownClasses], // will be CREATED on commit
+      unknownSubjects: [...unknownSubjects], // BB.4 — unknown subject names in sheet or compulsory list
+      rowsWithSubjectsCount, // BB.4 — how many rows declared subjects or pathways
+      hasCompulsorySubjects: Boolean(compulsorySubjects && compulsorySubjects.length > 0),
       duplicateInFileRows: dupRows,
       possibleExistingRows: possibleExisting,
       matchedRows, // R.1 — real matches this import will UPDATE, not duplicate
@@ -690,15 +737,12 @@ export async function commitImport(
     // name or code), rather than re-querying per row.
     const allTenantSubjects = await tenantDb().subject.findMany({ where: { archived: false }, select: { id: true, name: true, code: true } });
     const subjectByKey = new Map<string, string>();
-    for (const s of allTenantSubjects) {
-      subjectByKey.set(s.name.trim().toLowerCase(), s.id);
-      subjectByKey.set(s.code.trim().toLowerCase(), s.id);
-    }
+    populateSubjectMap(allTenantSubjects, subjectByKey);
     function resolveSubjectNames(names: string[]): { resolvedIds: string[]; unresolved: string[] } {
       const resolvedIds: string[] = [];
       const unresolved: string[] = [];
       for (const name of names) {
-        const id = subjectByKey.get(name.trim().toLowerCase());
+        const id = lookupSubjectId(subjectByKey, name);
         if (id) resolvedIds.push(id);
         else unresolved.push(name);
       }

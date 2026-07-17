@@ -152,3 +152,16 @@ export async function generateNeyoLoginId(): Promise<string> {
   }
   return `NEYO${Date.now().toString(36).toUpperCase()}`;
 }
+
+/**
+ * Generate a custom NEYO-curated login email for any student or staff member.
+ * e.g., "Mary Achieng Otieno" at "karibu-high" -> "mary.otieno.482@karibuhigh.neyo.co.ke"
+ */
+export function generateCuratedNeyoEmail(fullName: string, tenantSlugOrCode: string): string {
+  const parts = fullName.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim().split(/\s+/);
+  const first = parts[0] || "user";
+  const last = parts.length > 1 ? parts[parts.length - 1] : "";
+  const prefix = last ? `${first}.${last}` : first;
+  const domainSlug = tenantSlugOrCode.toLowerCase().replace(/[^a-z0-9]/g, "") || "school";
+  return `${prefix}.${Math.floor(100 + Math.random() * 900)}@${domainSlug}.neyo.co.ke`;
+}

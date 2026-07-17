@@ -24,6 +24,9 @@ export function SyllabusClient() {
   const [status, setStatus] = React.useState("");
   const [open, setOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+  const [viewMode, setViewMode] = React.useState<"topics" | "academics-report">("topics");
+  const [reportData, setReportData] = React.useState<any | null>(null);
+  const [reportBusy, setReportBusy] = React.useState(false);
 
   const load = React.useCallback(async () => {
     const p = new URLSearchParams();
@@ -35,6 +38,21 @@ export function SyllabusClient() {
     if (json.ok) setBoard(json.data);
   }, [classId, subjectId, status]);
   React.useEffect(() => { load(); }, [load]);
+
+  const loadReport = React.useCallback(async () => {
+    setReportBusy(true);
+    try {
+      const p = new URLSearchParams({ action: "coverage_report" });
+      if (classId) p.set("classId", classId);
+      if (subjectId) p.set("subjectId", subjectId);
+      const res = await fetch(`/api/syllabus?${p}`);
+      const json = await res.json();
+      if (json.ok) setReportData(json.data);
+    } finally {
+      setReportBusy(false);
+    }
+  }, [classId, subjectId]);
+  React.useEffect(() => { if (viewMode === "academics-report") void loadReport(); }, [viewMode, loadReport]);
 
   async function update(id: string, nextStatus: string) {
     setBusy(true);
@@ -62,11 +80,79 @@ export function SyllabusClient() {
           <Field label="Class"><select value={classId} onChange={(e) => setClassId(e.target.value)} className="h-10 rounded-2xl border border-navy-200 bg-white px-3 text-sm dark:border-navy-700 dark:bg-navy-900"><option value="">All classes</option>{board.classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
           <Field label="Subject"><select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className="h-10 rounded-2xl border border-navy-200 bg-white px-3 text-sm dark:border-navy-700 dark:bg-navy-900"><option value="">All subjects</option>{board.subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
           <Field label="Status"><select value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 rounded-2xl border border-navy-200 bg-white px-3 text-sm dark:border-navy-700 dark:bg-navy-900"><option value="">Any</option><option>PLANNED</option><option>IN_PROGRESS</option><option>COVERED</option><option>LATE</option></select></Field>
-          <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Add scope topic</Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Add scope topic</Button>
+            <Button variant="secondary" onClick={() => setViewMode(viewMode === "topics" ? "academics-report" : "topics")}>
+              {viewMode === "topics" ? "Academics Audit Report (`I.97`)" : "View Topics Grid"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      {board.topics.length === 0 ? (
+      {viewMode === "academics-report" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpenCheck className="h-5 w-5 text-green-600" />
+              Academics Syllabus Verification Audit (`ensure the syllabus records are real`)
+            </CardTitle>
+            <p className="text-xs text-navy-500">
+              Cross-references teacher-reported coverage against REAL student assessments (`CbcAssessment` / `LessonObservation`) and taught `LessonPlan` records (`I.88`). If a teacher marks a topic covered without any real student assessments, it is flagged as `Self-Reported Only`.
+            </p>
+          </CardHeader>
+          <CardContent>
+            {reportBusy || !reportData ? (
+              <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+            ) : reportData.items?.length === 0 ? (
+              <EmptyState icon={BookOpenCheck} title="No active class-subject pairs" description="Assign teachers to classes and subjects to track verified syllabus progress." />
+            ) : (
+              <div className="overflow-x-auto rounded-2xl border border-navy-100 dark:border-navy-800">
+                <table className="w-full border-collapse bg-white text-xs dark:bg-navy-900">
+                  <thead>
+                    <tr className="bg-warm-50 border-b border-navy-100 text-left font-bold text-navy-700 dark:bg-navy-800 dark:border-navy-700 dark:text-navy-200">
+                      <th className="p-3">Class &amp; Subject</th>
+                      <th className="p-3">Assigned Teacher</th>
+                      <th className="p-3 text-center">Topics</th>
+                      <th className="p-3 text-center">Delivered Lessons (`I.88`)</th>
+                      <th className="p-3 text-center">Student Assessments</th>
+                      <th className="p-3 text-center">Coverage</th>
+                      <th className="p-3">Syllabus Audit Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportData.items.map((item: any) => (
+                      <tr key={`${item.classId}-${item.subjectId}`} className="border-b border-navy-100 hover:bg-navy-50/50 dark:border-navy-800 dark:hover:bg-navy-800/50">
+                        <td className="p-3 font-semibold text-navy-950 dark:text-white">
+                          {item.className} · <span className="text-navy-600 dark:text-navy-300">{item.subjectName}</span>
+                        </td>
+                        <td className="p-3 font-medium text-navy-800 dark:text-navy-200">{item.teacherName}</td>
+                        <td className="p-3 text-center font-bold">{item.totalTopics}</td>
+                        <td className="p-3 text-center font-bold text-blue-600 dark:text-blue-400">{item.deliveredLessonPlans}</td>
+                        <td className="p-3 text-center font-bold text-green-600 dark:text-green-400">{item.realAssessmentsEntered}</td>
+                        <td className="p-3 text-center">
+                          <Badge tone={item.coveragePct >= 80 ? "green" : item.coveragePct >= 40 ? "amber" : "red"}>
+                            {item.coveragePct}%
+                          </Badge>
+                        </td>
+                        <td className="p-3 font-semibold">
+                          <span className={
+                            item.status === "VERIFIED_COVERED" ? "text-green-700 dark:text-green-300" :
+                            item.status === "SELF_REPORTED_ONLY" ? "text-amber-700 dark:text-amber-300" :
+                            item.status === "IN_PROGRESS" ? "text-blue-700 dark:text-blue-300" :
+                            "text-red-700 dark:text-red-300"
+                          }>
+                            {item.statusLabel}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : board.topics.length === 0 ? (
         <EmptyState icon={BookOpenCheck} title="No syllabus scope yet" description="Add the required scope topics for a class and subject, then teachers can mark coverage as they teach." />
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
