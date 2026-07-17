@@ -38,30 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { formatKES } from "@/lib/utils";
-
-type PricingEngineConfig = {
-  weightStudent: number;
-  weightStaff: number;
-  weightParent: number;
-  weightStorageGb: number;
-  weightAiOcrUsage: number;
-  baseFloorKes: number;
-  kesPerScorePoint: number;
-  avgGbPerStudent: number;
-  avgGbPerStaff: number;
-  flatSchoolOverheadGb: number;
-  avgAiOcrUsagePerStudent: number;
-  fairUseStorageMultiplier: number;
-  defaultRepriceThresholdPct: number;
-  studentRepriceThresholdPct: number | null;
-  staffRepriceThresholdPct: number | null;
-  parentRepriceThresholdPct: number | null;
-  storageRepriceThresholdPct: number | null;
-  freeTierMode: "TRIAL" | "EVERYONE_PAYS";
-  freeTrialDays: number;
-  alumniStorageFactorEnabled: boolean;
-  avgGbPerAlumniRecord: number;
-};
+import type { PricingEngineConfig } from "@/lib/validations/pricing-engine";
 
 type SchoolPricingRow = {
   tenantId: string;
@@ -420,6 +397,19 @@ export function PricingEngineOpsTab() {
               {config.alumniStorageFactorEnabled && (
                 <NumField label="Avg GB per alumni record" value={config.avgGbPerAlumniRecord} step={0.01} onChange={(v) => setConfig({ ...config, avgGbPerAlumniRecord: v })} />
               )}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-navy-400">Modular User &amp; Module Based Model (`MODULAR_USERS_V1`) — Live Editable Rates</p>
+            <p className="mb-2 text-xs text-navy-500 dark:text-navy-400">
+              Alternative pricing model where schools pay per user + per active module opened. Schools can toggle between this and Capacity V2 right in `/settings/billing`. Editing these rates immediately affects all modular-mode quotations and renewals.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <NumField label="Base Core Fee (KES/term)" value={config.modularBaseCoreFeeKes ?? 3000} onChange={(v) => setConfig({ ...config, modularBaseCoreFeeKes: v })} hint="Covers core OS (`students, attendance, finance`)." />
+              <NumField label="Per Student Rate (KES/term)" value={config.modularPerStudentRateKes ?? 30} onChange={(v) => setConfig({ ...config, modularPerStudentRateKes: v })} hint="Charged per enrolled learner." />
+              <NumField label="Per Staff Rate (KES/term)" value={config.modularPerStaffRateKes ?? 200} onChange={(v) => setConfig({ ...config, modularPerStaffRateKes: v })} hint="Charged per active teacher/admin." />
+              <NumField label="Per Module Rate (KES/term)" value={config.modularPerModuleRateKes ?? 1500} onChange={(v) => setConfig({ ...config, modularPerModuleRateKes: v })} hint="Charged for each optional module opened (`Hostel, LMS, Library, etc.`)." />
             </div>
           </div>
 
