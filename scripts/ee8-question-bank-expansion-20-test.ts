@@ -65,6 +65,16 @@ import { QUESTION_BANK_EXPANSION_500MORE_PART28 } from "../src/lib/data/kicd-que
 import { QUESTION_BANK_EXPANSION_500MORE_PART29 } from "../src/lib/data/kicd-question-bank-expansion-500more-part29";
 import { QUESTION_BANK_EXPANSION_500MORE_PART30 } from "../src/lib/data/kicd-question-bank-expansion-500more-part30";
 import { QUESTION_BANK_EXPANSION_500MORE_PART31 } from "../src/lib/data/kicd-question-bank-expansion-500more-part31";
+import { QUESTION_BANK_EXPANSION_1000MORE_PART1 } from "../src/lib/data/kicd-question-bank-expansion-1000more-part1";
+import { QUESTION_BANK_EXPANSION_1000MORE_PART2 } from "../src/lib/data/kicd-question-bank-expansion-1000more-part2";
+import { QUESTION_BANK_EXPANSION_1000MORE_PART3 } from "../src/lib/data/kicd-question-bank-expansion-1000more-part3";
+import { QUESTION_BANK_EXPANSION_1000MORE_PART4 } from "../src/lib/data/kicd-question-bank-expansion-1000more-part4";
+import { QUESTION_BANK_EXPANSION_1000MORE_PART5 } from "../src/lib/data/kicd-question-bank-expansion-1000more-part5";
+import { QUESTION_BANK_EXPANSION_1000MORE_PART6 } from "../src/lib/data/kicd-question-bank-expansion-1000more-part6";
+import { QUESTION_BANK_EXPANSION_1000MORE_PART7 } from "../src/lib/data/kicd-question-bank-expansion-1000more-part7";
+import { QUESTION_BANK_EXPANSION_1000MORE_PART8 } from "../src/lib/data/kicd-question-bank-expansion-1000more-part8";
+import { QUESTION_BANK_EXPANSION_1000MORE_PART9 } from "../src/lib/data/kicd-question-bank-expansion-1000more-part9";
+import { QUESTION_BANK_EXPANSION_1000MORE_PART10 } from "../src/lib/data/kicd-question-bank-expansion-1000more-part10";
 import { JUNIOR_SCHOOL_QUESTION_SEEDS } from "../src/lib/data/kicd-junior-school-question-bank";
 import { JUNIOR_SCHOOL_QUESTION_SEEDS_PART2 } from "../src/lib/data/kicd-junior-school-question-bank-part2";
 import { QUESTION_BANK_EXPANSION_15 } from "../src/lib/data/kicd-question-bank-expansion-15";
@@ -150,9 +160,19 @@ async function runTest() {
     ...QUESTION_BANK_EXPANSION_500MORE_PART29,
     ...QUESTION_BANK_EXPANSION_500MORE_PART30,
     ...QUESTION_BANK_EXPANSION_500MORE_PART31,
+    ...QUESTION_BANK_EXPANSION_1000MORE_PART1,
+    ...QUESTION_BANK_EXPANSION_1000MORE_PART2,
+    ...QUESTION_BANK_EXPANSION_1000MORE_PART3,
+    ...QUESTION_BANK_EXPANSION_1000MORE_PART4,
+    ...QUESTION_BANK_EXPANSION_1000MORE_PART5,
+    ...QUESTION_BANK_EXPANSION_1000MORE_PART6,
+    ...QUESTION_BANK_EXPANSION_1000MORE_PART7,
+    ...QUESTION_BANK_EXPANSION_1000MORE_PART8,
+    ...QUESTION_BANK_EXPANSION_1000MORE_PART9,
+    ...QUESTION_BANK_EXPANSION_1000MORE_PART10,
   ];
 
-  assert(allExpansion.length === 1443, `Exact 1,443 new expansion questions present across Part 1 through Part 31 of our mega-expansions (Found ${allExpansion.length})`);
+  assert(allExpansion.length === 2443, `Exact 2,443 new expansion questions present across Part 1 through Part 10 of 1000more (Found ${allExpansion.length})`);
 
   const allQuestions = [
     ...JUNIOR_SCHOOL_QUESTION_SEEDS,
@@ -162,7 +182,7 @@ async function runTest() {
     ...allExpansion,
   ];
 
-  assert(allQuestions.length === 1670, `Total seeded question bank capacity is exactly 1,670 items across Kenya (Found ${allQuestions.length})`);
+  assert(allQuestions.length === 2670, `Total seeded question bank capacity is exactly 2,670 items across Kenya (Found ${allQuestions.length})`);
 
   // Verify options, correctAnswer, difficulty, and explanation structure across all 400 expansion items
   let malformedCount = 0;
@@ -243,14 +263,14 @@ async function runTest() {
   });
 
   const firstSeedResult = await seedAllQuestionBanks(testUser as any);
-  assert(firstSeedResult.totalSeeded === 1670, `First seed run created exactly 1,670 QuestionBankEntry rows inside tenant '${testTenantId}' (Created ${firstSeedResult.totalSeeded})`);
+  assert(firstSeedResult.totalSeeded === 2670, `First seed run created exactly 2,670 QuestionBankEntry rows inside tenant '${testTenantId}' (Created ${firstSeedResult.totalSeeded})`);
 
   // Verify idempotency on second run
   const secondSeedResult = await seedAllQuestionBanks(testUser as any);
   assert(secondSeedResult.totalSeeded === 0, `Second seed run is 100% idempotent — exactly 0 duplicate rows created (${firstSeedResult.totalSeeded} existing questions skipped)`);
 
   const totalDbQuestions = await db.questionBankEntry.count({ where: { tenantId: testTenantId } });
-  assert(totalDbQuestions === 1670, `Database confirms exactly 1,670 total question bank entries stored for tenant`);
+  assert(totalDbQuestions === 2670, `Database confirms exactly 2,670 total question bank entries stored for tenant`);
 
   // Verify that our SVG diagram entries (such as Heart Anatomy LV and Ohm's Law) saved cleanly
   const heartQuestion = await db.questionBankEntry.findFirst({
