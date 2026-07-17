@@ -27,16 +27,41 @@ type Step =
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const [demoModalOpen, setDemoModalOpen] = React.useState(false);
+  const [demoPhone, setDemoPhone] = React.useState("");
+  const [demoEmail, setDemoEmail] = React.useState("");
+  const [demoName, setDemoName] = React.useState("");
   const [demoLoading, setDemoLoading] = React.useState(false);
 
-  async function startDemo() {
+  async function submitAndLaunchDemo(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!/^(?:\+254|0)[17]\d{8}$/.test(demoPhone.replace(/\s+/g, ""))) {
+      toast({ title: "Please enter a valid Kenyan phone number (e.g. +254 712 345 678)", tone: "error" });
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(demoEmail)) {
+      toast({ title: "Please enter a valid school or work email address", tone: "error" });
+      return;
+    }
     setDemoLoading(true);
     try {
-      const res = await fetch("/api/demo/start", { method: "POST" });
+      const res = await fetch("/api/demo/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: demoPhone, email: demoEmail, name: demoName }),
+      });
       const json = await res.json();
-      if (json.ok) { window.location.href = "/dashboard"; }
-      else { toast({ title: json.error?.message || "Could not start the demo. Try again.", tone: "error" }); setDemoLoading(false); }
-    } catch { toast({ title: "Network problem starting the demo.", tone: "error" }); setDemoLoading(false); }
+      if (json.ok) {
+        toast({ title: "Interactive Demo Approved!", description: "Launching your sandboxed School OS...", tone: "success" });
+        setTimeout(() => { window.location.href = "/dashboard"; }, 700);
+      } else {
+        toast({ title: json.error?.message || "Could not start the demo. Try again.", tone: "error" });
+        setDemoLoading(false);
+      }
+    } catch {
+      toast({ title: "Network problem starting the demo.", tone: "error" });
+      setDemoLoading(false);
+    }
   }
 
   const [step, setStep] = React.useState<Step>("phone");
@@ -86,7 +111,9 @@ export default function LoginPage() {
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((j) => {
-        if (active && j.ok && j.data?.user) window.location.assign("/dashboard");
+        if (active && j.ok && j.data?.user) {
+          window.location.assign(j.data.user.role === "FOUNDER" || j.data.user.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard");
+        }
       })
       .catch(() => {});
     return () => {
@@ -183,7 +210,8 @@ export default function LoginPage() {
         tone: "success",
       });
       // Full reload so server components pick up the new session cookie.
-      setTimeout(() => window.location.assign("/dashboard"), 900);
+      const dest = json.data?.user?.role === "FOUNDER" || json.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+      setTimeout(() => window.location.assign(dest), 900);
     } catch {
       setFieldError("Network problem. Check your connection and retry.");
     } finally {
@@ -223,7 +251,8 @@ export default function LoginPage() {
       setSignedInName(json.data.user.fullName);
       setStep("success");
       toast({ title: `Welcome, ${json.data.user.fullName}`, tone: "success" });
-      setTimeout(() => window.location.assign("/dashboard"), 900);
+      const dest = json.data?.user?.role === "FOUNDER" || json.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+      setTimeout(() => window.location.assign(dest), 900);
     } catch {
       setFieldError("Network problem. Check your connection and retry.");
     } finally {
@@ -291,7 +320,8 @@ export default function LoginPage() {
       setSignedInName(json.data.user.fullName);
       setStep("success");
       toast({ title: `Welcome, ${json.data.user.fullName}`, tone: "success" });
-      setTimeout(() => window.location.assign("/dashboard"), 900);
+      const dest = json.data?.user?.role === "FOUNDER" || json.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+      setTimeout(() => window.location.assign(dest), 900);
     } catch {
       setFieldError("Network problem. Check your connection and retry.");
     } finally {
@@ -339,7 +369,8 @@ export default function LoginPage() {
       setSignedInName(verJson.data.user.fullName);
       setStep("success");
       toast({ title: `Welcome, ${verJson.data.user.fullName}`, tone: "success" });
-      setTimeout(() => window.location.assign("/dashboard"), 900);
+      const dest = verJson.data?.user?.role === "FOUNDER" || verJson.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+      setTimeout(() => window.location.assign(dest), 900);
     } catch {
       setFieldError("Passkey sign-in was cancelled or not available.");
     } finally {
@@ -781,7 +812,7 @@ export default function LoginPage() {
       <div className="mt-4 text-center">
         <button
           type="button"
-          onClick={startDemo}
+          onClick={() => setDemoModalOpen(true)}
           disabled={demoLoading}
           className="inline-flex items-center justify-center gap-2 rounded-full border border-navy-200 bg-white px-4 py-2 text-sm font-medium text-navy-700 transition-colors hover:bg-warm-50 disabled:opacity-60 dark:border-navy-700 dark:bg-navy-900 dark:text-navy-200"
         >
@@ -793,6 +824,71 @@ export default function LoginPage() {
       <p className="mt-2 text-center text-xs text-navy-400 dark:text-navy-600">
         Trouble signing in? Ask your school administrator to confirm your number.
       </p>
+
+      {/* Interactive Demo Lead Capture Modal */}
+      {demoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/60 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-navy-100 bg-white/90 p-6 shadow-2xl backdrop-blur-xl dark:border-navy-800 dark:bg-navy-900/90">
+            <div className="flex items-center justify-between border-b border-navy-100 pb-3 dark:border-navy-800">
+              <div className="flex items-center gap-2 font-bold text-navy-900 dark:text-white">
+                <Sparkles className="h-5 w-5 text-green-600" />
+                <span>Live Interactive Demo Portal</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDemoModalOpen(false)}
+                className="rounded-full p-1 text-navy-400 hover:bg-navy-100 dark:hover:bg-navy-800"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="mt-3 text-xs text-navy-600 dark:text-navy-300">
+              Experience NEYO with pre-seeded Kenyan high school data (<strong className="text-green-700 dark:text-green-400">Karibu High School</strong>). Enter your verified contact details to approve and launch instantly.
+            </p>
+            <form onSubmit={submitAndLaunchDemo} className="mt-4 space-y-3">
+              <div>
+                <Label htmlFor="demoPhone">Kenyan Phone Number *</Label>
+                <Input
+                  id="demoPhone"
+                  placeholder="+254 712 345 678"
+                  value={demoPhone}
+                  onChange={(e) => setDemoPhone(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="demoEmail">Work or School Email *</Label>
+                <Input
+                  id="demoEmail"
+                  type="email"
+                  placeholder="principal@karibuhigh.ac.ke"
+                  value={demoEmail}
+                  onChange={(e) => setDemoEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="demoName">Your Full Name (Optional)</Label>
+                <Input
+                  id="demoName"
+                  placeholder="e.g. Kamau Wanjiru"
+                  value={demoName}
+                  onChange={(e) => setDemoName(e.target.value)}
+                />
+              </div>
+              <div className="pt-2 flex gap-2 justify-end">
+                <Button type="button" variant="secondary" onClick={() => setDemoModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={demoLoading} className="rounded-full bg-green-700 hover:bg-green-800 text-white">
+                  {demoLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                  Verify & Launch Demo
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

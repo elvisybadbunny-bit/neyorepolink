@@ -4,6 +4,7 @@
  */
 import { db } from "@/lib/db";
 import { MODULES, getModuleDef, isModuleKey } from "@/lib/core/modules";
+import { recalculateTenantModularPricing } from "@/lib/services/pricing-engine.service";
 
 export class ModuleError extends Error {
   constructor(
@@ -90,6 +91,8 @@ export async function setModule(
       },
     }),
   ]);
+
+  await recalculateTenantModularPricing(tenantId).catch(() => {});
 
   return getModuleStates(tenantId);
 }

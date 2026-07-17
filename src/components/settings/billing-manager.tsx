@@ -28,9 +28,30 @@ interface BillingData {
     status: string;
     price: number;
     currentPeriodEnd: string;
+    pricingMode?: string;
+    sizeBasedPriceKes?: number;
   };
   limits: LimitStatus[];
   plans: PlanDef[];
+  dualPricing?: {
+    currentMode: string;
+    activePriceKes: number;
+    capacityModel: { monthlyPriceKes: number; rawScore: number };
+    modularModel: {
+      termTotalKes: number;
+      baseCoreFeeKes: number;
+      studentFeeKes: number;
+      staffFeeKes: number;
+      modulesFeeKes: number;
+      optionalModulesCount: number;
+    };
+    rates: {
+      perStudentRateKes: number;
+      perStaffRateKes: number;
+      baseCoreFeeKes: number;
+      perModuleRateKes: number;
+    };
+  };
 }
 
 const STATUS_TONE: Record<string, "green" | "amber" | "red" | "neutral"> = {
@@ -62,6 +83,9 @@ export function BillingManager({
   const [supportPriority, setSupportPriority] = React.useState("NORMAL");
   const [sendingSupport, setSendingSupport] = React.useState(false);
 
+  const [currentMode, setCurrentMode] = React.useState(data.dualPricing?.currentMode || sub.pricingMode || "SIZE_BASED_V2");
+  const [switchingModel, setSwitchingModel] = React.useState<string | null>(null);
+
   async function subscribe(planKey: string) {
     setPending(planKey);
     try {
@@ -84,6 +108,36 @@ export function BillingManager({
       toast({ title: `You're now on ${json.data.planName}`, tone: "success" });
     } finally {
       setPending(null);
+    }
+  }
+
+  async function switchModel(mode: "SIZE_BASED_V2" | "MODULAR_USERS_V1") {
+    setSwitchingModel(mode);
+    try {
+      const res = await fetch("/api/billing/switch-model", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPricingMode: mode }),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        toast({ title: json.error?.message || "Could not switch pricing model.", tone: "error" });
+        return;
+      }
+      setCurrentMode(mode);
+      setSub((s) => ({
+        ...s,
+        price: json.data.subscription?.sizeBasedPriceKes || s.price,
+        sizeBasedPriceKes: json.data.subscription?.sizeBasedPriceKes,
+        pricingMode: mode,
+      }));
+      toast({
+        title: `Switched to ${mode === "SIZE_BASED_V2" ? "Capacity-Based Model V2" : "Modular User & Module Model V1"}`,
+        description: `Your active term pricing is now ${formatKES(json.data.subscription?.sizeBasedPriceKes || 0)}.`,
+        tone: "success",
+      });
+    } finally {
+      setSwitchingModel(null);
     }
   }
 
@@ -189,6 +243,93 @@ export function BillingManager({
           </Button>
         </CardContent>
       </Card>
+
+      {/* Dual Pricing Model Selector */}
+      {data.dualPricing && (
+        <div className="mb-8">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-navy-400 dark:text-navy-500">
+            Select School Pricing Model (Configurable in Settings)
+          </h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {/* Card 1: Capacity-Based Model V2 */}
+            <Card className={`rounded-3xl transition-all duration-300 ${currentMode === "SIZE_BASED_V2" ? "ring-2 ring-green-500/60 bg-green-50/20 dark:bg-green-950/10" : "hover:border-navy-300"}`}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge tone={currentMode === "SIZE_BASED_V2" ? "green" : "neutral"}>
+                      {currentMode === "SIZE_BASED_V2" ? "Active Model" : "Alternative Model"}
+                    </Badge>
+                    <h3 className="mt-2 text-lg font-bold text-navy-950 dark:text-white">Capacity-Based Model V2</h3>
+                    <p className="text-xs text-navy-500">Neyo Complete — All 18+ Modules Included by Default</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-black text-navy-950 dark:text-white">
+                      {formatKES(data.dualPricing.capacityModel.monthlyPriceKes)}
+                    </p>
+                    <p className="text-[11px] text-navy-400">/ term (flat capacity quote)</p>
+                  </div>
+                </div>
+                <ul className="mt-4 space-y-2 border-t border-navy-100 pt-4 text-xs text-navy-600 dark:border-navy-800 dark:text-navy-300">
+                  <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" /> Every core and optional module unlocked instantly</li>
+                  <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" /> Fixed quote based on overall school size and usage score</li>
+                  <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" /> No surprise fees when teachers test new tools or modules</li>
+                </ul>
+                {canManage && currentMode !== "SIZE_BASED_V2" && (
+                  <Button
+                    onClick={() => switchModel("SIZE_BASED_V2")}
+                    disabled={switchingModel !== null}
+                    className="mt-5 w-full rounded-full bg-green-700 hover:bg-green-800 text-white font-semibold"
+                  >
+                    {switchingModel === "SIZE_BASED_V2" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+                    Switch to Capacity Complete Model
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Card 2: Modular User & Module V1 */}
+            <Card className={`rounded-3xl transition-all duration-300 ${currentMode === "MODULAR_USERS_V1" ? "ring-2 ring-blue-500/60 bg-blue-50/20 dark:bg-blue-950/10" : "hover:border-navy-300"}`}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge tone={currentMode === "MODULAR_USERS_V1" ? "blue" : "neutral"}>
+                      {currentMode === "MODULAR_USERS_V1" ? "Active Model" : "Alternative Model"}
+                    </Badge>
+                    <h3 className="mt-2 text-lg font-bold text-navy-950 dark:text-white">Modular User & Module Model V1</h3>
+                    <p className="text-xs text-navy-500">Pay-Per-User + Pay-Per-Module Opened</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-black text-navy-950 dark:text-white">
+                      {formatKES(data.dualPricing.modularModel.termTotalKes)}
+                    </p>
+                    <p className="text-[11px] text-navy-400">/ term (exact user & module total)</p>
+                  </div>
+                </div>
+                <div className="mt-3 rounded-2xl bg-navy-50/60 p-3 text-[11px] text-navy-600 dark:bg-navy-900/60 dark:text-navy-300 space-y-1">
+                  <div className="flex justify-between"><span>Base Core Fee (`students, attendance, finance`):</span><span className="font-mono font-semibold">{formatKES(data.dualPricing.modularModel.baseCoreFeeKes)}</span></div>
+                  <div className="flex justify-between"><span>Active Students / Staff (`at KES {data.dualPricing.rates.perStudentRateKes} / {data.dualPricing.rates.perStaffRateKes}`):</span><span className="font-mono font-semibold">{formatKES(data.dualPricing.modularModel.studentFeeKes + data.dualPricing.modularModel.staffFeeKes)}</span></div>
+                  <div className="flex justify-between"><span>Optional Modules Opened (`{data.dualPricing.modularModel.optionalModulesCount} active @ KES {data.dualPricing.rates.perModuleRateKes}`):</span><span className="font-mono font-semibold text-blue-600">{formatKES(data.dualPricing.modularModel.modulesFeeKes)}</span></div>
+                </div>
+                <ul className="mt-4 space-y-2 border-t border-navy-100 pt-4 text-xs text-navy-600 dark:border-navy-800 dark:text-navy-300">
+                  <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" /> Exact per-user calculation directly aligned with student census</li>
+                  <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" /> Price scales only when you choose to open extra optional modules</li>
+                  <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" /> Ideal for schools using only targeted modules</li>
+                </ul>
+                {canManage && currentMode !== "MODULAR_USERS_V1" && (
+                  <Button
+                    onClick={() => switchModel("MODULAR_USERS_V1")}
+                    disabled={switchingModel !== null}
+                    className="mt-5 w-full rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                  >
+                    {switchingModel === "MODULAR_USERS_V1" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+                    Switch to Modular User & Module Model
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
 
       {/* Plan picker */}
       <div>

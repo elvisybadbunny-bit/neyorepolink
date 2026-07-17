@@ -1272,6 +1272,9 @@
 
 ## G.23 — Detailed Billing Packages (Founder-requested 2026-06-12)
 - [x] Packages & Pricing Model (`Updated 2026-07-17 per founder directive`): Legacy Free Karibu and Elite removed. New signups receive a 30-Day (`1-Month`) Free Trial across the full operational system (`TRIAL`), continuing on active capacity-based billing (`Msingi` KES 4,500/term or `Pro` KES 9,000/term with all modules unlocked "Neyo Complete") if the system is operational to them.
+- [x] Dual Pricing Model Choice & Modular Engine (`MODULAR_USERS_V1` vs `SIZE_BASED_V2`): Built interactive side-by-side pricing philosophy switcher inside `/settings/billing` and Founder Ops (`/founder`). Schools can toggle between **Capacity Complete (`SIZE_BASED_V2`)** and **Modular User & Module Based (`MODULAR_USERS_V1`)** where exact pricing scales per user (`KES 30/student, KES 200/staff`) and per optional module opened (`+KES 1,500/term`). Recalculates dynamically when modules toggle via `recalculateTenantModularPricing`.
+- [x] Live Interactive Demo Lead Capture (`/login`): Replaced raw instant demo trigger with liquid-glass lead verification modal requiring verified Kenyan Phone Number (`+254 7XX XXX XXX`) and Email (`e.g. principal@karibuhigh.ac.ke`) prior to launching the sandboxed `Karibu High School` demo OS.
+- [x] Automated Grace & Service Retirement (`status: "SUSPENDED"`): Enforced strict state transitions (`TRIAL -> ACTIVE -> GRACE -> SUSPENDED`). When `graceEndsAt` passes without payment, operational features (`timetable, exam generator, portfolio`) auto-retire while preserving 100% of school records (`never deleted`). Instant restoration on M-Pesa STK payment (`ExpiredCheckoutClient`).
 - [x] 6 à-la-carte add-ons  *(SMS top-up / storage / hostel / transport / inventory+cafeteria / priority support — per-term KES, capped by plan.maxAddOns)*
 - [x] estimateTermCost()  *(base + per-student + add-ons; 9,000+800+3,000=12,800 verified; A.5 price grandfathering preserved)*
 

@@ -223,6 +223,21 @@ export function quotePriceForCounts(
   return { ...result, estimatedStorageGb, estimatedAiOcrUsage, alumniStorageGbAdded, alumniFactorApplied };
 }
 
+/** Compute exact per-term pricing under the Modular User & Module Based model (MODULAR_USERS_V1). */
+export function computeModularUserModulePrice(
+  studentCount: number,
+  staffCount: number,
+  enabledOptionalModulesCount: number,
+  config: PricingEngineConfig
+): { baseCoreFeeKes: number; studentFeeKes: number; staffFeeKes: number; modulesFeeKes: number; termTotalKes: number } {
+  const baseCoreFeeKes = config.modularBaseCoreFeeKes;
+  const studentFeeKes = studentCount * config.modularPerStudentRateKes;
+  const staffFeeKes = staffCount * config.modularPerStaffRateKes;
+  const modulesFeeKes = enabledOptionalModulesCount * config.modularPerModuleRateKes;
+  const termTotalKes = Math.round(baseCoreFeeKes + studentFeeKes + staffFeeKes + modulesFeeKes);
+  return { baseCoreFeeKes, studentFeeKes, staffFeeKes, modulesFeeKes, termTotalKes };
+}
+
 // ---------------------------------------------------------------------------
 // Real, live counts for an ALREADY-ONBOARDED school (used by the repricing
 // job — never estimates, these are exact real numbers).
@@ -620,4 +635,84 @@ export async function setDiscretionaryDecreaseDelegate(
     },
   });
   return { userId: target.id, canApplyDiscretionaryDecrease };
+}
+
+/** Recalculate and update the exact active term price for a school on MODULAR_USERS_V1 when modules or users change. */
+export async function recalculateTenantModularPricing(tenantId: string) {
+  const sub = await db.subscription.findUnique({ where: { tenantId } });
+  if (!sub || sub.pricingMode !== "MODULAR_USERS_V1") return sub;
+
+  const config = await getPricingEngineConfig();
+  const counts = await getRealCurrentCounts(tenantId);
+  const optionalModulesCount = await db.tenantModule.count({
+    where: {
+      tenantId,
+      enabled: true,
+      moduleKey: { notIn: ["students", "attendance", "finance", "bundi"] },
+    },
+  });
+
+  const res = computeModularUserModulePrice(counts.studentCount, counts.staffCount, optionalModulesCount, config);
+  const updated = await db.subscription.update({
+    where: { tenantId },
+    data: { sizeBasedPriceKes: res.termTotalKes },
+  });
+  return updated;
+}
+
+/** Switch a tenant between Capacity-Based V2 and Modular User & Module V1 right inside settings. */
+export async function switchTenantPricingModel(
+  tenantId: string,
+  actor: SessionUserLike,
+  newPricingMode: "SIZE_BASED_V2" | "MODULAR_USERS_V1"
+) {
+  const config = await getPricingEngineConfig();
+  const counts = await getRealCurrentCounts(tenantId);
+  const alumniRecordCount = await getRealAlumniCount(tenantId);
+
+  let newPriceKes = 0;
+  if (newPricingMode === "MODULAR_USERS_V1") {
+    const optionalModulesCount = await db.tenantModule.count({
+      where: {
+        tenantId,
+        enabled: true,
+        moduleKey: { notIn: ["students", "attendance", "finance", "bundi"] },
+      },
+    });
+    const modular = computeModularUserModulePrice(counts.studentCount, counts.staffCount, optionalModulesCount, config);
+    newPriceKes = modular.termTotalKes;
+  } else {
+    const quote = quotePriceForCounts(counts.studentCount, counts.staffCount, counts.parentCount, config, alumniRecordCount);
+    newPriceKes = quote.monthlyPriceKes;
+  }
+
+  const updated = await db.subscription.upsert({
+    where: { tenantId },
+    create: {
+      tenantId,
+      planKey: DEFAULT_PLAN_KEY,
+      status: "TRIAL",
+      pricingMode: newPricingMode,
+      sizeBasedPriceKes: newPriceKes,
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+    update: {
+      pricingMode: newPricingMode,
+      sizeBasedPriceKes: newPriceKes,
+    },
+  });
+
+  await db.auditLog.create({
+    data: {
+      tenantId,
+      actorId: actor.id,
+      actorName: actor.fullName,
+      action: "billing.pricing_model_switched",
+      entityType: "Subscription",
+      entityId: updated.id,
+      metadata: JSON.stringify({ newPricingMode, newPriceKes }),
+    },
+  });
+
+  return updated;
 }

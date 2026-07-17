@@ -61,6 +61,12 @@ export const pricingEngineConfigSchema = z.object({
   // is committing to for historical records — never a silent price bump.
   alumniStorageFactorEnabled: z.boolean(),
   avgGbPerAlumniRecord: z.number().min(0), // real per-alumnus estimated GB (their own historical file volume), only applied when the toggle above is ON
+
+  // Modular User & Module Pricing Model (MODULAR_USERS_V1) settings:
+  modularPerStudentRateKes: z.number().min(0).default(30),
+  modularPerStaffRateKes: z.number().min(0).default(200),
+  modularBaseCoreFeeKes: z.number().min(0).default(3000),
+  modularPerModuleRateKes: z.number().min(0).default(1500),
 });
 export type PricingEngineConfig = z.infer<typeof pricingEngineConfigSchema>;
 
@@ -91,6 +97,10 @@ export function defaultPricingEngineConfig(): PricingEngineConfig {
     freeTrialDays: 30,
     alumniStorageFactorEnabled: false,
     avgGbPerAlumniRecord: 0.1,
+    modularPerStudentRateKes: 30,
+    modularPerStaffRateKes: 200,
+    modularBaseCoreFeeKes: 3000,
+    modularPerModuleRateKes: 1500,
   };
 }
 
