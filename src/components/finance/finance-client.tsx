@@ -24,6 +24,8 @@ import { useToast } from "@/components/ui/toast";
 import { useBiometricGate } from "@/components/auth/biometric-gate";
 import { queuedPost } from "@/lib/offline/queue";
 import { MpesaSuspenseClientTab } from "@/components/finance/mpesa-suspense-client-tab";
+import { PayrollSuite } from "@/components/extensions-v2/payroll-suite";
+import { FarmSuite } from "@/components/extensions-v2/farm-suite";
 
 const kes = (n: number) => `KES ${n.toLocaleString("en-KE")}`;
 
@@ -35,11 +37,11 @@ interface LeaderboardRow { classId: string; className: string; classTeacherName:
 const STATUS_TONE: Record<string, "green" | "amber" | "red"> = { PAID: "green", PARTIAL: "amber", UNPAID: "red" };
 
 export function FinanceClient({ canStructure, canInvoice, canRecord, canDiscount, canManageSiblingDiscount }: { canStructure: boolean; canInvoice: boolean; canRecord: boolean; canDiscount?: boolean; canManageSiblingDiscount?: boolean }) {
-  const [tab, setTab] = React.useState<"overview" | "invoices" | "structures" | "promises" | "cashReminders" | "suspense">("overview");
+  const [tab, setTab] = React.useState<"overview" | "invoices" | "structures" | "promises" | "cashReminders" | "suspense" | "payroll" | "farm">("overview");
   return (
     <div className="space-y-5">
       <div className="inline-flex flex-wrap rounded-full border border-navy-200 p-0.5 dark:border-navy-700">
-        {([["overview", "Overview"], ["invoices", "Invoices"], ["structures", "Fee structures"], ["promises", "Promises Calendar"], ["suspense", "M-Pesa Suspense (`Reconciler`)"], ...(canRecord ? [["cashReminders", "Cash & reminders"]] as const : [])] as const).map(([k, label]) => (
+        {([["overview", "Overview"], ["invoices", "Invoices"], ["structures", "Fee structures"], ["promises", "Promises Calendar"], ["suspense", "M-Pesa Suspense (`Reconciler`)"], ["payroll", "BOM Payroll"], ["farm", "School Farm"], ...(canRecord ? [["cashReminders", "Cash & reminders"]] as const : [])] as const).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k as any)} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === k ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
             {label}
           </button>
@@ -53,6 +55,8 @@ export function FinanceClient({ canStructure, canInvoice, canRecord, canDiscount
       {tab === "promises" && <PromisesTab />}
       {tab === "cashReminders" && canRecord && <CashAndRemindersTab />}
       {tab === "suspense" && <MpesaSuspenseClientTab canManage={canRecord} />}
+      {tab === "payroll" && <PayrollSuite />}
+      {tab === "farm" && <FarmSuite />}
     </div>
   );
 }

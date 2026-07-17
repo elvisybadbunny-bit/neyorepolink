@@ -346,6 +346,26 @@ export const TENANT_OWNED_MODELS = [
   "ptaConsultationSlot",
   "bomGovernanceDocument",
   "lostAndFoundItem",
+  // Ideas 13 through 24 — The 12 Final School Management Pillars
+  "bomStaffPayroll",
+  "fleetVehicleLog",
+  "fleetFuelEntry",
+  "campusDisciplineEntry",
+  "counselingRecord",
+  "kitchenStoreRequisition",
+  "supplierLpo",
+  "hostelBedAllocation",
+  "hostelVandalismInspection",
+  "schoolFarmLedger",
+  "staffLeaveSubstitution",
+  "capitalAssetRegistry",
+  "labReagentRegister",
+  "alumniEndowmentCampaign",
+  "alumniPledge",
+  "visitorGateLog",
+  "coursebookAllocation",
+  "textbookFineRecovery",
+  "masterSchoolDiaryEvent",
   // NOTE: "complianceRequest" is DELIBERATELY NOT tenant-owned — NEYO Ops's
   // own real compliance queue (`listComplianceRequests()` in
   // founder-dashboard.service.ts) genuinely lists EVERY tenant's requests

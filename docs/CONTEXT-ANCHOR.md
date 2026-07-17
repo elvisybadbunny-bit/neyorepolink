@@ -1,3 +1,40 @@
+## 2026-07-18 (part 23) — Ideas 13 to 24 (The 12 Final Management Pillars) — FULLY BUILT, TESTED & VERIFIED
+
+**Session context**: Picked up from saved context and completed the full-stack implementation of **Ideas 13 to 24** (The 12 Final School Management Pillars) across Option B with zero hardcoding and full NEYO Ops toggle release controls (`EE.16` through `EE.27`). Also resolved a block-scoped variable redeclaration issue in `src/components/cbc/cbc-client.tsx` (restoring clean `npm run typecheck` compilation).
+
+**What was built & shipped**:
+
+1. **Idea 13: BOM Staff & TSC Statutory Payroll Engine (`EE.16` / `/finance/payroll`)**: Built `runBomPayroll()` / `calculateKenyanStatutoryDeductions()` in `extensions-v2.service.ts` supporting exact 2024/2026 KRA statutory deduction formulas (SHIF 2.75%, NSSF Tier I up to KES 480 & Tier II up to KES 3,840, Housing Levy AHL 1.5%, PAYE graduated tax bands minus KES 2,400 monthly relief) and direct bank transfer CSV export manifests. Embedded `PayrollSuite` inside `/finance` tab.
+
+2. **Idea 14: Vehicle Fleet Logbook & NTSA Safety Suite (`EE.17` / `/reception/fleet`)**: Built `addFleetVehicle()`, `recordFleetFuel()`, and `listFleetVehicles()`. Includes odometer logs, Bundi OCR fuel station receipt audit with km/L fuel efficiency anomaly checks, NTSA/Insurance expiration countdowns, and pre-trip 8-point safety inspection checklists. Embedded `FleetSuite` inside `/reception`.
+
+3. **Idea 15: Campus Discipline & Counseling Dossier (`EE.18` / `/academics/discipline`)**: Built `logCampusDisciplineIncident()` and `recordCounselingSession()`. Features 4-Tier Demerit Matrix, watermarked PDF Parent Summons Letter generator (+254 7XX... SMS alert marker), and role-locked confidential Guidance Counselor Vault. Embedded `DisciplineSuite` inside `/academics` tab.
+
+4. **Idea 16: Dining Hall Rationing & Store Requisitions (`EE.19` / `/cafeteria/store`)**: Built `issueKitchenStoreRequisition()` and `createSupplierLpo()`. Features per-capita daily food ration calibrator (linking biometric/headcounts to theoretical Maize/Beans drawdown in kg), divergence alert radar flagging over-issues (>15%), and official supplier LPO studio. Embedded `KitchenStoreSuite` inside `/cafeteria` tab.
+
+5. **Idea 17: Dormitory Bed Allocation Matrix & Damage Recovery (`EE.20` / `/hostel/allocations`)**: Built `allocateHostelBed()` and `inspectHostelVandalism()`. Features interactive 2D cubicle roll-call grid, mattress & locker asset tags, end-of-term digital vandalism inspection, and automated 1-click damage fee invoice suspense stamping. Embedded `HostelVandalismSuite` inside `/hostel` tab.
+
+6. **Idea 18: School Farm & Agricultural Enterprise Accounting (`EE.21` / `/finance/farm`)**: Built `recordSchoolFarmYield()` and `listSchoolFarmLedger()`. Double-entry yield ledger for Dairy milk, Poultry eggs, and Crops, internal kitchen sell-back transfer pricing (crediting farm revenue, debiting food budget), and direct M-Pesa staff sales counter. Embedded `FarmSuite` inside `/finance` tab.
+
+7. **Idea 19: Staff Leave & TSC TPAD Appraisal Readiness Tracker (`EE.22` / `/teacher/leave`)**: Built `recordStaffLeaveSubstitution()` and `listStaffLeaveSubstitutions()`. Features smart <100ms clash-free lesson substitution auto-matcher, automated substitute teacher SMS alerts, and 1-click TSC TPAD appraisal readiness dossier export. Embedded `TeacherSubstitutionSuite` inside `/teacher` tab.
+
+8. **Idea 20: Capital Asset & Lab Reagent Maintenance Register (`EE.23` / `/settings/hardware`)**: Built `addCapitalAsset()`, `addLabReagent()`, and `listCapitalAssetsAndReagents()`. QR asset tags (Bundi quick-scan), lab reagent hazmat safety register (Molarity, Corrosive/Toxic classifications, expiration alerts), and running-hour telemetry alerts for generators (250hr oil service), boreholes, and solar grids. Embedded `AssetMaintenanceSuite` inside `/settings/hardware`.
+
+9. **Idea 21: Alumni Association & Endowment Campaign Portal (`EE.24` / `/portal/alumni`)**: Built `createAlumniCampaign()`, `recordAlumniPledge()`, and `listAlumniCampaigns()`. Class of YYYY cohort directory, career mentorship slot scheduler, and live liquid-glass M-Pesa campaign progress thermometer with cohort leaderboards. Embedded `AlumniCampaignSuite` inside `/portal`.
+
+10. **Idea 22: Visitor & Vendor Campus Access Security Log (`EE.25` / `/reception/visitors`)**: Built `checkInVisitorGate()` and `listVisitorGateLogs()`. Rapid <15s gate check-in with National ID & phone capturing, host staff instant SMS entry alerts, Custody Dispute Red-Flag Radar, and printable QR visitor security passes. Embedded `GateSecuritySuite` inside `/reception`.
+
+11. **Idea 23: Student Library Book Overdue Fine & Textbook Recovery Engine (`EE.26` / `/academics/library`)**: Built `allocateCoursebook()` and `declareLostBookAndStampFee()`. Real-time 1:1 coursebook allocation dashboard, daily overdue fine engine (KES 10/day), and 1-click "Declare Lost & Stamp Replacement Fee to Student Invoice". Embedded `TextbookFineSuite` inside `/academics` tab.
+
+12. **Idea 24: Termly School Diary & Academic Calendar Event Scheduler (`EE.27` / `/portal/calendar`)**: Built `createMasterDiaryEvent()` and `listMasterDiaryEvents()`. Multi-category color-coded Odoo calendar, 72-hour automated parent SMS reminders, and interactive parent guest RSVP feeding kitchen rationing forecasts. Embedded `MasterDiarySuite` inside `/portal`.
+
+**Verification & Quality Proofs**:
+- `scripts/ee13-final-management-ideas-test.ts`: **13/13 test groups passing (100% green)**.
+- Workspace `npm run typecheck`: **0 errors**.
+- Database initialized & seeded with realistic Kenyan records for Karibu High, Uhuru Academy, Mji Mpya, and Mombasa Coast Senior in `prisma/seed.ts`.
+
+---
+
 ## 2026-07-16 (part 22) — Sandbox Environment Fully Restored (new chat/session) + EE.3 Follow-Up: Remaining Junior School Subjects + Senior School Grade 10 — FULLY BUILT, TESTED & VERIFIED
 
 **Session context**: a brand-new chat/session picked up this project from its own saved "save game" (Prompts 1/2/3 + this file + `FEATURES-CHECKLIST.md`, all already committed in the repo under `docs/` and mirrored in `external-backup/`). The sandbox itself had been fully wiped again (no `node_modules`, no live Postgres, no generated Prisma client) — the same recurring class of event this file has documented before (AA.8/AA.9/AA.10's own "sandbox wipe hit mid-session" entries).

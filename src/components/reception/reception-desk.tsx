@@ -31,6 +31,8 @@ import { useToast } from "@/components/ui/toast";
 import { TableContainer } from "@/components/ui/table";
 import { useBiometricGate } from "@/components/auth/biometric-gate";
 import { queuedPost } from "@/lib/offline/queue";
+import { GateSecuritySuite } from "@/components/extensions-v2/gate-security-suite";
+import { FleetSuite } from "@/components/extensions-v2/fleet-suite";
 
 // ---- types -----------------------------------------------------------------
 interface Visitor {
@@ -480,6 +482,11 @@ function ReportCardDayModal({ onClose }: { onClose: () => void }) {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="pt-6 border-t border-white/10 space-y-8">
+        <GateSecuritySuite />
+        <FleetSuite />
       </div>
     </div>
   );

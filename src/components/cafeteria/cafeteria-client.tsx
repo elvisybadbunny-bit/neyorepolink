@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { StudentSearchSelect } from "@/components/students/student-search-select";
+import { KitchenStoreSuite } from "@/components/extensions-v2/kitchen-store-suite";
 
 const kes = (n: number) => `KES ${n.toLocaleString("en-KE")}`;
 const DAYS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -39,7 +40,7 @@ export function CafeteriaClient({ canManage }: { canManage: boolean }) {
   const { toast } = useToast();
   const [data, setData] = React.useState<Data | null>(null);
   const [error, setError] = React.useState(false);
-  const [tab, setTab] = React.useState<"today" | "menu" | "cards" | "feePlans" | "requests" | "tables" | "queue">("today");
+  const [tab, setTab] = React.useState<"today" | "menu" | "cards" | "feePlans" | "requests" | "tables" | "queue" | "storeRation">("today");
   const [students, setStudents] = React.useState<StudentOpt[]>([]);
   const [editCell, setEditCell] = React.useState<{ day: number; meal: string; current: string } | null>(null);
   const [issuing, setIssuing] = React.useState(false);
@@ -102,6 +103,7 @@ export function CafeteriaClient({ canManage }: { canManage: boolean }) {
   const tabs = [
     { key: "today" as const, label: "Kitchen today", icon: Soup },
     { key: "menu" as const, label: "Week menu", icon: CalendarDays },
+    { key: "storeRation" as const, label: "Store & Rationing (`Idea 16`)", icon: Soup },
     ...(mealCardsEnabled ? [{ key: "cards" as const, label: "Meal cards", icon: CreditCard }] : []),
     ...(mealCardsEnabled && canManage ? [{ key: "feePlans" as const, label: "Fee plans", icon: ClipboardList }] : []),
     ...(canManage ? [{ key: "requests" as const, label: "Requests", icon: Inbox }] : []),
@@ -233,6 +235,8 @@ export function CafeteriaClient({ canManage }: { canManage: boolean }) {
           </CardContent>
         </Card>
       )}
+
+      {tab === "storeRation" && <KitchenStoreSuite />}
 
       {tab === "cards" && (
         <div className="space-y-3">

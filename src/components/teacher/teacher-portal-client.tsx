@@ -25,6 +25,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FileUpload, type UploadedFile } from "@/components/ui/file-upload";
 import { useToast } from "@/components/ui/toast";
 import { ClassChatButton } from "@/components/portal/library-card";
+import { TeacherSubstitutionSuite } from "@/components/extensions-v2/teacher-substitution-suite";
 
 interface ClassCard { id: string; label: string; curriculum: string; isClassTeacher: boolean; students: number; subjects: string[]; openHomework: number }
 interface TodayLesson { period: number; subjectName: string; subjectCode: string; className: string; classId: string }
@@ -45,7 +46,7 @@ const DAYS = ["", "Mon", "Tue", "Wed", "Thu", "Fri"];
 export function TeacherPortalClient({ canAssign }: { canAssign: boolean }) {
   const [home, setHome] = React.useState<Home | null>(null);
   const [error, setError] = React.useState(false);
-  const [tab, setTab] = React.useState<"overview" | "homework" | "notes" | "report" | "cash">("overview");
+  const [tab, setTab] = React.useState<"overview" | "homework" | "notes" | "report" | "cash" | "substitution">("overview");
   const [subjects, setSubjects] = React.useState<Subject[]>([]);
   const [allowCash, setAllowCash] = React.useState(false);
 
@@ -72,6 +73,7 @@ export function TeacherPortalClient({ canAssign }: { canAssign: boolean }) {
     { key: "homework" as const, label: "Homework", icon: BookOpen },
     { key: "notes" as const, label: "Notes", icon: FileText },
     { key: "report" as const, label: "Class report", icon: BarChart3 },
+    { key: "substitution" as const, label: "Leave & Substitution (`Idea 19`)", icon: UserCog },
     ...(allowCash ? [{ key: "cash" as const, label: "Cash payments", icon: Banknote }] : []),
   ];
 
@@ -104,6 +106,7 @@ export function TeacherPortalClient({ canAssign }: { canAssign: boolean }) {
       {tab === "homework" && <HomeworkTab classes={home.classes} subjects={subjects} canAssign={canAssign} />}
       {tab === "notes" && <NotesTab classes={home.classes} subjects={subjects} canAssign={canAssign} />}
       {tab === "report" && <ReportTab classes={home.classes} />}
+      {tab === "substitution" && <TeacherSubstitutionSuite />}
       {tab === "cash" && <CashPaymentsTab />}
     </div>
   );

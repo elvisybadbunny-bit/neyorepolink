@@ -488,6 +488,23 @@ model Tenant {
   ptaConsultationSlots         PtaConsultationSlot[]  @relation("PtaConsultationSlots")
   bomGovernanceDocuments       BomGovernanceDocument[] @relation("BomGovernanceDocuments")
   lostAndFoundItems            LostAndFoundItem[]     @relation("LostAndFoundItems")
+  bomStaffPayrolls             BomStaffPayroll[]      @relation("BomStaffPayrolls")
+  fleetVehicleLogs             FleetVehicleLog[]      @relation("FleetVehicleLogs")
+  campusDisciplineEntries      CampusDisciplineEntry[] @relation("CampusDisciplineEntries")
+  counselingRecords            CounselingRecord[]     @relation("CounselingRecords")
+  kitchenStoreRequisitions     KitchenStoreRequisition[] @relation("KitchenStoreRequisitions")
+  supplierLpos                 SupplierLpo[]          @relation("SupplierLpos")
+  hostelBedAllocations         HostelBedAllocation[]  @relation("HostelBedAllocations")
+  hostelVandalismInspections   HostelVandalismInspection[] @relation("HostelVandalismInspections")
+  schoolFarmLedgers            SchoolFarmLedger[]     @relation("SchoolFarmLedgers")
+  staffLeaveSubstitutions      StaffLeaveSubstitution[] @relation("StaffLeaveSubstitutions")
+  capitalAssetRegistries       CapitalAssetRegistry[] @relation("CapitalAssetRegistries")
+  labReagentRegisters          LabReagentRegister[]   @relation("LabReagentRegisters")
+  alumniEndowmentCampaigns     AlumniEndowmentCampaign[] @relation("AlumniEndowmentCampaigns")
+  visitorGateLogs              VisitorGateLog[]       @relation("VisitorGateLogs")
+  coursebookAllocations        CoursebookAllocation[] @relation("CoursebookAllocations")
+  textbookFineRecoveries       TextbookFineRecovery[] @relation("TextbookFineRecoveries")
+  masterSchoolDiaryEvents      MasterSchoolDiaryEvent[] @relation("MasterSchoolDiaryEvents")
 
   @@index([osKey])
 }
@@ -8739,5 +8756,330 @@ model LostAndFoundItem {
   createdAt            DateTime @default(now())
 
   @@index([tenantId, status, createdAt])
+}
+
+// Idea 13: BOM Staff & TSC Teacher Statutory Payroll & Deductions Engine
+model BomStaffPayroll {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation("BomStaffPayrolls", fields: [tenantId], references: [id], onDelete: Cascade)
+  staffName        String
+  idNumber         String
+  jobTitle         String
+  bankName         String
+  bankAccount      String
+  basicPay         Float
+  grossPay         Float
+  shifDeduction    Float
+  nssfTier1        Float
+  nssfTier2        Float
+  housingLevy      Float
+  payeTax          Float
+  netPay           Float
+  payPeriod        String   // e.g. "2026-07"
+  status           String   @default("APPROVED") // DRAFT | APPROVED | PAID
+  remittanceCsvPath String?
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId, payPeriod])
+}
+
+// Idea 14: Digital Gate Pass & Vehicle Fleet Logbook
+model FleetVehicleLog {
+  id               String          @id @default(cuid())
+  tenantId         String
+  tenant           Tenant          @relation("FleetVehicleLogs", fields: [tenantId], references: [id], onDelete: Cascade)
+  registrationNo   String          // e.g. "KDA 892X"
+  makeModel        String          // e.g. "Isuzu NQR 62-Seater"
+  capacity         Int             @default(62)
+  odometerKm       Float           @default(0)
+  ntsaExpiry       DateTime
+  insuranceExpiry  DateTime
+  safetyScore      Int             @default(100)
+  status           String          @default("ACTIVE") // ACTIVE | MAINTENANCE | EXPIRED
+  fuelEntries      FleetFuelEntry[]
+  createdAt        DateTime        @default(now())
+
+  @@index([tenantId, registrationNo])
+}
+
+model FleetFuelEntry {
+  id                String          @id @default(cuid())
+  vehicleId         String
+  vehicle           FleetVehicleLog @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  liters            Float
+  costPerLiter      Float
+  totalCost         Float
+  receiptPhotoUrl   String?
+  fuelEfficiencyKmL Float
+  anomalyFlagged    Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+}
+
+// Idea 15: Campus Discipline & Boarding Guidance Counseling Dossier
+model CampusDisciplineEntry {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  tenant             Tenant   @relation("CampusDisciplineEntries", fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId          String
+  studentName        String
+  incidentDate       DateTime @default(now())
+  severityLevel      Int      // 1 (Minor) to 4 (Expulsion Risk)
+  category           String   // Noise, Skipping, Fighting, Contraband
+  demerits           Int      @default(0)
+  description        String
+  summonsLetterPdfUrl String?
+  parentNotifiedSms  Boolean  @default(false)
+  status             String   @default("LOGGED") // LOGGED | SUMMONED | RESOLVED
+  createdAt          DateTime @default(now())
+
+  @@index([tenantId, studentId])
+}
+
+model CounselingRecord {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation("CounselingRecords", fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId      String
+  studentName    String
+  counselorName  String
+  sessionDate    DateTime @default(now())
+  encryptedNotes String
+  wellnessScore  Int      @default(5)
+  status         String   @default("ONGOING") // ONGOING | CLOSED
+  createdAt      DateTime @default(now())
+
+  @@index([tenantId, studentId])
+}
+
+// Idea 16: Dining Hall Rationing & Store Requisition Management Engine
+model KitchenStoreRequisition {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  tenant                Tenant   @relation("KitchenStoreRequisitions", fields: [tenantId], references: [id], onDelete: Cascade)
+  itemName              String   // Maize, Beans, Rice, Cooking Oil
+  unit                  String   // Bags, Kgs, Liters
+  stockOnHand           Float
+  activeStudentCount    Int
+  theoreticalRequiredKg Float
+  issuedQuantityKg      Float
+  divergencePct         Float    @default(0)
+  divergenceFlagged     Boolean  @default(false)
+  status                String   @default("APPROVED")
+  createdAt             DateTime @default(now())
+
+  @@index([tenantId, itemName])
+}
+
+model SupplierLpo {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation("SupplierLpos", fields: [tenantId], references: [id], onDelete: Cascade)
+  lpoNumber      String   // e.g. LPO-2026-089
+  supplierName   String
+  supplierPin    String
+  itemDescription String
+  totalAmountKes Float
+  status         String   @default("ISSUED") // ISSUED | DELIVERED | PAID
+  createdAt      DateTime @default(now())
+
+  @@index([tenantId, lpoNumber])
+}
+
+// Idea 17: Dormitory Bed Allocation Matrix & Hostel Inventory Inspection
+model HostelBedAllocation {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation("HostelBedAllocations", fields: [tenantId], references: [id], onDelete: Cascade)
+  dormitoryName String   // e.g. Mara House
+  cubicleNumber String   // e.g. Cubicle 4
+  bunkType      String   // UPPER | LOWER
+  studentId     String
+  studentName   String
+  mattressTag   String   // e.g. MT-MARA-104
+  lockerTag     String   // e.g. LK-MARA-104
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, dormitoryName, studentId])
+}
+
+model HostelVandalismInspection {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  tenant             Tenant   @relation("HostelVandalismInspections", fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId          String
+  studentName        String
+  lockerTag          String
+  condition          String   // INTACT | VANDALIZED
+  recoveryFeeKes     Float    @default(0)
+  feeInvoiceStamped  Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  @@index([tenantId, studentId])
+}
+
+// Idea 18: School Farm & Agricultural Enterprise Accounting
+model SchoolFarmLedger {
+  id                      String   @id @default(cuid())
+  tenantId                String
+  tenant                  Tenant   @relation("SchoolFarmLedgers", fields: [tenantId], references: [id], onDelete: Cascade)
+  enterprise              String   // DAIRY | POULTRY | CROPS
+  dailyYield              Float
+  unit                    String   // Liters, Trays, Kgs
+  kitchenTransferQuantity Float    @default(0)
+  mpesaStaffSalesKes      Float    @default(0)
+  internalRateKes         Float    @default(60)
+  totalInternalCreditKes  Float    @default(0)
+  entryDate               DateTime @default(now())
+
+  @@index([tenantId, enterprise])
+}
+
+// Idea 19: Staff Leave & TSC TPAD Appraisal Readiness Tracker
+model StaffLeaveSubstitution {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  tenant                Tenant    @relation("StaffLeaveSubstitutions", fields: [tenantId], references: [id], onDelete: Cascade)
+  teacherId             String
+  teacherName           String
+  leaveType             String    // SICK | MATERNITY | COMPASSIONATE
+  startDate             DateTime
+  endDate               DateTime
+  medicalChitUrl        String?
+  affectedLessonsCount Int       @default(0)
+  substituteTeacherId   String?
+  substituteTeacherName String?
+  substituteSmsSent     Boolean   @default(false)
+  status                String    @default("APPROVED") // APPROVED | COMPLETED
+  createdAt             DateTime  @default(now())
+
+  @@index([tenantId, teacherId])
+}
+
+// Idea 20: School Asset & Equipment Maintenance Registry
+model CapitalAssetRegistry {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation("CapitalAssetRegistries", fields: [tenantId], references: [id], onDelete: Cascade)
+  qrTag            String   @unique // e.g. ASSET-ICT-2026-001
+  assetName        String
+  category         String   // ICT | GENERATOR | BOREHOLE | SOLAR
+  location         String
+  runningHours     Float    @default(0)
+  nextServiceHours Float    @default(250)
+  status           String   @default("OPERATIONAL")
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId, category])
+}
+
+model LabReagentRegister {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation("LabReagentRegisters", fields: [tenantId], references: [id], onDelete: Cascade)
+  reagentName   String   // e.g. Sulphuric Acid
+  quantityLiters Float
+  molarity      String   // e.g. 2M
+  hazardClass   String   // CORROSIVE | FLAMMABLE | TOXIC
+  expiryDate    DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, reagentName])
+}
+
+// Idea 21: Alumni Association & Endowment Campaign Portal
+model AlumniEndowmentCampaign {
+  id             String         @id @default(cuid())
+  tenantId       String
+  tenant         Tenant         @relation("AlumniEndowmentCampaigns", fields: [tenantId], references: [id], onDelete: Cascade)
+  title          String         // e.g. 2026 Library Fund
+  targetAmountKes Float
+  raisedAmountKes Float          @default(0)
+  status         String         @default("ACTIVE")
+  pledges        AlumniPledge[]
+  createdAt      DateTime       @default(now())
+
+  @@index([tenantId, status])
+}
+
+model AlumniPledge {
+  id             String                  @id @default(cuid())
+  campaignId     String
+  campaign       AlumniEndowmentCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  alumniName     String
+  cohortYear     String                  // e.g. 2014
+  amountKes      Float
+  mpesaReference String?
+  createdAt      DateTime                @default(now())
+}
+
+// Idea 22: Visitor & Vendor Campus Access Security Log
+model VisitorGateLog {
+  id                   String    @id @default(cuid())
+  tenantId             String
+  tenant               Tenant    @relation("VisitorGateLogs", fields: [tenantId], references: [id], onDelete: Cascade)
+  visitorName          String
+  nationalId           String
+  phone                String
+  hostStaffId          String?
+  hostStaffName        String?
+  purpose              String
+  custodyAlertTriggered Boolean   @default(false)
+  entryApproved        Boolean   @default(true)
+  qrBadgePassId        String    // V-2026-001
+  checkInTime          DateTime  @default(now())
+  checkOutTime         DateTime?
+  status               String    @default("CHECKED_IN") // CHECKED_IN | CHECKED_OUT | DENIED
+
+  @@index([tenantId, status, checkInTime])
+}
+
+// Idea 23: Student Library Book Overdue Fine & Textbook Recovery Engine
+model CoursebookAllocation {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation("CoursebookAllocations", fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId   String
+  studentName String
+  bookTitle   String   // e.g. KLB Mathematics Form 3
+  copyBarcode String   // e.g. C-104
+  issuedDate  DateTime @default(now())
+  dueDate     DateTime
+  status      String   @default("ISSUED") // ISSUED | RETURNED | OVERDUE | LOST
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, studentId, status])
+}
+
+model TextbookFineRecovery {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  tenant                Tenant   @relation("TextbookFineRecoveries", fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId             String
+  studentName           String
+  bookTitle             String
+  copyBarcode           String
+  replacementCostKes    Float
+  invoiceSuspenseStamped Boolean  @default(false)
+  createdAt             DateTime @default(now())
+
+  @@index([tenantId, studentId])
+}
+
+// Idea 24: Termly School Diary & Academic Calendar Event Scheduler
+model MasterSchoolDiaryEvent {
+  id                     String   @id @default(cuid())
+  tenantId               String
+  tenant                 Tenant   @relation("MasterSchoolDiaryEvents", fields: [tenantId], references: [id], onDelete: Cascade)
+  eventTitle             String
+  category               String   // EXAM | VISITING | BREAK | SPORTS | BOM
+  eventDate              DateTime
+  targetAudience         String   // PARENTS | ALL | STAFF
+  smsReminderSent        Boolean  @default(false)
+  parentRsvpCount        Int      @default(0)
+  expectedGuestHeadcount Int      @default(0)
+  createdAt              DateTime @default(now())
+
+  @@index([tenantId, category, eventDate])
 }
 

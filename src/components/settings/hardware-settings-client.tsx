@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { hardware, HardwareDevice } from "@/lib/services/hardware.service";
 import { useToast } from "@/components/ui/toast";
+import { AssetMaintenanceSuite } from "@/components/extensions-v2/asset-maintenance-suite";
 
 export default function HardwareSettingsClient() {
   const { toast } = useToast();
@@ -264,6 +265,10 @@ export default function HardwareSettingsClient() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      <div className="pt-6 border-t border-white/10">
+        <AssetMaintenanceSuite />
       </div>
     </div>
   );

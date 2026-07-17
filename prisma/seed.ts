@@ -2603,6 +2603,127 @@ trailer<</Root 1 0 R>>
         });
         console.log("✓ Seeded P.4: recorded a real confirmed KJSEA 2025 milestone result (82%) for Achieng — used as a genuine Grade 9→10 pathway placement input.");
       }
+
+      // --- Seed Ideas 13 through 24 (The 12 Final Management Pillars) ---
+      const {
+        runBomPayroll,
+        addFleetVehicle,
+        logCampusDisciplineIncident,
+        issueKitchenStoreRequisition,
+        allocateHostelBed,
+        recordSchoolFarmYield,
+        recordStaffLeaveSubstitution,
+        addCapitalAsset,
+        createAlumniCampaign,
+        checkInVisitorGate,
+        allocateCoursebook,
+        createMasterDiaryEvent,
+      } = await import("../src/lib/services/extensions-v2.service");
+
+      await runBomPayroll(actorUser, {
+        staffName: "Achieng Mary Cook",
+        idNumber: "18294029",
+        jobTitle: "Head Cook",
+        bankName: "Equity Bank",
+        bankAccount: "01928392812",
+        basicPay: 22000,
+        payPeriod: "2026-07",
+      });
+
+      await addFleetVehicle(actorUser, {
+        registrationNo: "KDA 892X",
+        makeModel: "Isuzu NQR 62-Seater Bus",
+        capacity: 62,
+        odometerKm: 48210,
+        ntsaExpiry: "2026-12-31",
+        insuranceExpiry: "2026-12-31",
+      });
+
+      const achiengStudent = await db.student.findFirst({ where: { tenantId: tenant.id, admissionNo: "KHS1" } });
+      if (achiengStudent) {
+        await logCampusDisciplineIncident(actorUser, {
+          studentId: achiengStudent.id,
+          studentName: "Achieng Mary",
+          severityLevel: 1,
+          category: "Lateness",
+          demerits: 2,
+          description: "Late for morning parade",
+        });
+
+        await allocateHostelBed(actorUser, {
+          dormitoryName: "Mara House",
+          cubicleNumber: "Cubicle 4",
+          bunkType: "UPPER",
+          studentId: achiengStudent.id,
+          studentName: "Achieng Mary",
+          mattressTag: "MT-MARA-104",
+          lockerTag: "LK-MARA-104",
+        });
+
+        await allocateCoursebook(actorUser, {
+          studentId: achiengStudent.id,
+          studentName: "Achieng Mary",
+          bookTitle: "KLB Secondary Mathematics Form 2",
+          copyBarcode: "C-104",
+          dueDate: "2026-11-30",
+        });
+      }
+
+      await issueKitchenStoreRequisition(actorUser, {
+        itemName: "Dry Maize (90kg Bags)",
+        unit: "Kgs",
+        stockOnHand: 4500,
+        activeStudentCount: 850,
+        issuedQuantityKg: 297.5,
+      });
+
+      await recordSchoolFarmYield(actorUser, {
+        enterprise: "DAIRY",
+        dailyYield: 150,
+        unit: "Liters",
+        kitchenTransferQuantity: 120,
+        mpesaStaffSalesKes: 1800,
+        internalRateKes: 60,
+      });
+
+      await recordStaffLeaveSubstitution(actorUser, {
+        teacherId: actorUser.id,
+        teacherName: actorUser.fullName,
+        leaveType: "SICK",
+        startDate: "2026-07-20",
+        endDate: "2026-07-22",
+        affectedLessonsCount: 6,
+      });
+
+      await addCapitalAsset(actorUser, {
+        assetName: "50kVA Standby Diesel Generator",
+        category: "GENERATOR",
+        location: "Utility Shed",
+        runningHours: 242,
+        nextServiceHours: 250,
+      });
+
+      await createAlumniCampaign(actorUser, {
+        title: "2026 Science Lab & Library Fund",
+        targetAmountKes: 8000000,
+      });
+
+      await checkInVisitorGate(actorUser, {
+        visitorName: "Kamau John",
+        nationalId: "29401928",
+        phone: "+254 722 000 111",
+        purpose: "Official Ministry Inspection",
+      });
+
+      await createMasterDiaryEvent(actorUser, {
+        eventTitle: "Form 3 Visiting & PTA Clinic Day",
+        category: "VISITING",
+        eventDate: "2026-08-01",
+        targetAudience: "PARENTS",
+        expectedGuestHeadcount: 600,
+      });
+
+      console.log("✓ Seeded Ideas 13–24: BOM Payroll, Fleet, Discipline, Kitchen Store, Hostel, Farm, Leave, Capital Assets, Alumni, Visitor Gate, Textbook 1:1, and Master Diary successfully initialized!");
     }
   }
 }

@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { StudentSearchSelect } from "@/components/students/student-search-select";
+import { HostelVandalismSuite } from "@/components/extensions-v2/hostel-vandalism-suite";
 
 const kes = (n: number) => `KES ${n.toLocaleString("en-KE")}`;
 
@@ -34,10 +35,11 @@ interface StudentOpt { id: string; name: string; admissionNo: string; gender: st
 const GENDER_LABEL: Record<string, string> = { BOYS: "Boys", GIRLS: "Girls", MIXED: "Mixed" };
 
 export function HostelClient({ canManage }: { canManage: boolean }) {
-  const [tab, setTab] = React.useState<"dorms" | "curfew">("dorms");
+  const [tab, setTab] = React.useState<"dorms" | "curfew" | "vandalism">("dorms");
   const tabs = [
     { key: "dorms" as const, label: "Dorms & beds", icon: BedDouble },
     { key: "curfew" as const, label: "Curfew register", icon: MoonStar },
+    { key: "vandalism" as const, label: "Inspections & Damage Billing (`Idea 17`)", icon: BedDouble },
   ];
   return (
     <div className="space-y-4">
@@ -58,6 +60,7 @@ export function HostelClient({ canManage }: { canManage: boolean }) {
       </div>
       {tab === "dorms" && <DormsTab canManage={canManage} />}
       {tab === "curfew" && <CurfewTab canManage={canManage} />}
+      {tab === "vandalism" && <HostelVandalismSuite />}
     </div>
   );
 }

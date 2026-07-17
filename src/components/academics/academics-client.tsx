@@ -33,6 +33,8 @@ import { cn, curriculumLabel } from "@/lib/utils";
 import { BundiIntelligentWizard } from "@/components/bundi/bundi-intelligent-wizard";
 import { KnecCandidateStudio } from "@/components/academics/knec-candidate-studio";
 import { MoeReturnsClientTab } from "@/components/academics/moe-returns-client-tab";
+import { DisciplineSuite } from "@/components/extensions-v2/discipline-suite";
+import { TextbookFineSuite } from "@/components/extensions-v2/textbook-fine-suite";
 
 interface Subject { id: string; name: string; code: string; curriculum: string; departmentId: string | null; departmentName: string | null; archived: boolean }
 interface Dept { id: string; name: string; hodId: string | null; hodName: string | null; subjectCount: number }
@@ -48,7 +50,7 @@ const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurriculumEngineEnabled = false, schoolLevelActivation }: { canManage: boolean; canAppointHod: boolean; isScopedHod: boolean; isCurriculumEngineEnabled?: boolean; schoolLevelActivation?: { shouldShowPathwayTools: boolean; shouldShowSubjectSelectionTools: boolean; isJuniorSchool: boolean; isSeniorSchool: boolean; isMixedSchool: boolean; educationLevelsOffered: string[] } }) {
   const [subjects, setSubjects] = React.useState<Subject[]>([]);
-  const [tab, setTab] = React.useState<"subjects" | "departments" | "cocurricular" | "terms" | "timetable" | "exam-timetable" | "exam-auto-generator" | "lessons" | "generator" | "smart-timetable" | "roster" | "reports" | "curriculum-versions" | "pathways" | "computation" | "subject-selection" | "knec-studio" | "moe-returns">("subjects");
+  const [tab, setTab] = React.useState<"subjects" | "departments" | "cocurricular" | "terms" | "timetable" | "exam-timetable" | "exam-auto-generator" | "lessons" | "generator" | "smart-timetable" | "roster" | "reports" | "curriculum-versions" | "pathways" | "computation" | "subject-selection" | "knec-studio" | "moe-returns" | "discipline" | "library-recovery">("subjects");
 
   React.useEffect(() => {
     fetch("/api/academics/subjects")
@@ -68,6 +70,8 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
     { key: "terms" as const, label: "Terms", icon: CalendarRange },
     { key: "timetable" as const, label: "Timetable", icon: Grid3X3 },
     { key: "exam-timetable" as const, label: "Exam Timetable", icon: ClipboardList },
+    { key: "discipline" as const, label: "Discipline & Summons (`Idea 15`)", icon: Sparkles },
+    { key: "library-recovery" as const, label: "Textbook Fines (`Idea 23`)", icon: BookOpen },
     { key: "exam-auto-generator" as const, label: "Exam Auto-Generator", icon: Sparkles },
     { key: "knec-studio" as const, label: "KNEC Candidate Studio (`Idea 7`)", icon: Award },
     { key: "moe-returns" as const, label: "MOE Statutory Returns (`Idea 2`)", icon: FileText },
@@ -122,6 +126,8 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
       {tab === "timetable" && <TimetableTab canManage={canManage} />}
       {tab === "exam-timetable" && <ExamTimetableTab canManage={canManage} />}
       {tab === "exam-auto-generator" && <ExamAutoGeneratorTab canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
+      {tab === "discipline" && <DisciplineSuite />}
+      {tab === "library-recovery" && <TextbookFineSuite />}
       {tab === "knec-studio" && <KnecCandidateStudio canManage={canManage} />}
       {tab === "moe-returns" && <MoeReturnsClientTab canManage={canManage} />}
       {tab === "lessons" && <LessonsTab />}
