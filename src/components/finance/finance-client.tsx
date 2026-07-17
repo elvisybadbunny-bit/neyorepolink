@@ -24,6 +24,11 @@ import { useToast } from "@/components/ui/toast";
 import { useBiometricGate } from "@/components/auth/biometric-gate";
 import { queuedPost } from "@/lib/offline/queue";
 import { MpesaSuspenseClientTab } from "@/components/finance/mpesa-suspense-client-tab";
+import { PayrollSuite } from "@/components/extensions-v2/payroll-suite";
+import { FarmSuite } from "@/components/extensions-v2/farm-suite";
+import { V2HeroCard } from "@/components/ui/v2/v2-hero-card";
+import { V2ActionPill } from "@/components/ui/v2/v2-action-pill";
+import { V2MobileCardRow } from "@/components/ui/v2/v2-mobile-card-row";
 
 const kes = (n: number) => `KES ${n.toLocaleString("en-KE")}`;
 
@@ -35,11 +40,11 @@ interface LeaderboardRow { classId: string; className: string; classTeacherName:
 const STATUS_TONE: Record<string, "green" | "amber" | "red"> = { PAID: "green", PARTIAL: "amber", UNPAID: "red" };
 
 export function FinanceClient({ canStructure, canInvoice, canRecord, canDiscount, canManageSiblingDiscount }: { canStructure: boolean; canInvoice: boolean; canRecord: boolean; canDiscount?: boolean; canManageSiblingDiscount?: boolean }) {
-  const [tab, setTab] = React.useState<"overview" | "invoices" | "structures" | "promises" | "cashReminders" | "suspense">("overview");
+  const [tab, setTab] = React.useState<"overview" | "invoices" | "structures" | "promises" | "cashReminders" | "suspense" | "payroll" | "farm">("overview");
   return (
     <div className="space-y-5">
       <div className="inline-flex flex-wrap rounded-full border border-navy-200 p-0.5 dark:border-navy-700">
-        {([["overview", "Overview"], ["invoices", "Invoices"], ["structures", "Fee structures"], ["promises", "Promises Calendar"], ["suspense", "M-Pesa Suspense (`Reconciler`)"], ...(canRecord ? [["cashReminders", "Cash & reminders"]] as const : [])] as const).map(([k, label]) => (
+        {([["overview", "Overview"], ["invoices", "Invoices"], ["structures", "Fee structures"], ["promises", "Promises Calendar"], ["suspense", "M-Pesa Suspense (`Reconciler`)"], ["payroll", "BOM Payroll"], ["farm", "School Farm"], ...(canRecord ? [["cashReminders", "Cash & reminders"]] as const : [])] as const).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k as any)} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === k ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
             {label}
           </button>
@@ -53,6 +58,8 @@ export function FinanceClient({ canStructure, canInvoice, canRecord, canDiscount
       {tab === "promises" && <PromisesTab />}
       {tab === "cashReminders" && canRecord && <CashAndRemindersTab />}
       {tab === "suspense" && <MpesaSuspenseClientTab canManage={canRecord} />}
+      {tab === "payroll" && <PayrollSuite />}
+      {tab === "farm" && <FarmSuite />}
     </div>
   );
 }
@@ -65,15 +72,19 @@ function OverviewTab() {
   const [reminding, setReminding] = React.useState(false);
   const [digesting, setDigesting] = React.useState(false);
   const [error, setError] = React.useState(false);
+  const [uiVersion, setUiVersion] = React.useState<"v1" | "v2">("v1");
+
   const load = React.useCallback(async () => {
     setError(false);
     try {
-      const [agingRes, leaderboardRes] = await Promise.all([
+      const [agingRes, leaderboardRes, vRes] = await Promise.all([
         fetch("/api/finance/invoices?aging=1").then((r) => r.json()),
         fetch("/api/finance/leaderboard").then((r) => r.json()).catch(() => ({ ok: false })),
+        fetch("/api/ops/ui-version").then((r) => r.json()).catch(() => ({ ok: false })),
       ]);
       if (agingRes.ok) setAging(agingRes.data); else setError(true);
       if (leaderboardRes.ok) setLeaderboard(leaderboardRes.data.leaderboard ?? []);
+      if (vRes.ok && vRes.version) setUiVersion(vRes.version);
     } catch { setError(true); }
   }, []);
   React.useEffect(() => { load(); }, [load]);
@@ -118,6 +129,71 @@ function OverviewTab() {
     ["31–60 days late", b.d60, "bg-orange-500"],
     ["Over 60 days late", b.d90, "bg-red-500"],
   ];
+
+  if (uiVersion === "v2") {
+    return (
+      <div className="space-y-6">
+        {/* Hero Card */}
+        <V2HeroCard
+          title="Finance & Fees Command Center"
+          badgeLabel="Live Ledger"
+          metricValue={kes(aging.totalOutstanding)}
+          metricLabel="Total Outstanding Fees"
+          secondaryValue={`${aging.collectionRate}%`}
+          secondaryLabel="Collection Rate"
+          progressPct={aging.collectionRate}
+          icon={Wallet}
+          actions={
+            <>
+              <V2ActionPill
+                label={reminding ? "Sending..." : "Send Fee SMS Reminders"}
+                icon={Smartphone}
+                variant="primary"
+                onClick={sendReminders}
+                disabled={reminding || aging.openCount === 0}
+              />
+              <V2ActionPill
+                label="Daily Digest"
+                icon={FileText}
+                variant="secondary"
+                onClick={() => sendDigest("daily")}
+                disabled={digesting}
+              />
+              <V2ActionPill
+                label="Weekly Digest"
+                icon={Calendar}
+                variant="secondary"
+                onClick={() => sendDigest("weekly")}
+                disabled={digesting}
+              />
+            </>
+          }
+        />
+
+        {/* Mobile Leaderboard Cards */}
+        <div className="space-y-3">
+          <h3 className="font-bold text-white text-base flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-emerald-400" />
+            Class Collection Leaderboard
+          </h3>
+          <div className="space-y-2">
+            {leaderboard.map((row, idx) => (
+              <V2MobileCardRow
+                key={row.classId}
+                title={`#${idx + 1} ${row.className}`}
+                subtitle={`${row.classTeacherName} • ${row.learnerCount} learners`}
+                badgeText={`${row.collectionRate}% Collected`}
+                badgeVariant={row.collectionRate >= 70 ? "emerald" : "amber"}
+                rightValue={kes(row.collectedKes)}
+                metaText={`Billed: ${kes(row.billedKes)} | Outstanding: ${kes(row.outstandingKes)}`}
+                icon={Wallet}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

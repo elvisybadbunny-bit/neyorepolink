@@ -33,6 +33,11 @@ import { cn, curriculumLabel } from "@/lib/utils";
 import { BundiIntelligentWizard } from "@/components/bundi/bundi-intelligent-wizard";
 import { KnecCandidateStudio } from "@/components/academics/knec-candidate-studio";
 import { MoeReturnsClientTab } from "@/components/academics/moe-returns-client-tab";
+import { DisciplineSuite } from "@/components/extensions-v2/discipline-suite";
+import { TextbookFineSuite } from "@/components/extensions-v2/textbook-fine-suite";
+import { V2HeroCard } from "@/components/ui/v2/v2-hero-card";
+import { V2ActionPill } from "@/components/ui/v2/v2-action-pill";
+import { V2MobileCardRow } from "@/components/ui/v2/v2-mobile-card-row";
 
 interface Subject { id: string; name: string; code: string; curriculum: string; departmentId: string | null; departmentName: string | null; archived: boolean }
 interface Dept { id: string; name: string; hodId: string | null; hodName: string | null; subjectCount: number }
@@ -48,7 +53,7 @@ const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurriculumEngineEnabled = false, schoolLevelActivation }: { canManage: boolean; canAppointHod: boolean; isScopedHod: boolean; isCurriculumEngineEnabled?: boolean; schoolLevelActivation?: { shouldShowPathwayTools: boolean; shouldShowSubjectSelectionTools: boolean; isJuniorSchool: boolean; isSeniorSchool: boolean; isMixedSchool: boolean; educationLevelsOffered: string[] } }) {
   const [subjects, setSubjects] = React.useState<Subject[]>([]);
-  const [tab, setTab] = React.useState<"subjects" | "departments" | "cocurricular" | "terms" | "timetable" | "exam-timetable" | "exam-auto-generator" | "lessons" | "generator" | "smart-timetable" | "roster" | "reports" | "curriculum-versions" | "pathways" | "computation" | "subject-selection" | "knec-studio" | "moe-returns">("subjects");
+  const [tab, setTab] = React.useState<"subjects" | "departments" | "cocurricular" | "terms" | "timetable" | "exam-timetable" | "exam-auto-generator" | "lessons" | "generator" | "smart-timetable" | "roster" | "reports" | "curriculum-versions" | "pathways" | "computation" | "subject-selection" | "knec-studio" | "moe-returns" | "discipline" | "library-recovery">("subjects");
 
   React.useEffect(() => {
     fetch("/api/academics/subjects")
@@ -68,6 +73,8 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
     { key: "terms" as const, label: "Terms", icon: CalendarRange },
     { key: "timetable" as const, label: "Timetable", icon: Grid3X3 },
     { key: "exam-timetable" as const, label: "Exam Timetable", icon: ClipboardList },
+    { key: "discipline" as const, label: "Discipline & Summons (`Idea 15`)", icon: Sparkles },
+    { key: "library-recovery" as const, label: "Textbook Fines (`Idea 23`)", icon: BookOpen },
     { key: "exam-auto-generator" as const, label: "Exam Auto-Generator", icon: Sparkles },
     { key: "knec-studio" as const, label: "KNEC Candidate Studio (`Idea 7`)", icon: Award },
     { key: "moe-returns" as const, label: "MOE Statutory Returns (`Idea 2`)", icon: FileText },
@@ -122,6 +129,8 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
       {tab === "timetable" && <TimetableTab canManage={canManage} />}
       {tab === "exam-timetable" && <ExamTimetableTab canManage={canManage} />}
       {tab === "exam-auto-generator" && <ExamAutoGeneratorTab canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
+      {tab === "discipline" && <DisciplineSuite />}
+      {tab === "library-recovery" && <TextbookFineSuite />}
       {tab === "knec-studio" && <KnecCandidateStudio canManage={canManage} />}
       {tab === "moe-returns" && <MoeReturnsClientTab canManage={canManage} />}
       {tab === "lessons" && <LessonsTab />}
@@ -151,13 +160,17 @@ function SubjectsTab({ canManage }: { canManage: boolean }) {
   const [error, setError] = React.useState(false);
   const [dialog, setDialog] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+  const [uiVersion, setUiVersion] = React.useState<"v1" | "v2">("v1");
 
   const load = React.useCallback(async () => {
     setError(false);
     try {
-      const res = await fetch("/api/academics/subjects");
-      const json = await res.json();
-      if (json.ok) setSubjects(json.data.subjects); else setError(true);
+      const [res, vRes] = await Promise.all([
+        fetch("/api/academics/subjects").then((r) => r.json()),
+        fetch("/api/ops/ui-version").then((r) => r.json()).catch(() => ({ ok: false })),
+      ]);
+      if (res.ok) setSubjects(res.data.subjects); else setError(true);
+      if (vRes.ok && vRes.version) setUiVersion(vRes.version);
     } catch { setError(true); }
   }, []);
   React.useEffect(() => { load(); }, [load]);
@@ -174,6 +187,63 @@ function SubjectsTab({ canManage }: { canManage: boolean }) {
 
   if (error) return <LoadError onRetry={load} />;
   if (subjects === null) return <Skeletons />;
+
+  if (uiVersion === "v2") {
+    return (
+      <div className="space-y-6">
+        <V2HeroCard
+          title="Curriculum & Subject Directory"
+          badgeLabel="Active Curriculum"
+          metricValue={String(subjects.length)}
+          metricLabel="Active Learning Subjects"
+          secondaryValue="Grade 7–12"
+          secondaryLabel="Active Grade Band"
+          icon={BookOpen}
+          actions={
+            canManage ? (
+              <>
+                <V2ActionPill
+                  label="New Subject"
+                  icon={Plus}
+                  variant="primary"
+                  onClick={() => setDialog(true)}
+                />
+                <V2ActionPill
+                  label="Load CBE Preset"
+                  icon={Sparkles}
+                  variant="secondary"
+                  onClick={() => addPreset("CBC")}
+                  disabled={busy}
+                />
+                <V2ActionPill
+                  label="Load 8-4-4 Preset"
+                  icon={Sparkles}
+                  variant="secondary"
+                  onClick={() => addPreset("8-4-4")}
+                  disabled={busy}
+                />
+              </>
+            ) : undefined
+          }
+        />
+
+        <div className="space-y-2">
+          {subjects.map((s) => (
+            <V2MobileCardRow
+              key={s.id}
+              title={s.name}
+              subtitle={`Code: ${s.code} • Dept: ${s.departmentName ?? "Unassigned"}`}
+              badgeText={curriculumLabel(s.curriculum)}
+              badgeVariant={s.curriculum === "CBC" ? "emerald" : "cyan"}
+              icon={BookOpen}
+            />
+          ))}
+        </div>
+
+        {dialog && <SubjectDialog onClose={() => setDialog(false)} onDone={() => { setDialog(false); load(); }} />}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

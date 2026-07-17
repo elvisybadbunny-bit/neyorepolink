@@ -28,6 +28,8 @@ import { StudentCompetencySummaryCard } from "@/components/competencies/competen
 import { SkillsPassportCard } from "@/components/skills-passport/skills-passport-card";
 import { LearnerJourneyCard } from "@/components/learner-journey/learner-journey-card";
 import { ParentGrowthTab } from "./parent-growth-tab";
+import { MasterDiarySuite } from "@/components/extensions-v2/master-diary-suite";
+import { AlumniCampaignSuite } from "@/components/extensions-v2/alumni-campaign-suite";
 import { ParentPathwayCard } from "./parent-pathway-card";
 import { ParentPathwayGuideCard } from "./parent-pathway-guide-card";
 import { TransportRequestCard } from "./transport-request-card";
@@ -419,6 +421,11 @@ function ChildView({ id, onBack, isCurriculumEngineEnabled = false }: { id: stri
           ))}
         </CardContent>
       </Card>
+
+      <div className="pt-6 border-t border-white/10 space-y-8">
+        <MasterDiarySuite />
+        <AlumniCampaignSuite />
+      </div>
 
       {pickupDialog === "permanent" && <PickupPersonDialog studentId={data.child.id} onClose={() => setPickupDialog(null)} onDone={() => { setPickupDialog(null); load(); }} />}
       {pickupDialog === "alternate" && <AltPickupDialog studentId={data.child.id} onClose={() => setPickupDialog(null)} onDone={() => { setPickupDialog(null); load(); }} />}

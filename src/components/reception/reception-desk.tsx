@@ -31,6 +31,11 @@ import { useToast } from "@/components/ui/toast";
 import { TableContainer } from "@/components/ui/table";
 import { useBiometricGate } from "@/components/auth/biometric-gate";
 import { queuedPost } from "@/lib/offline/queue";
+import { GateSecuritySuite } from "@/components/extensions-v2/gate-security-suite";
+import { FleetSuite } from "@/components/extensions-v2/fleet-suite";
+import { V2HeroCard } from "@/components/ui/v2/v2-hero-card";
+import { V2ActionPill } from "@/components/ui/v2/v2-action-pill";
+import { V2MobileCardRow } from "@/components/ui/v2/v2-mobile-card-row";
 
 // ---- types -----------------------------------------------------------------
 interface Visitor {
@@ -66,14 +71,18 @@ export function ReceptionDesk({ schoolName }: { schoolName: string }) {
   const [dialog, setDialog] = React.useState<DialogKind>(null);
   const [badge, setBadge] = React.useState<Visitor | null>(null);
   const [busy, setBusy] = React.useState<string | null>(null);
+  const [uiVersion, setUiVersion] = React.useState<"v1" | "v2">("v1");
 
   const load = React.useCallback(async () => {
     setError(false);
     try {
-      const res = await fetch("/api/reception");
-      const json = await res.json();
-      if (json.ok) setData(json.data);
+      const [res, vRes] = await Promise.all([
+        fetch("/api/reception").then((r) => r.json()),
+        fetch("/api/ops/ui-version").then((r) => r.json()).catch(() => ({ ok: false })),
+      ]);
+      if (res.ok) setData(res.data);
       else setError(true);
+      if (vRes.ok && vRes.version) setUiVersion(vRes.version);
     } catch {
       setError(true);
     }
@@ -89,6 +98,76 @@ export function ReceptionDesk({ schoolName }: { schoolName: string }) {
       if (json.ok) { toast({ title: "Visitor signed out", tone: "success" }); load(); }
       else toast({ title: json.error?.message || "Failed", tone: "error" });
     } finally { setBusy(null); }
+  }
+
+  if (uiVersion === "v2" && data) {
+    return (
+      <div className="space-y-6">
+        <PersonSearch />
+
+        <V2HeroCard
+          title={`${schoolName} Reception & Security Control`}
+          badgeLabel="Active Gate Status"
+          metricValue={String(data.onSite)}
+          metricLabel="Active On-Site Visitors Today"
+          secondaryValue={String(data.inquiries.length)}
+          secondaryLabel="New Admission Inquiries"
+          icon={BadgeCheck}
+          actions={
+            <>
+              <V2ActionPill
+                label="Sign In Visitor"
+                icon={UserPlus}
+                variant="primary"
+                onClick={() => setDialog("visitor")}
+              />
+              <V2ActionPill
+                label="Log Phone Inquiry"
+                icon={PhoneCall}
+                variant="secondary"
+                onClick={() => setDialog("inquiry")}
+              />
+              <V2ActionPill
+                label="Walk-In Fee Cash"
+                icon={Wallet}
+                variant="accent"
+                onClick={() => setDialog("payment")}
+              />
+            </>
+          }
+        />
+
+        <div className="space-y-3">
+          <h3 className="font-bold text-white text-base flex items-center gap-2">
+            <Clock className="w-5 h-5 text-emerald-400" /> Currently On-Site Visitors
+          </h3>
+          <div className="space-y-2">
+            {data.visitors.filter((v) => !v.signedOutAt).map((v) => (
+              <V2MobileCardRow
+                key={v.id}
+                title={v.name}
+                subtitle={`Purpose: ${v.purpose} • Host: ${v.host ?? "General Office"}`}
+                badgeText={v.badgeNo}
+                badgeVariant="emerald"
+                metaText={`Signed in at ${fmtTime(v.signedInAt)}`}
+                icon={BadgeCheck}
+                actionButton={
+                  <Button size="sm" variant="secondary" onClick={() => signOut(v.id)} disabled={busy === v.id}>
+                    {busy === v.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />}
+                    Sign out
+                  </Button>
+                }
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-6 border-t border-white/10 space-y-8">
+          <GateSecuritySuite />
+          <FleetSuite />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -480,6 +559,11 @@ function ReportCardDayModal({ onClose }: { onClose: () => void }) {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="pt-6 border-t border-white/10 space-y-8">
+        <GateSecuritySuite />
+        <FleetSuite />
       </div>
     </div>
   );
