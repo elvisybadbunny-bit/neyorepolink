@@ -16,7 +16,7 @@ import {
   KICD_UNIVERSAL_COMPETENCIES,
   KICD_4POINT_RUBRICS,
   KICD_CORE_VALUES_AND_DUTIES,
-} from "@/lib/services/universal-presets.service";
+} from "@/lib/data/universal-presets-data";
 
 interface UniversalPresetsModalProps {
   open: boolean;

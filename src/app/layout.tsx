@@ -11,12 +11,9 @@ import { ExpiredCheckoutClient } from "@/components/public-site/expired-checkout
 import { getLiquidColorLevel } from "@/lib/services/platform-appearance.service";
 import { isFounderTier } from "@/lib/core/roles";
 
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
-  display: "swap",
-});
+const inter = {
+  variable: "font-inter",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const rows = await db.platformSetting.findMany({

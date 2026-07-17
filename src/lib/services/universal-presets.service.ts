@@ -13,6 +13,17 @@ import { db } from "@/lib/db";
 import { withTenant } from "@/lib/core/tenant-context";
 import { tenantDb } from "@/lib/core/tenant-db";
 import type { SessionUser } from "@/lib/core/session";
+import {
+  KICD_UNIVERSAL_COMPETENCIES,
+  KICD_4POINT_RUBRICS,
+  KICD_CORE_VALUES_AND_DUTIES,
+} from "@/lib/data/universal-presets-data";
+
+export {
+  KICD_UNIVERSAL_COMPETENCIES,
+  KICD_4POINT_RUBRICS,
+  KICD_CORE_VALUES_AND_DUTIES,
+};
 
 export class UniversalPresetError extends Error {
   constructor(public code: "FORBIDDEN" | "INVALID", message: string) {
@@ -20,67 +31,6 @@ export class UniversalPresetError extends Error {
     this.name = "UniversalPresetError";
   }
 }
-
-export const KICD_UNIVERSAL_COMPETENCIES = [
-  {
-    name: "Communication and Collaboration",
-    code: "CC",
-    description: "Ability to express ideas clearly across mediums and work cooperatively within diverse teams.",
-  },
-  {
-    name: "Critical Thinking and Problem Solving",
-    code: "CTPS",
-    description: "Ability to evaluate evidence, reason logically, and devise effective solutions to real-world challenges.",
-  },
-  {
-    name: "Imagination and Creativity",
-    code: "IC",
-    description: "Capacity to generate novel ideas, design original artifacts, and approach tasks with artistic flair.",
-  },
-  {
-    name: "Citizenship",
-    code: "CIT",
-    description: "Active engagement in civic duties, environmental stewardship, and adherence to constitutional values.",
-  },
-  {
-    name: "Digital Literacy",
-    code: "DL",
-    description: "Competence in using modern ICT tools, digital communication networks, and technological devices ethically.",
-  },
-  {
-    name: "Learning to Learn",
-    code: "L2L",
-    description: "Self-directed study discipline, intellectual curiosity, and continuous personal skill acquisition.",
-  },
-  {
-    name: "Self-Efficacy",
-    code: "SE",
-    description: "Confidence in personal abilities, emotional resilience, self-discipline, and proactive goal setting.",
-  },
-];
-
-export const KICD_4POINT_RUBRICS = [
-  {
-    name: "Exceeding Expectations (`EE` — Level 4)",
-    code: "EE-L4",
-    description: "Learner demonstrates deep mastery, high creativity, and independent execution without guidance. Solves complex variations accurately.",
-  },
-  {
-    name: "Meeting Expectations (`ME` — Level 3)",
-    code: "ME-L3",
-    description: "Learner accurately completes required tasks and demonstrates solid conceptual understanding of the learning outcome.",
-  },
-  {
-    name: "Approaching Expectations (`AE` — Level 2)",
-    code: "AE-L2",
-    description: "Learner grasps core concepts but requires occasional teacher prompts, peer assistance, or structured scaffolds.",
-  },
-  {
-    name: "Below Expectations (`BE` — Level 1)",
-    code: "BE-L1",
-    description: "Learner requires intensive remedial support, simplified instruction, and continuous guidance to perform basic tasks.",
-  },
-];
 
 export const KICD_8POINT_RUBRICS = [
   {
@@ -139,19 +89,6 @@ export const KICD_8POINT_RUBRICS = [
     level: 1,
     description: "Learner requires intensive 1-on-1 remedial intervention and foundational remediation to perform basic tasks (0%-29%).",
   },
-];
-
-export const KICD_CORE_VALUES_AND_DUTIES = [
-  { name: "Love & Compassion", category: "Core Value", description: "Showing empathy, kindness, and mutual care within the school community." },
-  { name: "Responsibility & Accountability", category: "Core Value", description: "Fulfilling personal duties and taking ownership of actions and belongings." },
-  { name: "Respect & Inclusivity", category: "Core Value", description: "Honoring peers, teachers, elders, and respecting diverse cultural backgrounds." },
-  { name: "Unity & Peace", category: "Core Value", description: "Promoting harmony, resolving disputes amicably, and fostering collective spirit." },
-  { name: "Patriotism", category: "Core Value", description: "Love for Kenya, pride in national heritage, and loyalty to national symbols." },
-  { name: "Integrity", category: "Core Value", description: "Honesty, truthfulness, transparency, and ethical conduct in all examinations and duties." },
-  { name: "Class Prefect", category: "Student Duty Area", description: "Assisting class teacher in maintaining order, taking registers, and coordinating tasks." },
-  { name: "Bell Ringer & Timekeeper", category: "Student Duty Area", description: "Managing daily school bell schedule accurately across periods and breaks." },
-  { name: "Sanitation & Environmental Captain", category: "Student Duty Area", description: "Leading compound cleanliness, tree planting, and waste recycling initiatives." },
-  { name: "Academic & Library Monitor", category: "Student Duty Area", description: "Managing class textbook distribution, homework collection, and library decorum." },
 ];
 
 export async function applyUniversalCbcPresets(user: SessionUser, presetType: "COMPETENCIES" | "RUBRICS" | "RUBRICS_8POINT" | "VALUES_DUTIES" | "ALL") {
