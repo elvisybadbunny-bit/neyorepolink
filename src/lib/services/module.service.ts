@@ -4,9 +4,10 @@
  */
 import { db } from "@/lib/db";
 import { MODULES, getModuleDef, isModuleKey } from "@/lib/core/modules";
-import { recalculateTenantModularPricing } from "@/lib/services/pricing-engine.service";
+import { recalculateTenantModularPricing, checkPricingOptimizationAdvisor } from "@/lib/services/pricing-engine.service";
 import { isPaused } from "@/lib/services/platform-flags.service";
 import { checkFeatureReleaseAccess } from "@/lib/services/early-access-release.service";
+import { createInApp } from "@/lib/services/notification.service";
 
 export class ModuleError extends Error {
   constructor(
@@ -115,6 +116,22 @@ export async function setModule(
   ]);
 
   await recalculateTenantModularPricing(tenantId).catch(() => {});
+
+  // Smart Pricing Optimization Advisor check right upon module activation
+  if (enabled && !def.core) {
+    await checkPricingOptimizationAdvisor(tenantId).then(async (adv) => {
+      if (adv.shouldSwitchToCapacity && adv.advisoryMessage) {
+        await createInApp({
+          tenantId,
+          recipientId: actor.id,
+          title: adv.advisoryTitle || "💡 Smart Pricing Advice: Switch to Capacity Complete",
+          body: adv.advisoryMessage,
+          category: "billing",
+          href: "/settings/billing",
+        });
+      }
+    }).catch(() => {});
+  }
 
   return getModuleStates(tenantId);
 }

@@ -51,6 +51,13 @@ interface BillingData {
       baseCoreFeeKes: number;
       perModuleRateKes: number;
     };
+    optimizationAdvisor?: {
+      shouldSwitchToCapacity: boolean;
+      potentialSavingsKes: number;
+      enabledOptionalModulesCount: number;
+      advisoryTitle: string | null;
+      advisoryMessage: string | null;
+    };
   };
 }
 
@@ -250,15 +257,33 @@ export function BillingManager({
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-navy-400 dark:text-navy-500">
             Select School Pricing Model (Configurable in Settings)
           </h2>
+          {data.dualPricing.optimizationAdvisor?.shouldSwitchToCapacity && (
+            <div className="mb-4 rounded-2xl border border-green-300 bg-green-50/90 p-4 dark:border-green-800 dark:bg-green-950/40 shadow-sm animate-pulse">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-black text-green-900 dark:text-green-200 flex items-center gap-2">
+                  💡 SMART PRICING RECOMMENDATION (`Save {formatKES(data.dualPricing.optimizationAdvisor.potentialSavingsKes)}/term`)
+                </span>
+                <Badge tone="green">Bundi Advisor</Badge>
+              </div>
+              <p className="mt-1.5 text-xs text-green-800 dark:text-green-300 leading-relaxed">
+                {data.dualPricing.optimizationAdvisor.advisoryMessage}
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {/* Card 1: Capacity-Based Model V2 */}
-            <Card className={`rounded-3xl transition-all duration-300 ${currentMode === "SIZE_BASED_V2" ? "ring-2 ring-green-500/60 bg-green-50/20 dark:bg-green-950/10" : "hover:border-navy-300"}`}>
+            <Card className={`rounded-3xl transition-all duration-300 ${currentMode === "SIZE_BASED_V2" ? "ring-2 ring-green-500/60 bg-green-50/20 dark:bg-green-950/10" : data.dualPricing.optimizationAdvisor?.shouldSwitchToCapacity ? "ring-2 ring-green-400 bg-green-50/30 dark:ring-green-700 dark:bg-green-950/20 shadow-lg" : "hover:border-navy-300"}`}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Badge tone={currentMode === "SIZE_BASED_V2" ? "green" : "neutral"}>
-                      {currentMode === "SIZE_BASED_V2" ? "Active Model" : "Alternative Model"}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge tone={currentMode === "SIZE_BASED_V2" ? "green" : "neutral"}>
+                        {currentMode === "SIZE_BASED_V2" ? "Active Model" : "Alternative Model"}
+                      </Badge>
+                      {data.dualPricing.optimizationAdvisor?.shouldSwitchToCapacity && (
+                        <Badge tone="green" className="animate-bounce">💡 Recommended</Badge>
+                      )}
+                    </div>
                     <h3 className="mt-2 text-lg font-bold text-navy-950 dark:text-white">Capacity-Based Model V2</h3>
                     <p className="text-xs text-navy-500">Neyo Complete — All 18+ Modules Included by Default</p>
                   </div>

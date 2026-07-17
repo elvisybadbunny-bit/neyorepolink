@@ -693,6 +693,71 @@ export async function recalculateTenantModularPricing(
   return updated;
 }
 
+export interface PricingOptimizationAdvisorResult {
+  tenantId: string;
+  shouldSwitchToCapacity: boolean;
+  currentModularKes: number;
+  capacityQuoteKes: number;
+  potentialSavingsKes: number;
+  enabledOptionalModulesCount: number;
+  advisoryTitle: string | null;
+  advisoryMessage: string | null;
+}
+
+/** Check whether a school on MODULAR_USERS_V1 has opened enough optional modules that switching to Capacity Complete (SIZE_BASED_V2) is cheaper and better for them. */
+export async function checkPricingOptimizationAdvisor(tenantId: string): Promise<PricingOptimizationAdvisorResult> {
+  const sub = await db.subscription.findUnique({ where: { tenantId } });
+  const config = await getPricingEngineConfig();
+  const counts = await getRealCurrentCounts(tenantId);
+  const alumniRecordCount = await getRealAlumniCount(tenantId);
+
+  const optionalModulesCount = await db.tenantModule.count({
+    where: {
+      tenantId,
+      enabled: true,
+      moduleKey: { notIn: ["students", "attendance", "finance", "bundi"] },
+    },
+  });
+
+  const modular = computeModularUserModulePrice(counts.studentCount, counts.staffCount, optionalModulesCount, config);
+  const capacity = quotePriceForCounts(counts.studentCount, counts.staffCount, counts.parentCount, config, alumniRecordCount);
+
+  const currentModularKes = sub?.pricingMode === "MODULAR_USERS_V1" ? (sub.sizeBasedPriceKes || modular.termTotalKes) : modular.termTotalKes;
+  const capacityQuoteKes = capacity.monthlyPriceKes;
+  const potentialSavingsKes = Math.max(0, currentModularKes - capacityQuoteKes);
+
+  const shouldSwitchToCapacity = Boolean(
+    sub?.pricingMode === "MODULAR_USERS_V1" && (
+      (currentModularKes > capacityQuoteKes) ||
+      (optionalModulesCount >= 4 && potentialSavingsKes > 0)
+    )
+  );
+
+  let advisoryTitle: string | null = null;
+  let advisoryMessage: string | null = null;
+
+  if (shouldSwitchToCapacity) {
+    advisoryTitle = `💡 Smart Pricing Advice: Switch to Capacity Complete & Save KES ${potentialSavingsKes.toLocaleString("en-KE")}/term`;
+    advisoryMessage = `Your school has opened ${optionalModulesCount} optional modules under the pay-per-module model (` +
+      `KES ${currentModularKes.toLocaleString("en-KE")}/term). ` +
+      `We advise switching to our Capacity Complete model (SIZE_BASED_V2) inside Settings → Billing. ` +
+      `You will unlock EVERY single NEYO module immediately (` +
+      `Library, LMS, Hostel, Transport, Cafeteria, Inventory, Analytics, etc.) ` +
+      `for one flat capacity quote of KES ${capacityQuoteKes.toLocaleString("en-KE")}/term — saving your school KES ${potentialSavingsKes.toLocaleString("en-KE")} every term!`;
+  }
+
+  return {
+    tenantId,
+    shouldSwitchToCapacity,
+    currentModularKes,
+    capacityQuoteKes,
+    potentialSavingsKes,
+    enabledOptionalModulesCount: optionalModulesCount,
+    advisoryTitle,
+    advisoryMessage,
+  };
+}
+
 /** Switch a tenant between Capacity-Based V2 and Modular User & Module V1 right inside settings. */
 export async function switchTenantPricingModel(
   tenantId: string,

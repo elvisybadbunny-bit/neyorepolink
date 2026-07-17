@@ -2,7 +2,7 @@ import { requirePermission } from "@/lib/core/session";
 import { ensureSubscription } from "@/lib/services/billing.service";
 import { getAllLimitStatuses } from "@/lib/services/limits.service";
 import { getPlanFromCatalog, listPlansFromCatalog } from "@/lib/services/pricing-catalog.service";
-import { getPricingEngineConfig, getRealCurrentCounts, quotePriceForCounts, computeModularUserModulePrice } from "@/lib/services/pricing-engine.service";
+import { getPricingEngineConfig, getRealCurrentCounts, quotePriceForCounts, computeModularUserModulePrice, checkPricingOptimizationAdvisor } from "@/lib/services/pricing-engine.service";
 import { db } from "@/lib/db";
 import { ok, handleError } from "@/lib/api/respond";
 
@@ -44,6 +44,7 @@ export async function GET() {
       limits,
       plans,
       dualPricing: {
+        optimizationAdvisor: await checkPricingOptimizationAdvisor(user.tenantId),
         currentMode: sub.pricingMode,
         activePriceKes: sub.sizeBasedPriceKes || (sub.pricingMode === "MODULAR_USERS_V1" ? modularQuote.termTotalKes : capacityQuote.monthlyPriceKes),
         capacityModel: {
