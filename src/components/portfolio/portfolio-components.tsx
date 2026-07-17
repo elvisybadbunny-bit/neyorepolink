@@ -188,8 +188,8 @@ export function PortfolioHero({
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-3">
-          <Button variant="secondary" onClick={onExport} className="rounded-full backdrop-blur-xl">
-            <Download className="h-4 w-4 text-green-400" /> Export pack
+          <Button variant="secondary" onClick={onExport} className="rounded-full backdrop-blur-xl font-bold">
+            <Download className="h-4 w-4 text-green-400 mr-1" /> Download A4 PDF Album (`EE.14`)
           </Button>
           {timeline.canApprove ? (
             <Button variant="secondary" onClick={onOpenQueue} className="rounded-full backdrop-blur-xl">

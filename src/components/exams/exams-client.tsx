@@ -8,8 +8,12 @@
 import * as React from "react";
 import {
   ClipboardList, Plus, AlertCircle, Loader2, X, ArrowLeft, FileText,
-  CheckCircle2, Eye, EyeOff, Save, Send, ShieldCheck, Clock3,
+  CheckCircle2, Eye, EyeOff, Save, Send, ShieldCheck, Clock3, Printer, BookOpen, Trophy,
 } from "lucide-react";
+import { MarkSheetModal } from "@/components/academics/mark-sheet-modal";
+import { ExamPaperTidyingModal } from "@/components/academics/exam-paper-tidying-modal";
+import { PublicExamLibraryModal } from "@/components/academics/public-exam-library-modal";
+import { InterSchoolContestModal } from "@/components/academics/inter-school-contest-modal";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -294,15 +298,15 @@ function ExamDetail({ exam, subjects, classes, canEnterMarks, canPublish, canReq
           </div>
         )
       ) : (
-        <MarksEntry examId={exam.id} maxMarks={exam.maxMarks} subjects={subjects} classes={classes} onSaved={load} />
+        <MarksEntry examId={exam.id} examName={exam.name} maxMarks={exam.maxMarks} subjects={subjects} classes={classes} onSaved={load} />
       )}
     </div>
   );
 }
 
 // ---- marks grid with autosave -------------------------------------------------------
-function MarksEntry({ examId, maxMarks, subjects, classes, onSaved }: {
-  examId: string; maxMarks: number; subjects: Subject[]; classes: ClassOpt[]; onSaved: () => void;
+function MarksEntry({ examId, examName, maxMarks, subjects, classes, onSaved }: {
+  examId: string; examName: string; maxMarks: number; subjects: Subject[]; classes: ClassOpt[]; onSaved: () => void;
 }) {
   const { toast } = useToast();
   const [subjectId, setSubjectId] = React.useState("");
@@ -311,6 +315,10 @@ function MarksEntry({ examId, maxMarks, subjects, classes, onSaved }: {
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [savedAt, setSavedAt] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [markSheetOpen, setMarkSheetOpen] = React.useState(false);
+  const [examPaperTidyingOpen, setExamPaperTidyingOpen] = React.useState(false);
+  const [publicLibraryOpen, setPublicLibraryOpen] = React.useState(false);
+  const [contestModalOpen, setContestModalOpen] = React.useState(false);
   const dirtyRef = React.useRef(false);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -380,6 +388,46 @@ function MarksEntry({ examId, maxMarks, subjects, classes, onSaved }: {
           <option value="">Subject…</option>
           {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
+        {classId && subjectId && (
+          <>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setMarkSheetOpen(true)}
+              className="rounded-full gap-1.5 border-navy-300 text-xs font-semibold shadow-sm hover:border-emerald-500 hover:text-emerald-600 dark:border-navy-600"
+            >
+              <Printer className="h-3.5 w-3.5" /> Paper Sheet / Scan (`EE.4`)
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setExamPaperTidyingOpen(true)}
+              className="rounded-full gap-1.5 border-navy-300 text-xs font-semibold shadow-sm hover:border-emerald-500 hover:text-emerald-600 dark:border-navy-600"
+            >
+              <FileText className="h-3.5 w-3.5" /> Tidy Scanned Exam (`EE.5`)
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setPublicLibraryOpen(true)}
+              className="rounded-full gap-1.5 border-navy-300 text-xs font-semibold shadow-sm hover:border-emerald-500 hover:text-emerald-600 dark:border-navy-600"
+            >
+              <BookOpen className="h-3.5 w-3.5 text-emerald-600" /> National Exam Bank (`EE.6`)
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setContestModalOpen(true)}
+              className="rounded-full gap-1.5 border-amber-300 text-xs font-semibold shadow-sm text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300"
+            >
+              <Trophy className="h-3.5 w-3.5 text-amber-500" /> Inter-School Contests (`EE.10`)
+            </Button>
+          </>
+        )}
         {students && (
           <span className="ml-auto inline-flex items-center gap-2 text-xs text-navy-400">
             {saving ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</> : savedAt ? <><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> Saved {savedAt}</> : `${filled}/${students.length} entered`}
@@ -422,6 +470,47 @@ function MarksEntry({ examId, maxMarks, subjects, classes, onSaved }: {
           </div>
         </div>
       )}
+
+      <MarkSheetModal
+        open={markSheetOpen}
+        onOpenChange={setMarkSheetOpen}
+        examId={examId}
+        examName={examName}
+        subjectId={subjectId}
+        subjectName={subjects.find((s) => s.id === subjectId)?.name ?? ""}
+        classId={classId}
+        className={classes.find((c) => c.id === classId)?.name ?? ""}
+        maxMarks={maxMarks}
+        onApplied={() => {
+          loadSheet();
+          onSaved();
+        }}
+      />
+
+      <ExamPaperTidyingModal
+        open={examPaperTidyingOpen}
+        onOpenChange={setExamPaperTidyingOpen}
+        subjectId={subjectId}
+        subjectName={subjects.find((s) => s.id === subjectId)?.name ?? ""}
+        classId={classId}
+        className={classes.find((c) => c.id === classId)?.name ?? ""}
+        examId={examId}
+        onSaved={onSaved}
+      />
+
+      <PublicExamLibraryModal
+        open={publicLibraryOpen}
+        onOpenChange={setPublicLibraryOpen}
+        subjects={subjects}
+        classes={classes}
+        onCloned={onSaved}
+      />
+
+      <InterSchoolContestModal
+        open={contestModalOpen}
+        onOpenChange={setContestModalOpen}
+        subjects={subjects || []}
+      />
     </div>
   );
 }

@@ -57,76 +57,42 @@ export const ADD_ONS: AddOnDef[] = [
 
 const CORE = ["students", "attendance", "finance", "academics", "staff"];
 
+const ALL_MODULES = [...CORE, "library", "lms", "hostel", "transport", "inventory", "cafeteria", "extra_storage", "skills_passport", "custom_reports", "advanced_analytics", "pathway_guidance", "transfer_passport"];
+
 export const PLANS: PlanDef[] = [
-  {
-    key: "free_karibu",
-    name: "Free Karibu",
-    tagline: "For small schools getting started",
-    pricePerTerm: 0,
-    perStudentPerTerm: 0,
-    limits: { students: 50, staff: 10, smsPerTerm: 0 },
-    includedModules: [...CORE],
-    maxAddOns: 0,
-    overageAllowance: 1.0, // no overage on free
-    support: "Community support",
-    highlights: [
-      "Up to 50 students",
-      "Core modules: students, attendance, finance, academics, staff",
-      "M-Pesa fee collection included",
-    ],
-  },
   {
     key: "msingi",
     name: "Msingi",
-    tagline: "Day schools that want the full academic suite",
+    tagline: "Standard school plan with 1-Month Free Trial for new signups",
     pricePerTerm: 4500,
     perStudentPerTerm: 0,
-    limits: { students: 250, staff: 35, smsPerTerm: 0 },
-    includedModules: [...CORE, "library", "lms"],
-    maxAddOns: 2,
-    overageAllowance: 1.1,
-    support: "Email support (48h)",
+    limits: { students: 500, staff: 50, smsPerTerm: 0 },
+    includedModules: [...ALL_MODULES],
+    maxAddOns: 10,
+    overageAllowance: 1.15,
+    support: "Email + WhatsApp support (24h)",
     highlights: [
-      "Up to 250 students",
-      "Library + Learning (LMS) included",
-      "Up to 2 add-ons",
+      "1-Month Free Trial for new users",
+      "All modules unlocked (Neyo Complete)",
+      "Up to 500 students",
     ],
   },
   {
     key: "pro",
     name: "Pro",
-    tagline: "Growing schools, day or boarding",
+    tagline: "Large and growing schools, day or boarding",
     pricePerTerm: 9000,
     perStudentPerTerm: 0,
-    limits: { students: 600, staff: 80, smsPerTerm: 0 },
-    includedModules: [...CORE, "library", "lms", "hostel", "transport"],
-    maxAddOns: 3,
-    overageAllowance: 1.1,
-    support: "Email + WhatsApp support (24h)",
-    highlights: [
-      "Up to 600 students",
-      "Hostel + Transport included",
-      "Up to 3 add-ons",
-    ],
-  },
-  {
-    key: "elite",
-    name: "Elite",
-    tagline: "Large schools and group academies",
-    pricePerTerm: 22000,
-    perStudentPerTerm: 0,
     limits: { students: 5000, staff: 500, smsPerTerm: 0 },
-    // Elite implicitly unlocks premium Part J features
-    // Elite bundles every premium Part-J revenue feature (J.23).
-    includedModules: [...CORE, "library", "lms", "hostel", "transport", "inventory", "cafeteria", "extra_storage", "skills_passport", "custom_reports", "advanced_analytics", "pathway_guidance", "transfer_passport"],
+    includedModules: [...ALL_MODULES],
     maxAddOns: 15,
     overageAllowance: 1.25,
     support: "Priority support + onboarding",
     highlights: [
+      "1-Month Free Trial for new users",
       "Up to 5,000 students",
-      "Every module included",
-      "Custom domain",
-      "Priority support & up to 10 add-ons",
+      "All modules unlocked (Neyo Complete)",
+      "Priority support + custom onboarding",
     ],
   },
 ];
@@ -147,4 +113,4 @@ export function estimateTermCost(plan: PlanDef, students: number, addOnKeys: str
   return plan.pricePerTerm + plan.perStudentPerTerm * students + addOns;
 }
 
-export const DEFAULT_PLAN_KEY = "free_karibu";
+export const DEFAULT_PLAN_KEY = "msingi";

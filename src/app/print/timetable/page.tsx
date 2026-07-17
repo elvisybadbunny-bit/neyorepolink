@@ -50,7 +50,8 @@ export default async function PrintTimetableRoute({
 }) {
   const user = await requireUser();
   const tenant = await db.tenant.findUnique({ where: { id: user.tenantId }, select: { name: true, logoUrl: true } });
-  const daysVertical = searchParams.vertical === "1";
+  const tenantConfig = await db.timetableConfig.findFirst({ where: { tenantId: user.tenantId } });
+  const daysVertical = searchParams.vertical !== "0";
   const cellFontSize = searchParams.font ? Number(searchParams.font) : 13;
   const bandW = searchParams.bw === "1";
 
@@ -68,7 +69,7 @@ export default async function PrintTimetableRoute({
             title={group.title}
             subtitle={group.subtitle}
             slots={group.slots as RealSlot[]}
-            config={group.config}
+            config={group.config || tenantConfig || null}
             daysVertical={daysVertical}
             cellFontSize={cellFontSize}
             pageBreakAfter={idx < bundle.groups.length - 1}
@@ -93,7 +94,7 @@ export default async function PrintTimetableRoute({
         title={title}
         subtitle="Class timetable"
         slots={slots as RealSlot[]}
-        config={config}
+        config={config || tenantConfig || null}
         daysVertical={daysVertical}
         cellFontSize={cellFontSize}
         pageBreakAfter={false}
@@ -115,7 +116,7 @@ export default async function PrintTimetableRoute({
         title={teacher.fullName}
         subtitle={teacher.timetableShortCode ? `Teacher timetable · ${teacher.timetableShortCode}` : "Teacher timetable"}
         slots={slots as RealSlot[]}
-        config={null}
+        config={tenantConfig || null}
         daysVertical={daysVertical}
         cellFontSize={cellFontSize}
         pageBreakAfter={false}

@@ -38,6 +38,10 @@ export const EE_FEATURES: EeFeatureDef[] = [
   { id: "EE.9", label: "Scan Paper Quiz to Formative Assessment", description: "Scan a paper quiz into a printable, self-marking formative assessment." },
   { id: "EE.10", label: "Inter-School Contests", description: "NEYO-hosted contests (coding or any subject) across schools, built on the quiz engine." },
   { id: "EE.11", label: "QR Gate-Pass Status Scanning", description: "Sub-second QR scan response with a clear allowed/not-allowed/didn't-pass/invalid status." },
+  { id: "EE.12", label: "KNEC / KJSEA SMS & Webhook Placement Lookup", description: "Real-time SMS placement query (22263 style) verifying student Senior School pathway & class placement." },
+  { id: "EE.13", label: "Interactive STEM Canvas Simulations", description: "Interactive virtual science and math lab simulations (Ohm's Law, Levers, Angles) with real-time sliders and calculations." },
+  { id: "EE.14", label: "Automated CBC/CBE Digital Portfolio & Project Album PDF Booklet", description: "Converts student project photos, competency ratings, and rubric observations directly into a downloadable A4 PDF booklet." },
+  { id: "EE.15", label: "Universal CBC/CBE Presets Engine", description: "1-Click application of the 7 universal core competencies, official KICD 4-point rubrics, and core values without manual typing." },
 ];
 
 export const EE_FEATURE_IDS = EE_FEATURES.map((f) => f.id);

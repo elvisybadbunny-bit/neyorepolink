@@ -464,6 +464,13 @@ model Tenant {
   QrScanEvent                  QrScanEvent[]
   StudentNationalAssessment    StudentNationalAssessment[]
   lessonObservations           LessonObservation[]
+  scannedExamPapers            ScannedExamPaper[]
+  questionBankEntries          QuestionBankEntry[]
+  questionBankAttempts         QuestionBankAttempt[]
+  paperQuizFormativeBatches    PaperQuizFormativeBatch[]
+  hostedContests               InterSchoolContest[]  @relation("HostedContests")
+  participatingContests        ContestRegistration[] @relation("ParticipatingContests")
+  contestAttempts              ContestAttempt[]      @relation("ContestAttempts")
 
   @@index([osKey])
 }
@@ -834,6 +841,9 @@ model CbcStrand {
   assessments     CbcAssessment[]
   lessonPlans     LessonPlan[]
   substrands      CbcSubstrand[]
+  learningVideos  LearningVideo[]
+  questionBankEntries QuestionBankEntry[]
+  paperQuizFormativeBatches PaperQuizFormativeBatch[]
 
   @@unique([tenantId, subjectId, name])
   @@index([tenantId, subjectId])
@@ -854,6 +864,9 @@ model CbcSubstrand {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   assessments     CbcAssessment[]
+  learningVideos  LearningVideo[]
+  questionBankEntries QuestionBankEntry[]
+  paperQuizFormativeBatches PaperQuizFormativeBatch[]
 
   @@unique([tenantId, strandId, name])
   @@index([tenantId, strandId])
@@ -936,6 +949,7 @@ model Exam {
   subjects         ExamSubject[]
   results          ExamResult[]
   releaseApprovals ExamReleaseApprovalRequest[]
+  scannedExamPapers ScannedExamPaper[]
   createdAt        DateTime                     @default(now())
 
   @@index([tenantId, year, term])
@@ -1413,6 +1427,11 @@ model Subject {
   quizzes                   Quiz[]
   PathwaySubjectRequirement PathwaySubjectRequirement[]
   SubjectPaperConfig        SubjectPaperConfig[]
+  scannedExamPapers         ScannedExamPaper[]
+  learningVideos            LearningVideo[]
+  questionBankEntries       QuestionBankEntry[]
+  paperQuizFormativeBatches PaperQuizFormativeBatch[]
+  interSchoolContests       InterSchoolContest[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -2798,6 +2817,7 @@ model GatePass {
   approvedAt     DateTime?
   decisionNote   String?
   usedAt         DateTime? // stamped by the gate when the student exits
+  returnedAt     DateTime? // EE.11 — stamped when the student checks back in at the gate
   createdAt      DateTime  @default(now())
 
   @@unique([tenantId, passNo])
@@ -3679,7 +3699,7 @@ model Subscription {
   tenantId String @unique
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  planKey String @default("free_karibu") // see core/plans.ts
+  planKey String @default("msingi") // see core/plans.ts
   status  String @default("ACTIVE") // ACTIVE | PAST_DUE | GRACE | SUSPENDED | CANCELLED
 
   // Price grandfathering: the price locked in at subscribe time (KES/term).
@@ -4543,6 +4563,8 @@ model SchoolClass {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
+  scannedExamPapers ScannedExamPaper[]
+  paperQuizFormativeBatches PaperQuizFormativeBatch[]
   students Student[]
 
   @@unique([tenantId, level, stream])
@@ -4596,6 +4618,8 @@ model Student {
 
   guardians                    StudentGuardian[]
   documents                    StudentDocument[]
+  questionBankAttempts         QuestionBankAttempt[]
+  contestAttempts              ContestAttempt[]
   requirements                 StudentRequirement[]
   customFields                 StudentCustomField[]
   transfers                    StudentTransfer[]
@@ -5545,6 +5569,20 @@ model LearningVideo {
   thumbnailUrl String?
   savedById    String
   savedByName  String
+  // EE.7 — Strand/sub-strand/subject linking & national approval fields
+  subjectId       String?
+  subject         Subject?      @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  strandId        String?
+  strand          CbcStrand?    @relation(fields: [strandId], references: [id], onDelete: SetNull)
+  substrandId     String?
+  substrand       CbcSubstrand? @relation(fields: [substrandId], references: [id], onDelete: SetNull)
+  grade           String?       // e.g. "Grade 4", "Grade 10"
+  scope           String        @default("SCHOOL") // SCHOOL | NATIONAL
+  approvalStatus  String        @default("APPROVED") // APPROVED | PENDING | REJECTED
+  approvedById    String?
+  approvedByName  String?
+  approvedAt      DateTime?
+  rejectionReason String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -5552,6 +5590,9 @@ model LearningVideo {
 
   @@unique([tenantId, youtubeId])
   @@index([tenantId, title])
+  @@index([strandId, approvalStatus])
+  @@index([subjectId, grade, approvalStatus])
+  @@index([scope, approvalStatus])
 }
 
 model LearningVideoSession {
@@ -5573,6 +5614,69 @@ model LearningVideoSession {
 
   @@index([tenantId, startedAt])
   @@index([tenantId, classId])
+}
+
+// =============================================================================
+// PART EE.8 — In-App Quiz / Question Bank & Weakness-Driven Student Practice
+// =============================================================================
+
+model QuestionBankEntry {
+  id              String        @id @default(cuid())
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdById     String
+  createdByName   String
+  subjectId       String
+  subject         Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  strandId        String?
+  strand          CbcStrand?    @relation(fields: [strandId], references: [id], onDelete: SetNull)
+  substrandId     String?
+  substrand       CbcSubstrand? @relation(fields: [substrandId], references: [id], onDelete: SetNull)
+  grade           String        // e.g. "Grade 7", "Grade 8", "Grade 9"
+  prompt          String
+  questionType    String        @default("MULTIPLE_CHOICE") // MULTIPLE_CHOICE | SHORT_ANSWER | TRUE_FALSE
+  optionsJson     String        @default("[]") // e.g. '["Option A", "Option B", "Option C", "Option D"]'
+  correctAnswer   String        // exact correct string or index e.g. "Option B" or "1"
+  explanation     String?       // step-by-step explanation shown after student attempt
+  difficulty      Int           @default(2) // 1=EASY, 2=MEDIUM, 3=HARD
+  // Rich diagram/illustration support (never text only!):
+  illustrationUrl String?       // image URL if from scanned book or diagram upload
+  diagramSvg      String?       // raw SVG or geometric diagram data
+  diagramType     String?       // e.g. "GEOMETRY_TRIANGLE", "CIRCUIT", "BAR_GRAPH", "PLANT_CELL"
+  sourceType      String        @default("TEACHER_CREATED") // TEACHER_CREATED | BOOK_SCAN | KICD_SEEDED | CLONED
+  scope           String        @default("SCHOOL") // SCHOOL | NATIONAL_SHARED
+  approvalStatus  String        @default("APPROVED") // APPROVED | PENDING_OPS | REJECTED
+  approvedById    String?
+  approvedByName  String?
+  approvedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  attempts         QuestionBankAttempt[]
+  contestQuestions ContestQuestion[]
+
+  @@index([tenantId, subjectId])
+  @@index([strandId, difficulty])
+  @@index([grade, subjectId, approvalStatus])
+  @@index([scope, approvalStatus])
+}
+
+model QuestionBankAttempt {
+  id             String            @id @default(cuid())
+  tenantId       String
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId      String
+  student        Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  questionId     String
+  question       QuestionBankEntry @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedAnswer String
+  isCorrect      Boolean
+  timeTakenSecs  Int               @default(30)
+  attemptedAt    DateTime          @default(now())
+
+  @@index([tenantId, studentId, isCorrect])
+  @@index([questionId, isCorrect])
 }
 
 // I.89 — WebRTC online live classes (home/mobile/TV join room).
@@ -6324,6 +6428,51 @@ model EntranceExamPaper {
 
   @@unique([tenantId, classId])
   @@index([tenantId, classLabel])
+}
+
+// =============================================================================
+// PART EE.5 — Scanned Exam Papers (Teacher writes on paper, NEYO tidies it)
+// =============================================================================
+
+model ScannedExamPaper {
+  id              String       @id @default(cuid())
+  tenantId        String
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdById     String
+  createdByName   String
+  subjectId       String
+  subject         Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  classId         String
+  schoolClass     SchoolClass  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  examId          String?
+  exam            Exam?        @relation(fields: [examId], references: [id], onDelete: SetNull)
+  title           String
+  instructions    String?
+  timeAllowedMins Int          @default(120)
+  totalMarks      Int          @default(100)
+  status          String       @default("TIDIED") // DRAFT | TIDIED | PUBLISHED | ARCHIVED
+  // JSON array of ScannedExamQuestion:
+  // { id, questionNumber, prompt, questionType: "MULTIPLE_CHOICE" | "STRUCTURED" | "ESSAY", options: string[], marks: number, confidencePct: number }
+  questionsJson   String       @default("[]")
+  rawScanUrl      String?
+  // EE.6 — privacy tier for cross-school sharing:
+  // PRIVATE | SCHOOL_ONLY | PUBLIC_SHARED
+  privacyTier     String       @default("SCHOOL_ONLY")
+  sharingApprovalStatus   String    @default("NONE") // NONE | PENDING | APPROVED | REJECTED
+  sharingRequestedById    String?
+  sharingRequestedByName  String?
+  sharingRequestedAt      DateTime?
+  sharingDecidedById      String?
+  sharingDecidedByName    String?
+  sharingDecidedAt        DateTime?
+  sharingDecisionNote     String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([tenantId, subjectId])
+  @@index([tenantId, classId])
+  @@index([tenantId, status])
+  @@index([privacyTier, sharingApprovalStatus])
 }
 
 // =============================================================================
@@ -7967,5 +8116,136 @@ model IdempotentRequest {
 
   @@unique([tenantId, action, idempotencyKey])
   @@index([tenantId, createdAt])
+}
+
+// =============================================================================
+// PART EE.9 — Scan Paper Quiz into Printable, Self-Marking Formative Assessment
+// =============================================================================
+
+model PaperQuizFormativeBatch {
+  id               String       @id @default(cuid())
+  tenantId         String
+  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdById      String
+  createdByName    String
+  subjectId        String
+  subject          Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  classId          String
+  schoolClass      SchoolClass  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  strandId         String
+  strand           CbcStrand    @relation(fields: [strandId], references: [id], onDelete: Cascade)
+  substrandId      String?
+  substrand        CbcSubstrand? @relation(fields: [substrandId], references: [id], onDelete: SetNull)
+  title            String
+  instructions     String?
+  totalQuizMarks   Int          @default(10)
+  // Threshold % bounds for deterministic conversion to KICD 4-point rubric:
+  eeThresholdPct   Int          @default(80) // >= 80% = Level 4 (EE)
+  meThresholdPct   Int          @default(60) // >= 60% = Level 3 (ME)
+  aeThresholdPct   Int          @default(40) // >= 40% = Level 2 (AE)
+  // Below aeThresholdPct (< 40%) = Level 1 (BE)
+  status           String       @default("DRAFT") // DRAFT | APPLIED | ARCHIVED
+  // JSON array of scanned/selected quiz questions: { questionNumber, prompt, marks }
+  questionsJson    String       @default("[]")
+  // JSON array of batch student scores/rubrics: { studentId, admissionNo, studentName, score, level, comment, status: "PENDING" | "APPLIED" }
+  studentScoresJson String      @default("[]")
+  appliedCount     Int          @default(0)
+  appliedAt        DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([tenantId, classId])
+  @@index([tenantId, strandId])
+  @@index([tenantId, status])
+}
+
+// =============================================================================
+// PART EE.10 — Inter-School Contests (Coding, Mathematics, Science across schools)
+// =============================================================================
+
+model InterSchoolContest {
+  id             String                @id @default(cuid())
+  hostTenantId   String
+  hostTenant     Tenant                @relation("HostedContests", fields: [hostTenantId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdByName  String
+  title          String                // e.g. "National Junior School Mathematics Olympiad 2026"
+  description    String?
+  subjectId      String?               // optional link to a specific subject
+  subject        Subject?              @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  category       String                @default("MATHEMATICS") // MATHEMATICS | SCIENCE | CODING_ICT | DEBATE | GENERAL
+  targetGradeBand String               @default("Grade 7–9 (Junior School)")
+  visibility     String                @default("OPEN_NATIONAL") // OPEN_NATIONAL | INVITE_ONLY
+  status         String                @default("UPCOMING") // DRAFT | UPCOMING | ACTIVE | ENDED | ARCHIVED
+  startTime      DateTime?
+  endTime        DateTime?
+  timeLimitMins  Int                   @default(45)
+  totalMarks     Int                   @default(20)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  questions      ContestQuestion[]
+  registrations  ContestRegistration[]
+  attempts       ContestAttempt[]
+
+  @@index([hostTenantId, status])
+  @@index([visibility, status])
+}
+
+model ContestQuestion {
+  id             String             @id @default(cuid())
+  contestId      String
+  contest        InterSchoolContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  order          Int                @default(1)
+  questionBankId String?
+  questionBank   QuestionBankEntry? @relation(fields: [questionBankId], references: [id], onDelete: SetNull)
+  prompt         String
+  questionType   String             @default("MULTIPLE_CHOICE")
+  optionsJson    String             @default("[]")
+  correctAnswer  String
+  explanation    String?
+  marks          Int                @default(2)
+  diagramSvg     String?
+
+  @@index([contestId, order])
+}
+
+model ContestRegistration {
+  id              String             @id @default(cuid())
+  contestId       String
+  contest         InterSchoolContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  tenantId        String
+  tenant          Tenant             @relation("ParticipatingContests", fields: [tenantId], references: [id], onDelete: Cascade)
+  registeredById  String
+  registeredByName String
+  schoolTeamName  String?            // e.g. "Karibu Math Wizards"
+  registeredAt    DateTime           @default(now())
+
+  @@unique([contestId, tenantId])
+  @@index([tenantId])
+}
+
+model ContestAttempt {
+  id              String             @id @default(cuid())
+  contestId       String
+  contest         InterSchoolContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  tenantId        String
+  tenant          Tenant             @relation("ContestAttempts", fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId       String
+  student         Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentName     String
+  admissionNo     String
+  answersJson     String             @default("{}") // map of { questionId: selectedAnswer }
+  score           Int                @default(0)
+  totalMarks      Int                @default(20)
+  scorePct        Int                @default(0)
+  timeTakenSecs   Int                @default(0)
+  status          String             @default("SUBMITTED") // IN_PROGRESS | SUBMITTED | DISQUALIFIED
+  startedAt       DateTime           @default(now())
+  submittedAt     DateTime?
+
+  @@unique([contestId, studentId])
+  @@index([contestId, score, timeTakenSecs])
+  @@index([tenantId, studentId])
 }
 

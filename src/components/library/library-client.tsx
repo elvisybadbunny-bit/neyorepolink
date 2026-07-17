@@ -14,6 +14,7 @@ import {
   CheckCircle2, Inbox, Banknote, FileText, Download, BookUp, Camera, Usb,
   UploadCloud, Sparkles, Tag, Printer, QrCode,
 } from "lucide-react";
+import jsQR from "jsqr";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -713,6 +714,7 @@ function IssueTab({ onIssued }: { onIssued: () => void }) {
   const [scannerOpen, setScannerOpen] = React.useState(false);
   const [scannerStatus, setScannerStatus] = React.useState("Camera scanner idle");
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
   const scanningRef = React.useRef(false);
   const [hit, setHit] = React.useState<BarcodeHit | null>(null);
@@ -775,10 +777,6 @@ function IssueTab({ onIssued }: { onIssued: () => void }) {
   React.useEffect(() => () => stopBuiltInScanner(), []);
 
   async function startBuiltInScanner() {
-    if (!("BarcodeDetector" in window)) {
-      toast({ title: "This browser does not support the built-in barcode scanner. Type the ISBN or use a USB scanner instead.", tone: "error" });
-      return;
-    }
     try {
       setScannerOpen(true);
       setScannerStatus("Requesting camera permission…");
@@ -788,24 +786,60 @@ function IssueTab({ onIssued }: { onIssued: () => void }) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
-      const Detector = (window as any).BarcodeDetector;
-      const detector = new Detector({ formats: ["ean_13", "ean_8", "code_128", "code_39", "upc_a", "upc_e"] });
+
+      const hasBarcodeDetector = "BarcodeDetector" in window;
+      let detector: any = null;
+      if (hasBarcodeDetector) {
+        try {
+          const Detector = (window as any).BarcodeDetector;
+          detector = new Detector({ formats: ["qr_code", "ean_13", "ean_8", "code_128", "code_39", "upc_a", "upc_e"] });
+        } catch {
+          detector = null;
+        }
+      }
+
       scanningRef.current = true;
-      setScannerStatus("Built-in camera scanner active — point at the book barcode");
+      setScannerStatus("Built-in camera active (`jsQR + BarcodeDetector`) — point at book barcode or copy QR");
+
       const loop = async () => {
         if (!scanningRef.current || !videoRef.current) return;
         try {
-          const codes = await detector.detect(videoRef.current);
-          const value = codes?.[0]?.rawValue;
-          if (value) {
-            setBarcode(value);
-            setScannerStatus(`Scanned ${value}`);
-            stopBuiltInScanner();
-            const res = await fetch(`/api/library?barcode=${encodeURIComponent(value)}`);
-            const json = await res.json();
-            if (json.ok) { setHit(json.data); setBookId(json.data.id); setBookQuery(json.data.title); }
-            else toast({ title: json.error?.message || "Barcode not found", tone: "error" });
-            return;
+          if (videoRef.current.readyState >= 2 && videoRef.current.videoWidth > 0) {
+            if (detector) {
+              try {
+                const codes = await detector.detect(videoRef.current);
+                const value = codes?.[0]?.rawValue;
+                if (value) {
+                  setBarcode(value);
+                  setScannerStatus(`Scanned ${value}`);
+                  stopBuiltInScanner();
+                  await scan(value);
+                  return;
+                }
+              } catch {
+                /* fallback to jsQR below */
+              }
+            }
+
+            if (canvasRef.current) {
+              const canvas = canvasRef.current;
+              const video = videoRef.current;
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              const ctx = canvas.getContext("2d");
+              if (ctx) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const decoded = jsQR(imageData.data, imageData.width, imageData.height);
+                if (decoded && decoded.data) {
+                  setBarcode(decoded.data);
+                  setScannerStatus(`Scanned QR ${decoded.data}`);
+                  stopBuiltInScanner();
+                  await scan(decoded.data);
+                  return;
+                }
+              }
+            }
           }
         } catch { /* keep scanning */ }
         requestAnimationFrame(loop);
@@ -813,26 +847,30 @@ function IssueTab({ onIssued }: { onIssued: () => void }) {
       requestAnimationFrame(loop);
     } catch {
       setScannerStatus("Camera permission denied or unavailable");
-      toast({ title: "Camera scanner could not start. Type the ISBN or use a USB scanner.", tone: "error" });
+      toast({ title: "Camera scanner could not start. Type the ISBN/code below or use the simulator.", tone: "error" });
       stopBuiltInScanner();
     }
   }
 
-  async function scan() {
-    if (!barcode.trim()) return;
-    const raw = barcode.trim();
+  async function scan(overrideCode?: string) {
+    const codeToCheck = overrideCode !== undefined ? overrideCode : barcode;
+    if (!codeToCheck.trim()) return;
+    const raw = codeToCheck.trim();
+    if (overrideCode !== undefined) setBarcode(raw);
     setCopyId(""); setCopyLabel("");
-    // Try the ISBN/title-level barcode first (existing behavior)…
     const res = await fetch(`/api/library?barcode=${encodeURIComponent(raw)}`);
     const json = await res.json();
     if (json.ok) {
-      setHit(json.data);
-      setBookId(json.data.id);
-      setBookQuery(json.data.title);
+      const d = json.data;
+      setHit(d);
+      setBookId(d.id);
+      setBookQuery(d.title);
+      const loanDays = d.loanPeriodDays || 14;
+      const calcDue = new Date(Date.now() + 3 * 3600_000 + loanDays * 86400_000).toISOString().slice(0, 10);
+      setDueDate(calcDue);
+      toast({ title: `✓ Found: ${d.title} — Due date set to ${calcDue}`, description: "Book details auto-filled. Pick learner and press Issue.", tone: "success" });
       return;
     }
-    // …then T.1's real per-copy code (a scanned label QR resolves to the
-    // EXACT physical copy, auto-selecting it for the issue below).
     const copyRes = await fetch(`/api/library?copyCode=${encodeURIComponent(raw)}`);
     const copyJson = await copyRes.json();
     if (copyJson.ok) {
@@ -847,7 +885,10 @@ function IssueTab({ onIssued }: { onIssued: () => void }) {
       setCopyId(d.copyId);
       setCopyLabel(`Copy ${d.copyNo}`);
       setHit({ id: d.bookId, title: d.title, author: d.author, shelf: d.shelf, copiesAvailable: 1, copiesTotal: 1, openIssues: [] });
-      toast({ title: `Scanned Copy ${d.copyNo} of "${d.title}"`, tone: "success" });
+      const loanDays = d.loanPeriodDays || 14;
+      const calcDue = new Date(Date.now() + 3 * 3600_000 + loanDays * 86400_000).toISOString().slice(0, 10);
+      setDueDate(calcDue);
+      toast({ title: `✓ Scanned Copy #${d.copyNo} of "${d.title}"`, description: `Due date set to ${calcDue}. Just select learner and tap Issue!`, tone: "success" });
       return;
     }
     setHit(null);
@@ -876,11 +917,11 @@ function IssueTab({ onIssued }: { onIssued: () => void }) {
       <CardHeader><CardTitle className="flex items-center gap-2"><BookUp className="h-4 w-4 text-green-600" /> Issue a book</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <Label>Scan barcode / type ISBN</Label>
+          <Label>Scan barcode / type ISBN / scan copy QR</Label>
           <div className="flex flex-wrap gap-2">
-            <Input value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && scan()} placeholder="9789966882XXX" />
-            <Button variant="secondary" onClick={scan}><ScanLine className="h-4 w-4" /> Find</Button>
-            <Button variant="secondary" onClick={startBuiltInScanner}><Camera className="h-4 w-4" /> Built-in scanner</Button>
+            <Input value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && scan()} placeholder="9789966882XXX or COPY-001" />
+            <Button variant="secondary" onClick={() => scan()}><ScanLine className="h-4 w-4 mr-1" /> Find</Button>
+            <Button variant="secondary" onClick={startBuiltInScanner}><Camera className="h-4 w-4 mr-1" /> Built-in scanner</Button>
           </div>
           <div className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
             <div className="rounded-2xl border border-green-100 bg-green-50/60 px-3 py-2 text-green-800 dark:border-green-900/40 dark:bg-green-950/20 dark:text-green-200">
@@ -890,10 +931,48 @@ function IssueTab({ onIssued }: { onIssued: () => void }) {
               <Usb className="mr-1 inline h-3.5 w-3.5" /> External hardware scanner: not connected. Plug one in and it will type here automatically.
             </div>
           </div>
+
+          {/* Quick-Test Book Simulation Bar */}
+          <div className="mt-3 rounded-xl border border-dashed border-navy-200 bg-navy-50/60 p-2.5 dark:border-navy-700/60 dark:bg-navy-800/40">
+            <p className="flex items-center gap-1 text-xs font-bold text-navy-700 dark:text-navy-300 mb-1.5">
+              <Sparkles className="h-3 w-3 text-amber-500" /> Quick-Test Simulator Bar (Simulate camera barcode/QR capture):
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => scan("9789966112233")}
+                className="rounded-full bg-white text-xs text-navy-700 border border-navy-300 dark:bg-navy-900 dark:text-navy-200"
+              >
+                ⚡ Test ISBN `9789966112233`
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => scan("9789966223344")}
+                className="rounded-full bg-white text-xs text-navy-700 border border-navy-300 dark:bg-navy-900 dark:text-navy-200"
+              >
+                ⚡ Test ISBN `9789966223344`
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => scan("COPY-001")}
+                className="rounded-full bg-white text-xs text-green-700 border border-green-300 dark:bg-navy-900 dark:text-green-300"
+              >
+                ⚡ Test Copy QR `COPY-001`
+              </Button>
+            </div>
+          </div>
+
           {scannerOpen && (
-            <div className="mt-3 overflow-hidden rounded-2xl border border-green-200 bg-navy-950 p-2">
-              <video ref={videoRef} className="h-48 w-full rounded-xl object-cover" muted playsInline />
-              <Button size="sm" variant="secondary" onClick={stopBuiltInScanner} className="mt-2 w-full">Stop scanner</Button>
+            <div className="mt-3 overflow-hidden rounded-2xl border border-green-200 bg-navy-950 p-3 text-center">
+              <div className="relative mx-auto max-w-sm overflow-hidden rounded-xl border-2 border-green-500 shadow-lg">
+                <video ref={videoRef} className="h-48 w-full rounded-xl object-cover" muted playsInline />
+                <div className="absolute inset-0 border-4 border-dashed border-green-400/60 pointer-events-none animate-pulse" />
+              </div>
+              <canvas ref={canvasRef} className="hidden" />
+              <Button size="sm" variant="secondary" onClick={stopBuiltInScanner} className="mt-2.5 rounded-full">Stop scanner</Button>
             </div>
           )}
         </div>

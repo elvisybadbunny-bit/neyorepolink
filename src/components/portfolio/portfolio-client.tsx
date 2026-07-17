@@ -223,6 +223,22 @@ export function PortfolioClient({ initialStudentId = "" }: { initialStudentId?: 
 
   async function exportPack() {
     if (!studentId || !timeline) return;
+    const approvedCount = timeline.items.filter((item) => item.status === "APPROVED").length;
+    if (approvedCount === 0) {
+      toast({ title: "Nothing ready for export yet", description: "Approve at least one portfolio artifact first.", tone: "error" });
+      return;
+    }
+    setExporting(true);
+    try {
+      window.open(`/api/portfolio?studentId=${encodeURIComponent(studentId)}&export=pdf&print=1`, "_blank");
+      toast({ title: "Opening CBC Digital Portfolio A4 Booklet (`EE.14` / PDF)...", tone: "success" });
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function exportJsonPack() {
+    if (!studentId || !timeline) return;
     const approvedVisibleCount = timeline.items.filter((item) => item.status === "APPROVED" && item.visibleToParents).length;
     if (approvedVisibleCount === 0) {
       toast({ title: "Nothing is ready for export yet", description: "Approve at least one family-visible portfolio item first.", tone: "error" });

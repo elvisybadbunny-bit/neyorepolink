@@ -116,6 +116,17 @@ export async function generateDutyRoster(user: SessionUser, input: { rotationPer
         metadata: JSON.stringify({ rotationPeriod: input.rotationPeriod, teacherCount: teachers.length, teachersPerCycle: teamSize, entryCount: entries.length }),
       },
     });
+    for (const t of teachers) {
+      await db.notification.create({
+        data: {
+          tenantId: user.tenantId,
+          recipientId: t.id,
+          title: "📋 Official Teacher Duty Roster Published",
+          body: `The Teacher Duty Roster for ${term.termLabel} has been published. Check your weekly assignments right away under Academics -> Duty Roster.`,
+          href: "/academics?tab=roster",
+        },
+      }).catch(() => {});
+    }
     return dutyRosterBoard(user);
   });
 }

@@ -104,7 +104,10 @@ export async function getExamTimetableGeneratorSetup(user: SessionUser) {
       tdb.examTimetableGeneratorRun.findMany({ orderBy: { createdAt: 'desc' } }),
     ]);
     return {
-      classes,
+      classes: classes.map((c) => ({
+        ...c,
+        name: [c.level, c.stream].filter(Boolean).join(" "),
+      })),
       subjects,
       paperConfigs,
       runs: runs.map((run) => ({ ...run, classIds: parseJson<string[]>(run.classIdsJson, []), periods: parseJson<PeriodInput[]>(run.periodJson, []) })),

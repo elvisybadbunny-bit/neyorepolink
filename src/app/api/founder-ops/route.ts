@@ -383,7 +383,7 @@ export async function POST(req: NextRequest) {
           const status = tenant.subscription?.status ?? "ACTIVE";
           if (inputBroadcast.segment === "all") return true;
           if (inputBroadcast.segment === "active") return status === "ACTIVE";
-          if (inputBroadcast.segment === "trial") return tenant.subscription?.planKey === "free_karibu";
+          if (inputBroadcast.segment === "trial") return status === "TRIAL" || tenant.subscription?.planKey === "free_karibu" || tenant.subscription?.planKey === "msingi";
           if (inputBroadcast.segment === "past_due") return status === "PAST_DUE";
           if (inputBroadcast.segment === "grace") return status === "GRACE";
           if (inputBroadcast.segment === "suspended") return status === "SUSPENDED";

@@ -17,6 +17,7 @@ import {
   approvePortfolioItem,
   deletePortfolioItem,
   exportPortfolioPack,
+  generatePortfolioPdfBookletHtml,
   getPortfolioTimeline,
   rejectPortfolioItem,
   submitPortfolioItem,
@@ -31,6 +32,18 @@ export async function GET(req: NextRequest) {
     await assertJFeatureEnabled("J.7");
     const studentId = req.nextUrl.searchParams.get("studentId");
     if (!studentId) return fail("INVALID", "studentId parameter is required.", 422);
+
+    if (req.nextUrl.searchParams.get("export") === "pdf" || req.nextUrl.searchParams.get("format") === "pdf" || req.nextUrl.searchParams.get("print") === "1") {
+      const { assertEeFeatureReleased } = await import("@/lib/services/platform-flags.service");
+      await assertEeFeatureReleased("EE.14");
+      const html = await generatePortfolioPdfBookletHtml(user, studentId);
+      return new Response(html, {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Disposition": req.nextUrl.searchParams.get("print") === "1" ? "inline" : `attachment; filename="CBC_Digital_Portfolio_${studentId}.html"`,
+        },
+      });
+    }
 
     if (req.nextUrl.searchParams.get("export") === "1") {
       return ok({ pack: await exportPortfolioPack(user, studentId) });

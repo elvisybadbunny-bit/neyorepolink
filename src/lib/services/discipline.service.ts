@@ -153,11 +153,11 @@ export async function listIncidents(user: SessionUser, q: { studentId?: string; 
         ...(q.studentId ? { studentId: q.studentId } : {}),
         ...(search ? {
           OR: [
-            { studentName: { contains: search } },
-            { admissionNo: { contains: search } },
-            { category: { contains: search.toUpperCase() } },
-            { description: { contains: search } },
-            { proofFileName: { contains: search } },
+            { studentName: { contains: search, mode: "insensitive" } },
+            { admissionNo: { contains: search, mode: "insensitive" } },
+            { category: { contains: search, mode: "insensitive" } },
+            { description: { contains: search, mode: "insensitive" } },
+            { proofFileName: { contains: search, mode: "insensitive" } },
           ],
         } : {}),
       },

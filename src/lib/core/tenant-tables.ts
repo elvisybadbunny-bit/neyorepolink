@@ -318,6 +318,14 @@ export const TENANT_OWNED_MODELS = [
   "bundiDocumentTemplate",
   "staffImport",
   "libraryImport",
+  "scannedExamPaper",
+  "questionBankEntry",
+  "questionBankAttempt",
+  "paperQuizFormativeBatch",
+  "interSchoolContest",
+  "contestQuestion",
+  "contestRegistration",
+  "contestAttempt",
   // NOTE: "complianceRequest" is DELIBERATELY NOT tenant-owned — NEYO Ops's
   // own real compliance queue (`listComplianceRequests()` in
   // founder-dashboard.service.ts) genuinely lists EVERY tenant's requests

@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     let mapping;
     let targetClassId: string | undefined;
     let updateExisting = true;
+    let compulsorySubjects: string[] | undefined;
 
     if (contentType.includes("multipart/form-data")) {
       const form = await req.formData();
@@ -41,6 +42,10 @@ export async function POST(req: NextRequest) {
       const targetClassRaw = form.get("targetClassId");
       targetClassId = typeof targetClassRaw === "string" && targetClassRaw ? targetClassRaw : undefined;
       updateExisting = form.get("updateExisting") !== "false";
+      const compRaw = form.get("compulsorySubjects");
+      if (typeof compRaw === "string" && compRaw.trim()) {
+        try { compulsorySubjects = JSON.parse(compRaw); } catch { compulsorySubjects = compRaw.split(/[;,]/).map(s => s.trim()).filter(Boolean); }
+      }
     } else {
       const body = importPreviewSchema.parse(await req.json());
       source = body.source;
@@ -49,10 +54,11 @@ export async function POST(req: NextRequest) {
       mapping = body.mapping;
       targetClassId = body.targetClassId;
       updateExisting = body.updateExisting;
+      compulsorySubjects = body.compulsorySubjects;
       rows = body.rows ?? parseDelimited(body.text ?? "");
     }
 
-    const preview = await previewImport(user, rows, hasHeader, mapping, targetClassId, updateExisting);
+    const preview = await previewImport(user, rows, hasHeader, mapping, targetClassId, updateExisting, compulsorySubjects);
     return ok({ source, fileName, hasHeader, rows, updateExisting, ...preview });
   } catch (e) {
     return handleError(e);

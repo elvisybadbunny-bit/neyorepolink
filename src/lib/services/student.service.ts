@@ -269,11 +269,13 @@ export async function listStudents(user: SessionUser, filters: StudentFilters) {
     if (filters.q) {
       const q = filters.q.trim();
       const or: Record<string, unknown>[] = [
-        { firstName: { contains: q } },
-        { lastName: { contains: q } },
-        { middleName: { contains: q } },
-        { admissionNo: { contains: q } },
-        { legacyAdmissionNo: { contains: q } },
+        { firstName: { contains: q, mode: "insensitive" } },
+        { lastName: { contains: q, mode: "insensitive" } },
+        { middleName: { contains: q, mode: "insensitive" } },
+        { admissionNo: { contains: q, mode: "insensitive" } },
+        { legacyAdmissionNo: { contains: q, mode: "insensitive" } },
+        { upiNumber: { contains: q, mode: "insensitive" } },
+        { birthCertNo: { contains: q, mode: "insensitive" } },
       ];
       // Guardian-phone search (B.1.7): a parent calls / pays via M-Pesa and we
       // only have the phone. Accept 0712..., 712..., +254712... fragments.

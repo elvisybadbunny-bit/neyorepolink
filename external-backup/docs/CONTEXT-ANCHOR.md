@@ -4670,12 +4670,12 @@ _Earlier: after A.5 Billing & Subscriptions_
 
 ## A.5 Billing & Subscriptions: DONE (2 lines partial via seams)
 - DB: Subscription (planKey,status,grandfatheredPrice,period,graceEndsAt), SubscriptionPayment (mpesaRef unique), UsageCounter (tenant,metric,periodKey). Migration a5_billing. Both added to TENANT_OWNED_MODELS.
-- core/plans.ts: free_karibu(0)/pro(9000)/elite(22000) KES/term + limits + overageAllowance + maxAddOns.
-- services/billing.service.ts: ensureSubscription, subscribeToPlan (grandfathers price; chargeViaSeam auto-confirms in dev, fails closed in prod — real Daraja STK = A.6), runSubscriptionStateMachine (ACTIVE->GRACE(14d)->SUSPENDED, NEVER deletes data), BillingError.
+- core/plans.ts: msingi(4500)/pro(9000) KES/term + capacity-based pricing + 1-Month Free Trial for new signups (legacy Free Karibu & Elite removed).
+- services/billing.service.ts: ensureSubscription, subscribeToPlan (grandfathers price; chargeViaSeam auto-confirms in dev, fails closed in prod — real Daraja STK = A.6), runSubscriptionStateMachine (TRIAL->ACTIVE->GRACE(14d)->SUSPENDED, NEVER deletes data), BillingError.
 - services/limits.service.ts: checkLimit/checkSmsQuota/recordUsage/getAllLimitStatuses, currentPeriodKey (YYYY-T{1,2,3}).
 - API: GET /api/billing, POST /api/billing/subscribe (requirePermission tenant.manage_settings), POST /api/billing/run-state-machine (SUPER_ADMIN, cron stand-in). respond.ts maps BillingError.
 - UI: /settings/billing + components/settings/billing-manager.tsx (status badge, usage bars, plan picker). Sidebar "Billing" (always visible).
-- Seed: Karibu=Pro (usage 312 students/28 staff/1240 sms), Uhuru=Free Karibu.
+- Seed: Karibu=Pro (usage 312 students/28 staff/1240 sms), Uhuru=Msingi (30-Day Free Trial).
 - PARTIAL: M-Pesa STK (seam->A.6 needs Daraja creds); Receipt PDF (A.10) + SMS (A.7).
 - Auto-downgrade intentionally NOT built (spec says excluded).
 

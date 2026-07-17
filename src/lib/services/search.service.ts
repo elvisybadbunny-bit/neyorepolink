@@ -89,11 +89,11 @@ export async function search(
       const scope = await scopeWhere(user);
       const digits = q.replace(/[\s\-()]/g, "");
       const nameOr: Record<string, unknown>[] = [
-        { firstName: { contains: q } },
-        { lastName: { contains: q } },
-        { middleName: { contains: q } },
-        { admissionNo: { contains: q } },
-        { legacyAdmissionNo: { contains: q } },
+        { firstName: { contains: q, mode: "insensitive" } },
+        { lastName: { contains: q, mode: "insensitive" } },
+        { middleName: { contains: q, mode: "insensitive" } },
+        { admissionNo: { contains: q, mode: "insensitive" } },
+        { legacyAdmissionNo: { contains: q, mode: "insensitive" } },
       ];
       if (/^\+?\d{4,}$/.test(digits)) {
         const candidates = new Set<string>([digits]);
@@ -127,10 +127,10 @@ export async function search(
     const users = await tdb.user.findMany({
       where: {
         OR: [
-          { fullName: { contains: q } },
-          { email: { contains: q } },
-          { phone: { contains: q } },
-          { neyoLoginId: { contains: q } },
+          { fullName: { contains: q, mode: "insensitive" } },
+          { email: { contains: q, mode: "insensitive" } },
+          { phone: { contains: q, mode: "insensitive" } },
+          { neyoLoginId: { contains: q, mode: "insensitive" } },
         ],
       },
       take: LIMIT_PER_TYPE,
@@ -150,10 +150,10 @@ export async function search(
     const payments = await tdb.payment.findMany({
       where: {
         OR: [
-          { accountRef: { contains: q } },
-          { phone: { contains: q } },
-          { mpesaRef: { contains: q } },
-          { description: { contains: q } },
+          { accountRef: { contains: q, mode: "insensitive" } },
+          { phone: { contains: q, mode: "insensitive" } },
+          { mpesaRef: { contains: q, mode: "insensitive" } },
+          { description: { contains: q, mode: "insensitive" } },
         ],
       },
       take: LIMIT_PER_TYPE,

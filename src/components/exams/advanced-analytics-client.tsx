@@ -17,10 +17,13 @@ export function AdvancedAnalyticsClient() {
     try {
       const res = await fetch("/api/analytics/advanced");
       const json = await res.json();
-      if (json.ok) setData(json.data);
-      else toast({ title: json.error?.message || "Failed to load advanced analytics", tone: "error" });
+      if (json.ok) {
+        setData(json.data);
+      } else if (json.error?.code !== "FORBIDDEN" && json.error?.code !== "TIER_LOCKED") {
+        toast({ title: json.error?.message || "Failed to load advanced analytics", tone: "error" });
+      }
     } catch {
-      toast({ title: "Failed to load advanced analytics", tone: "error" });
+      /* silent catch when network fails or access locked */
     } finally {
       setLoading(false);
     }
@@ -28,8 +31,8 @@ export function AdvancedAnalyticsClient() {
 
   React.useEffect(() => { void load(); }, [load]);
 
-  if (loading) return <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-navy-400" /></div>;
-  if (!data) return <Card><CardContent className="p-6"><EmptyState icon={AlertTriangle} title="Advanced analytics unavailable" description="We could not load the leadership analytics right now." /></CardContent></Card>;
+  if (loading) return <div className="flex justify-center p-6"><Loader2 className="h-5 w-5 animate-spin text-navy-400" /></div>;
+  if (!data) return null; // Silently hide if leadership analytics are locked or unauthorized
 
   const gapGroups = [
     { title: "Weak competencies overall", rows: data.competencyGaps.overall },

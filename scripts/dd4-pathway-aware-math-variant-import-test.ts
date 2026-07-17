@@ -132,7 +132,7 @@ async function main() {
     // -----------------------------------------------------------------
     // 6. CRITICAL: cross-tenant isolation.
     // -----------------------------------------------------------------
-    const t2 = await db.tenant.findFirstOrThrow({ where: { slug: "uwezo-primary-junior" } });
+    const t2 = await db.tenant.findFirstOrThrow({ where: { slug: "uhuru-academy" } });
     const crossSel = await db.studentSubjectSelection.findMany({ where: { tenantId: t2.id, studentId: { in: createdIds } } });
     check("6. CRITICAL: a different tenant sees ZERO of our real test students' own subject selections", crossSel.length === 0);
   } finally {

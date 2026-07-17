@@ -17,6 +17,7 @@
  * hardcoded in a way that would require a code change to adjust.
  */
 import { db } from "@/lib/db";
+import { DEFAULT_PLAN_KEY } from "@/lib/core/plans";
 import type { SessionUser } from "@/lib/core/session";
 import { isFounderTier } from "@/lib/core/roles";
 import {
@@ -285,11 +286,11 @@ export async function migrateTenantToSizeBasedPricing(tenantId: string): Promise
     where: { tenantId },
     create: {
       tenantId,
-      planKey: "free_karibu",
-      status: "ACTIVE",
+      planKey: DEFAULT_PLAN_KEY,
+      status: "TRIAL",
       pricingMode: "SIZE_BASED_V2",
       sizeBasedPriceKes: quote.monthlyPriceKes,
-      currentPeriodEnd: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000),
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // exactly 1 free month (30 days) for new users
     },
     update: {
       pricingMode: "SIZE_BASED_V2",

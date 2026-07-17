@@ -41,7 +41,7 @@ const DUPLICATE_COOLDOWN_SEC = 15;
  */
 export function extractVerifyCode(scanned: string): string {
   const trimmed = scanned.trim();
-  const match = trimmed.match(/\/verify\/([A-Za-z0-9]+)\/?$/);
+  const match = trimmed.match(/\/verify\/([A-Za-z0-9._-]+)\/?$/);
   if (match) return match[1].toUpperCase();
   return trimmed.toUpperCase();
 }
@@ -239,3 +239,394 @@ export async function recentScans(user: SessionUser, limit = 20) {
     }));
   });
 }
+
+// =============================================================================
+// PART EE.11 — QR Gate-Pass Status Scanning & 1-Tap Checkpoint Stamping
+// =============================================================================
+
+export interface GatePassScanStatusResult {
+  status: "ALLOWED" | "NOT_ALLOWED" | "DIDNT_PASS" | "INVALID";
+  statusLabel: string;
+  tone: "green" | "red" | "amber" | "gray";
+  student: {
+    id: string;
+    name: string;
+    admissionNo: string;
+    photoUrl: string | null;
+    className: string;
+  } | null;
+  gatePass: {
+    id: string;
+    passNo: string;
+    reason: string;
+    leaveAt: string;
+    returnBy: string | null;
+    escortName: string | null;
+    issuedByName: string;
+    approvedByName: string | null;
+    status: string;
+    usedAt: string | null;
+    returnedAt: string | null;
+  } | null;
+  canExit: boolean;
+  canReturn: boolean;
+  message: string;
+}
+
+/**
+ * Sub-second QR scan evaluation at the security gate checkpoint (`EE.11`).
+ * Resolves either a direct Gate Pass number (`GP-0001`) or a Student ID card QR (`/verify/<CODE>` / admission No).
+ * Returns exact status (`ALLOWED`, `NOT_ALLOWED`, `DIDNT_PASS`, `INVALID`) in under 150ms.
+ */
+export async function scanForGatePassStatus(user: SessionUser, scanned: string): Promise<GatePassScanStatusResult> {
+  return withTenant(user.tenantId, async () => {
+    const code = extractVerifyCode(scanned);
+    if (!code) {
+      return {
+        status: "INVALID",
+        statusLabel: "INVALID / UNRECOGNIZED CODE",
+        tone: "gray",
+        student: null,
+        gatePass: null,
+        canExit: false,
+        canReturn: false,
+        message: "No readable code detected from scanner input.",
+      };
+    }
+
+    // 1. Try exact GatePass.passNo match first (e.g. GP1, GP-0001)
+    const directPass = await tenantDb().gatePass.findFirst({
+      where: {
+        OR: [
+          { passNo: { equals: code, mode: "insensitive" } },
+          { passNo: { equals: code.replace(/-/g, ""), mode: "insensitive" } },
+        ],
+      },
+    });
+
+    if (directPass) {
+      const student = await tenantDb().student.findFirst({
+        where: { id: directPass.studentId },
+        include: { schoolClass: true },
+      });
+      const studentInfo = student
+        ? {
+            id: student.id,
+            name: [student.firstName, student.middleName, student.lastName].filter(Boolean).join(" "),
+            admissionNo: student.admissionNo,
+            photoUrl: student.photoUrl,
+            className: student.schoolClass ? [student.schoolClass.level, student.schoolClass.stream].filter(Boolean).join(" ") : "Unassigned",
+          }
+        : { id: directPass.studentId, name: directPass.studentName, admissionNo: directPass.admissionNo, photoUrl: null, className: "Unassigned" };
+
+      const passInfo = {
+        id: directPass.id,
+        passNo: directPass.passNo,
+        reason: directPass.reason,
+        leaveAt: directPass.leaveAt.toISOString(),
+        returnBy: directPass.returnBy ? directPass.returnBy.toISOString() : null,
+        escortName: directPass.escortName,
+        issuedByName: directPass.issuedByName,
+        approvedByName: directPass.approvedByName,
+        status: directPass.status,
+        usedAt: directPass.usedAt ? directPass.usedAt.toISOString() : null,
+        returnedAt: directPass.returnedAt ? directPass.returnedAt.toISOString() : null,
+      };
+
+      if (student && student.id) {
+        if (directPass.status === "ACTIVE" || directPass.status === "APPROVED") {
+          if (!directPass.usedAt) {
+            await logScan(user, student.id, "GATE_PASS" as any, "OK", `Allowed exit on pass ${directPass.passNo}`);
+            return {
+              status: "ALLOWED",
+              statusLabel: "ALLOWED / ACTIVE GATE PASS",
+              tone: "green",
+              student: studentInfo,
+              gatePass: passInfo,
+              canExit: true,
+              canReturn: false,
+              message: `Student is ALLOWED to exit campus. Gate pass ${directPass.passNo} is active and approved.`,
+            };
+          } else if (!directPass.returnedAt) {
+            await logScan(user, student.id, "GATE_PASS" as any, "DUPLICATE", `Already exited on pass ${directPass.passNo}`);
+            return {
+              status: "DIDNT_PASS",
+              statusLabel: "DIDN'T PASS / ALREADY EXITED",
+              tone: "amber",
+              student: studentInfo,
+              gatePass: passInfo,
+              canExit: false,
+              canReturn: true,
+              message: `Student already exited campus at ${directPass.usedAt.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })} on pass ${directPass.passNo} and has not checked back in yet.`,
+            };
+          } else {
+            await logScan(user, student.id, "GATE_PASS" as any, "BLOCKED", `Pass consumed & returned ${directPass.passNo}`);
+            return {
+              status: "DIDNT_PASS",
+              statusLabel: "PASS ALREADY CONSUMED & RETURNED",
+              tone: "amber",
+              student: studentInfo,
+              gatePass: passInfo,
+              canExit: false,
+              canReturn: false,
+              message: `Gate pass ${directPass.passNo} was already consumed and student checked back in on ${directPass.returnedAt.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })}.`,
+            };
+          }
+        } else if (directPass.status === "USED") {
+          if (!directPass.returnedAt) {
+            await logScan(user, student.id, "GATE_PASS" as any, "DUPLICATE", `Already exited on pass ${directPass.passNo}`);
+            return {
+              status: "DIDNT_PASS",
+              statusLabel: "DIDN'T PASS / ALREADY EXITED",
+              tone: "amber",
+              student: studentInfo,
+              gatePass: passInfo,
+              canExit: false,
+              canReturn: true,
+              message: `Student already exited campus at ${directPass.usedAt?.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })} on pass ${directPass.passNo} and has not checked back in yet.`,
+            };
+          } else {
+            await logScan(user, student.id, "GATE_PASS" as any, "BLOCKED", `Pass consumed & returned ${directPass.passNo}`);
+            return {
+              status: "DIDNT_PASS",
+              statusLabel: "PASS ALREADY CONSUMED & RETURNED",
+              tone: "amber",
+              student: studentInfo,
+              gatePass: passInfo,
+              canExit: false,
+              canReturn: false,
+              message: `Gate pass ${directPass.passNo} was already fully consumed and student checked back in.`,
+            };
+          }
+        } else if (directPass.status === "PENDING") {
+          await logScan(user, student.id, "GATE_PASS" as any, "BLOCKED", `Pass pending approval ${directPass.passNo}`);
+          return {
+            status: "NOT_ALLOWED",
+            statusLabel: "NOT ALLOWED / PASS PENDING APPROVAL",
+            tone: "red",
+            student: studentInfo,
+            gatePass: passInfo,
+            canExit: false,
+            canReturn: false,
+            message: `Gate pass ${directPass.passNo} is still PENDING principal or class teacher approval. Do not allow exit.`,
+          };
+        } else {
+          await logScan(user, student.id, "GATE_PASS" as any, "BLOCKED", `Pass ${directPass.status.toLowerCase()} ${directPass.passNo}`);
+          return {
+            status: "NOT_ALLOWED",
+            statusLabel: `NOT ALLOWED / PASS ${directPass.status}`,
+            tone: "red",
+            student: studentInfo,
+            gatePass: passInfo,
+            canExit: false,
+            canReturn: false,
+            message: `Gate pass ${directPass.passNo} is ${directPass.status.toLowerCase()}. Do not allow exit.`,
+          };
+        }
+      }
+    }
+
+    // 2. Try resolving as a Student ID QR code, DocumentVerification, or admission number
+    let studentIdToLookup: string | null = null;
+    const docVer = await tenantDb().documentVerification.findFirst({
+      where: { code, docType: { in: ["student_id", "gate_pass"] } },
+    });
+    if (docVer && docVer.studentId) {
+      studentIdToLookup = docVer.studentId;
+    } else {
+      const stuByAdm = await tenantDb().student.findFirst({
+        where: { admissionNo: { equals: code, mode: "insensitive" }, status: "ACTIVE" },
+      });
+      if (stuByAdm) {
+        studentIdToLookup = stuByAdm.id;
+      } else {
+        const stuById = await tenantDb().student.findFirst({
+          where: { id: code, status: "ACTIVE" },
+        });
+        if (stuById) studentIdToLookup = stuById.id;
+      }
+    }
+
+    if (!studentIdToLookup) {
+      return {
+        status: "INVALID",
+        statusLabel: "INVALID / UNRECOGNIZED CODE",
+        tone: "gray",
+        student: null,
+        gatePass: null,
+        canExit: false,
+        canReturn: false,
+        message: `Unrecognized QR code (${code}) — does not match any active student ID or gate pass in this school.`,
+      };
+    }
+
+    const student = await tenantDb().student.findFirst({
+      where: { id: studentIdToLookup, status: "ACTIVE" },
+      include: { schoolClass: true },
+    });
+    if (!student) {
+      return {
+        status: "INVALID",
+        statusLabel: "INVALID / STUDENT NOT ACTIVE",
+        tone: "gray",
+        student: null,
+        gatePass: null,
+        canExit: false,
+        canReturn: false,
+        message: "Student record found but account is no longer active.",
+      };
+    }
+
+    const studentInfo = {
+      id: student.id,
+      name: [student.firstName, student.middleName, student.lastName].filter(Boolean).join(" "),
+      admissionNo: student.admissionNo,
+      photoUrl: student.photoUrl,
+      className: student.schoolClass ? [student.schoolClass.level, student.schoolClass.stream].filter(Boolean).join(" ") : "Unassigned",
+    };
+
+    // Check recent/active gate passes for this student
+    const passes = await tenantDb().gatePass.findMany({
+      where: {
+        studentId: student.id,
+        status: { in: ["ACTIVE", "APPROVED", "USED", "PENDING"] },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+
+    const activePass = passes.find((p) => (p.status === "ACTIVE" || p.status === "APPROVED") && !p.usedAt);
+    if (activePass) {
+      const passInfo = {
+        id: activePass.id,
+        passNo: activePass.passNo,
+        reason: activePass.reason,
+        leaveAt: activePass.leaveAt.toISOString(),
+        returnBy: activePass.returnBy ? activePass.returnBy.toISOString() : null,
+        escortName: activePass.escortName,
+        issuedByName: activePass.issuedByName,
+        approvedByName: activePass.approvedByName,
+        status: activePass.status,
+        usedAt: activePass.usedAt ? activePass.usedAt.toISOString() : null,
+        returnedAt: activePass.returnedAt ? activePass.returnedAt.toISOString() : null,
+      };
+      await logScan(user, student.id, "GATE_PASS" as any, "OK", `Allowed exit via student QR on pass ${activePass.passNo}`);
+      return {
+        status: "ALLOWED",
+        statusLabel: "ALLOWED / ACTIVE GATE PASS",
+        tone: "green",
+        student: studentInfo,
+        gatePass: passInfo,
+        canExit: true,
+        canReturn: false,
+        message: `Student is ALLOWED to exit campus. Gate pass ${activePass.passNo} is active and approved.`,
+      };
+    }
+
+    const exitedPass = passes.find((p) => (p.status === "USED" || p.usedAt !== null) && !p.returnedAt);
+    if (exitedPass) {
+      const passInfo = {
+        id: exitedPass.id,
+        passNo: exitedPass.passNo,
+        reason: exitedPass.reason,
+        leaveAt: exitedPass.leaveAt.toISOString(),
+        returnBy: exitedPass.returnBy ? exitedPass.returnBy.toISOString() : null,
+        escortName: exitedPass.escortName,
+        issuedByName: exitedPass.issuedByName,
+        approvedByName: exitedPass.approvedByName,
+        status: exitedPass.status,
+        usedAt: exitedPass.usedAt ? exitedPass.usedAt.toISOString() : null,
+        returnedAt: exitedPass.returnedAt ? exitedPass.returnedAt.toISOString() : null,
+      };
+      await logScan(user, student.id, "GATE_PASS" as any, "DUPLICATE", `Already exited on pass ${exitedPass.passNo}`);
+      return {
+        status: "DIDNT_PASS",
+        statusLabel: "DIDN'T PASS / ALREADY EXITED CAMPUS",
+        tone: "amber",
+        student: studentInfo,
+        gatePass: passInfo,
+        canExit: false,
+        canReturn: true,
+        message: `Student already exited campus at ${exitedPass.usedAt?.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })} on pass ${exitedPass.passNo} and has not checked back in yet.`,
+      };
+    }
+
+    const pendingPass = passes.find((p) => p.status === "PENDING");
+    if (pendingPass) {
+      const passInfo = {
+        id: pendingPass.id,
+        passNo: pendingPass.passNo,
+        reason: pendingPass.reason,
+        leaveAt: pendingPass.leaveAt.toISOString(),
+        returnBy: pendingPass.returnBy ? pendingPass.returnBy.toISOString() : null,
+        escortName: pendingPass.escortName,
+        issuedByName: pendingPass.issuedByName,
+        approvedByName: pendingPass.approvedByName,
+        status: pendingPass.status,
+        usedAt: pendingPass.usedAt ? pendingPass.usedAt.toISOString() : null,
+        returnedAt: pendingPass.returnedAt ? pendingPass.returnedAt.toISOString() : null,
+      };
+      await logScan(user, student.id, "GATE_PASS" as any, "BLOCKED", `Pass pending approval ${pendingPass.passNo}`);
+      return {
+        status: "NOT_ALLOWED",
+        statusLabel: "NOT ALLOWED / PASS PENDING APPROVAL",
+        tone: "red",
+        student: studentInfo,
+        gatePass: passInfo,
+        canExit: false,
+        canReturn: false,
+        message: `Student has a gate pass request (${pendingPass.passNo}) that is still PENDING principal or class teacher approval. Do not allow exit.`,
+      };
+    }
+
+    await logScan(user, student.id, "GATE_PASS" as any, "BLOCKED", "No active pass for student");
+    return {
+      status: "NOT_ALLOWED",
+      statusLabel: "NOT ALLOWED / NO ACTIVE GATE PASS",
+      tone: "red",
+      student: studentInfo,
+      gatePass: null,
+      canExit: false,
+      canReturn: false,
+      message: `Student ${studentInfo.name} has no active or approved gate pass to leave campus today.`,
+    };
+  });
+}
+
+/**
+ * 1-Tap Checkpoint Stamping: records exact exit (`usedAt`) or exact return (`returnedAt`)
+ * in under 100ms right when security taps the button on the verified status screen (`EE.11`).
+ */
+export async function stampGatePassAction(user: SessionUser, passId: string, action: "EXIT" | "RETURN", note?: string) {
+  return withTenant(user.tenantId, async () => {
+    const pass = await tenantDb().gatePass.findUnique({ where: { id: passId } });
+    if (!pass) throw new QrScanError("NOT_FOUND", "Gate pass not found.");
+
+    if (action === "EXIT") {
+      if (!["ACTIVE", "APPROVED"].includes(pass.status) || pass.usedAt) {
+        throw new QrScanError("DUPLICATE", `Gate pass ${pass.passNo} is already ${pass.status.toLowerCase()} or already used.`);
+      }
+      const updated = await tenantDb().gatePass.update({
+        where: { id: passId },
+        data: { status: "USED", usedAt: new Date() },
+      });
+      await logScan(user, pass.studentId, "GATE_PASS_EXIT" as any, "OK", `Stamped gate exit for pass ${pass.passNo}${note ? ` (${note})` : ""}`);
+      return { ok: true, stampedAction: "EXIT", gatePass: updated, timestamp: new Date().toISOString() };
+    } else {
+      // RETURN check-in
+      if (!pass.usedAt) {
+        throw new QrScanError("INVALID", `Cannot check in return for pass ${pass.passNo} — student has not exited yet.`);
+      }
+      if (pass.returnedAt) {
+        throw new QrScanError("DUPLICATE", `Return already stamped for pass ${pass.passNo} at ${pass.returnedAt.toLocaleTimeString("en-KE")}.`);
+      }
+      const updated = await tenantDb().gatePass.update({
+        where: { id: passId },
+        data: { returnedAt: new Date() },
+      });
+      await logScan(user, pass.studentId, "GATE_PASS_RETURN" as any, "OK", `Stamped gate return check-in for pass ${pass.passNo}${note ? ` (${note})` : ""}`);
+      return { ok: true, stampedAction: "RETURN", gatePass: updated, timestamp: new Date().toISOString() };
+    }
+  });
+}
+

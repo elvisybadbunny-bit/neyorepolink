@@ -175,9 +175,9 @@ export async function pickupListFor(user: SessionUser, q: string) {
       where: {
         active: true,
         OR: [
-          { nationalId: { contains: q } },
-          { fullName: { contains: q } },
-          { phone: { contains: q } },
+          { nationalId: { contains: q, mode: "insensitive" } },
+          { fullName: { contains: q, mode: "insensitive" } },
+          { phone: { contains: q, mode: "insensitive" } },
         ],
       },
       select: { studentId: true },
@@ -188,8 +188,8 @@ export async function pickupListFor(user: SessionUser, q: string) {
       where: {
         deletedAt: null, status: "ACTIVE",
         OR: [
-          { firstName: { contains: q } }, { lastName: { contains: q } },
-          { admissionNo: { contains: q } }, { legacyAdmissionNo: { contains: q } },
+          { firstName: { contains: q, mode: "insensitive" } }, { lastName: { contains: q, mode: "insensitive" } },
+          { admissionNo: { contains: q, mode: "insensitive" } }, { legacyAdmissionNo: { contains: q, mode: "insensitive" } },
           ...(personStudentIds.length ? [{ id: { in: personStudentIds } }] : []),
         ],
       },

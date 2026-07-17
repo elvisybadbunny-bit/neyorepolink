@@ -34,7 +34,7 @@ interface StudentOpt { id: string; name: string; admissionNo: string }
 
 const PASS_TONE: Record<string, "green" | "amber" | "red" | "neutral"> = { ACTIVE: "green", PENDING: "amber", USED: "neutral", CANCELLED: "red", EXPIRED: "amber" };
 
-export function GateClient({ canManage, canPanic, canIssuePass, canApprovePass, currentUserId, canScanAttendance = false, canScanPayment = false }: { canManage: boolean; canPanic: boolean; canIssuePass: boolean; canApprovePass: boolean; currentUserId: string; canScanAttendance?: boolean; canScanPayment?: boolean }) {
+export function GateClient({ canManage, canPanic, canIssuePass, canApprovePass, currentUserId, canScanAttendance = false, canScanPayment = false, canCheckGatePass = true }: { canManage: boolean; canPanic: boolean; canIssuePass: boolean; canApprovePass: boolean; currentUserId: string; canScanAttendance?: boolean; canScanPayment?: boolean; canCheckGatePass?: boolean }) {
   const { toast } = useToast();
   const online = useOnline();
   const [passes, setPasses] = React.useState<Pass[] | null>(null);
@@ -199,7 +199,7 @@ export function GateClient({ canManage, canPanic, canIssuePass, canApprovePass, 
     { key: "passes" as const, label: "Gate passes", icon: DoorClosed },
     { key: "pickup" as const, label: "Pickup authorisation", icon: UserCheck },
     { key: "panic" as const, label: "Emergency", icon: Siren },
-    ...((canScanAttendance || canScanPayment) ? [{ key: "scan" as const, label: "Scan ID", icon: ScanLine }] : []),
+    ...((canCheckGatePass || canScanAttendance || canScanPayment) ? [{ key: "scan" as const, label: "QR Checkpoint (`EE.11`)", icon: ScanLine }] : []),
   ];
 
   return (
@@ -413,8 +413,8 @@ export function GateClient({ canManage, canPanic, canIssuePass, canApprovePass, 
         </div>
       )}
 
-      {tab === "scan" && (canScanAttendance || canScanPayment) && (
-        <QrScanStation canMarkAttendance={canScanAttendance} canLookupPayment={canScanPayment} />
+      {tab === "scan" && (canCheckGatePass || canScanAttendance || canScanPayment) && (
+        <QrScanStation canCheckGatePass={canCheckGatePass} canMarkAttendance={canScanAttendance} canLookupPayment={canScanPayment} />
       )}
 
       {dialog === "pass" && <PassDialog students={students} onClose={() => setDialog(null)} onDone={() => { setDialog(null); load(); }} />}

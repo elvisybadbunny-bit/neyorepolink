@@ -7,6 +7,8 @@
 import { db } from "@/lib/db";
 import { withTenant } from "@/lib/core/tenant-context";
 import { tenantDb } from "@/lib/core/tenant-db";
+import { can } from "@/lib/core/permissions";
+import type { Role } from "@/lib/core/roles";
 import { scopeWhere } from "@/lib/services/student.service";
 import { LEVEL_LABELS } from "@/lib/validations/cbc";
 import type { SessionUser } from "@/lib/core/session";
@@ -112,6 +114,27 @@ export async function deleteSubstrand(user: SessionUser, id: string) {
   return withTenant(user.tenantId, async () => {
     await tenantDb().cbcSubstrand.delete({ where: { id } }).catch(() => {});
     return { success: true };
+  });
+}
+
+/**
+ * Immutability Guard (`cant be deleted anyhowly`):
+ * Student academic observations and assessments cannot be deleted arbitrarily by ordinary teachers to prevent entering fake records and later removing them.
+ * Requires Academics Leadership (`academics.manage`), Principal, Deputy Principal, or Founder authorization.
+ */
+export async function deleteCbcAssessment(user: SessionUser, id: string) {
+  return withTenant(user.tenantId, async () => {
+    const primaryCanManage = can(user.role as Role, "academics.manage");
+    const secondaryCanManage = user.secondaryRole ? can(user.secondaryRole as Role, "academics.manage") : false;
+    const isLeadership = ["PRINCIPAL", "DEPUTY_PRINCIPAL", "FOUNDER", "SUPER_ADMIN", "SCHOOL_OWNER"].includes(user.role);
+    if (!primaryCanManage && !secondaryCanManage && !isLeadership) {
+      throw new CbcError("FORBIDDEN", "Student academic records cannot be deleted arbitrarily by teachers (\"cant be deleted anyhowly\"). Only the Principal or Academics HOD can authorize deleting or voiding submitted assessments.");
+    }
+    const row = await tenantDb().cbcAssessment.findUnique({ where: { id } });
+    if (!row) throw new CbcError("NOT_FOUND", "Assessment record not found.");
+    await tenantDb().cbcAssessment.delete({ where: { id } });
+    await audit(user, "cbc.assessment_deleted", row.strandId, { studentId: row.studentId, level: row.level, date: row.date });
+    return { success: true, deletedId: id };
   });
 }
 
@@ -399,6 +422,16 @@ export async function saveAssessments(
       saved++;
     }
     await audit(user, "cbc.assessed", input.strandId, { date: input.date, saved });
+    if (saved > 0) {
+      const { syncSyllabusFromAssessment } = await import("@/lib/services/syllabus.service");
+      await syncSyllabusFromAssessment(user, {
+        classId,
+        subjectId: strand.subjectId,
+        strandId: strand.id,
+        substrandId: input.entries[0]?.substrandId || null,
+        topicName: strand.name,
+      }).catch(() => {});
+    }
     return { saved };
   });
 }

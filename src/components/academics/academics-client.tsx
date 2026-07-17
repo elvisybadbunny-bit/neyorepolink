@@ -57,6 +57,7 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
 
   const showPathwayTools = schoolLevelActivation?.shouldShowPathwayTools ?? true;
   const showSubjectSelectionTools = schoolLevelActivation?.shouldShowSubjectSelectionTools ?? true;
+  const [dismissLevelBanner, setDismissLevelBanner] = React.useState(() => typeof window !== "undefined" && localStorage.getItem("neyo_dismiss_academics_level") === "true");
 
   const tabs = [
     { key: "subjects" as const, label: "Subjects", icon: BookOpen },
@@ -74,14 +75,20 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
       ...(showPathwayTools ? [{ key: "pathways" as const, label: "Senior Pathways", icon: Sparkles }] : []),
       ...(showSubjectSelectionTools ? [{ key: "subject-selection" as const, label: "Subject Selection", icon: BookOpen }] : [])
     ] : []),
-    { key: "generator" as const, label: "Timetable Generator", icon: Sparkles },
     { key: "smart-timetable" as const, label: "Smart Timetable", icon: Wand2 },
     { key: "roster" as const, label: "Duty Roster", icon: CalendarRange },
   ];
   return (
     <div className="space-y-5">
-      {schoolLevelActivation && (
-        <div className="print:hidden rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 dark:border-green-900/30 dark:bg-green-950/20 dark:text-green-200">
+      {schoolLevelActivation && !dismissLevelBanner && (
+        <div className="print:hidden relative rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 dark:border-green-900/30 dark:bg-green-950/20 dark:text-green-200">
+          <button
+            onClick={() => { setDismissLevelBanner(true); if (typeof window !== "undefined") localStorage.setItem("neyo_dismiss_academics_level", "true"); }}
+            className="absolute right-3 top-3 rounded-full p-1 text-green-700 hover:bg-green-100 dark:hover:bg-green-900/40"
+            title="Dismiss note"
+          >
+            <X className="h-4 w-4" />
+          </button>
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="green">Level-aware Academics</Badge>
             {schoolLevelActivation.isJuniorSchool && <Badge tone="blue">Junior School active</Badge>}
@@ -2183,6 +2190,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const [starting, setStarting] = React.useState(false);
   // AA.9 — real "start of term" teacher-rotation action state.
   const [rotatingTeachers, setRotatingTeachers] = React.useState(false);
+  const [timetableStatus, setTimetableStatus] = React.useState<"PUBLISHED" | "DRAFT">("PUBLISHED");
   const [payload, setPayload] = React.useState<any>(null);
   const [job, setJob] = React.useState<any>(null);
   const [classes, setClasses] = React.useState<any[]>([]);
@@ -2861,6 +2869,32 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
     await actuallyStartGeneration();
   }
 
+  async function handleUpdateTimetableStatus(newStatus: "PUBLISHED" | "DRAFT") {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/academics/timetable/engine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: newStatus === "PUBLISHED" ? "publish_timetable" : "draft_timetable" }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setTimetableStatus(newStatus);
+        if (newStatus === "PUBLISHED") {
+          toast({ title: "🚀 Official Timetable Published!", description: `Notified ${json.data.notifiedTeachersCount} active teacher(s). Schedule locked for staff & learners.`, tone: "success" });
+        } else {
+          toast({ title: "📝 Timetable set to Draft", description: "Schedule is now in draft mode for academic planners.", tone: "success" });
+        }
+      } else {
+        toast({ title: json.error?.message || "Could not update status.", tone: "error" });
+      }
+    } catch {
+      toast({ title: "Network error", tone: "error" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   // AA.9 — real "start of term" action: deliberately re-rolls the
   // teacher assignment for every real class-subject pairing a school has
   // flagged "Rotate this subject's teacher every term" — a Principal/
@@ -2981,6 +3015,25 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                 </p>
               </div>
               <div className="flex flex-col items-stretch gap-2 md:items-end">
+                <div className="flex flex-wrap items-center gap-1.5 justify-end mb-1">
+                  <Button
+                    size="sm"
+                    onClick={() => handleUpdateTimetableStatus("PUBLISHED")}
+                    disabled={!canManage || saving || timetableStatus === "PUBLISHED"}
+                    className="rounded-full bg-green-600 hover:bg-green-700 text-white font-black text-xs shadow-md"
+                  >
+                    🚀 Publish to All ({timetableStatus === "PUBLISHED" ? "Active" : "1-Click"})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => handleUpdateTimetableStatus("DRAFT")}
+                    disabled={!canManage || saving || timetableStatus === "DRAFT"}
+                    className="rounded-full font-bold text-xs border-amber-300 text-amber-800 dark:border-amber-800 dark:text-amber-300"
+                  >
+                    📝 Save as Draft ({timetableStatus === "DRAFT" ? "Active" : "1-Click"})
+                  </Button>
+                </div>
                 <Button onClick={runMasterButton} disabled={!canManage || starting || preGenLoading || ["QUEUED", "RUNNING"].includes(job?.status)} className="h-12 min-w-[220px]">
                   {starting || preGenLoading || ["QUEUED", "RUNNING"].includes(job?.status)
                     ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -5830,6 +5883,7 @@ function ExamAutoGeneratorTab({ canManage, schoolLevelActivation }: { canManage:
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const [dismissExamLevelBanner, setDismissExamLevelBanner] = React.useState(() => typeof window !== "undefined" && localStorage.getItem("neyo_dismiss_exam_level") === "true");
   const [setup, setSetup] = React.useState<{ classes: ClassOpt[]; runs: ExamGeneratorRunRow[] } | null>(null);
   const [preview, setPreview] = React.useState<any | null>(null);
   const [form, setForm] = React.useState({
@@ -5947,8 +6001,15 @@ function ExamAutoGeneratorTab({ canManage, schoolLevelActivation }: { canManage:
     <div className="space-y-5">
       <Card>
         <CardContent className="p-5">
-          {schoolLevelActivation && (
-            <div className="mb-3 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 dark:border-green-900/30 dark:bg-green-950/20 dark:text-green-200">
+          {schoolLevelActivation && !dismissExamLevelBanner && (
+            <div className="mb-3 relative rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 dark:border-green-900/30 dark:bg-green-950/20 dark:text-green-200">
+              <button
+                onClick={() => { setDismissExamLevelBanner(true); if (typeof window !== "undefined") localStorage.setItem("neyo_dismiss_exam_level", "true"); }}
+                className="absolute right-3 top-3 rounded-full p-1 text-green-700 hover:bg-green-100 dark:hover:bg-green-900/40"
+                title="Dismiss note"
+              >
+                <X className="h-4 w-4" />
+              </button>
               <p className="font-semibold">Level-aware Timetable Generation</p>
               <p className="mt-1 text-xs text-green-800 dark:text-green-300">
                 Exam auto-generation is most relevant where structured subject loads are active. Subject Selection appears only for Junior/Senior School, and Senior Pathways appear only for Senior School.
@@ -5994,7 +6055,7 @@ function ExamAutoGeneratorTab({ canManage, schoolLevelActivation }: { canManage:
                     return (
                       <label key={klass.id} className="flex items-center gap-2 text-xs text-navy-700 dark:text-navy-200">
                         <input type="checkbox" checked={checked} onChange={(e) => setForm((p) => ({ ...p, classIds: e.target.checked ? [...new Set([...p.classIds, klass.id])] : p.classIds.filter((id) => id !== klass.id) }))} />
-                        <span>{klass.name}</span>
+                        <span>{(klass as any).name || [(klass as any).level, (klass as any).stream].filter(Boolean).join(" ")}</span>
                       </label>
                     );
                   })}
