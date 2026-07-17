@@ -132,15 +132,15 @@ export function BiometricGateProvider({ children }: { children: React.ReactNode 
       {children}
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex min-h-screen items-center justify-center overflow-y-auto p-4 sm:p-6">
           {/* Frosted backing scrim */}
           <div 
-            className="absolute inset-0 bg-navy-950/40 backdrop-blur-md" 
+            className="fixed inset-0 bg-navy-950/60 backdrop-blur-md transition-opacity" 
             onClick={handleClose}
           />
           
           {/* Dynamic Island style physical security capsule modal */}
-          <div className="relative w-full max-w-sm transform overflow-hidden rounded-3xl bg-navy-950 border border-white/10 p-6 text-center text-white shadow-pop transition-all animate-island md:max-w-md">
+          <div className="relative z-10 my-auto mx-auto w-full max-w-sm transform overflow-hidden rounded-3xl bg-navy-950 border border-white/10 p-6 text-center text-white shadow-2xl transition-all animate-island sm:max-w-md">
             
             {/* Top Close */}
             {!appUnlockMode && status !== "verifying" && status !== "success" && (

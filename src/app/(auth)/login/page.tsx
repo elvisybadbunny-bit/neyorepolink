@@ -33,6 +33,99 @@ export default function LoginPage() {
   const [demoName, setDemoName] = React.useState("");
   const [demoLoading, setDemoLoading] = React.useState(false);
 
+  // Forgot Password with SMS OTP state
+  const [forgotOpen, setForgotOpen] = React.useState(false);
+  const [forgotInput, setForgotInput] = React.useState("");
+  const [forgotOtp, setForgotOtp] = React.useState("");
+  const [forgotNewPwd, setForgotNewPwd] = React.useState("");
+  const [recoverySent, setRecoverySent] = React.useState(false);
+  const [recoveryLoading, setRecoveryLoading] = React.useState(false);
+
+  // First Login Activation / Set Initial Password state
+  const [firstLoginOpen, setFirstLoginOpen] = React.useState(false);
+  const [firstLoginPwd, setFirstLoginPwd] = React.useState("");
+  const [firstLoginLoading, setFirstLoginLoading] = React.useState(false);
+  const [firstLoginDest, setFirstLoginDest] = React.useState("/dashboard");
+
+  async function handleSendRecoveryOtp(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!forgotInput.trim()) {
+      toast({ title: "Please enter your phone number or NEYO email", tone: "error" });
+      return;
+    }
+    setRecoveryLoading(true);
+    try {
+      const res = await fetch("/api/auth/password-reset/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneOrEmail: forgotInput.trim() }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setRecoverySent(true);
+        toast({ title: "Recovery Code Sent!", description: json.data?.message || "Check your phone SMS.", tone: "success" });
+      } else {
+        toast({ title: json.error?.message || "Could not send recovery code.", tone: "error" });
+      }
+    } finally {
+      setRecoveryLoading(false);
+    }
+  }
+
+  async function handleVerifyRecoveryOtp(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!forgotOtp || forgotNewPwd.length < 8) {
+      toast({ title: "Enter the 6-digit OTP code and a password with at least 8 characters", tone: "error" });
+      return;
+    }
+    setRecoveryLoading(true);
+    try {
+      const res = await fetch("/api/auth/password-reset/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneOrEmail: forgotInput.trim(), otpCode: forgotOtp, newPassword: forgotNewPwd }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        toast({ title: "Password Reset & Account Unlocked!", description: "Taking you to your dashboard...", tone: "success" });
+        setForgotOpen(false);
+        setStep("success");
+        const dest = json.data?.user?.role === "FOUNDER" || json.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+        setTimeout(() => window.location.assign(dest), 800);
+      } else {
+        toast({ title: json.error?.message || "Verification failed.", tone: "error" });
+      }
+    } finally {
+      setRecoveryLoading(false);
+    }
+  }
+
+  async function handleSetInitialPassword(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (firstLoginPwd.length < 8) {
+      toast({ title: "Password must be at least 8 characters long", tone: "error" });
+      return;
+    }
+    setFirstLoginLoading(true);
+    try {
+      const res = await fetch("/api/auth/set-initial-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword: firstLoginPwd }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        toast({ title: "Secure Password Set!", description: "Entering your School OS...", tone: "success" });
+        setFirstLoginOpen(false);
+        setTimeout(() => window.location.assign(firstLoginDest), 600);
+      } else {
+        toast({ title: json.error?.message || "Could not save password.", tone: "error" });
+      }
+    } finally {
+      setFirstLoginLoading(false);
+    }
+  }
+
   async function submitAndLaunchDemo(e?: React.FormEvent) {
     if (e) e.preventDefault();
     if (!/^(?:\+254|0)[17]\d{8}$/.test(demoPhone.replace(/\s+/g, ""))) {
@@ -211,6 +304,12 @@ export default function LoginPage() {
       });
       // Full reload so server components pick up the new session cookie.
       const dest = json.data?.user?.role === "FOUNDER" || json.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+      if (json.data?.user?.hasSetInitialPassword === false) {
+        setFirstLoginDest(dest);
+        setFirstLoginOpen(true);
+        setStep("success");
+        return;
+      }
       setTimeout(() => window.location.assign(dest), 900);
     } catch {
       setFieldError("Network problem. Check your connection and retry.");
@@ -252,6 +351,11 @@ export default function LoginPage() {
       setStep("success");
       toast({ title: `Welcome, ${json.data.user.fullName}`, tone: "success" });
       const dest = json.data?.user?.role === "FOUNDER" || json.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+      if (json.data?.user?.hasSetInitialPassword === false) {
+        setFirstLoginDest(dest);
+        setFirstLoginOpen(true);
+        return;
+      }
       setTimeout(() => window.location.assign(dest), 900);
     } catch {
       setFieldError("Network problem. Check your connection and retry.");
@@ -321,6 +425,11 @@ export default function LoginPage() {
       setStep("success");
       toast({ title: `Welcome, ${json.data.user.fullName}`, tone: "success" });
       const dest = json.data?.user?.role === "FOUNDER" || json.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+      if (json.data?.user?.hasSetInitialPassword === false) {
+        setFirstLoginDest(dest);
+        setFirstLoginOpen(true);
+        return;
+      }
       setTimeout(() => window.location.assign(dest), 900);
     } catch {
       setFieldError("Network problem. Check your connection and retry.");
@@ -370,6 +479,11 @@ export default function LoginPage() {
       setStep("success");
       toast({ title: `Welcome, ${verJson.data.user.fullName}`, tone: "success" });
       const dest = verJson.data?.user?.role === "FOUNDER" || verJson.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+      if (verJson.data?.user?.hasSetInitialPassword === false) {
+        setFirstLoginDest(dest);
+        setFirstLoginOpen(true);
+        return;
+      }
       setTimeout(() => window.location.assign(dest), 900);
     } catch {
       setFieldError("Passkey sign-in was cancelled or not available.");
@@ -724,6 +838,18 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => {
+                  setForgotOpen(true);
+                  setRecoverySent(false);
+                  setForgotOtp("");
+                  setForgotNewPwd("");
+                }}
+                className="flex w-full items-center justify-center gap-1 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+              >
+                Forgot your password? Recover with 6-digit SMS OTP
+              </button>
+              <button
+                type="button"
+                onClick={() => {
                   setStep("phone");
                   setFieldError(null);
                 }}
@@ -883,6 +1009,123 @@ export default function LoginPage() {
                 <Button type="submit" disabled={demoLoading} className="rounded-full bg-green-700 hover:bg-green-800 text-white">
                   {demoLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                   Verify & Launch Demo
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Forgot Password with SMS OTP Modal */}
+      {forgotOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/60 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-navy-100 bg-white/95 p-6 shadow-2xl backdrop-blur-xl dark:border-navy-800 dark:bg-navy-900/95">
+            <div className="flex items-center justify-between border-b border-navy-100 pb-3 dark:border-navy-800">
+              <div className="flex items-center gap-2 font-bold text-navy-900 dark:text-white">
+                <Mail className="h-5 w-5 text-blue-600" />
+                <span>Recover Password via SMS OTP</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForgotOpen(false)}
+                className="rounded-full p-1 text-navy-400 hover:bg-navy-100 dark:hover:bg-navy-800"
+              >
+                ✕
+              </button>
+            </div>
+            {!recoverySent ? (
+              <form onSubmit={handleSendRecoveryOtp} className="mt-4 space-y-4">
+                <p className="text-xs text-navy-600 dark:text-navy-300">
+                  Enter your registered phone number (`+254 7XX...`) or custom NEYO email (`kamau@karibuhigh.neyo.co.ke`). We will dispatch a secure 6-digit verification code to your phone right away.
+                </p>
+                <div>
+                  <Label htmlFor="forgotInput">Account Phone or Email *</Label>
+                  <Input
+                    id="forgotInput"
+                    placeholder="0712 345 678 or kamau@karibuhigh.neyo.co.ke"
+                    value={forgotInput}
+                    onChange={(e) => setForgotInput(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex gap-2 justify-end pt-2">
+                  <Button type="button" variant="secondary" onClick={() => setForgotOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={recoveryLoading || !forgotInput.trim()} className="rounded-full bg-blue-600 hover:bg-blue-700 text-white">
+                    {recoveryLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MailCheck className="mr-2 h-4 w-4" />}
+                    Send SMS Recovery Code
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyRecoveryOtp} className="mt-4 space-y-4">
+                <p className="text-xs text-green-700 dark:text-green-400 bg-green-50/60 p-3 rounded-2xl border border-green-200 dark:bg-green-950/20 dark:border-green-900/40 font-semibold">
+                  ✓ 6-digit recovery code dispatched via SMS. Enter it below along with your new password.
+                </p>
+                <div>
+                  <Label htmlFor="forgotOtp">6-Digit SMS OTP Code *</Label>
+                  <Input
+                    id="forgotOtp"
+                    placeholder="e.g. 849201"
+                    maxLength={6}
+                    className="font-mono text-center text-lg tracking-widest"
+                    value={forgotOtp}
+                    onChange={(e) => setForgotOtp(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="forgotNewPwd">Create New Secure Password *</Label>
+                  <PasswordInput
+                    id="forgotNewPwd"
+                    placeholder="At least 8 characters"
+                    value={forgotNewPwd}
+                    onChange={(e) => setForgotNewPwd(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex gap-2 justify-end pt-2">
+                  <Button type="button" variant="secondary" onClick={() => setRecoverySent(false)}>
+                    Back
+                  </Button>
+                  <Button type="submit" disabled={recoveryLoading || forgotOtp.length < 6 || forgotNewPwd.length < 8} className="rounded-full bg-green-700 hover:bg-green-800 text-white font-semibold">
+                    {recoveryLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                    Verify Code & Reset Password
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* First Login Activation / Set Initial Password Modal */}
+      {firstLoginOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/70 p-4 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-green-200 bg-white p-6 shadow-2xl dark:border-green-800 dark:bg-navy-900">
+            <div className="flex items-center gap-2 border-b border-navy-100 pb-3 font-bold text-navy-950 dark:border-navy-800 dark:text-white">
+              <ShieldCheck className="h-6 w-6 text-green-600 animate-pulse" />
+              <span>First Login Activation (`Set Password`)</span>
+            </div>
+            <p className="mt-3 text-xs text-navy-600 dark:text-navy-300">
+              Welcome to NEYO! Since this is your initial login with your curated NEYO account, please set a secure password (`at least 8 characters`) to protect your school records going forward.
+            </p>
+            <form onSubmit={handleSetInitialPassword} className="mt-4 space-y-4">
+              <div>
+                <Label htmlFor="firstLoginPwd">Create Your Secure Password *</Label>
+                <PasswordInput
+                  id="firstLoginPwd"
+                  placeholder="At least 8 characters"
+                  value={firstLoginPwd}
+                  onChange={(e) => setFirstLoginPwd(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button type="submit" disabled={firstLoginLoading || firstLoginPwd.length < 8} className="w-full rounded-full bg-green-700 hover:bg-green-800 text-white font-semibold py-2.5">
+                  {firstLoginLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                  Activate Account & Enter School OS
                 </Button>
               </div>
             </form>

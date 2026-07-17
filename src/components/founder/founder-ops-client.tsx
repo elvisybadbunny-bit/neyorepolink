@@ -55,8 +55,9 @@ import { InfluencerCodesOpsTab } from "@/components/founder/influencer-codes-ops
 import { NeyoTeamOpsTab } from "@/components/founder/neyo-team-ops-tab";
 import { FounderMorningDashboardTab } from "@/components/founder/founder-morning-dashboard-tab";
 import { UnitEconomicsTab } from "@/components/founder/unit-economics-tab";
+import { DemoRequestsOpsTab } from "@/components/founder/demo-requests-ops-tab";
 
-const TABS = ["Overview", "Founder Dashboard", "Unit Economics", "Build log", "Metrics", "Cadence", "Interviews", "Platform Flags", "Feature Toggles", "Revenue Grants", "Custom Feature Requests", "Discount Campaigns", "Influencer Codes", "Pathway Guide", "Revenue Ops", "Pricing Engine", "Storage Intelligence", "Developer Center", "Bundi Import", "Curriculum Library", "Business Operations", "Ecosystem Trends", "Team & Access"] as const;
+const TABS = ["Overview", "Founder Dashboard", "Demo Requests", "Unit Economics", "Build log", "Metrics", "Cadence", "Interviews", "Platform Flags", "Feature Toggles", "Revenue Grants", "Custom Feature Requests", "Discount Campaigns", "Influencer Codes", "Pathway Guide", "Revenue Ops", "Pricing Engine", "Storage Intelligence", "Developer Center", "Bundi Import", "Curriculum Library", "Business Operations", "Ecosystem Trends", "Team & Access"] as const;
 type Tab = (typeof TABS)[number];
 
 type Dashboard = {
@@ -798,6 +799,7 @@ export function FounderOpsClient() {
       {tab === "Revenue Grants" && <RevenueGrantsOpsTab />}
       {tab === "Custom Feature Requests" && <CustomFeatureRequestsOpsTab />}
       {tab === "Team & Access" && <NeyoTeamOpsTab />}
+      {tab === "Demo Requests" && <DemoRequestsOpsTab />}
       {tab === "Pathway Guide" && <PathwayGuideOpsTab />}
       {tab === "Discount Campaigns" && <DiscountCampaignsOpsTab />}
       {tab === "Influencer Codes" && <InfluencerCodesOpsTab />}

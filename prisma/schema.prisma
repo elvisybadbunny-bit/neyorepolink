@@ -3932,6 +3932,10 @@ model User {
   fullName      String
   phone         String? // +254 format
   email         String?
+  customNeyoEmail       String? @unique // Curated NEYO login email (e.g. kamau.m@karibuhigh.neyo.co.ke)
+  hasSetInitialPassword Boolean @default(true) // false if first-time user needing initial password setup
+  recoveryOtpCode       String? // 6-digit OTP for password recovery or mobile first-login
+  recoveryOtpExpiresAt  DateTime?
   role          String  @default("RECEPTIONIST") // validated against the 16 roles
   secondaryRole String? // optional second role for dual-role staff
 
@@ -8247,5 +8251,23 @@ model ContestAttempt {
   @@unique([contestId, studentId])
   @@index([contestId, score, timeTakenSecs])
   @@index([tenantId, studentId])
+}
+
+// Demo Lead / Request record (waiting for approval in NEYO Ops before spawning sandbox).
+model DemoRequest {
+  id                String    @id @default(cuid())
+  phone             String
+  email             String    @unique
+  fullName          String?
+  schoolName        String?
+  status            String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  requestedAt       DateTime  @default(now())
+  approvedAt        DateTime?
+  approvedBy        String?
+  spawnedTenantId   String?
+  spawnedTenantSlug String?
+  notes             String?
+
+  @@index([status, requestedAt])
 }
 

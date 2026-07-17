@@ -124,7 +124,31 @@ export interface VerifyOtpResult {
     fullName: string;
     role: string;
     tenantId: string;
+    hasSetInitialPassword?: boolean;
+    customNeyoEmail?: string | null;
   };
+}
+
+/** Create and persist a session token directly for a verified user (used after OTP/password resets). */
+export async function createSessionToken(
+  userId: string,
+  context?: { userAgent?: string; ipAddress?: string; deviceId?: string }
+): Promise<string> {
+  const now = new Date();
+  const sessionToken = crypto.randomBytes(32).toString("hex");
+  const sessionExpiry = new Date(now.getTime() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
+  await db.session.create({
+    data: {
+      token: sessionToken,
+      userId,
+      userAgent: context?.userAgent ?? null,
+      ipAddress: context?.ipAddress ?? null,
+      deviceId: context?.deviceId ?? null,
+      expiresAt: sessionExpiry,
+    },
+  });
+  await db.user.update({ where: { id: userId }, data: { lastLoginAt: now } }).catch(() => {});
+  return sessionToken;
 }
 
 /**
@@ -235,6 +259,8 @@ export async function verifyLoginOtp(
       fullName: user.fullName,
       role: user.role,
       tenantId: user.tenantId,
+      hasSetInitialPassword: user.hasSetInitialPassword,
+      customNeyoEmail: user.customNeyoEmail,
     },
   };
 }
@@ -268,8 +294,15 @@ export async function loginWithPassword(
     "Wrong email or password."
   );
 
+  const queryStr = email.trim();
   const user = await db.user.findFirst({
-    where: { email: { equals: email } },
+    where: {
+      OR: [
+        { email: { equals: queryStr } },
+        { customNeyoEmail: { equals: queryStr } },
+        { neyoLoginId: { equals: queryStr.toUpperCase() } },
+      ],
+    },
   });
 
   // Run a verify even when the user/hash is missing, to keep timing uniform.
@@ -327,6 +360,8 @@ export async function loginWithPassword(
       fullName: user.fullName,
       role: user.role,
       tenantId: user.tenantId,
+      hasSetInitialPassword: user.hasSetInitialPassword,
+      customNeyoEmail: user.customNeyoEmail,
     },
   };
 }

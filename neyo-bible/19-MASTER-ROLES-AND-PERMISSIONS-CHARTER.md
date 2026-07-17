@@ -145,3 +145,22 @@ These roles belong to parents and students accessing public or self-service port
 - **Organizational Tier**: External Stakeholder (`Student Portal B.11`).
 - **Core Responsibilities**: Viewing personal timetables (`PrintTimetablePage` / screen view), checking homework assignments (`Homework`), submitting digital project files (`PortfolioItem J.7`), practicing on self-marking quizzes (`EE.8 Question Bank Attempt`), participating in **Inter-School Contests (`EE.10`)**, and exploring **STEM Virtual Labs (`EE.13`)**.
 - **Database Permissions**: Strictly read-only on curriculum/timetable data; insert access strictly scoped to their personal `QuestionBankAttempt`, `ContestAttempt`, and `HomeworkSubmission` records (`withTenant` + `studentId` check).
+
+---
+
+## SECTION 6 — Dual-Role Staff & Multi-Role Permission Merging (`effectivePermissionsForUser`)
+
+In real-world educational institutions (`such as Karibu High School` and boarding academies), staff members frequently carry **two operational responsibilities simultaneously** (`e.g. a senior Chemistry teacher who also serves as Deputy Principal or Boarding Master`). NEYO handles this natively via its **Dual-Role Authorization Seam (`User.role` + `User.secondaryRole`)**:
+
+1. **Permission Set Union (`effectivePermissionsForUser`)**:
+   - Whenever an authenticated session checks whether a staff member can access a tool (`requirePermission` / `hasPermission`), the authorization engine (`src/lib/core/session.ts` and `src/lib/core/permissions.ts`) computes their effective capability set by merging all canonical permissions granted to `User.role` (`Primary Role`) **PLUS** all permissions granted to `User.secondaryRole` (`Secondary Role`):
+     $$\text{EffectivePermissions} = \text{PermissionsForRole}(\text{User.role}) \cup \text{PermissionsForRole}(\text{User.secondaryRole})$$
+2. **Operational Workflow Example**:
+   - If `Njoroge Peter` has `role: "TEACHER"` and `secondaryRole: "DEPUTY_PRINCIPAL"`:
+     - As a `TEACHER`, he can record classroom attendance (`attendance.record`), publish CAT marks (`academics.manage`), and create lesson observations (`cbc.observe`).
+     - As a `DEPUTY_PRINCIPAL`, he also unlocks leadership capabilities: approving teacher study leave (`staff.manage`), analyzing school-wide attendance trends (`attendance.view`), and reviewing student discipline records (`discipline.manage`).
+   - The staff member **never has to log out or switch profiles mid-day** — both toolsets coexist smoothly on their School OS sidebar and dashboard.
+3. **Curated NEYO Login Emails & Account Activation (`customNeyoEmail`)**:
+   - Every enrolled student and staff member automatically receives a unique, curated NEYO email (`e.g., peter.njoroge.148@karibuhigh.neyo.co.ke` generated via `generateCuratedNeyoEmail`), preventing personal email clutter or duplicate account numbers.
+   - Upon their initial first login (`hasSetInitialPassword === false`), the user is prompted with our liquid-glass **First Login Activation Modal** where they choose and set their secure initial 8-character password (`POST /api/auth/set-initial-password`).
+   - **Password Recovery via SMS OTP**: If a user forgets their password (`PasswordRecoveryModal`), instead of insecure email links, they enter their phone or curated NEYO email, receive a secure 6-digit SMS OTP (`POST /api/auth/password-reset/send-otp`), and instantly reset their password right on screen (`POST /api/auth/password-reset/verify-otp`).
