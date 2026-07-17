@@ -35,6 +35,9 @@ import { KnecCandidateStudio } from "@/components/academics/knec-candidate-studi
 import { MoeReturnsClientTab } from "@/components/academics/moe-returns-client-tab";
 import { DisciplineSuite } from "@/components/extensions-v2/discipline-suite";
 import { TextbookFineSuite } from "@/components/extensions-v2/textbook-fine-suite";
+import { V2HeroCard } from "@/components/ui/v2/v2-hero-card";
+import { V2ActionPill } from "@/components/ui/v2/v2-action-pill";
+import { V2MobileCardRow } from "@/components/ui/v2/v2-mobile-card-row";
 
 interface Subject { id: string; name: string; code: string; curriculum: string; departmentId: string | null; departmentName: string | null; archived: boolean }
 interface Dept { id: string; name: string; hodId: string | null; hodName: string | null; subjectCount: number }
@@ -157,13 +160,17 @@ function SubjectsTab({ canManage }: { canManage: boolean }) {
   const [error, setError] = React.useState(false);
   const [dialog, setDialog] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+  const [uiVersion, setUiVersion] = React.useState<"v1" | "v2">("v1");
 
   const load = React.useCallback(async () => {
     setError(false);
     try {
-      const res = await fetch("/api/academics/subjects");
-      const json = await res.json();
-      if (json.ok) setSubjects(json.data.subjects); else setError(true);
+      const [res, vRes] = await Promise.all([
+        fetch("/api/academics/subjects").then((r) => r.json()),
+        fetch("/api/ops/ui-version").then((r) => r.json()).catch(() => ({ ok: false })),
+      ]);
+      if (res.ok) setSubjects(res.data.subjects); else setError(true);
+      if (vRes.ok && vRes.version) setUiVersion(vRes.version);
     } catch { setError(true); }
   }, []);
   React.useEffect(() => { load(); }, [load]);
@@ -180,6 +187,63 @@ function SubjectsTab({ canManage }: { canManage: boolean }) {
 
   if (error) return <LoadError onRetry={load} />;
   if (subjects === null) return <Skeletons />;
+
+  if (uiVersion === "v2") {
+    return (
+      <div className="space-y-6">
+        <V2HeroCard
+          title="Curriculum & Subject Directory"
+          badgeLabel="Active Curriculum"
+          metricValue={String(subjects.length)}
+          metricLabel="Active Learning Subjects"
+          secondaryValue="Grade 7–12"
+          secondaryLabel="Active Grade Band"
+          icon={BookOpen}
+          actions={
+            canManage ? (
+              <>
+                <V2ActionPill
+                  label="New Subject"
+                  icon={Plus}
+                  variant="primary"
+                  onClick={() => setDialog(true)}
+                />
+                <V2ActionPill
+                  label="Load CBE Preset"
+                  icon={Sparkles}
+                  variant="secondary"
+                  onClick={() => addPreset("CBC")}
+                  disabled={busy}
+                />
+                <V2ActionPill
+                  label="Load 8-4-4 Preset"
+                  icon={Sparkles}
+                  variant="secondary"
+                  onClick={() => addPreset("8-4-4")}
+                  disabled={busy}
+                />
+              </>
+            ) : undefined
+          }
+        />
+
+        <div className="space-y-2">
+          {subjects.map((s) => (
+            <V2MobileCardRow
+              key={s.id}
+              title={s.name}
+              subtitle={`Code: ${s.code} • Dept: ${s.departmentName ?? "Unassigned"}`}
+              badgeText={curriculumLabel(s.curriculum)}
+              badgeVariant={s.curriculum === "CBC" ? "emerald" : "cyan"}
+              icon={BookOpen}
+            />
+          ))}
+        </div>
+
+        {dialog && <SubjectDialog onClose={() => setDialog(false)} onDone={() => { setDialog(false); load(); }} />}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

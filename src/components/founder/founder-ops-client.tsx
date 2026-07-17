@@ -63,6 +63,7 @@ import { FeatureReleaseControlsTab } from "@/components/founder/feature-release-
 import { BundiOcrConfigTab } from "@/components/founder/bundi-ocr-config-tab";
 import { TrialLimitsOpsTab } from "@/components/founder/trial-limits-ops-tab";
 import { FounderCredentialsVault } from "@/components/founder/founder-credentials-vault";
+import { UiVersionToggleOpsCard } from "@/components/founder/ui-version-toggle-ops-card";
 
 const TABS = ["Overview", "Founder Dashboard", "Credentials & Secrets Vault", "Demo Requests", "Diagnostic Replay", "Maintenance Ops", "Trial Limits", "Release Whitelists", "Bundi OCR Quotas", "Unit Economics", "Build log", "Metrics", "Cadence", "Interviews", "Platform Flags", "Feature Toggles", "Revenue Grants", "Custom Feature Requests", "Discount Campaigns", "Influencer Codes", "Pathway Guide", "Revenue Ops", "Pricing Engine", "Storage Intelligence", "Storage Archive Tiers", "Developer Center", "Bundi Import", "Curriculum Library", "Business Operations", "Ecosystem Trends", "Team & Access"] as const;
 type Tab = (typeof TABS)[number];
@@ -794,6 +795,7 @@ export function FounderOpsClient() {
       {tab === "Interviews" && <InterviewsTab rows={data.interviews} value={interview} setValue={setInterview} saving={saving} onSave={() => mutate("create_interview", { ...interview, painPoints: lines(interview.painPointsText), quotes: lines(interview.quotesText), opportunities: lines(interview.opportunitiesText) }, "Customer interview saved")} onDelete={(id: string) => remove("interviews", id)} />}
       {tab === "Platform Flags" && (
         <div className="space-y-6">
+          <UiVersionToggleOpsCard />
           <PlatformFlagsTab flags={flags} toggling={saving} onToggle={toggleFlag} />
           <ShellReleaseCard />
         </div>
