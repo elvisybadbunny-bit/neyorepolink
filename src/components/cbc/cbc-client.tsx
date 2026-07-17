@@ -225,6 +225,42 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
       setPrimaryBusy(false);
     }
   }
+  // EE.3 (Senior School phase) — same pattern as the Junior School library
+  // above, pointed at /api/cbc/senior-curriculum instead. Silently hidden
+  // (renders nothing) until NEYO Ops has released EE.3 — the SAME
+  // release-button flag covers both grade bands, so there is nothing extra
+  // to release separately.
+  const [seniorGrades, setSeniorGrades] = React.useState<string[]>([]);
+  const [seniorSubjectCodes, setSeniorSubjectCodes] = React.useState<string[]>([]);
+  const [seniorGrade, setSeniorGrade] = React.useState("");
+  const [seniorSubjectId, setSeniorSubjectId] = React.useState("");
+  const [seniorPreview, setSeniorPreview] = React.useState<{ name: string; learningOutcome: string; substrands: { name: string }[] }[] | null>(null);
+  const [seniorBusy, setSeniorBusy] = React.useState(false);
+  const [seniorAvailable, setSeniorAvailable] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch("/api/cbc/senior-curriculum").then((r) => r.json()).then((j) => {
+      if (j.ok) {
+        setSeniorGrades(j.data.grades ?? []);
+        setSeniorSubjectCodes(j.data.subjectCodes ?? []);
+        setSeniorAvailable(true);
+      }
+    }).catch(() => {
+      // EE.3 not yet released by NEYO Ops -- the card below simply never
+      // appears; every other Strands tab feature keeps working untouched.
+    });
+  }, []);
+
+  React.useEffect(() => {
+    setSeniorPreview(null);
+    if (!seniorGrade || !seniorSubjectId) return;
+    const subj = subjects.find((s) => s.id === seniorSubjectId);
+    if (!subj) return;
+    fetch(`/api/cbc/senior-curriculum?grade=${encodeURIComponent(seniorGrade)}&subjectCode=${subj.code}`)
+      .then((r) => r.json())
+      .then((j) => { if (j.ok) setSeniorPreview(j.data.strands ?? []); })
+      .catch(() => {});
+  }, [seniorGrade, seniorSubjectId, subjects]);
 
   async function applySeniorCurriculum() {
     if (!seniorGrade || !seniorSubjectId) return;
@@ -454,6 +490,8 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
           <CardHeader>
             <CardTitle className="text-base">Senior School curriculum library (Grade 10–12)</CardTitle>
             <p className="text-xs text-navy-400">Real KICD Grade 10, 11, and 12 core and pathway strands/sub-strands (STEM electives, Applied/Business, Social Sciences, Languages, and Core Mathematics/English/Kiswahili/CSL).</p>
+            <CardTitle className="text-base">Senior School curriculum library (Grade 10)</CardTitle>
+            <p className="text-xs text-navy-400">Real KICD strands and sub-strands for the compulsory Senior School core subjects — pick a grade and subject, preview what will be added, then apply.</p>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-2">
