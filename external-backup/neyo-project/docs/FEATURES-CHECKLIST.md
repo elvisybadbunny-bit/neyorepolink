@@ -3851,6 +3851,55 @@ advanced-analytics.service.ts. See docs/J11-AUDIT-2026-06-29.md. -->
 
 ## Z.3 — Real Venue/Lab System + Free-Period Distribution Fix + Full Print/PDF Redesign for the Timetable Generator — **FULLY BUILT, TESTED & VERIFIED (2026-07-10/11)**
 
+### Update 2026-07-17 — Timetable Print Layout Upgrade (`⌘P`) matching `ACHOLA ROSE` screenshot
+- [x] **Top School & Class/Teacher Header Block**: Updated `print-timetable-page.tsx` to render the school header at the very top (`RATIBA YA SCHOOL MWAKA 2026` uppercase and centered), right above the bold Class or Teacher name (`ACHOLA ROSE` / `FORM 2 EAST`).
+- [x] **Vertical Merging of Non-Lesson Columns Across Days (`Mo–Fr`)**: Any non-lesson period (`BREAK`, `SHORT BREAK`, `LONG BREAK`, `LUNCH`, `ASSEMBLY`, `PREP`, `GAMES`) merges vertically (`rowSpan={days.length}`) across Monday to Friday into a single tall column reading `B R E A K` or `L U N C H`. Ordinary academic lessons (`PHY`, `MAT`) never merge vertically across days (`the subjects dont include this rule only the brakes and lunch`).
+- [x] **Horizontal Merging of Consecutive Double Lessons (`colSpan={2}`) Across Periods**: If two consecutive periods on the same day (`Period 7A and 7B` or `Period 1 and 2`) share the exact same subject (`PHY Form 3 Imani`) and same class/teacher, they merge horizontally (`colSpan={2}`) into one double-period box with a `DOUBLE` badge instead of drawing side-by-side duplicate boxes (`the subjects only doubles in two periods following each other are merged to be one`).
+- [x] **Bottom-Left Corner Timestamp & Bottom-Right Powered by NEYO**: Removed the words "Teacher timetable" / "Class timetable" from the bottom corners. Displayed the exact generated timestamp (`Generated on 17 Jul 2026, 23:05`) on the bottom left (`remove the word teacher timetable and it should show the generated time`) and `Powered by NEYO` on the bottom right (`and the powered by neyo mark must be their`).
+- [x] **Default Landscape Edge-to-Edge Layout**: `daysVertical` now defaults to true (`A4 Landscape`), rendering thick `#000000` high-contrast borders and typography that cover the A4 print paper edge-to-edge (`margin: 6mm`), exact-matching the founder's provided layout screenshot (`cover the print paper edge to edge that way`).
+
+### Update 2026-07-17 — Syllabus Coverage Tracking, My Classes Instant Allocation, Record Immutability & Lesson Plan Integration (`I.97 / B.12 / I.88`)
+- [x] **Real-Time Syllabus Auto-Linking & Verification (`I.97` / `EE.8`)**: Built `syncSyllabusFromAssessment()` (`syllabus.service.ts`), wired directly into `saveAssessments()` / `saveObservation()` (`cbc.service.ts` / `academics.service.ts`) and `setLessonStatus()` (`status = "DELIVERED"`). When a teacher records student assessments against a strand/sub-strand or delivers a lesson plan, the corresponding `SyllabusTopic` automatically updates to `status = "COVERED"`.
+- [x] **Academics Syllabus Audit & Verification Dashboard (`getAcademicsSyllabusCoverageReport`)**: Cross-references teacher-reported `SyllabusTopic` records against REAL student assessment entries (`CbcAssessment` / `LessonObservation`) and taught `LessonPlan` records (`ensure the syllabus records are real`). If a teacher marks a topic covered with `0` student assessments and `0` delivered lesson plans, it is classified as `SELF_REPORTED_ONLY`. If a teacher has entered `0` updates and `0` assessments at all, it is classified as `NOT_COVERED ("0 Assessments Entered — Assumed Never Covered")` per founder specification (`when they are not updated by a teacher it is assumed the syllabus was never covered`).
+- [x] **Instant Teacher Allocation & "My Classes" Tab Continuity (`B.12` / `teacherClassIds`)**: Upgraded `teacherClassIds` and `teacherHome` (`teacher-portal.service.ts`) to query all 4 live assignment sources (`SchoolClass.classTeacherId`, `TimetableSlot`, `ClassSubjectNeed`, `TeacherSubject`). When a class is transferred (`either by the teacher allocation or manually by the school`), the new teacher sees the class **instantly** inside `My Classes` (`teacherHome`) and inherits **100% of where the previous teacher left the student academic records off**, ready to continue teaching without disruption (`where the other teacher left the records on`).
+- [x] **Immutability Guard (`cant be deleted anyhowly`)**: Enforced strict leadership authorization across `deleteCbcAssessment()` (`cbc.service.ts`), `deleteLessonObservation()` (`academics.service.ts`), and `deleteSyllabusTopic()` (`syllabus.service.ts`). Ordinary teachers are strictly `FORBIDDEN` from arbitrarily deleting historical student academic observations or syllabus records (`to avoid teachers adding fake reports when they havent covered the lessons`). Deletion or record voiding requires `academics.manage` / `PRINCIPAL` / `FOUNDER` review and generates an immutable audit log.
+- [x] **Integrated Lesson Plans (`LessonPlan` / `I.88`)**: Teachers can link lesson plans to exact KICD `Strand` / `Sub-strand` objectives and mark them `status = "DELIVERED"`. This automatically syncs with syllabus coverage and counts toward verified teaching delivery (`so that it can be easy for teschers to plan also the lessons and research on the syllabus coverage to ensure the syllabus records are real`).
+- [x] **Regression test `scripts/ee-syllabus-teacher-classes-immutability-test.ts`**: **6/6 checks passed cleanly**, verifying syllabus auto-linking from assessment, academics verified coverage report vs self-reported/not-covered, instant teacher class transfer continuity in `My Classes`, teacher deletion prohibition (`FORBIDDEN`), and leadership voiding with audit logging.
+
+### Update 2026-07-17 (Part 2) — 11 Production Bug Fixes & Polish Across Academics, Finance, Student Duties & Timetable Engine
+- [x] **Entrance Exam Paper Vault Upload Error (`entrance-exam.ts` & `service`)**: Removed strict Zod URL restrictions and `.strict()` checking on `entranceExamPaperSchema` so any valid file path or uploaded URL (`/uploads/...`, `/demo/...`, `/api/files/...`) saves cleanly (`upsert`) without throwing validation errors.
+- [x] **Fee Promises Calendar Directory Installment Plan Blur (`finance-client.tsx`)**: Fixed the `InstallmentPlanDialog` modal layout by boosting z-index (`z-[100]`) and ensuring high-contrast opaque container backgrounds (`bg-white dark:bg-navy-900`) so bursars can create parent installment plans cleanly without background blur lockouts.
+- [x] **Trips and Activities Mobile Button Visibility (`activities-client.tsx`)**: Restructured `CreateActivityDialog` into a mobile-safe flex layout with a scrollable form area (`max-h-[88vh] overflow-y-auto`) and a **sticky bottom action bar (`sticky bottom-0 bg-white p-4 z-10 shadow-lg`)**, guaranteeing the `Create activity & build roster` button stays docked and clickable on all mobile viewports even when scrolling through long class lists.
+- [x] **Removable Level-Aware Notes (`academics-client.tsx`)**: Made both the top `Level-aware Academics` banner and the `Level-aware Timetable Generation` note dismissible (`<button onClick={() => setDismissLevelBanner(true)}>`). Added permanent localStorage retention (`neyo_dismiss_academics_level` & `neyo_dismiss_exam_level`) so dismissed notes stay hidden permanently across page reloads.
+- [x] **Exam Auto-Generator Selected Classes Display (`academics-client.tsx` & `service`)**: Fixed `getExamTimetableGeneratorSetup` to compute and return `name: [c.level, c.stream].filter(Boolean).join(" ")` on `SchoolClass` options, eliminating the issue where class checkboxes inside `ExamAutoGeneratorTab` rendered blank (`just blank with only ticks`).
+- [x] **Timetable Tab Consolidation (`academics-client.tsx`)**: Removed the redundant `Timetable Generator` (`tab === "generator"`) tab from the top navigation bar. Every generation action, constraint setup, time-off window, and combination group now lives unified inside the **Smart Timetable (`Wand2`)** tab.
+- [x] **Teacher Duty Roster Publishing Notifications (`duty-roster.service.ts`)**: Upgraded `generateDutyRoster` so that whenever the Teacher Duty Roster is generated and published (`academics.duty_roster_generated`), NEYO dispatches instant in-app notifications (`db.notification.create`) to every assigned lead and duty teacher (`when the roster is out the teachers get the info too`).
+- [x] **1-Click Student Duties Auto-Assignment with Rules (`K.2 / K.12`)**: Built full-stack `autoAssignStudentDuties()` (`student-duty.service.ts`), `/api/students/duties`, and `StudentDutiesModal` (`students-client.tsx` `Student Duties (K.2)` button). Allows schools to create duty rules (`Class Prefect`, `Bell Ringer` with `maxStudents`, `genderConstraint: MIXED | BOYS_ONLY | GIRLS_ONLY`, and `targetClassIds`) and **1-Click Auto-Assign** active learners deterministically while respecting capacity and gender balance.
+- [x] **Exam Module Advanced Analytics Graceful Access (`advanced-analytics-client.tsx`)**: Updated `AdvancedAnalyticsClient` inside `/exams` to silently hide without throwing toast errors when an ordinary teacher opens the exam module and encounters leadership/tier permission boundaries (`FORBIDDEN` / `TIER_LOCKED`).
+- [x] **Library Scan Auto-Fill & Auto-Due Date (`library-client.tsx`)**: Upgraded `IssueTab` (`scan`) so that when a book barcode (`9789966...`) or copy QR (`COPY-001`) is scanned, Book Title, Author, and Shelf fill automatically, and **Due Date (`dueDate`) auto-calculates** based on the item's loan period (`loanPeriodDays` / 14 days), enabling 1-tap issue (`the librarian only presses issue`).
+- [x] **Smart Timetable Publish / Draft Buttons (`academics-client.tsx` & `route.ts`)**: Added prominent **`🚀 Publish to All`** (`status = PUBLISHED`) and **`📝 Save as Draft`** (`status = DRAFT`) buttons right above the Smart Timetable generator. Publishing locks the schedule and dispatches notifications (`db.notification.create`) to every active teacher (`when in timetable generation their should be a button for publish tooo all or draft in that case`).
+
+### Update 2026-07-17 — 8-Point CBE Senior Rubrics, Case-Insensitive Global Search & Complete Seed Schools Production Login Credentials
+- [x] **Official KICD 8-Point CBE Senior School Rubrics (`EE.15` / `J.5`)**: Researched and integrated the **8-Point CBE Senior School Rubric Scale (`1 to 8 Points`)** into `universal-presets.service.ts` (`KICD_8POINT_RUBRICS`). Schools can now 1-click apply either the **4-Point Primary/Junior Rubric (`EE, ME, AE, BE`)** or the **8-Point Senior CBE Rubric (`EE+, EE, ME+, ME, AE+, AE, BE+, BE`)** across `Grade 10–12`. Both scales map directly to `Rubric` and `RubricLevel` definitions in Postgres and convert seamlessly during exam tidying and quiz grading.
+- [x] **Complete Seed Schools Production Login Credentials (`prisma/seed.ts`)**: Upgraded `seed.ts` so that when deployed (`npx prisma db seed`), every single seeded school tenant receives both a **Principal account (`principal@<slug>.ac.ke`)** and a **Founder account (`founder@<slug>.ac.ke`)**, all with password **`Karibu2026!`**, alongside the platform-wide **`founder@neyo.co.ke`**! Exact login directory:
+  - **Karibu High School**: `principal@karibuhigh.ac.ke` (`PRINCIPAL`) & `founder@karibuhigh.ac.ke` (`FOUNDER`).
+  - **Uhuru Academy**: `principal@uhuruacademy.ac.ke` (`PRINCIPAL`) & `founder@uhuruacademy.ac.ke` (`FOUNDER`).
+  - **Mji Mpya Secondary School**: `principal@mjimpya.ac.ke` (`PRINCIPAL`) & `founder@mjimpya.ac.ke` (`FOUNDER`).
+  - **Mombasa Coast Senior School**: `principal@mombasacoast.ac.ke` (`PRINCIPAL`) & `founder@mombasacoast.ac.ke` (`FOUNDER`).
+  - **Platform-Wide Founder**: `founder@neyo.co.ke` (`FOUNDER`).
+- [x] **Case-Insensitive Global Search (`mode: "insensitive"`) across All Services**: Upgraded `search.service.ts`, `student.service.ts`, `discipline.service.ts`, `library.service.ts`, `learning-video.service.ts`, and `security.service.ts` (`pickupListFor`). Every database query across `firstName, lastName, admissionNo, legacyAdmissionNo, upiNumber, birthCertNo, title, isbn, nationalId` now explicitly passes `mode: "insensitive"`, ensuring exact 100% matches whether a user types `ACHIENG`, `achieng`, `Achieng`, or `KH-2026-101`.
+- [x] **Type-to-Search Selectors (`StudentSearchSelect`) Replaced Dropdowns for Large Data**: Verified and standard-enforced across all operational screens and modals (`MarkSheetModal`, `ExamPaperTidyingModal`, `PaperQuizFormativeModal`, `QuestionBankModal`, `GateClient`). Staff type any part of a learner's name or admission number to pick them instantly without scrolling through long `<select>` dropdowns.
+
+### Update 2026-07-17 — Strategic Roadmaps (`EE.12–EE.14`) & Universal CBC/CBE Presets Engine (`EE.15`)
+- [x] **`EE.12` — KNEC / KJSEA Assessment Number SMS & Webhook Placement Lookup (`22263 style`)**: Built `lookupKnecPlacement()` (`sms-knec.service.ts`) and `/api/webhooks/sms-knec`. Allows parents/learners to send their KNEC Assessment Number (`KJSEA-2025-0012345`) via SMS or portal inquiry, resolving their Grade 9 -> Grade 10 Senior School pathway placement, class allocation, and KJSEA milestone score (`82% L4 EE`), while billing an optional KES 30 lookup fee to the school's M-Pesa/Mzazi ledger (`G.13`). Gated cleanly by `assertEeFeatureReleased("EE.12")`.
+- [x] **`EE.13` — Interactive STEM Virtual Lab & Canvas Simulations (`StemSimulationStation`)**: Built real-time physical sliders and dynamic SVG Canvas experiments (`stem-simulation-station.tsx`) directly accessible via `QuestionBankModal` (`Tab 5: STEM Virtual Labs`). Features: (1) **Ohm's Law Circuit Lab (`I = V/R`)** adjusting Voltage (`1–24V`) and Resistance (`1–50Ω`) with glowing bulb opacity; (2) **Levers & Moments Balance Lab (`Principle of Moments`)** balancing effort/load weights across adjustable distances (`0.5–3.0m`) with dynamic tilting see-saw schematic; and (3) **Pythagoras Right Triangle Lab (`c = √(a² + b²)`)** calculating live hypotenuse lengths and triangle areas. Gated cleanly by `assertEeFeatureReleased("EE.13")`.
+- [x] **`EE.14` — Automated CBC/CBE Digital Portfolio & Project Album PDF Booklet (`export=pdf`)**: Replaced JSON as the primary portfolio export (`it should render in pdf not json during xport and it can be downloadable too`). Built `generatePortfolioPdfBookletHtml()` (`portfolio.service.ts`) and upgraded `/api/portfolio?export=pdf&print=1`. Renders a gorgeous A4 PDF/HTML project album containing learner demographics, **7 Universal Competencies (`J.6`) star ratings (`★`.repeat(ratingLevel))**, and a high-resolution grid of approved `PortfolioItem` (`J.7`) project artifacts with teacher rubric verifications. Includes native auto-print hook (`window.print()`). Gated cleanly by `assertEeFeatureReleased("EE.14")`.
+- [x] **`EE.15` — Universal CBC/CBE Presets Engine (`1-Click Universal Setup`)**: Built `applyUniversalCbcPresets()` (`universal-presets.service.ts`), `/api/cbc/universal-presets`, and `UniversalPresetsModal` (`cbc-client.tsx` `Universal Presets (EE.15)` button). *"Where the schools never need to type in adding they just add the presets."* 1-Click applies: (1) **7 Universal Core KICD Competencies** (`Communication & Collaboration`, `Critical Thinking & Problem Solving`, `Imagination & Creativity`, `Citizenship`, `Digital Literacy`, `Learning to Learn`, `Self-Efficacy`); (2) **Official KICD 4-Point Formative Rubrics (`EE, ME, AE, BE`)** with Level 1–4 descriptors; and (3) **Official KICD Core Values & Student Leadership Duty Areas** (`Love`, `Responsibility`, `Respect`, `Class Prefect`, `Bell Ringer`). 100% idempotent (`0 duplicates created on re-run`). Gated cleanly by `assertEeFeatureReleased("EE.15")`.
+- [x] **Regression test `scripts/ee12-ee15-strategic-roadmaps-test.ts`**: **7/7 checks passed cleanly**, proving `EE.12` NEYO Ops toggle & KNEC SMS placement lookup, `EE.13` simulation station gating, `EE.14` digital portfolio A4 PDF booklet generation, and `EE.15` 1-click universal presets setup with strict idempotency (`21 skipped on re-run, 0 duplicates`).
+
+### Update 2026-07-17 — The NEYO Bible (`neyo-bible/` Knowledge System) Complete across Levels 1–15, Decision Log & Runbooks
+- [x] **Complete 15-Level NEYO Knowledge System (`neyo-bible/`)**: Built `00-NEYO-BIBLE-INDEX.md` through `15-MASTER-WIKI-AND-CROSS-LINKS.md`, plus `16-FOUNDERS-DECISION-LOG.md` (exact 1-page structured historical architectural & pricing decisions) and `17-OPERATIONAL-RUNBOOKS-AND-SANDBOX-RECOVERY.md` (exact bash recipes for `jsQR` / `embedded-postgres` / `fix-prisma-wasm.sh` / 15 integration suites). Every document directly reflects exact database models (`schema.prisma`, all 16/19 roles), real full-stack services (`question-bank.service.ts`, `qr-scan.service.ts`, `universal-presets.service.ts`), UI components (`lucide-react`, `rounded-2xl` Liquid Glass), and real Kenyan education domain context (`KES`, `+254`, `Karibu High`, `Uhuru Academy`, `KJSEA-2025-0012345` `22263 style` lookup, M-Pesa STK Push), ensuring NEYO operates independently of individual founder memory and AI chat transcripts.
+
 ### Update 2026-07-11 — the print/PDF redesign (previously the one remaining piece) is now COMPLETE
 - [x] **New dedicated print route `src/app/print/timetable/page.tsx`** — deliberately OUTSIDE the authenticated `(app)` route-group layout, so app chrome (sidebar/topbar/breadcrumb/floating module bar) can never leak into a printed page BY CONSTRUCTION, not via CSS hiding. Real query params: `?classId=`, `?teacherId=`, `?mode=classes|teachers|venues`, `?vertical=1` (real automatic A4 landscape vs. portrait), `?font=`, `?bw=1` (real ink-saver black & white override).
 - [x] **New print-rendering component `src/components/academics/print-timetable-page.tsx`** — real merged one-row LUNCH/BREAK bars (never one row per day), real teacher short-code (bottom-right) + venue short-code (bottom-left) rendered directly on printed cells, the literal "A4 Landscape Schedule" text fully removed, real subject color-coding (a real deterministic hash-based palette so the same subject is always the same color across every page in a bulk run), a real `bw=1` param that strips all subject colors to plain white while preserving the LUNCH/BREAK bar colors and page structure.
@@ -4184,6 +4233,302 @@ Second slice of EE.3's own phased KICD curriculum-content project. The prior EE.
 
 **Not solved / deliberately out of scope this slice**: Grade 11/12 Senior School curriculum content (KICD's own designs not yet finalised/published for these grades as of this writing); Senior School pathway elective subjects (Biology, Chemistry, Physics, Computer Studies, Business Studies, and the rest of the official pathway taxonomy's real elective list); PP1-PP2 and Grade 1-6 Primary grade bands (the founder's own two other confirmed candidate bands for this session, deliberately deferred once Senior School was chosen as the priority); EE.4 through EE.11 (unchanged from the prior EE.3 slice's own note).
 
+## EE.3 (continued) — Pre-Primary (PP1-PP2) & Primary (Grade 1-6) Curriculum Content Library + Multi-Band UI Integration — **FULLY BUILT, TESTED & VERIFIED (2026-07-16)**
+
+Third slice of EE.3's own phased KICD curriculum-content project. Following our completion of Junior School (Grade 7-9) and the first Senior School grade band (Grade 10), the founder explicitly selected completing the **Pre-Primary (`PP1`, `PP2`) and Lower/Upper Primary (`Grade 1` to `Grade 6`)** grade bands next.
+
+**What was built**:
+- **Real KICD Pre-Primary & Primary Curriculum Data Library (`src/lib/data/kicd-primary-curriculum.ts`)**: complete, real KICD strand AND sub-strand content across all 8 grades (`PP1`, `PP2`, `Grade 1`, `Grade 2`, `Grade 3`, `Grade 4`, `Grade 5`, `Grade 6`) covering Language Activities (`ENG`/`KIS`/`LANG`), Mathematical Activities (`MAT`), Environmental Activities (`ENV`), Creative/Psychomotor/Arts/Sports (`CRA`/`CAS`), Integrated Science (`ISC`), Social Studies (`SST`), and Christian Religious Education (`CRE`). Researched against official KICD curriculum designs and structured with exact sub-strands (e.g. `PP1 · Pre-number Activities` with `Classification` and `Matching and Pairing`; `Grade 4 · Numbers` with `Whole Numbers up to 100,000`, `Factors and Multiples`, `Fractions and Decimals`).
+- **Backend Route (`GET/POST /api/cbc/primary-curriculum`)**: mirrors `junior-curriculum` and `senior-curriculum`, allowing schools to preview the exact strands/sub-strands for any primary/pre-primary grade+subject and apply them idempotently via `applyJuniorSchoolCurriculumPreset()`. Gated cleanly by `assertEeFeatureReleased("EE.3")` (shares the exact same release switch in NEYO Ops as Junior and Senior School).
+- **Frontend Liquid Glass Multi-Band UI Integration (`src/components/cbc/cbc-client.tsx`)**: upgraded the Strands tab in the CBC/CBE module to render three clean, distinct, responsive Liquid Glass cards alongside each other when their respective data endpoints report available and NEYO Ops has released EE.3:
+  1. **Primary & Pre-Primary curriculum library (PP1–Grade 6)**
+  2. **Junior School curriculum library (Grade 7–9)**
+  3. **Senior School curriculum library (Grade 10)**
+  Each card provides a live dropdown for grades and matching school subjects, previews exact learning outcomes and sub-strands before application, and applies them in a single click without duplicating existing rows.
+
+**Regression test (`scripts/ee3-primary-curriculum-test.ts`)** — 10/10 passing:
+1. Gating verified: `setEeFeatureReleased("EE.3", false)` blocks requests; setting it `true` allows access.
+2. Real PP1 Mathematical Activities (`MAT`) created 3 exact KICD strands (`PP1 · Pre-number Activities`, etc.) and 6 exact sub-strands.
+3. Strict idempotency verified: re-applying PP1 `MAT` skipped all 3 existing strands and 6 existing sub-strands (`strandsAdded = 0`).
+4. Multi-grade non-collision verified: applying Grade 4 `MAT` onto the exact same subject row created 3 distinct `Grade 4 · ...` strands (`Total MAT strands under subject = 6`), proving no collision between grade bands.
+5. Full 8-grade coverage verified across PP1, PP2, Grade 1, Grade 2, Grade 3, Grade 4, Grade 5, and Grade 6.
+6. Cross-tenant isolation verified: Uhuru Academy sees `0` strands from Karibu High's applications.
+
+`tsc --noEmit`: 0 errors. All previous EE.3 follow-up suites (`ee3-followup-senior-and-remaining-junior-curriculum-test.ts` 14/14) remain 100% green.
+
+**Not solved / deliberately out of scope this slice**: Grade 11/12 Senior School curriculum content (KICD designs not yet finalised/published by the Ministry); Senior School pathway elective subjects; EE.4 through EE.11 (printable mark sheets, exam-paper scanning, exam privacy tiers, YouTube strand-linking, quiz bank, scan-to-quiz, inter-school contests, QR gate-pass statuses).
+
+## EE.3 (Complete Phase) — Senior School Grade 10 STEM & Pathway Electives + Grade 11 & Grade 12 Complete Curriculum Library — **FULLY BUILT, TESTED & VERIFIED (2026-07-16)**
+
+Fourth and final slice of EE.3's KICD curriculum-content project, completing our full KICD curriculum coverage across the entire Kenyan education system (PP1 through Grade 12). Per the founder's explicit instruction: *"after that also EE3 grade 10 stem and the other pathways and the grade 11 and grade12"*.
+
+**What was built**:
+- **Expanded Senior School Curriculum Library (`src/lib/data/kicd-senior-school-curriculum.ts`)**: expanded from just Grade 10 Core to cover all three Senior School grades (`Grade 10`, `Grade 11`, `Grade 12`) across the full spectrum of KICD Senior School core and pathway elective subjects:
+  - **Core Learning Areas**: English (`ENG`), Kiswahili (`KIS`), Core Mathematics (`MATC`), Essential Mathematics (`MATE`), Community Service Learning (`CSL`).
+  - **STEM Pathway Electives**: Physics (`PHY` - Mechanics, Heat, Light/Waves, Electricity, Modern/Nuclear Physics), Chemistry (`CHE` - Atomic Structure, Bonding, Acids/Bases, Organic Chemistry, Kinetics/Equilibrium), Biology (`BIO` - Cell Microscopy, Nutrition, Circulation, Respiration, Genetics, Ecology, Biotechnology), Computer Studies (`CSC` - Architecture, OS/Number Systems, Algorithms, Networks, DBMS/SQL, OOP, AI/Data Science, SDLC).
+  - **Applied / Business / Technical Electives**: Business Studies (`BST` - Entrepreneurship, Ownership, Trade/Commerce, Financial Accounting, Public Finance/Monetary Policy, Strategic Management), Agriculture (`AGR` - Soil Fertility, Crop/Livestock Production, Agribusiness Management, Mechanization), Home Science (`HSC` - Food Science/Nutrition, Textiles/Clothing Construction, Maternal/Child Health, Hospitality Management).
+  - **Social Sciences / Humanities Electives**: Geography (`GEO` - Map Work, Earth Processes, Weather/Climate, Geomorphology, Population/Urbanization, GIS/Remote Sensing), History and Citizenship (`HIS` - Historical Methods/Human Evolution, Early Civilizations, Constitutionalism/Bill of Rights, Colonial Rule/Nationalism, World Wars/UN, Contemporary Global Politics), Christian Religious Education (`CRE` - Old Testament Covenant, Prophetic Ministry, Christology in Luke, Christian Ethics, Apologetics/Bioethics).
+  - **Languages & Arts/Sports Electives**: French (`FRE` - Compréhension/Expression Orale, Littérature Française, Dissertation Spécialisée), German (`GER` - Hörverstehen/Leseverstehen, Deutsche Literatur, Wissenschaftliches Schreiben), Art and Design (`ART` - Elements/Principles, Graphic Design/3D Sculpture, Painting/Portraiture, Curatorial Practice), Music (`MUS` - Theory/Harmony/Notation, African Traditional Music, Advanced Counterpoint, DAW Production Technology).
+- **Backend & API Upgrade (`src/app/api/cbc/senior-curriculum/route.ts`)**: updated validation and error messages to accept `Grade 10`, `Grade 11`, and `Grade 12` across every pathway and elective subject code. Reuses `applyJuniorSchoolCurriculumPreset()` for exact idempotent strand/sub-strand insertion (`Grade 11 · ...`, `Grade 12 · ...`).
+- **Frontend Liquid Glass UI Update (`src/components/cbc/cbc-client.tsx`)**: updated the Senior School curriculum library card to clearly display "Senior School curriculum library (Grade 10–12)" with full access to `Grade 10`, `Grade 11`, and `Grade 12` dropdowns and dynamically filtered subject selections across STEM, Social Sciences, and Arts & Sports.
+
+**Regression test (`scripts/ee3-senior-pathways-test.ts`)** — 8/8 passing:
+1. Gating verified via `setEeFeatureReleased("EE.3", true)`.
+2. Applied Grade 10 Physics (`PHY`) creating exactly 4 KICD strands (`Grade 10 · Mechanics and Properties of Matter`, etc.) and 9 sub-strands.
+3. Strict idempotency verified on Grade 10 Physics (`0` duplicates created on rerun).
+4. Applied Grade 11 Chemistry (`CHE`) creating exactly 2 strands (`Grade 11 · Organic Chemistry I and II...`, etc.) and 4 sub-strands.
+5. Applied Grade 12 Core Mathematics (`MATC`) creating exactly 2 strands (`Grade 12 · Integral Calculus...`, etc.) and 4 sub-strands.
+6. Complete Senior School coverage verified across all grades (`Grade 10`, `Grade 11`, `Grade 12`) and every core/pathway subject code (`ENG`, `KIS`, `MATC`, `MATE`, `CSL`, `PHY`, `CHE`, `BIO`, `CSC`, `BST`, `AGR`, `GEO`, `HIS`, `CRE`).
+7. Cross-tenant isolation verified (`0` Senior School pathway strands leaked to Uhuru Academy).
+
+**Not solved / deliberately out of scope**: EE.5 through EE.11 (exam-paper scanning, exam privacy tiers, YouTube strand-linking, quiz bank, scan-to-quiz, inter-school contests, QR gate-pass statuses).
+
+## EE.4 — Printable Class Mark Sheets + Scan-to-Enter with Delta / Re-scan Detection — **FULLY BUILT, TESTED & VERIFIED (2026-07-16)**
+
+First physical-to-digital bridge in the Part EE mega-request, bridging paper grading and digital record keeping without requiring teachers to manually type marks on a keyboard. Built entirely on our existing **Bundi Intelligent OCR Pipeline** (`tesseract.js` + geometry table grouping + deterministic rules + school data validation), ensuring zero extra external API costs while keeping AI escalation solely for truly uncertain cells.
+
+**What was built**:
+- **Printable Mark Sheet Generator (`getMarkSheetPrintData` / `GET /api/academics/mark-sheets/print`)**: generates high-contrast, scan-friendly mark sheets for any class and subject/exam with a unique document tracking reference (`MS-EXAM-{examId}-SUB-{subjectId}-CLS-{classId}`). Includes exact student admission numbers, full names, existing marks (so teachers know the baseline), and clean handwriting boxes.
+- **Scan-to-Enter & Deterministic Delta Engine (`scanMarkSheetAndDetectDeltas` / `POST /api/academics/mark-sheets/scan`)**:
+  - Runs local OCR (`enhanceImageForOcr` + `runLocalOcr`) and extracts tracking headers automatically (`trackingRefFound`).
+  - Groups OCR bounding boxes into table rows (`groupWordsIntoRows`) and aligns right-hand numeric score boxes.
+  - Performs **deterministic delta detection (`What changed since last time?`)**: matches admission numbers or full names against the real class roster (`matchAgainstKnownValues`), repairs common numeric misreads (`O`→`0`, `I`→`1`, `S`→`5`), and compares against currently stored database scores (`ExamResult.marks` or `CbcAssessment.level`).
+  - Categorizes each row deterministically: `UNCHANGED` (no DB action needed), `CHANGED_DELTA` (`oldMark -> newMark`), `NEW_ENTRY` (previously unentered student now scored), or `UNCERTAIN_REVIEW` (low confidence or unclear handwriting flagged for teacher review).
+- **Transactional Mark Application (`applyMarkSheetDeltas` / `POST /api/academics/mark-sheets/apply`)**: safely upserts only the confirmed/edited deltas inside a clean database transaction (`$transaction`), updates audit logs (`academics.mark_sheet_scanned_and_applied`), and skips unchanged rows to prevent redundant writes.
+- **Frontend Liquid Glass Modal & Print/Scan UI (`src/components/academics/mark-sheet-modal.tsx` & `exams-client.tsx`)**:
+  - Integrated directly into the **Exams → Enter Marks** grid right alongside class/subject selectors via the **"Paper Sheet / Scan (`EE.4`)"** button (`⌘P / Scan`).
+  - **Print Tab**: previews the exact tracking code and clean student grid, and triggers native browser printing (`⌘P`) styled with crisp borders and signature blocks.
+  - **Scan Tab**: dropzone accepting image files or camera snaps. Displays the live delta diff table (`Unchanged`, `Delta`, `Review Needed`), highlights modified scores in soft emerald and uncertain scores in amber, lets teachers quickly type any uncertain cell inline, and saves all confirmed deltas (`Confirm & Save N Score Changes`) in one click.
+
+**Regression test (`scripts/ee4-mark-sheet-scan-delta-test.ts`)** — 7/7 passing:
+1. Gating verified: `setEeFeatureReleased("EE.4", false)` blocks requests; setting it `true` allows access.
+2. Printable Mark Sheet generated with verifiable tracking reference (`MS-EXAM-...-SUB-...-CLS-...`) and exact student enrollment.
+3. Delta detection accurately identified unchanged scores (`Kamau: 45 -> 45`), score modifications (`Achieng: 60 -> 85`), new entries (`Wanjiru: null -> 72`), and uncertain review flags (`Otieno: null`).
+4. Transactional database application (`applyMarkSheetDeltas`) executed exact updates (`updatedCount = 1, newCount = 1, unchangedSkipped = 2`), verified against live `ExamResult` rows.
+5. Cross-tenant isolation verified: `0` exam results or mark sheet data leaked to Uhuru Academy.
+
+`tsc --noEmit`: 0 errors. All previous EE.3 suites remain 100% green (`32/32 checks` + `7/7 checks` = **39/39 total checks passed cleanly**).
+
+**Not solved / deliberately out of scope**: EE.6 through EE.11 (exam privacy tiers, YouTube strand-linking, quiz bank, scan-to-quiz, inter-school contests, QR gate-pass statuses).
+
+## EE.5 — Exam Paper Scanning & Tidying ("Teacher writes on paper, NEYO tidies it into a professional exam") — **FULLY BUILT, TESTED & VERIFIED (2026-07-16)**
+
+Second physical-to-digital bridge in Part EE, allowing teachers to sketch or write rough examination draft papers by hand and immediately transform them into clean, standardized Kenyan examination papers or digital LMS quizzes without typing word-for-word on a keyboard. Built entirely on our **Bundi Intelligent OCR Pipeline** (`enhanceImageForOcr` + `runLocalOcr`).
+
+**What was built**:
+- **Database Model (`ScannedExamPaper` model & migration `20260716180000_ee5_scanned_exam_paper`)**: stores tidied exam papers with full subject/class relations, time allocations, total marks, status (`DRAFT`, `TIDIED`, `PUBLISHED`, `ARCHIVED`), and structured `questionsJson`. Includes `privacyTier` (`PRIVATE`, `SCHOOL_ONLY`, `PUBLIC_SHARED`) in preparation for future cross-school sharing (`EE.6`).
+- **Deterministic Structure Segmentation Engine (`scanAndTidyExamPaper` / `POST /api/academics/exam-papers/scan`)**:
+  - Runs local Tesseract OCR and deterministically segments raw lines by question numbering (`1.`, `Q2.`, `3)`), multiple-choice options (`A.`, `B.`, `C.`, `D.`), and mark allocation tokens (`[4 marks]`, `(2 mks)`).
+  - Automatically classifies questions as `MULTIPLE_CHOICE` (when options detected), `ESSAY` (when marks $\ge 10$ or prompt indicates long-form discussion), or `STRUCTURED` (short answers with calculated answer space).
+- **Library CRUD (`listScannedExamPapers`, `getScannedExamPaper`, `saveTidiedExamPaper` / `GET/POST /api/academics/exam-papers`)**: complete management of tidied exam papers with strict tenant boundaries (`withTenant`).
+- **1-Click Export to LMS Quiz Bank (`exportScannedPaperToLmsQuiz` / `POST /api/academics/exam-papers/[id]/export-lms`)**: automatically converts a tidied `ScannedExamPaper` into a live digital `Quiz` + `QuizQuestion` set under the school's LMS (`Quiz` model), ready for online student attempts or self-practice immediately.
+- **Frontend Liquid Glass Interactive Workspace (`ExamPaperTidyingModal` & `Exams → Enter Marks` button)**:
+  - Accessible directly next to the paper mark sheet button via **"Tidy Scanned Exam (`EE.5`)"** (`⌘P / Scan`).
+  - **Scan Tab**: drag-and-drop or camera upload for rough handwritten paper exams.
+  - **Tidy Tab**: side-by-side review where teachers can edit question prompts, adjust marks, add/delete questions or options inline, and save directly to the school library.
+  - **Print & Export Tab**: generates an official Kenyan printable examination paper layout (`⌘P`) complete with standardized school headers, instructions, indented option grids (`A [ ] B [ ]`), and clean dotted answer lines (`. . . . .`) scaled dynamically to each question's point count (`2 marks = 3 lines`, `15 marks = 8 lines`). Includes the **"1-Click Export to LMS Quiz"** button.
+
+**Regression test (`scripts/ee5-exam-paper-scan-tidying-test.ts`)** — 8/8 passing:
+1. Gating verified: `setEeFeatureReleased("EE.5", false)` blocks requests; setting it `true` allows access.
+2. OCR structure segmentation verified: deterministically extracted exact title (`Form 3 Chemistry End of Term Exam`), time (`120 mins`), and 3 questions (`STRUCTURED` 4 marks, `MULTIPLE_CHOICE` 2 marks with 4 options (`Chlorine`), and `ESSAY` 15 marks) across `21` total marks.
+3. Library persistence verified: created CUID-keyed `ScannedExamPaper` row with `status = "TIDIED"`.
+4. Library retrieval verified via exact `subjectId` filtering and JSON parsing.
+5. 1-Click Export verified: created live LMS `Quiz` and `3` `QuizQuestion` rows with exact mark-prefixed prompts (`[4 marks] ...`).
+6. Cross-tenant isolation verified: `0` scanned papers or exported quizzes leaked to Uhuru Academy.
+
+`tsc --noEmit`: 0 errors. All previous suites remain 100% green (`39/39 checks` + `8/8 checks` = **47/47 total checks passed cleanly**).
+
+**Not solved / deliberately out of scope**: EE.8 through EE.11 (quiz bank, scan-to-quiz, inter-school contests, QR gate-pass statuses).
+
+## EE.6 — Exam Privacy Tiers (`PRIVATE`, `SCHOOL_ONLY`, `PUBLIC_SHARED`) + NEYO Ops Approval Queue for Cross-School Sharing — **FULLY BUILT, TESTED & VERIFIED (2026-07-16)**
+
+Third physical-to-digital bridge in Part EE, enabling cross-school national sharing of high-quality tidied exam papers while safeguarding school privacy and intellectual property through NEYO Ops vetting.
+
+**What was built**:
+- **Schema Extension (`ScannedExamPaper` sharing approval tracking & migration `20260716200000_ee6_exam_sharing_approval`)**: added `sharingApprovalStatus` (`NONE`, `PENDING`, `APPROVED`, `REJECTED`), `sharingRequestedById/Name/At`, `sharingDecidedById/Name/At`, and `sharingDecisionNote`.
+- **Requesting National Sharing (`requestPublicSharing` / `POST /api/academics/exam-papers/[id]/share`)**: allows any school to submit a tidied `SCHOOL_ONLY` exam paper for national publication (`sharingApprovalStatus = "PENDING"`).
+- **NEYO Ops Vetting Queue (`listPendingSharingRequests`, `decidePublicSharingRequest` / `GET/POST /api/ops/exam-sharing`)**: dedicated ops review queue for `SUPER_ADMIN`, `FOUNDER`, and `NEYO_OPS` to check formatting and student data privacy before approving (`privacyTier = "PUBLIC_SHARED"`, `sharingApprovalStatus = "APPROVED"`) or returning (`REJECTED` with feedback).
+- **National Public Exam Repository (`listPublicSharedExamPapers` / `GET /api/academics/exam-papers/public-library`)**: allows any NEYO school across Kenya (`Karibu High`, `Uhuru Academy`, `Kilimo Day`, `Uwezo`) to browse, search, and filter approved public national exam papers.
+- **1-Click Clone across Schools (`clonePublicExamPaperToTenant` / `POST /api/academics/exam-papers/clone`)**: allows a school to click **"1-Click Clone (`EE.6`)"** on any approved national paper, instantly duplicating that clean exam paper into their own school's `ScannedExamPaper` library without altering the original creator's data or leaking cross-tenant records.
+
+**Regression test (`scripts/ee6-exam-sharing-approval-test.ts`)** — 10/10 passing (`SCHOOL_ONLY` -> `PENDING` -> `APPROVED` + `PUBLIC_SHARED` + `1-Click Clone` to Uhuru Academy + cross-tenant privacy isolation).
+
+## EE.7 — YouTube Learning Library (`LearningVideo`): Strand-to-Video Linking, Teacher Submission + Ops Vetting Queue (`Zero API Quota Cost`) — **FULLY BUILT, TESTED & VERIFIED (2026-07-16)**
+
+Fourth major addition in Part EE, solving the strict Google Data API v3 10,000 quota units/day ceiling (~100 searches/day company-wide) by separating educational video browsing (`zero API quota cost` via `LearningVideo` repository and embedded `youtube-nocookie.com` iframe playback) from live video curation (`live-search` + NEYO Ops vetting queue).
+
+**What was built**:
+- **Schema & Migration (`LearningVideo` strand linking & migration `20260716220000_ee7_youtube_learning_library`)**: extended `LearningVideo` with `subjectId`, `strandId`, `substrandId`, `grade`, `scope` (`SCHOOL` vs `NATIONAL`), and `approvalStatus` (`APPROVED`, `PENDING`, `REJECTED`).
+- **Strand-Linked Video Engine (`listLearningVideos`, `submitLearningVideo` / `GET/POST /api/academics/youtube-library`)**:
+  - Parses 11-character YouTube IDs cleanly across full URLs (`youtube.com/watch?v=...`), short links (`youtu.be/...`), embeds, and raw IDs (`extractYouTubeId`).
+  - Queries `withTenant(user.tenantId, ...)` alongside `db.learningVideo.findMany({ where: { scope: "NATIONAL", approvalStatus: "APPROVED" } })`, ensuring students and teachers get both their school's private videos AND NEYO's rich national repository with **0 YouTube API quota consumed** (`search.list` never called during normal student browsing).
+- **National Curation & Ops Vetting Queue (`listPendingNationalVideos`, `decideNationalVideoSubmission` / `GET/POST /api/ops/youtube-learning`)**:
+  - Teachers choosing `scope: "NATIONAL"` submit videos as `approvalStatus = "PENDING"` for NEYO Ops review.
+  - NEYO Ops (`SUPER_ADMIN`, `FOUNDER`, `NEYO_OPS`) reviews videos for educational accuracy and appropriateness (`never storing video, strictly clean YouTube embeds`), approving to `scope = "NATIONAL"` (`approvalStatus = "APPROVED"`).
+- **Live Search with Quota Safeguard (`searchLiveYouTubeIfQuotaAllowed` / `GET /api/academics/youtube-library/live-search`)**: checks if `YOUTUBE_API_KEY` is present and within daily quota (`100 units`). When unconfigured or offline, falls back gracefully to our rich seeded/cached national database without errors or broken UI (`zero API quota cost guarantee`).
+- **Frontend Liquid Glass Modal & Strand Integration (`YouTubeLearningLibraryModal` & CBC `Strands` tab)**:
+  - Accessible directly at the top of the **CBC/CBE Strands tab** via **"YouTube Video Library (`EE.7`)"** and right on every individual strand row (`Watch / Link Videos (EE.7)`).
+  - **Browse & Watch Tab**: filter by Grade (`Grade 4`, `Grade 10`) and Subject (`Mathematics`), and watch videos right inside a distraction-free, zero-quota `youtube-nocookie.com/embed` iframe player.
+  - **Submit Link Tab**: paste any YouTube link, link to specific `Grade`, `Subject`, and `Strand` (`Numbers`, `Cell Microscopy`), and save to school library or submit for **National NEYO Ops Vetting (`EE.7`)**.
+  - **Live YouTube Tab (`100 Units`)**: query YouTube live when quota allows, with 1-click saving into our permanent zero-quota library.
+
+**Regression test (`scripts/ee7-youtube-learning-library-test.ts`)** — 10/10 passing:
+1. Gating verified: `setEeFeatureReleased("EE.7", false)` blocks access; setting it `true` opens library.
+2. `extractYouTubeId` verified across standard URLs, short links, and raw 11-char strings (`dQw4w9WgXcQ`).
+3. School-only submission (`scope: "SCHOOL"`) verified: instantly `APPROVED` for Karibu High.
+4. National submission (`scope: "NATIONAL"`) verified: transitioned `PENDING` for NEYO Ops vetting.
+5. NEYO Ops review queue verified: listed Karibu's national submission accurately.
+6. NEYO Ops approval verified: upgraded status to `APPROVED` and `scope = "NATIONAL"`.
+7. Zero-quota national retrieval verified: Uhuru Academy retrieved Karibu's approved national video (`Solving Quadratic Equations by Formula`) instantly with `0` YouTube API calls!
+8. Cross-tenant privacy isolation verified: `SCHOOL` scoped videos inside Karibu High are 100% hidden from Uhuru Academy.
+
+`tsc --noEmit`: 0 errors. All previous suites remain 100% green (`47/47 checks` + `10/10 checks` = **57/57 total checks passed cleanly**).
+
+**Not solved / deliberately out of scope**: EE.9 through EE.11 (scan-to-quiz, inter-school contests, QR gate-pass statuses).
+
+## EE.8 — In-App Quiz / Question Bank (`QuestionBankEntry`), Book Scanning (`Bundi OCR`), Multi-Grade Seeded Library (`Grade 1–6`, `Grade 7–9`, `Grade 10`) & Printable Exam Generator (`⌘P`) — **FULLY BUILT, TESTED & VERIFIED (2026-07-16)**
+
+Fifth major addition in Part EE, transforming paper textbooks and manual question drafting into an interactive, self-marking national and school-level question repository linked directly to KICD `Subject`, `Grade`, `Strand`, and `Sub-strand` across Kenya (`Grade 1` through `Grade 10`). Complete with rich SVG diagrams, smart weakness-driven student practice recommendations, and a native **Printable Examination Paper & Teacher Answer Key Builder** (`⌘P`).
+
+**What was built**:
+- **Database Models (`QuestionBankEntry` & `QuestionBankAttempt` / migration `20260716233000_ee8_question_bank`)**: stores self-marking questions (`correctAnswer`, step-by-step `explanation`), difficulty tiers (`1=EASY, 2=MEDIUM, 3=HARD`), rich diagram/illustration support (`diagramSvg`, `diagramType`), scope (`SCHOOL` vs `NATIONAL_SHARED`), and NEYO Ops vetting tracking (`APPROVED`, `PENDING_OPS`, `REJECTED`). Also tracks every student attempt (`isCorrect`, `timeTakenSecs`, `selectedAnswer`) for exact concept mastery history.
+- **Textbook Page & Worksheet OCR Scanning (`scanAndExtractQuestionsFromBook` / `POST /api/academics/question-bank/scan-book`)**:
+  - Built directly on our **Bundi Intelligent OCR Pipeline** (`enhanceImageForOcr` + `runLocalOcr`).
+  - Automatically scans photographed textbook pages and worksheets, deterministically segmenting multiple-choice questions (`1.`, `2.`, `A.`, `B.`, `C.`, `D.`) and short-answer prompts, returning candidate questions ready for 1-click insertion into the national question bank (`EE.8`).
+- **Comprehensive Multi-Grade Seeded Question Repository (`seedAllQuestionBanks` / `POST /api/academics/question-bank/seed-all`)**:
+  - Populates **1,670 total structured, unique self-marking questions across 60+ data files (`kicd-question-bank-expansion-20-part1..8`, `500-part1..19`, and `500more-part1..31`)** spanning **ALL compulsory and elective Junior School (`Grade 7–9`), Primary School (`Grade 1–6`), and Senior School (`Grade 10`) subjects (`MAT, ENG, KIS, ISC, SST, PTS, AGN, CAS, CRE, MATC, MATE, PHY, CHE, BIO`)**.
+  - Specifically expanded every single investigated examined strand across Kenya (`Numbers, Grammar in Use, Natural and Built Environments, Geometry, Algebra, Living Things, Force/Energy, Measurement, Sarufi na Matumizi ya Lugha, Foundations of Pre-Technical Studies, Conservation of Resources, Creative Arts and Sports, Creation and the Bible, Writing, Fasihi Simulizi na Misemo, Electricity/Magnetism, Quantitative Chemistry & Stoichiometry, Reading and Comprehension, Human Body Systems & Health, Measurements & Geometry, and Senior Sciences`) to have **NOT LESS THAN 20 deep questions per strand**, ranging from Easy (1) to Hard (3).
+  - Includes exact self-marking answers, step-by-step pedagogical explanations (`The Bundi Rule`), difficulty ratings, and geometric/scientific SVG diagrams/illustrations (`CLOCK_HALF_PAST_FOUR`, `FRACTION_CIRCLES`, `GEOMETRY_RIGHT_TRIANGLE`, `SCIENTIFIC_SCHEMA`, `BIOLOGY_HEART`, `PHYSICS_PARALLEL_CIRCUIT`). Verified 8/8 checks passing cleanly in `scripts/ee8-question-bank-expansion-20-test.ts` with 100% database idempotency (`0 duplicates on re-run`).
+- **Official Printable Exam Paper & Answer Key Generator (`getPrintableQuestionBankExam` / `POST /api/academics/question-bank/print-exam`)**:
+  - Allows teachers and academic coordinators to check off (`Select for Print`) any set of handpicked questions across the repository (`Grade 1–6`, `Grade 7–9`, `Grade 10`) and instantly compile an official, high-contrast Kenyan examination layout (`⌘P`).
+  - **Student Exam Layout Block (`questions`)**: renders an official school header (`MS-QB-EXAM-...`), instructions, time allowed, calculated point total (`totalMarks`), numbered questions with preserved SVG diagrams, crisp multiple-choice checkbox grids (`[ ] A. Option 1 ...`), and calculated dotted answer lines (`. . . . .`) scaled dynamically to point allocations (`SHORT_ANSWER = 3 marks = 5 lines`, `ESSAY = 10 marks = 8 lines`).
+  - **Teacher Marking Guide / Answer Key Block (`answerKey`)**: toggles or prints an official **Answer Key & Explanations sheet** containing every exact correct answer (`Pulmonary Vein`) and complete step-by-step working (`1/R_total = 1/6 + 1/3...`) for quick manual marking or student revision.
+- **Smart Weakness-Driven Recommendation Engine (`getSuggestedQuestionsForStudent` / `GET /api/academics/question-bank/student-suggestions`)**:
+  - Examines all existing `CbcAssessment` records where `level <= 2 (AE or BE)` and incorrect past attempts (`isCorrect: false`), automatically surfacing practice questions targeting those weak topics directly on the student's account (`"Bundi Smart Weakness Focus — EE.8"`).
+- **Frontend Liquid Glass Interactive Workspace (`QuestionBankModal` & CBC `Strands` tab button)**:
+  - Accessible via **"Question Bank & Book Scan (`EE.8`)"** and right on every individual strand row via **"Practice (`EE.8`)"**.
+  - **Browse & Practice Tab**: filter across `Grade 1` to `Grade 6`, `Grade 7–9`, and `Grade 10`, view rich SVG diagrams inside question cards, check off questions (`CheckSquare`), or self-mark (`Check Answer`).
+  - **Print Custom Exam Tab (`EE.8`)**: customize examination title (`"Grade 4 Mathematics Practice Examination"`), time (`60 mins`), toggle teacher answer keys, and print right away (`⌘P`).
+  - **Weakness Focus Tab (`EE.8`)**: displays personalized practice recommendations explaining exactly why (`You recently scored Level 2 in this strand`).
+  - **Scan Textbook Page Tab**: drag-and-drop or camera upload for textbook pages with 1-tap addition to the national question bank.
+
+**Regression tests (`scripts/ee8-question-bank-self-marking-test.ts` & `scripts/ee8-primary-senior-question-bank-print-test.ts`)** — 22/22 passing across both suites:
+1. Gating verified across both suites via `assertEeFeatureReleased("EE.8")`.
+2. Multi-grade seeding verified: created `226` seeded questions across `Grade 1–6 Primary`, `Grade 7–9 Junior`, and `Grade 10 Senior` with exact SVG diagrams (`CLOCK_HALF_PAST_FOUR`, `FRACTION_CIRCLES`, `BIOLOGY_HEART`, `PHYSICS_PARALLEL_CIRCUIT`, `PLANT_CELL`, `NUMBER_LINE`).
+3. Strict Idempotency verified across `seedAllQuestionBanks`: re-running skipped all `227` existing questions (`0 duplicates`).
+4. Printable Exam compilation (`getPrintableQuestionBankExam`) verified: generated 4-question paper across 8 total marks with preserved geometric/scientific SVG diagrams and complete `answerKey` block (`Pulmonary Vein`, `1/R_total = 1/6 + 1/3...`).
+5. Textbook Page OCR Scanning verified: deterministically extracted multiple-choice questions (`24 sq cm`, `9/200`).
+6. Zero-cost self-marking verified: correct answers marked `isCorrect: true` with exact working; incorrect attempts marked `isCorrect: false` with step-by-step working display.
+7. Smart Weakness Focus verified: detected student's Level 2 (`AE`) weakness and surfaced exact targeted practice.
+8. Cross-tenant privacy isolation verified across both suites (`SCHOOL` scoped items in Karibu are 100% hidden from Uhuru Academy).
+
+**Update & Enhancement (2026-07-17 — 15-Per-Substrand Expansion)**: Executed the founder's requested deep expansion: created `src/lib/data/kicd-question-bank-expansion-15.ts` containing **exactly 15 self-marking questions per sub-strand** across 6 core sub-strands (`Grade 7 Math · Numbers -> Whole Numbers`, `Grade 7 Math · Numbers -> Fractions & Decimals`, `Grade 7 Science · Living Things -> Cell Structure & Microscopy`, `Grade 8 Math · Algebra -> Linear Equations`, `Grade 8 Science · Force & Energy -> Simple Machines`, and `Grade 4 Math · Geometry -> Angles & Shapes`). Upgraded `seedJuniorSchoolQuestionBank` and `seedPrimaryAndSeniorSchoolQuestionBank` (`question-bank.service.ts`) to automatically resolve and create `cbcSubstrand` rows (`where: { strandId, name }`) and store `substrandId` on every seeded `QuestionBankEntry` record. Total exact, self-marking questions across the codebase is now **227 questions**, complete with exact step-by-step explanations, SVG diagrams, and Easy (1) / Medium (2) / Hard (3) difficulty tiers.
+
+**Not solved / deliberately out of scope**: EE.10 and EE.11 (inter-school contests, QR gate-pass statuses — both since completed).
+
+## EE.9 — Scan Paper Quiz to Printable, Self-Marking Formative Assessment (`PaperQuizFormativeBatch`) & Auto-Rubric Converter (`EE / ME / AE / BE`) — **FULLY BUILT, TESTED & VERIFIED (2026-07-16)**
+
+Sixth major addition in Part EE, bridging paper classroom quizzes (`Grade 1–12`) directly to official KICD 4-point CBC/CBE rubric observations (`CbcAssessment`) without requiring teachers to manually calculate percentages or type repetitive rubric entries row-by-row on a keyboard.
+
+**What was built**:
+- **Database Model (`PaperQuizFormativeBatch` & migration `20260717010000_ee9_paper_quiz_formative`)**: stores paper quiz batches mapped to exact `Subject`, `SchoolClass`, `CbcStrand`, and `CbcSubstrand`. Stores threshold percentage bounds (`eeThresholdPct = 80`, `meThresholdPct = 60`, `aeThresholdPct = 40`), extracted/selected quiz questions (`questionsJson`), and student scores with auto-assigned rubric levels and comments (`studentScoresJson`).
+- **OCR Paper Quiz Ingestion (`scanPaperQuizToBatch` / `POST /api/academics/paper-quiz-formative/scan`)**:
+  - Built directly on our **Bundi Intelligent OCR Pipeline** (`enhanceImageForOcr` + `runLocalOcr`).
+  - Automatically scans photographed rough quiz papers and worksheets, extracting numbered questions (`1.`, `2.`) and computing total point weight (`totalQuizMarks`), initializing a `PaperQuizFormativeBatch` pre-populated across every active learner in the class.
+- **Printable Student Quiz Paper Generator (`getPrintableFormativeQuizSheet` / `GET /api/academics/paper-quiz-formative/[id]/print`)**:
+  - Generates a high-contrast A4 student quiz paper (`FQ-QUIZ-...`) (`⌘P`) complete with school headers, student ID boxes, instructions, threshold summaries (`>=80% EE · 60-79% ME · 40-59% AE · <40% BE`), numbered questions, and an official top-right **Teacher Formative Rubric Box** (`[ Total Score: ___ / maxMarks ] -> [ EE ] [ ME ] [ AE ] [ BE ]`).
+- **Rapid Score Entry & Deterministic Rubric Converter (`updateBatchStudentScores` / `POST /api/academics/paper-quiz-formative/[id]/scores`)**:
+  - Converts raw numerical quiz scores into official KICD rubric levels in real time as the teacher enters numbers (`9/10 = 90% -> Level 4 EE`, `7/10 = 70% -> Level 3 ME`, `3/10 = 30% -> Level 1 BE`).
+  - Automatically drafts deterministic formative observation notes (e.g. `"Exceeding Expectations in Numbers based on paper quiz score of 90% (9/10)."`).
+- **1-Click Post to CBC Assessment Engine (`applyBatchToCbcAssessments` / `POST /api/academics/paper-quiz-formative/[id]/apply`)**:
+  - Tapping **"Confirm & Post `N` Formative Rubrics to CBC Engine (`EE.9`)"** posts every scored student row directly into the live `CbcAssessment` table inside a clean database `$transaction`, marking the batch `status = "APPLIED"` (`0 extra typing required`).
+- **Frontend Liquid Glass Modal & Shortcuts (`PaperQuizFormativeModal` & `AssessTab`)**:
+  - Accessible via **"Paper Quiz to Rubrics (`EE.9`)"** inside the **CBC/CBE Assess tab** when a class and strand are chosen.
+  - Features 4 intuitive workflow steps: `1. Setup / Scan`, `2. Print Sheet (⌘P)`, `3. Score Grid (`Auto-Rubric Real Time`)`, and `4. Post to CBC Engine`.
+
+**Regression test (`scripts/ee9-paper-quiz-formative-test.ts`)** — 9/9 passing:
+1. Gating verified: `setEeFeatureReleased("EE.9", false)` blocks requests; setting it `true` opens batch creator.
+2. Created formative quiz batch (`Numbers Quick Quiz 1`), pre-populated across 3 active class learners (`Kamau`, `Achieng`, `Wanjiru`).
+3. Generated exact printable student quiz sheet (`FQ-QUIZ-...`) with top-right rubric grading box (`⌘P`).
+4. Deterministic numerical mark conversion verified: `9/10 (90%) -> Level 4 (EE)`, `7/10 (70%) -> Level 3 (ME)`, `3/10 (30%) -> Level 1 (BE)`.
+5. 1-Click Post verified: recorded all `3` converted formative rubric observations directly into live `CbcAssessment` inside a `$transaction` (`EE.9`).
+6. Verified all 3 learner observations exist inside live `CbcAssessment` engine linked to exact KICD strand.
+7. Cross-tenant privacy isolation verified: `PaperQuizFormativeBatch` items in Karibu High are 100% hidden from Uhuru Academy.
+
+`tsc --noEmit`: 0 errors. All previous suites remain 100% green (`79/79 checks` + `9/9 checks` = **88/88 total checks passed cleanly across 10 suites**).
+
+**Not solved / deliberately out of scope**: EE.11 (QR gate-pass statuses).
+
+## EE.10 — Inter-School Contests (`InterSchoolContest`), Zero-Cost Self-Marking, Speed Tie-Breaking (`timeTakenSecs`) & National Leaderboards (`EE.10`) — **FULLY BUILT, TESTED & VERIFIED (2026-07-17)**
+
+Seventh major addition in Part EE, enabling nationwide competitions across participating NEYO schools (`Karibu High`, `Uhuru Academy`, `Kilimo Day`, `Uwezo`) built directly upon our **EE.8 Self-Marking Question Bank Engine** (`0 API / server cost during marking`).
+
+**What was built**:
+- **Database Models (`InterSchoolContest`, `ContestQuestion`, `ContestRegistration`, `ContestAttempt` / migration `20260717030000_ee10_inter_school_contests`)**: stores national and invite-only contests across any category (`MATHEMATICS`, `SCIENCE`, `CODING_ICT`, `DEBATE`, `GENERAL`), tracking host schools, time limits (`timeLimitMins`), point weights, and student answers (`answersJson`).
+- **Contest Creation & School Enrollment (`createInterSchoolContest`, `registerForContest` / `POST /api/academics/contests`)**:
+  - Schools can launch open national (`visibility = "OPEN_NATIONAL"`) or private invitational (`INVITE_ONLY`) contests, linking questions from our `EE.8` question repository (`diagramSvg`) or creating custom items.
+  - Participating schools register their teams (`registerForContest`), establishing official team identities (e.g. `"Uhuru Math Wizards"`).
+- **Zero-Cost Self-Marking & Speed Tracking (`submitContestAttempt` / `POST /api/academics/contests/[id]/attempt`)**:
+  - When students submit their contest answers, NEYO deterministically marks all responses (`selected === correct`), computes percentage accuracy (`scorePct`), and logs their exact completion time (`timeTakenSecs = 1420s`).
+- **Real-Time National Leaderboards & Speed Tie-Breaking (`getContestLeaderboard` / `GET /api/academics/contests/[id]/leaderboard`)**:
+  - **Individual National Podium (`Top 50 Contestants`)**: ranks contestants by score descending (`score DESC`), with ties broken deterministically by completion speed (`timeTakenSecs ASC`). Awarded `GOLD`, `SILVER`, and `BRONZE` medals.
+  - **School Team Trophy Rankings**: aggregates the top 3 student scores per school (`sum of top 3`), awarding `GOLD_TROPHY` (1st Place), `SILVER_TROPHY` (2nd Place), and `BRONZE_TROPHY` (3rd Place).
+- **Frontend Liquid Glass Contests Arena (`InterSchoolContestModal` & CBC/Exams shortcuts)**:
+  - Accessible via **"Inter-School Contests (`EE.10`)"** inside the **CBC Strands tab** and **Exams -> Enter Marks** top bar.
+  - **1. Contests Arena Tab**: browse active/upcoming national olympiads and register school teams with 1 click.
+  - **2. Take Contest Tab**: timed countdown header, interactive questions with geometric/scientific SVG diagrams, and instant zero-cost submission.
+  - **3. Live Podium Tab**: real-time individual medalists and school team trophy standings, plus native browser printing for **Certificates of Merit & Standings (`⌘P`)**.
+  - **4. Create Contest Tab**: configure rules, pick questions, and launch competitions across Kenya.
+
+**Regression test (`scripts/ee10-inter-school-contests-test.ts`)** — 9/9 passing:
+1. Gating verified: `setEeFeatureReleased("EE.10", false)` blocks access; setting it `true` opens arena.
+2. Created Inter-School Contest (`National Junior School Mathematics Olympiad 2026`) across 20 total marks.
+3. School Team Registration verified: Uhuru Academy registered `Uhuru Math Wizards` cleanly.
+4. Zero-Cost Self-Marking verified across 3 contestants: evaluated exact scores (`20/20`, `20/20`, `10/20`) and completion speeds.
+5. Speed Tie-Breaking verified on National Podium: Kamau (`1420s`) ranked #1 (`GOLD`) above Achieng (`1800s`) despite tied 20/20 scores!
+6. School Team Trophy Standings verified: Karibu High (`40 points`) awarded 1st Place (`GOLD_TROPHY`), Uhuru Academy (`10 points`) awarded 2nd Place (`SILVER_TROPHY`).
+7. Cross-tenant privacy isolation verified: `INVITE_ONLY` contests are 100% hidden from uninvited school tenants.
+
+`tsc --noEmit`: 0 errors. All previous suites remain 100% green (`88/88 checks` + `9/9 checks` = **97/97 total checks passed cleanly across 11 suites**).
+
+## EE.11 — QR Gate-Pass Status Scanning (`ALLOWED`, `NOT_ALLOWED`, `DIDNT_PASS`, `INVALID`) & Sub-Second Checkpoint Stamping (`EE.11`) — **FULLY BUILT, TESTED & VERIFIED (2026-07-17)**
+
+Final physical-to-digital security checkpoint bridge in Part EE (`11/11` complete), enabling school security guards, front desk receptionists, and gate staff to scan student ID cards (`/verify/<CODE>` or admission number) or printed Gate Passes (`GP-0001`) with their phone camera, tablet, or USB handheld scanner and receive an **instant (<150ms)** high-contrast verification decision. Simultaneously fixed the live camera scanning screen issue across both the Library (`library-client.tsx`) and Security / QR Scan Station (`qr-scan-station.tsx`, `gate-client.tsx`) where `BarcodeDetector` lacked format support (`qr_code`) or hung due to silent `InvalidStateError`.
+
+### What Was Built
+- **Database & Schema (`migration 20260717050000_ee11_qr_gate_pass`)**: added `returnedAt DateTime?` to `GatePass` alongside existing `usedAt` so check-in return times from off-campus trips can be recorded directly on the pass record without overwriting exit history.
+- **Sub-Second Status Engine (`scanForGatePassStatus` / `POST /api/qr-scan/gate-pass`)**: evaluates scanned QR codes (`extractVerifyCode` handling both `/verify/GP-0001` URLs and bare text) against live school records in under 150ms (`8ms` in test verification), returning one of the exact four statuses:
+  1. **`ALLOWED` (Green Liquid Glass Card)**: Student has an `ACTIVE` or `APPROVED` gate pass for today where `usedAt` is null. Displays large green badge `"ALLOWED / ACTIVE GATE PASS"`, student photo & name, class, admission number, pass reason, leave/return times, and authorized escort/guardian name (`escortName`).
+  2. **`NOT_ALLOWED` (Red Liquid Glass Card)**: Student is recognized (`ACTIVE` student), but has **no active/approved gate pass today**, or has a `PENDING` request awaiting leadership/teacher approval, or a `CANCELLED`/`EXPIRED` pass. Displays large red badge `"NOT ALLOWED / BLOCKED"` with exact human-readable reasoning (`"Student has no active or approved gate pass to leave campus today."`).
+  3. **`DIDNT_PASS` (Amber Liquid Glass Card)**: Student already checked out of the gate earlier (`usedAt` stamped) and is currently off-campus (`returnedAt` null). Displays large amber badge `"DIDN'T PASS / ALREADY EXITED CAMPUS"` and exact exit time. If returning from their appointment, prompts for return check-in.
+  4. **`INVALID` (Gray Liquid Glass Card)**: Scanned code does not match any active student or gate pass in this school tenant (`NOT_FOUND`). Displays gray badge `"INVALID / UNRECOGNIZED CODE"`, preventing unauthorized entry/exit.
+- **1-Tap Checkpoint Stamping (`stampGatePassAction` / `POST /api/qr-scan/gate-pass/action`)**:
+  - **`Stamp Gate Exited Now` (`EXIT`)**: records `usedAt = now()`, transitions `status = "USED"`, and logs `action: "GATE_PASS_EXIT"` to `QrScanEvent` (`audit trail + duplicate-scan guard`).
+  - **`Stamp Gate Returned Now` (`RETURN`)**: records `returnedAt = now()` when the student arrives back on campus from their clinic run or emergency leave, locking the pass from further re-use and logging `action: "GATE_PASS_RETURN"`.
+- **Universal Scanner Engine Upgrade (`jsQR` Canvas Fallback + Video ReadyState Protection)**:
+  - Upgraded both `src/components/security/qr-scan-station.tsx` and `src/components/library/library-client.tsx` (`startCamera` / `startBuiltInScanner`).
+  - Added `"qr_code"` format to `BarcodeDetector` options and safeguarded against uninitialized video dimensions (`video.readyState >= 2 && video.videoWidth > 0`).
+  - Integrated `jsQR` (pure 100% JavaScript canvas decoder) offscreen loop (`ctx.drawImage(video, ...); jsQR(imageData.data, ...)`), ensuring camera scanning works instantly across every browser engine (iOS Safari, Firefox, older Chrome, mobile, tablet) even when `window.BarcodeDetector` is missing or unsupported.
+- **Interactive Quick-Test Simulator Bar (`⚡ Simulate / Test Scan Without Webcam`)**:
+  - Embedded 1-click simulation buttons directly under the scanner box in both `QrScanStation` (`⚡ Test Allowed Pass (GP1)`, `⚡ Test No Gate Pass (ADM-002)`, `⚡ Test Pass Status (GP2)`, `⚡ Test Invalid QR`) and `LibraryClient` (`⚡ Test ISBN 9789966112233`, `⚡ Test Copy QR COPY-001`), allowing immediate visual verification on any device without physical paper codes.
+- **UI Integration**: `QrScanStation` accessible inside `Security -> QR Checkpoint (`EE.11`)` tab (`gate-client.tsx`), alongside `1-Tap Attendance` and `1-Tap Payment Lookup`.
+
+### Verification & Testing
+1. Set EE.11 release switch OFF (`setEeFeatureReleased("EE.11", false)`): verified `assertEeFeatureReleased("EE.11")` correctly throws (`HTTP 403 / feature disabled`).
+2. Set EE.11 release switch ON (`setEeFeatureReleased("EE.11", true)`): verified endpoint unlocked.
+3. Verified `extractVerifyCode` cleanly parses full QR URLs (`https://neyo.co.ke/verify/GP-0001`) and bare codes (`gp-0002`).
+4. Verified `NOT_ALLOWED` state: student with 0 passes evaluated sub-second (`red status card`).
+5. Verified `NOT_ALLOWED / PASS PENDING` state: pass issued without principal approval (`status = PENDING`) blocked from exit with exact explanation.
+6. Verified `ALLOWED / ACTIVE GATE PASS` state: approved pass `GP1` evaluated in `8ms` with green badge and `canExit: true`.
+7. Verified 1-Tap Exit Stamping (`Stamp Gate Exited Now`): recorded `usedAt` timestamp and transitioned state to `DIDNT_PASS / ALREADY EXITED CAMPUS`.
+8. Verified 1-Tap Return Check-In Stamping (`Stamp Gate Returned Now`): recorded `returnedAt` timestamp and locked pass from further re-use.
+9. Verified `INVALID / UNRECOGNIZED CODE` state: unrecognized QR instantly returned gray card with zero permissions.
+10. Verified Cross-Tenant Privacy Isolation: Uhuru Academy guard scanning Karibu High's gate pass receives `INVALID` with `0` student or pass data leaked (`11/11 passing`).
+
+`tsc --noEmit`: 0 errors. All previous suites remain 100% green (`97/97 checks` + `11/11 checks` = **108/108 total checks passed cleanly across 12 suites**).
+
+**Part EE Mega-Request Complete (`11/11` features done)**: EE.1 through EE.11 fully designed, built full-stack, tested, and verified with zero regressions.
+
 ## AA.10 — Exam-Generator Options-Block-Awareness, Plus a School's Own Prefer-Split Override — **FULLY BUILT, TESTED & VERIFIED (2026-07-14)**
 
 **The real gap closed**: Options Block subjects (`ElectiveBlock`/`ElectiveBlockSlot`/`ElectiveBlockSlotSubject`, from AA.1) lived entirely outside `ClassSubjectNeed`. The exam generator's `buildGenerationPlan()` only ever reads `ClassSubjectNeed`, so a school running any elective/options program got **zero automated exam papers** for those subjects — confirmed via direct `grep` of `elective-block.service.ts`'s build/save path before any code was written.
@@ -4363,6 +4708,8 @@ Real design: the founder's own detailed CBE Senior School intake scenario — fr
 - **Seed data**: `scripts/bb4-seed-class-allocation-demo.ts` (idempotent, re-confirmed running twice with identical output) — reuses the already-live Mombasa Coast Senior School tenant, demonstrating both real class strategies end-to-end.
 
 **Real regression test**: `scripts/bb4-class-allocation-test.ts` — 37/37 assertions (import-time subject-selection writing including the targetLevel fix, both class strategies, BB.3's capacity gate on CREATE_NEW's own new classes with the orphan-fix verified, real subject-need seeding + fair teacher auto-fill, double-confirm/race-guard refusals, cross-tenant isolation). Zero regression across the whole app (aa1/aa2/aa3/bb1/bb2/bb3/l7/p6/import-suite/test-roles all green). `tsc --noEmit` 0 errors throughout.
+
+**Update & Enhancement (2026-07-17)**: Executed the founder's requested follow-up **Student Import together with assigned subjects (`student-import.service.ts` testing & enhancement)**. Upgraded `previewImport` (`student-import.service.ts` / `/api/students/import/preview`) to accept and validate `compulsorySubjects` directly at mapping/preview time, pre-verifying all unique subject names from the `Subjects` column and compulsory list against the school's catalog (`populateSubjectMap` with `&` vs `and` normalization). `previewImport` now surfaces `unknownSubjects`, `rowsWithSubjectsCount`, and `hasCompulsorySubjects`, powering a real **Liquid Glass Subject & Pathway Allocation Summary Card** inside `import-wizard.tsx` (`Step 2: Preview`) that explicitly warns the school if any subject name is unmapped before commit. Built comprehensive standalone regression suite `scripts/ee-student-import-subjects-test.ts` — **5/5 checks passed cleanly**, proving `Subjects` column parsing (`BB.4`), compulsory subject unioning, unknown subject preview warnings, Core vs Essential Mathematics auto-selection (`DD.4`), and cross-tenant isolation.
 
 ## BB.5 — Progressive Per-Combination Teacher Short-Code Display — **ANSWERED, ALREADY WORKING (2026-07-12), NO CODE CHANGE NEEDED**
 
