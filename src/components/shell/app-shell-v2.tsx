@@ -21,6 +21,7 @@ import { AliveModeLayer } from "./alive-mode-layer";
 import { FloatingModuleBar } from "./floating-module-bar";
 import { ShellSidePanel } from "./shell-side-panel";
 import { Sidebar } from "./sidebar";
+import { PlatformMaintenanceAndDiagnosticBanner } from "./maintenance-banner";
 import { cn } from "@/lib/utils";
 
 export function AppShellV2({
@@ -58,6 +59,7 @@ export function AppShellV2({
       <HelpOverlay />
       <PwaProvider />
       <AliveModeLayer />
+      <PlatformMaintenanceAndDiagnosticBanner />
       <Topbar
         tenantName={tenantName}
         tenantLogoUrl={tenantLogoUrl}

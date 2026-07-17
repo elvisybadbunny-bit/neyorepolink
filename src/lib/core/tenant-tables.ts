@@ -326,6 +326,11 @@ export const TENANT_OWNED_MODELS = [
   "contestQuestion",
   "contestRegistration",
   "contestAttempt",
+  "mpesaSuspenseReceipt",
+  "tenantHealthSnapshot",
+  "supportImpersonationLog",
+  "tenantSmsTelemetry",
+  "storageArchiveTier",
   // NOTE: "complianceRequest" is DELIBERATELY NOT tenant-owned — NEYO Ops's
   // own real compliance queue (`listComplianceRequests()` in
   // founder-dashboard.service.ts) genuinely lists EVERY tenant's requests

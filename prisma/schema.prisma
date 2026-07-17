@@ -471,6 +471,10 @@ model Tenant {
   hostedContests               InterSchoolContest[]  @relation("HostedContests")
   participatingContests        ContestRegistration[] @relation("ParticipatingContests")
   contestAttempts              ContestAttempt[]      @relation("ContestAttempts")
+  mpesaSuspenseReceipts        MpesaSuspenseReceipt[] @relation("MpesaSuspenseReceipts")
+  healthSnapshots              TenantHealthSnapshot[] @relation("HealthSnapshots")
+  smsTelemetry                 TenantSmsTelemetry[]   @relation("SmsTelemetry")
+  storageArchiveTiers          StorageArchiveTier[]   @relation("StorageArchiveTiers")
 
   @@index([osKey])
 }
@@ -8269,5 +8273,149 @@ model DemoRequest {
   notes             String?
 
   @@index([status, requestedAt])
+}
+
+// ---------------------------------------------------------------------------
+// NEYO Ops Management & Global Storage Minimization Architecture (2026-07-17)
+// ---------------------------------------------------------------------------
+
+// Idea 1.1: M-Pesa Suspense Ledger & Auto-Reconciler (orphan IPN inbox)
+model MpesaSuspenseReceipt {
+  id                 String    @id @default(cuid())
+  tenantId           String?
+  tenant             Tenant?   @relation("MpesaSuspenseReceipts", fields: [tenantId], references: [id], onDelete: SetNull)
+  transId            String    @unique // M-Pesa transaction ID (e.g. SFJ293847K)
+  transTime          String
+  transAmount        Int
+  billRefNumber      String // e.g. "KH-999" (typo or unmatched)
+  mpesaSenderPhone   String // e.g. "+254712345678"
+  mpesaSenderName    String // e.g. "OTIENO BRIAN"
+  status             String    @default("UNMATCHED") // UNMATCHED | ALLOCATED | REFUNDED
+  allocatedToStudentId String?
+  allocatedToInvoiceId String?
+  allocatedAt        DateTime?
+  allocatedBy        String?
+  matchScore         Int       @default(0) // 0-100 AI/Phone fuzzy match confidence
+  matchReasonsJson   String    @default("[]") // top candidate reasons
+  createdAt          DateTime  @default(now())
+
+  @@index([tenantId, status, transTime])
+}
+
+// Idea 1.2: School Operational Health & Churn Defcon Radar
+model TenantHealthSnapshot {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  tenant                Tenant   @relation("HealthSnapshots", fields: [tenantId], references: [id], onDelete: Cascade)
+  healthScore           Int      @default(100) // 0-100 Defcon health
+  churnRiskLevel        String   @default("LOW") // LOW | MEDIUM | HIGH | CRITICAL
+  attendanceScore       Int      @default(100)
+  feeLedgerScore        Int      @default(100)
+  leadershipLoginScore  Int      @default(100)
+  errorRateScore        Int      @default(100)
+  topFrictionReason     String?
+  calculatedAt          DateTime @default(now())
+
+  @@index([tenantId, calculatedAt])
+  @@index([churnRiskLevel, healthScore])
+}
+
+// Idea 1.3: Audit-Safe Diagnostic Impersonation / View-As Session Replay
+model SupportImpersonationToken {
+  id             String    @id @default(cuid())
+  token          String    @unique // high-entropy read-only diagnostic token
+  targetTenantId String
+  targetUserId   String
+  createdById    String
+  createdByName  String
+  reason         String // statutory diagnostic reason
+  isReadOnly     Boolean   @default(true) // absolute safety lock
+  expiresAt      DateTime // 15-minute diagnostic window
+  revokedAt      DateTime?
+  usedCount      Int       @default(0)
+  createdAt      DateTime  @default(now())
+
+  @@index([token, expiresAt, revokedAt])
+  @@index([targetTenantId, targetUserId])
+}
+
+model SupportImpersonationLog {
+  id             String   @id @default(cuid())
+  tokenId        String
+  targetTenantId String
+  targetUserId   String
+  action         String // e.g. "VIEW_TIMETABLE", "READ_INVOICE"
+  path           String // exact URL path inspected
+  metadataJson   String   @default("{}")
+  timestamp      DateTime @default(now())
+
+  @@index([tokenId, timestamp])
+  @@index([targetTenantId, timestamp])
+}
+
+// Idea 1.4: Scheduled Maintenance Command Center (incident & lock windows)
+model PlatformMaintenanceWindow {
+  id               String   @id @default(cuid())
+  title            String // e.g. "Database Pool & Storage Vault Upgrade"
+  description      String
+  scheduledStartAt DateTime
+  scheduledEndAt   DateTime
+  status           String   @default("SCHEDULED") // SCHEDULED | ACTIVE | COMPLETED | CANCELLED
+  isReadOnlyLock   Boolean  @default(true) // turns portals read-only
+  createdBy        String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([status, scheduledStartAt, scheduledEndAt])
+}
+
+// Idea 1.5: SMS Gateway Delivery Route & DND Health Monitor
+model TenantSmsTelemetry {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  tenant              Tenant   @relation("SmsTelemetry", fields: [tenantId], references: [id], onDelete: Cascade)
+  periodKey           String // e.g. "2026-T2"
+  totalAttempted      Int      @default(0)
+  totalDelivered      Int      @default(0)
+  totalRejected       Int      @default(0)
+  totalDndBlocked     Int      @default(0)
+  dndRatePct          Int      @default(0) // percentage of DND blocked
+  autoFallbackEnabled Boolean  @default(true) // auto-switch to In-App/WhatsApp on high DND
+  updatedAt           DateTime @updatedAt
+
+  @@unique([tenantId, periodKey])
+  @@index([tenantId, dndRatePct])
+}
+
+// Idea 2.2: Pre-Upload Content-Addressable Storage (CAS) Deduplication Ledger
+model StorageVaultBlob {
+  id                    String   @id @default(cuid())
+  checksumSha256        String   @unique // exact cryptographic SHA-256
+  storageUrl            String // master R2 / CDN location
+  mimeType              String // e.g. image/webp, application/pdf
+  sizeBytes             Int
+  originalSizeBytes     Int?
+  compressionRatioPct   Int      @default(100)
+  referenceCount        Int      @default(1) // how many schools/users point to this blob
+  firstUploadedByTenantId String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([checksumSha256])
+}
+
+// Idea 2.4: 3-Tier Automated Storage Lifecycle & Cold-Vault Offloading
+model StorageArchiveTier {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation("StorageArchiveTiers", fields: [tenantId], references: [id], onDelete: Cascade)
+  tierName         String   // HOT_NVME | WARM_COMPRESSED | COLD_ALUMNI_VAULT
+  totalFilesCount  Int      @default(0)
+  totalSizeBytes   Int      @default(0)
+  lastArchivedAt   DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([tenantId, tierName])
+  @@index([tenantId])
 }
 
