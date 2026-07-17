@@ -81,9 +81,26 @@ what NEYO's own config already expects.
    ```
    postgresql://neondb_owner:AbCdEf123@ep-something-12345.eu-central-1.aws.neon.tech/neondb?sslmode=require
    ```
-   **Copy this entire string** — you'll paste it in twice below (Step 4 and
-   Step 6). Treat it like a password; never post it publicly or paste it into
-   chat with anyone you don't fully trust.
+   **Copy this entire string** — you'll paste it in below (Step 4). Treat it
+   like a password; never post it publicly or paste it into chat with anyone
+   you don't fully trust.
+
+> **CRITICAL — read this or your deploy WILL fail with error `P1002`**: Neon
+> actually gives you **two** different connection strings, not one — a
+> **Pooled connection** (has `-pooler` in the hostname, e.g.
+> `ep-young-glade-ascr58x4-pooler.c-4...`) and a **Direct connection** (no
+> `-pooler`, e.g. `ep-young-glade-ascr58x4.c-4...`). On Neon's dashboard,
+> look for a toggle/tab labelled "Pooled connection" vs "Direct connection"
+> right next to the connection string box. **You need BOTH, as two separate
+> Vercel environment variables** — see Step 4 below. If you only set the
+> pooled one (which is what a first-time setup usually copies by default),
+> `prisma migrate deploy` fails with exactly the error `Error: P1002 ...
+> was reached but timed out ... Context: Timed out trying to acquire a
+> postgres advisory lock` — a pooled/pgbouncer connection genuinely cannot
+> hold the kind of lock Prisma's migration engine needs; only a direct
+> connection can. This is a real, already-fixed gap in NEYO's own database
+> config (`prisma/schema.prisma` now has a `directUrl` line specifically
+> for this) — you just need to give it the second connection string too.
 
 > **Real, important technical note — UPDATE**: NEYO's database schema file
 > (`prisma/schema.prisma`) has now been switched to `provider = "postgresql"`
@@ -108,7 +125,8 @@ left, Value on the right), all scoped to **Production**:
 
 | Name | Value | Where it comes from |
 |---|---|---|
-| `DATABASE_URL` | your real Neon connection string | Step 3 above |
+| `DATABASE_URL` | your real Neon **Pooled** connection string (has `-pooler` in it) | Step 3 above |
+| `POSTGRES_URL_NON_POOLING` | your real Neon **Direct** connection string (NO `-pooler` in it) | Step 3 above — the SECOND string, see the critical note above |
 | `NEYO_MASTER_KEK` | a real random secret — see below | generate fresh, see note |
 | `APP_BASE_URL` | `https://neyo.co.ke` (your real domain, with `https://`) | your domain |
 | `ROOT_DOMAIN` | `neyo.co.ke` (your real domain, NO `https://`, NO `www`) | your domain |
@@ -116,6 +134,14 @@ left, Value on the right), all scoped to **Production**:
 | `DARAJA_WEBHOOK_TOKEN` | a real random secret — see below | generate fresh |
 | `WEBAUTHN_RP_ID` | `neyo.co.ke` (your real domain, NO `https://`) | your domain |
 | `WEBAUTHN_ORIGIN` | `https://neyo.co.ke` (your real domain, with `https://`) | your domain |
+
+> **If Vercel auto-connected Neon for you** (via the "Add Neon" integration
+> button in the Vercel dashboard, rather than pasting the string yourself):
+> Vercel/Neon's own integration usually creates `POSTGRES_URL_NON_POOLING`
+> for you automatically already, alongside `DATABASE_URL`/`POSTGRES_URL`. Go
+> check Settings → Environment Variables — if `POSTGRES_URL_NON_POOLING`
+> already exists in that list, you don't need to add it again; NEYO's own
+> `prisma/schema.prisma` already reads that exact variable name.
 
 **How to generate a real random secret** (for `NEYO_MASTER_KEK`,
 `CRON_SECRET`, `DARAJA_WEBHOOK_TOKEN`): these need to be long, random, and
@@ -220,6 +246,38 @@ Once deployed and your domain's DNS has propagated:
      (Karibu High, Kilimo Day, etc.) from your local `dev.db` into the new
      production Postgres database, if you want the exact same test data
      available on the real site too.
+
+---
+
+## Troubleshooting real errors you might see
+
+### `Error: P1002 ... The database server at '...-pooler...' was reached but timed out ... Context: Timed out trying to acquire a postgres advisory lock`
+
+This is the single most common real deploy failure with Neon + Prisma, and
+it is a real, fixed gap in NEYO's own config (not a code bug you introduced).
+It means `POSTGRES_URL_NON_POOLING` (your Neon **Direct** connection string)
+is either missing from Vercel's Environment Variables, or was accidentally
+set to the same **Pooled** string as `DATABASE_URL`. Fix: go to Vercel →
+Settings → Environment Variables, confirm `POSTGRES_URL_NON_POOLING` exists
+and its value does NOT contain `-pooler` in the hostname (copy Neon's
+"Direct connection" string specifically — see the critical note under
+Step 3 above), save, then click **Redeploy**. No code changes are ever
+needed for this specific error — it's purely an environment variable value.
+
+### `Error: P3009 ... migrate found failed migrations in the target database`
+
+This means an earlier deploy attempt died partway through applying a
+migration, leaving the database in a "half-migrated" state Prisma safely
+refuses to build on top of automatically. NEYO's `vercel.json` already runs
+`scripts/auto-resolve-failed-migrations.js` before every migration attempt
+specifically to auto-heal this — if you still see this error after a
+redeploy, tell me the exact migration name from the error message and I'll
+help you resolve it safely (never by resetting/wiping the database).
+
+### `Hobby accounts are limited to daily cron jobs`
+
+Covered in Step 5 above — already fixed in the code, just redeploy the
+latest `main`.
 
 ---
 

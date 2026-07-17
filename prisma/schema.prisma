@@ -13,7 +13,23 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Runtime queries (the app itself, every request) go through Neon's
+  // POOLED connection (pgbouncer) for real connection-limit safety at
+  // scale — this is `DATABASE_URL` / Vercel's Neon integration default.
   url      = env("DATABASE_URL")
+  // `prisma migrate deploy`/`migrate dev` ALWAYS use this DIRECT
+  // (non-pooled) connection instead. REAL BUG FIX (2026-07-18): without
+  // this line, `migrate deploy` was forced through the pooled endpoint,
+  // which does not support the session-level Postgres advisory lock
+  // Prisma's migration engine needs — this is the exact real cause of
+  // the founder's live Vercel deploy failure (P1002: "the database
+  // server ... was reached but timed out ... acquire a postgres
+  // advisory lock"). Neon's own Vercel integration always provides a
+  // real, separate non-pooled URL for exactly this reason — see
+  // POSTGRES_URL_NON_POOLING in the Vercel/Neon integration env vars
+  // (already read by scripts/auto-resolve-failed-migrations.js's own
+  // fallback chain, just never wired into the schema itself until now).
+  directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
 // ---------------------------------------------------------------------------
