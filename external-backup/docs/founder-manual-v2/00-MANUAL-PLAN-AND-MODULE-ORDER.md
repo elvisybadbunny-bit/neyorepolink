@@ -26,6 +26,7 @@ language:
 - [Module 01 — Dashboard & Role-Based Home](./01-DASHBOARD-AND-ROLE-BASED-HOME.md)
 - [Module 02 — Login, Security, User Menu & Navigation](./02-LOGIN-SECURITY-USER-MENU-AND-NAVIGATION.md)
 - [Module 03 — School Setup, Profile, Modules, Branding & Settings](./03-SCHOOL-SETUP-PROFILE-MODULES-BRANDING-AND-SETTINGS.md)
+- [Module 04 — Users, Roles, Staff Access & Invitations](./04-USERS-ROLES-STAFF-ACCESS-AND-INVITATIONS.md)
 
 ## The standard chapter format
 

@@ -101,6 +101,7 @@ making this index unreadable:
 - **[Module 01 — Dashboard & Role-Based Home](../founder-manual-v2/01-DASHBOARD-AND-ROLE-BASED-HOME.md)**
 - **[Module 02 — Login, Security, User Menu & Navigation](../founder-manual-v2/02-LOGIN-SECURITY-USER-MENU-AND-NAVIGATION.md)**
 - **[Module 03 — School Setup, Profile, Modules, Branding & Settings](../founder-manual-v2/03-SCHOOL-SETUP-PROFILE-MODULES-BRANDING-AND-SETTINGS.md)**
+- **[Module 04 — Users, Roles, Staff Access & Invitations](../founder-manual-v2/04-USERS-ROLES-STAFF-ACCESS-AND-INVITATIONS.md)**
 
 ## Levels planned
 

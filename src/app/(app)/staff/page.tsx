@@ -17,7 +17,10 @@ export default async function StaffPage() {
           Records, leave, recruitment and HR files.
         </p>
       </div>
-      <StaffClient canManage={effectivePermissions.includes("staff.manage")} />
+      <StaffClient
+        canManage={effectivePermissions.includes("staff.manage")}
+        canInvite={effectivePermissions.includes("user.manage_roles")}
+      />
     </div>
   );
 }

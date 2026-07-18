@@ -1,3 +1,17 @@
+## 2026-07-18 (part 37) — Founder Manual V2 Module 04 + Missing Staff Invitation UI Repaired
+
+Continued Manual V2 with `04-USERS-ROLES-STAFF-ACCESS-AND-INVITATIONS.md`: a detailed beginner guide distinguishing User account, HR profile, academic assignment and payroll; company vs school roles; all school-role responsibilities/boundaries; Staff page permissions; Directory search/table; every File/Edit/Role/Appraisal/Training/Disciplinary action; leave/applications/approvals and human-confirmed substitutes; recruitment; bulk CSV/XLSX/Paste/Bundi import; academic assignments after account creation; access/offboarding; company Team separation; troubleshooting, 17-point founder verification and edit paths.
+
+A real reachable-UI gap was fixed: `inviteStaff()` and `POST /api/onboarding/invite` were implemented and permission-gated but no Staff screen called them. Added `canInvite` based specifically on `user.manage_roles` (separate from `staff.manage`), an **Invite staff** button and modal for name/email/role, real API call, duplicate-email feedback, and accurate instruction that an email-only invited user must use **Email me a sign-in link** then set their first password. Invitation creates no insecure shared default password and does not falsely auto-create HR profile, salary, subjects, classes or timetable assignments.
+
+Focused ESLint on Staff page/client passes with zero errors. Verified the only `StaffClient` caller supplies the new permission prop, static wiring for invite endpoint/button, `git diff --check`, and mirror byte comparison. Full project typecheck remains blocked by Prisma engine download/TLS as previously recorded.
+
+Manual identifies one honest remaining product gap: Staff has no dedicated deactivate/terminate/reactivate lifecycle UI with session revocation and assignment transfer. This should be built deliberately later rather than approximated through role changes or deletion.
+
+**Next manual chapter:** Module 05 — Students, Guardians, Classes, Imports, Transfers and Alumni. This is the learner data foundation before Admissions, Attendance and timetable.
+
+---
+
 ## 2026-07-18 (part 36) — Founder Manual V2 Module 03 + Missing School-Level/Profile Controls Repaired
 
 Continued Manual V2 with `03-SCHOOL-SETUP-PROFILE-MODULES-BRANDING-AND-SETTINGS.md`: a beginner-facing, current-code manual for the permission-filtered Settings hub, School Profile load/save, identity/logo/colours, real school structure, platform/personal appearance controls, shell versions, vision/contacts/socials, GPS clock-in geofence, joining requirements, module registry/toggles, Curriculum activation, menu visibility, joint owners, public website, payments/data/printing/recycle/developer settings, a complete setup example, timetable dependencies, troubleshooting, founder verification and edit points.

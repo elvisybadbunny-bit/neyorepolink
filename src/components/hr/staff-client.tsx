@@ -49,7 +49,7 @@ const LEAVE_STATUS_TONE: Record<string, "green" | "amber" | "red" | "neutral"> =
 const SUB_STATUS_TONE: Record<string, "green" | "amber" | "red" | "neutral"> = { PROPOSED: "amber", CONFIRMED: "green", DECLINED: "neutral", UNFILLED: "red", REVERTED: "neutral" };
 const STAFF_ROLES = ["PRINCIPAL", "DEPUTY_PRINCIPAL", "DEAN_OF_STUDIES", "HOD", "TEACHER", "CLASS_TEACHER", "BURSAR", "ACCOUNTANT", "RECEPTIONIST", "LIBRARIAN", "HOSTEL_MASTER", "SUPPORT_STAFF"];
 
-export function StaffClient({ canManage }: { canManage: boolean }) {
+export function StaffClient({ canManage, canInvite }: { canManage: boolean; canInvite: boolean }) {
   const [tab, setTab] = React.useState<"directory" | "leave" | "recruitment">("directory");
   return (
     <div className="space-y-5">
@@ -58,7 +58,7 @@ export function StaffClient({ canManage }: { canManage: boolean }) {
           <button key={k} onClick={() => setTab(k)} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === k ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>{label}</button>
         ))}
       </div>
-      {tab === "directory" && <DirectoryTab canManage={canManage} />}
+      {tab === "directory" && <DirectoryTab canManage={canManage} canInvite={canInvite} />}
       {tab === "leave" && <LeaveTab canManage={canManage} />}
       {tab === "recruitment" && <RecruitmentTab canManage={canManage} />}
     </div>
@@ -66,12 +66,13 @@ export function StaffClient({ canManage }: { canManage: boolean }) {
 }
 
 // ---- Directory --------------------------------------------------------------------
-function DirectoryTab({ canManage }: { canManage: boolean }) {
+function DirectoryTab({ canManage, canInvite }: { canManage: boolean; canInvite: boolean }) {
   const [rows, setRows] = React.useState<StaffRow[] | null>(null);
   const [error, setError] = React.useState(false);
   const [file, setFile] = React.useState<string | null>(null);
   const [q, setQ] = React.useState("");
   const [importing, setImporting] = React.useState(false);
+  const [inviting, setInviting] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setError(false);
@@ -104,11 +105,18 @@ function DirectoryTab({ canManage }: { canManage: boolean }) {
             className="w-64 rounded-full border border-navy-200 bg-white py-2 pl-9 pr-4 text-sm dark:border-navy-700 dark:bg-navy-900"
           />
         </div>
-        {canManage && (
-          <Button onClick={() => setImporting(true)}>
-            <Plus className="h-4 w-4" /> Bulk Import Staff
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {canInvite && (
+            <Button variant="secondary" onClick={() => setInviting(true)}>
+              <Users className="h-4 w-4" /> Invite staff
+            </Button>
+          )}
+          {canManage && (
+            <Button onClick={() => setImporting(true)}>
+              <Plus className="h-4 w-4" /> Bulk Import Staff
+            </Button>
+          )}
+        </div>
       </div>
 
       <TableContainer>
@@ -136,8 +144,68 @@ function DirectoryTab({ canManage }: { canManage: boolean }) {
         </Table>
       </TableContainer>
       {file && <StaffFileDrawer userId={file} canManage={canManage} onClose={() => { setFile(null); load(); }} />}
+      {inviting && <InviteStaffModal onClose={() => setInviting(false)} onDone={() => { setInviting(false); load(); }} />}
       {importing && <ImportStaffModal onClose={() => setImporting(false)} onDone={() => { setImporting(false); load(); }} />}
     </>
+  );
+}
+
+function InviteStaffModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { toast } = useToast();
+  const [fullName, setFullName] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [role, setRole] = React.useState("TEACHER");
+  const [saving, setSaving] = React.useState(false);
+
+  async function invite() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/onboarding/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invites: [{ fullName, email, role }] }),
+      });
+      const json = await res.json();
+      if (json.ok && json.data?.created > 0) {
+        toast({
+          title: "Staff account created",
+          description: "Send the staff member to Email me a sign-in link; first login will require a secure password.",
+          tone: "success",
+        });
+        onDone();
+      } else if (json.ok) {
+        toast({ title: "That email already belongs to a NEYO account.", tone: "error" });
+      } else {
+        const message = json.error?.fields ? Object.values(json.error.fields)[0] : json.error?.message;
+        toast({ title: (message as string) || "Could not invite staff member.", tone: "error" });
+      }
+    } catch {
+      toast({ title: "Network problem — try again.", tone: "error" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal title="Invite a staff member" onClose={onClose}>
+      <div className="space-y-3">
+        <p className="rounded-2xl border border-blue-200 bg-blue-50/70 px-3 py-2 text-xs text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200">
+          This creates a real account in this school without a shared default password. Confirm the role carefully; it controls which records and modules the person can access.
+        </p>
+        <div><Label>Full name</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="e.g. Mary Akinyi" /></div>
+        <div><Label>Work email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="mary.akinyi@school.ac.ke" /></div>
+        <div>
+          <Label>School role</Label>
+          <select value={role} onChange={(e) => setRole(e.target.value)} className="mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
+            {STAFF_ROLES.map((r) => <option key={r} value={r}>{r.replaceAll("_", " ").toLowerCase()}</option>)}
+          </select>
+        </div>
+        <p className="text-xs text-navy-400">After creation, add the HR record, teacher subjects/classes and any other operational assignments separately.</p>
+        <Button onClick={invite} disabled={saving || fullName.trim().length < 2 || !email.includes("@")} className="w-full">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />} Create staff account
+        </Button>
+      </div>
+    </Modal>
   );
 }
 
