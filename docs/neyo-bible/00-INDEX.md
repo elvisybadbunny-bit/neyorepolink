@@ -37,6 +37,10 @@ was: **"Delete it, rebuild for real."** This is that rebuild.
   engineering decisions grounded in the founder prompts, context anchor, checklist, and named real
   implementation files; includes superseded directions and a maintenance protocol for future
   decisions.
+- **[06 — School Operations Playbook](./06-SCHOOL-OPERATIONS-PLAYBOOK.md)** — real daily and term
+  workflows for leadership, teachers, Finance, Reception, families, Library, Hostel, and Clinic;
+  documents shared-record hand-offs, role boundaries, exception handling, and the source services
+  behind each workflow.
 
 ## Levels planned (not yet started — will be added one at a time, never all at once)
 

@@ -1,3 +1,15 @@
+## 2026-07-18 (part 28) — Genuine NEYO Bible Continued: Level 06 School Operations Playbook
+
+**Founder's instruction:** "Continue."
+
+Continued the genuine, source-grounded NEYO Bible with `docs/neyo-bible/06-SCHOOL-OPERATIONS-PLAYBOOK.md`. This level documents how real school work moves between roles instead of describing modules as isolated feature lists. It covers daily and term workflows for school leadership, Teachers/Class Teachers, Bursars/Accountants, Reception, Parents/Students, Librarians, Hostel Masters, and Clinic/authorized support staff. Each section names the real page, permission boundary, service functions, downstream hand-offs, and honest escalation path. Added a cross-role hand-off matrix (attendance→guardian, marks→release approval→family, STK→invoice/receipt/reconciliation, library/hostel charges→the common student invoice, inquiries→admissions, clinic referrals→guardian follow-up) and a school-wide exception protocol that preserves audit evidence and forbids deleting history as a repair shortcut.
+
+This is deliberately an operations playbook rather than another feature-completion claim: `FEATURES-CHECKLIST.md` remains the feature ledger, Level 05 remains the durable decision log, and Level 02 remains the architecture reference. Verified all directly cited page/service files and key functions against the current checkout before documenting them. Updated `docs/neyo-bible/00-INDEX.md`, synchronized both repository backup Bible trees, and byte-compared all copies.
+
+**Next NEYO Bible work:** Level 07 should document Customer Success & School Onboarding—lead intake, demo/quote, tenant onboarding, rollout, support/diagnostic replay, incident communication, renewal/health monitoring, and offboarding/data portability—grounded in the real NEYO Support and Founder Ops implementation.
+
+---
+
 ## 2026-07-18 (part 27) — Genuine NEYO Bible Continued: Level 05 Founder Decision Log
 
 **Founder's instruction:** "Do this Continuing the genuine NEYO Bible."
