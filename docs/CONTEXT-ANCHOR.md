@@ -1,3 +1,22 @@
+## 2026-07-18 (part 38) — Staff Lifecycle Gap Fixed Full Stack: Deactivate, Reactivate, Terminate, Revoke Sessions & Transfer Assignments
+
+**Founder instruction:** when the manual finds a gap, fix it full-stack and report it rather than only documenting it.
+
+Fixed the Module 04 gap without a schema migration because the real database foundation already existed (`User.isActive`, `Session`, `StaffProfile.contractEndDate`, `TeacherTransferImpact`, `ClassSubjectNeed`, `SchoolClass.classTeacherId`, `TimetableGenerationJob`, `AuditLog`).
+
+- New `staff-lifecycle.service.ts`: tenant/role/self-action checks; required audit reason; Deactivate and Reactivate; all-session revocation; transfer preview via the existing L.7 impact engine; transfer/termination apply; HR contract-end update; admin-actor audit.
+- New validated `POST /api/hr/lifecycle`, gated by `user.manage_roles`, with DEACTIVATE/REACTIVATE/PREVIEW_TRANSFER/APPLY_TRANSFER actions and central error mapping.
+- Extended `applyTeacherTransferReplacement()` with a backwards-compatible `deactivateDeparting` option so assignment-only transfer can keep the original account active while termination deactivates it.
+- Staff directory now includes inactive school staff, shows an inactive badge, hides Message for inactive accounts, and displays permission-gated **Access**.
+- Access modal: required reason; Deactivate access only; Reactivate; Transfer teaching assignments; Terminate & transfer. Transfer first shows all affected direct subject/class-teacher responsibilities, then applies best qualified active workload-allowed recommendations and starts real timetable regeneration. Unmatched responsibilities stay honestly unassigned.
+- Deactivate/terminate revoke all server sessions immediately; terminate also stamps HR contract end to Nairobi today and preserves HR/payroll/audit history.
+
+Focused ESLint across all changed service/API/UI/error files passes with zero errors; `git diff --check` passes. Manual Module 04 updated from “open gap” to exact operating instructions and implementation evidence. Full project typecheck remains blocked by Prisma engine download/TLS as previously recorded.
+
+**Important follow-up after any transfer:** leadership must review generated timetable, combination/elective assignments, duties, pending approvals, external provider accounts and physical assets—the current impact engine's automated scope is direct ClassSubjectNeed and class-teacher responsibilities.
+
+---
+
 ## 2026-07-18 (part 37) — Founder Manual V2 Module 04 + Missing Staff Invitation UI Repaired
 
 Continued Manual V2 with `04-USERS-ROLES-STAFF-ACCESS-AND-INVITATIONS.md`: a detailed beginner guide distinguishing User account, HR profile, academic assignment and payroll; company vs school roles; all school-role responsibilities/boundaries; Staff page permissions; Directory search/table; every File/Edit/Role/Appraisal/Training/Disciplinary action; leave/applications/approvals and human-confirmed substitutes; recruitment; bulk CSV/XLSX/Paste/Bundi import; academic assignments after account creation; access/offboarding; company Team separation; troubleshooting, 17-point founder verification and edit paths.

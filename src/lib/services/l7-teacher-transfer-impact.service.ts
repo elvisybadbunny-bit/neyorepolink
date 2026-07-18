@@ -107,7 +107,12 @@ export async function analyseTeacherTransferImpact(user: SessionUser, teacherId:
   });
 }
 
-export async function applyTeacherTransferReplacement(user: SessionUser, impactId: string, replacementTeacherId?: string) {
+export async function applyTeacherTransferReplacement(
+  user: SessionUser,
+  impactId: string,
+  replacementTeacherId?: string,
+  options: { deactivateDeparting?: boolean } = {},
+) {
   return withTenant(user.tenantId, async () => {
     const tdb = tenantDb();
     const impact = await tdb.teacherTransferImpact.findUnique({ where: { id: impactId } });
@@ -128,7 +133,9 @@ export async function applyTeacherTransferReplacement(user: SessionUser, impactI
       }
     }
 
-    await tdb.user.update({ where: { id: impact.teacherId }, data: { isActive: false } }).catch(() => {});
+    if (options.deactivateDeparting !== false) {
+      await tdb.user.update({ where: { id: impact.teacherId }, data: { isActive: false } }).catch(() => {});
+    }
     const job = await startGeneration(user);
     await tdb.teacherTransferImpact.update({ where: { id: impactId }, data: { replacementTeacherId: replacementTeacherId ?? recommendations[0]?.best?.teacherId ?? null, timetableJobId: job.id, status: 'APPLIED' } });
     return { success: true, timetableJob: job };

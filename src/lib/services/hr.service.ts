@@ -49,8 +49,8 @@ function daysBetween(start: string, end: string): number {
 export async function staffDirectory(user: SessionUser) {
   return withTenant(user.tenantId, async () => {
     const staff = await tenantDb().user.findMany({
-      where: { isActive: true, role: { notIn: ["PARENT", "STUDENT", "SUPER_ADMIN"] } },
-      select: { id: true, fullName: true, role: true, phone: true, email: true },
+      where: { role: { notIn: ["PARENT", "STUDENT", "SUPER_ADMIN", "FOUNDER", "NEYO_OPS", "NEYO_SUPPORT"] } },
+      select: { id: true, fullName: true, role: true, phone: true, email: true, isActive: true },
       orderBy: { fullName: "asc" },
     });
     const profiles = await tenantDb().staffProfile.findMany();
@@ -58,7 +58,7 @@ export async function staffDirectory(user: SessionUser) {
     return staff.map((u) => {
       const p = pMap.get(u.id);
       return {
-        userId: u.id, name: u.fullName, role: u.role, phone: u.phone, email: u.email,
+        userId: u.id, name: u.fullName, role: u.role, phone: u.phone, email: u.email, isActive: u.isActive,
         tscNumber: p?.tscNumber ?? null, qualifications: p?.qualifications ?? null,
         employmentDate: p?.employmentDate ?? null,
         contractType: p?.contractType ?? null, contractEndDate: p?.contractEndDate ?? null,

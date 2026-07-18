@@ -29,7 +29,7 @@ const STAFF_BUNDI_FIELD_OPTIONS: Record<string, string> = {
   contractType: "Contract type", emergencyContact: "Emergency contact", ignore: "— Skip —",
 };
 
-interface StaffRow { userId: string; name: string; role: string; phone: string | null; email: string | null; tscNumber: string | null; qualifications: string | null; employmentDate: string | null; contractType: string | null; contractEndDate: string | null; hasProfile: boolean }
+interface StaffRow { userId: string; name: string; role: string; phone: string | null; email: string | null; isActive: boolean; tscNumber: string | null; qualifications: string | null; employmentDate: string | null; contractType: string | null; contractEndDate: string | null; hasProfile: boolean }
 interface LeaveRow { id: string; userId: string; userName: string; type: string; startDate: string; endDate: string; days: number; reason: string | null; status: string; decidedByName: string | null; decisionNote: string | null }
 interface Balance { type: string; label: string; allowance: number; used: number; remaining: number }
 interface Posting { id: string; title: string; description: string | null; deadline: string | null; open: boolean; applicationCount: number; applications: { id: string; name: string; phone: string; email: string | null; status: string; notes: string | null }[] }
@@ -73,6 +73,7 @@ function DirectoryTab({ canManage, canInvite }: { canManage: boolean; canInvite:
   const [q, setQ] = React.useState("");
   const [importing, setImporting] = React.useState(false);
   const [inviting, setInviting] = React.useState(false);
+  const [lifecycle, setLifecycle] = React.useState<StaffRow | null>(null);
 
   const load = React.useCallback(async () => {
     setError(false);
@@ -126,7 +127,7 @@ function DirectoryTab({ canManage, canInvite }: { canManage: boolean; canInvite:
             {filtered.map((r) => (
               <TR key={r.userId}>
                 <TD>
-                  <span className="font-medium">{r.name}</span>
+                  <span className="inline-flex items-center gap-2 font-medium">{r.name}{!r.isActive && <Badge tone="red">inactive</Badge>}</span>
                   <span className="block text-[10px] text-navy-400">{r.role.replaceAll("_", " ").toLowerCase()}{r.phone ? ` · ${r.phone}` : ""}</span>
                 </TD>
                 <TD className="font-mono text-xs">{r.tscNumber ?? <span className="text-navy-300">—</span>}</TD>
@@ -135,7 +136,8 @@ function DirectoryTab({ canManage, canInvite }: { canManage: boolean; canInvite:
                 <TD>
                   <div className="flex items-center gap-1.5">
                     <Button size="sm" variant="secondary" onClick={() => setFile(r.userId)}><FileText className="h-3.5 w-3.5" /> File</Button>
-                    <MessageButton recipientId={r.userId} recipientName={r.name} />
+                    {canInvite && <Button size="sm" variant="ghost" onClick={() => setLifecycle(r)}><UserCog className="h-3.5 w-3.5" /> Access</Button>}
+                    {r.isActive && <MessageButton recipientId={r.userId} recipientName={r.name} />}
                   </div>
                 </TD>
               </TR>
@@ -145,6 +147,7 @@ function DirectoryTab({ canManage, canInvite }: { canManage: boolean; canInvite:
       </TableContainer>
       {file && <StaffFileDrawer userId={file} canManage={canManage} onClose={() => { setFile(null); load(); }} />}
       {inviting && <InviteStaffModal onClose={() => setInviting(false)} onDone={() => { setInviting(false); load(); }} />}
+      {lifecycle && <StaffLifecycleModal staff={lifecycle} onClose={() => setLifecycle(null)} onDone={() => { setLifecycle(null); load(); }} />}
       {importing && <ImportStaffModal onClose={() => setImporting(false)} onDone={() => { setImporting(false); load(); }} />}
     </>
   );
@@ -204,6 +207,75 @@ function InviteStaffModal({ onClose, onDone }: { onClose: () => void; onDone: ()
         <Button onClick={invite} disabled={saving || fullName.trim().length < 2 || !email.includes("@")} className="w-full">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />} Create staff account
         </Button>
+      </div>
+    </Modal>
+  );
+}
+
+function StaffLifecycleModal({ staff, onClose, onDone }: { staff: StaffRow; onClose: () => void; onDone: () => void }) {
+  const { toast } = useToast();
+  const [reason, setReason] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [impact, setImpact] = React.useState<any | null>(null);
+  const [terminate, setTerminate] = React.useState(false);
+
+  async function post(body: unknown) {
+    const res = await fetch("/api/hr/lifecycle", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error?.message || "Could not update staff access.");
+    return json.data;
+  }
+  async function access(action: "DEACTIVATE" | "REACTIVATE") {
+    setBusy(true);
+    try {
+      const data = await post({ action, userId: staff.userId, reason });
+      toast({ title: action === "DEACTIVATE" ? `Account deactivated · ${data.sessionsRevoked} session(s) revoked` : "Staff account reactivated", tone: "success" });
+      onDone();
+    } catch (e) { toast({ title: e instanceof Error ? e.message : "Could not update access.", tone: "error" }); }
+    finally { setBusy(false); }
+  }
+  async function preview(forTermination: boolean) {
+    setBusy(true); setTerminate(forTermination);
+    try { setImpact(await post({ action: "PREVIEW_TRANSFER", userId: staff.userId, reason })); }
+    catch (e) { toast({ title: e instanceof Error ? e.message : "Could not analyse assignments.", tone: "error" }); }
+    finally { setBusy(false); }
+  }
+  async function applyTransfer() {
+    setBusy(true);
+    try {
+      const data = await post({ action: "APPLY_TRANSFER", impactId: impact.impactId, terminate, reason });
+      toast({ title: terminate ? `Staff terminated · ${data.sessionsRevoked} session(s) revoked` : "Assignments transferred and timetable regeneration started", tone: "success" });
+      onDone();
+    } catch (e) { toast({ title: e instanceof Error ? e.message : "Could not apply assignment transfer.", tone: "error" }); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <Modal title={`Staff access — ${staff.name}`} onClose={onClose}>
+      <div className="space-y-3">
+        <div><Label>Reason / audit note</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Contract ended on 31 August" /></div>
+        {!impact ? (
+          <div className="grid gap-2">
+            {staff.isActive ? <>
+              <Button variant="secondary" onClick={() => access("DEACTIVATE")} disabled={busy || reason.trim().length < 3}>Deactivate access only</Button>
+              <Button variant="secondary" onClick={() => preview(false)} disabled={busy || reason.trim().length < 3}>Transfer teaching assignments</Button>
+              <Button variant="danger" onClick={() => preview(true)} disabled={busy || reason.trim().length < 3}>Terminate & transfer assignments</Button>
+            </> : <Button onClick={() => access("REACTIVATE")} disabled={busy || reason.trim().length < 3}>Reactivate staff account</Button>}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+              <strong>{impact.summary}</strong> NEYO will use the best qualified, active and workload-allowed recommendation for each affected class/subject. Items with no recommendation remain honestly unassigned for manual follow-up.
+            </div>
+            <ul className="max-h-44 space-y-1 overflow-y-auto text-xs text-navy-600 dark:text-navy-300">
+              {impact.affected.map((item: any, index: number) => <li key={index}>• {item.type.replaceAll("_", " ").toLowerCase()} · {item.classLabel}{item.lessonsPerWeek ? ` · ${item.lessonsPerWeek} lessons/week` : ""}</li>)}
+            </ul>
+            <Button variant={terminate ? "danger" : "primary"} onClick={applyTransfer} disabled={busy} className="w-full">
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} {terminate ? "Confirm termination, revoke sessions & transfer" : "Confirm assignment transfer"}
+            </Button>
+            <Button variant="ghost" onClick={() => setImpact(null)} disabled={busy} className="w-full">Back</Button>
+          </div>
+        )}
       </div>
     </Modal>
   );

@@ -48,6 +48,7 @@ import { CbcError } from "@/lib/services/cbc.service";
 import { FinanceError } from "@/lib/services/finance.service";
 import { PayrollError } from "@/lib/services/payroll.service";
 import { HrError } from "@/lib/services/hr.service";
+import { StaffLifecycleError } from "@/lib/services/staff-lifecycle.service";
 import { SubstituteError } from "@/lib/services/substitute.service";
 import { PortalError } from "@/lib/services/parent-portal.service";
 import { TeacherPortalError } from "@/lib/services/teacher-portal.service";
@@ -443,6 +444,11 @@ export function handleError(err: unknown) {
 
   // HR (B.9).
   if (err instanceof HrError) {
+    const status = err.code === "NOT_FOUND" ? 404 : err.code === "FORBIDDEN" ? 403 : 422;
+    return fail(err.code, err.message, status);
+  }
+
+  if (err instanceof StaffLifecycleError) {
     const status = err.code === "NOT_FOUND" ? 404 : err.code === "FORBIDDEN" ? 403 : 422;
     return fail(err.code, err.message, status);
   }

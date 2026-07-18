@@ -387,23 +387,30 @@ Do not give leadership role merely to make missing class access disappear; fix a
 
 ---
 
-## 18. Deactivation, departure and access removal
+## 18. Deactivation, termination, reactivation and assignment transfer
 
-Current Staff UI focuses records/role, not a clear terminate/deactivate button. Do not “solve” a
-departure by changing person into an unrelated low role or deleting HR history.
+The gap found in the first manual pass is now fixed. Authorized role managers see **Access** on every
+Staff row, including inactive staff (shown with an inactive badge).
 
-Proper future/authorized offboarding should:
+Enter a required reason/audit note, then choose:
 
-- mark User inactive through a dedicated controlled workflow;
-- invalidate sessions/passkeys/OAuth/API access;
-- transfer classes/tasks/approvals;
-- close leave/substitute responsibilities;
-- preserve HR/payroll/audit/legal records;
-- revoke external provider/company access;
-- return assets and document exit.
+- **Deactivate access only:** sets `User.isActive=false`, revokes every server session immediately,
+  preserves HR and teaching assignments for temporary suspension/leave/investigation.
+- **Reactivate staff account:** sets active again and clears contract-end marker; the person must
+  sign in again because old sessions are not restored.
+- **Transfer teaching assignments:** analyses every direct class-subject need and class-teacher duty,
+  displays affected responsibilities, then assigns each to the best qualified active teacher within
+  workload rules and starts timetable regeneration. Original account remains active.
+- **Terminate & transfer assignments:** performs the same impact preview/transfer, marks account
+  inactive, revokes all sessions, stamps HR contract end to Nairobi today, starts timetable
+  regeneration and audits the actor/reason/impact/job.
 
-This is a known manual/product gap to address in a dedicated staff access lifecycle feature rather
-than using direct database edits.
+If no qualified replacement exists, the responsibility remains honestly unassigned for manual
+follow-up. The system must not silently invent a teacher. HR/payroll/audit history is preserved.
+
+Current transfer analysis covers direct `ClassSubjectNeed` and class-teacher duties. After applying,
+leadership must inspect generated timetable, combination/elective blocks, duties, pending approvals,
+external provider access and physical assets before closing offboarding.
 
 ---
 
@@ -465,11 +472,14 @@ The real invite backend existed but no reachable Staff UI used it. Added permiss
 staff** button/modal wired to `/api/onboarding/invite`, with role/email/name, duplicate-email feedback
 and accurate first-login magic-link instruction.
 
-### Still open
+### Fixed after founder review
 
-A dedicated staff deactivate/terminate/reactivate access lifecycle UI is not present in the current
-Staff client. It should be designed with session revocation, assignment transfer, HR retention and
-audit rather than improvised role changes/deletion.
+Added the dedicated **Access** lifecycle full stack: existing `User.isActive`, `Session`,
+`StaffProfile`, `TeacherTransferImpact`, teaching-assignment and timetable-job records provide the
+real database layer; new `staff-lifecycle.service.ts` owns security/business rules and audit;
+`POST /api/hr/lifecycle` provides validated, permission-gated actions; Staff Directory now lists
+active/inactive staff and provides Deactivate, Reactivate, Transfer and Terminate preview/apply UI.
+No schema migration was needed because the required durable records already existed.
 
 ---
 
