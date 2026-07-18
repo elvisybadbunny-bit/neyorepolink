@@ -1,3 +1,15 @@
+## 2026-07-18 (part 41) — Founder Manual V2 Module 07 Attendance + QR Attendance Entry Point Fixed
+
+Built `07-ATTENDANCE-CLASS-REGISTERS-STAFF-GPS-OFFLINE-SMS-AND-INSIGHTS.md` with exact role/scope, P/A/L/E meaning, all three original tabs, date controls, Principal Master Override, every class card state, fresh-register Present default versus actual Save, status cycling, sticky save/SMS/offline behavior, idempotent replay, historical correction, staff clock/GPS/geofence/day sheet, all four Insights cards, hostel/hardware distinctions, daily example, troubleshooting, 16-point verification and edit paths.
+
+Following the founder's fix-gaps rule, repaired QR discoverability full-stack UI wiring: `qr-scan.service.ts`, `/api/qr-scan/attendance`, `QrScanEvent` and universal `QrScanStation` were real but the station was only reachable through Security/Gate. Added permission-gated **QR attendance** to AttendanceTabs and reused the same scanner in attendance-only mode (`canLookupPayment=false`, `canCheckGatePass=false`), avoiding duplicate logic/API/schema. Users with attendance.record can now scan from the module where they expect it; Gate retains all three modes.
+
+Static source wiring and `git diff --check` pass; docs mirrored/byte-compared. A sandbox wipe removed `node_modules` before focused ESLint, and bare `npx` attempted incompatible ESLint 10, so no false lint-pass claim is made. No other orphaned Attendance action found.
+
+**Next:** Module 08 Academics Foundation (terms, departments, subjects, lesson plans and curriculum mapping) before the dedicated complete timetable chapter.
+
+---
+
 ## 2026-07-18 (part 40) — Manual Completeness Correction + Module 06 Admissions
 
 **Founder correction:** Module 05 summary did not explicitly explain Bundi Intelligent imports or every New Year button/tab. Founder asked whether features were being left out. Corrected the standard immediately.

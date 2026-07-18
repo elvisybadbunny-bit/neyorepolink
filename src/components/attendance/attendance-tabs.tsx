@@ -4,11 +4,13 @@
 import * as React from "react";
 import { AttendanceClient } from "@/components/attendance/attendance-client";
 import { StaffAttendanceTab, InsightsTab } from "@/components/attendance/staff-attendance-client";
+import { QrScanStation } from "@/components/security/qr-scan-station";
 
 export function AttendanceTabs({ canRecord, canInsights, currentUserId }: { canRecord: boolean; canInsights: boolean; currentUserId: string }) {
-  const [tab, setTab] = React.useState<"classes" | "staff" | "insights">("classes");
+  const [tab, setTab] = React.useState<"classes" | "qr" | "staff" | "insights">("classes");
   const tabs = [
     { key: "classes" as const, label: "Class registers", show: true },
+    { key: "qr" as const, label: "QR attendance", show: canRecord },
     { key: "staff" as const, label: "Staff", show: true },
     { key: "insights" as const, label: "Insights", show: canInsights },
   ].filter((t) => t.show);
@@ -27,6 +29,7 @@ export function AttendanceTabs({ canRecord, canInsights, currentUserId }: { canR
         ))}
       </div>
       {tab === "classes" && <AttendanceClient canRecord={canRecord} currentUserId={currentUserId} />}
+      {tab === "qr" && <QrScanStation canMarkAttendance={canRecord} canLookupPayment={false} canCheckGatePass={false} />}
       {tab === "staff" && <StaffAttendanceTab />}
       {tab === "insights" && <InsightsTab />}
     </div>

@@ -104,6 +104,7 @@ making this index unreadable:
 - **[Module 04 — Users, Roles, Staff Access & Invitations](../founder-manual-v2/04-USERS-ROLES-STAFF-ACCESS-AND-INVITATIONS.md)**
 - **[Module 05 — Students, Guardians, Classes, Imports, Transfers & Alumni](../founder-manual-v2/05-STUDENTS-GUARDIANS-CLASSES-IMPORTS-TRANSFERS-AND-ALUMNI.md)**
 - **[Module 06 — Admissions](../founder-manual-v2/06-ADMISSIONS-INQUIRIES-APPLICATIONS-INTERVIEWS-OFFERS-AND-ADMIT.md)**
+- **[Module 07 — Attendance](../founder-manual-v2/07-ATTENDANCE-CLASS-REGISTERS-STAFF-GPS-OFFLINE-SMS-AND-INSIGHTS.md)**
 
 ## Levels planned
 
