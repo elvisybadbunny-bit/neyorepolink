@@ -1,3 +1,13 @@
+## 2026-07-18 (part 48) — Founder Manual V2 Module 14 Finance
+
+Built `14-FINANCE-FEES-INVOICES-MPESA-CASH-RECONCILIATION-AND-ACTIVITIES.md`: unified invoice/payment truth; permissions; every Finance tab/link; Overview metrics/reminders/digests/leaderboard/aging; Fee Structure fields/items/sibling discount/batch idempotency; invoice search/actions; Manual/M-Pesa/Cash/Discount/Print; Payments; Suspense human allocation; Promises/installment plans; Teacher Cash policy/confirm/reject; reminder schedule/never-logged/SMS spend; Treasury bank clearing; Trips & Activities/Tournament rosters/consent; BOM Payroll/Farm distinctions; jobs; worked example, errors and 18-step verification.
+
+Render-chain inspection confirms all Finance tabs and external links are wired; no orphaned Finance UI found. Static source/diff verification, `git diff --check`, docs mirrored/byte-compared. No code change required.
+
+**Next:** Module 15 Payroll & HR (salary/statutory runs, payslips, staff records, leave, recruitment, performance/training/discipline, lifecycle and all buttons).
+
+---
+
 ## 2026-07-18 (part 47) — Founder Manual V2 Module 13 Parent & Student Shared Portal
 
 Built `13-PARENT-STUDENT-SHARED-PORTAL-FEES-RESULTS-HOMEWORK-SAFETY-AND-SERVICES.md`: shared portal rationale/ownership scope; My Children and family split plan; child header/Portfolio/Class Chat; invoices/STK/promises/receipts; published results/reports; growth/competency/pathway; attendance; permanent/one-time pickup; parent photo/document approval requests; transport and cafeteria requests; timetable/substitutes; homework submissions/re-submission/grade lock; notes; uniform ordering/invoicing/size stock; library/fines; family-safe health; school contacts/messages; PTA; Diary; Alumni Campaign; subject selection/pathways; LMS quizzes/discussions; complete example, errors and 18-step verification.

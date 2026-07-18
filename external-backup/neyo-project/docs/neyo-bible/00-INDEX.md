@@ -111,6 +111,7 @@ making this index unreadable:
 - **[Module 11 — CBE, Competencies, Assessments & Learning Evidence](../founder-manual-v2/11-CBE-COMPETENCIES-ASSESSMENTS-SYLLABUS-PORTFOLIO-QUESTION-BANK-AND-VIDEOS.md)**
 - **[Module 12 — Teacher Portal](../founder-manual-v2/12-TEACHER-PORTAL-MY-CLASSES-HOMEWORK-NOTES-REPORTS-AND-SUBSTITUTION.md)**
 - **[Module 13 — Parent & Student Shared Portal](../founder-manual-v2/13-PARENT-STUDENT-SHARED-PORTAL-FEES-RESULTS-HOMEWORK-SAFETY-AND-SERVICES.md)**
+- **[Module 14 — Finance](../founder-manual-v2/14-FINANCE-FEES-INVOICES-MPESA-CASH-RECONCILIATION-AND-ACTIVITIES.md)**
 
 ## Levels planned
 
