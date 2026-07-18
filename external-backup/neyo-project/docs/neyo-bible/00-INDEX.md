@@ -113,6 +113,7 @@ making this index unreadable:
 - **[Module 13 — Parent & Student Shared Portal](../founder-manual-v2/13-PARENT-STUDENT-SHARED-PORTAL-FEES-RESULTS-HOMEWORK-SAFETY-AND-SERVICES.md)**
 - **[Module 14 — Finance](../founder-manual-v2/14-FINANCE-FEES-INVOICES-MPESA-CASH-RECONCILIATION-AND-ACTIVITIES.md)**
 - **[Module 15 — Payroll & Human Resources](../founder-manual-v2/15-PAYROLL-AND-HR-SALARIES-STATUTORY-DEDUCTIONS-PAYSLIPS-AND-PEOPLE.md)**
+- **[Module 16 — Communication, Messages, Notifications & Calendar](../founder-manual-v2/16-COMMUNICATION-MESSAGES-NOTIFICATIONS-AND-CALENDAR.md)**
 
 ## Levels planned
 

@@ -1,3 +1,13 @@
+## 2026-07-18 (part 50) — Founder Manual V2 Module 16 Communication, Messages, Notifications & Calendar
+
+Built `16-COMMUNICATION-MESSAGES-NOTIFICATIONS-AND-CALENDAR.md`: correct tool selection; broadcast permissions/teacher restriction; audience cards and sibling phone dedupe; SMS/In-app; mandatory recipients/cost/quota preview and send; teacher approval; sent ledger; channel cascade; direct/group/class/announcement messaging; compose/attachments/read/ack/delivery reports/fallback; notification bell/native push/preferences; Calendar views/keyboard/new event/audience/invites; recurrence; holidays; iCal/private feed copy/rotate/revoke; examples, errors and 17-step verification.
+
+Render/service/route audit found no orphaned component. External channel delivery remains credential-dependent and is explicitly not called live without evidence. Static source/diff verification, `git diff --check`, docs mirrored/byte-compared. No code change required.
+
+**Next:** Module 17 LMS, Homework, Quizzes, Discussions, Learning Videos & Online Classes.
+
+---
+
 ## 2026-07-18 (part 49) — Founder Manual V2 Module 15 Payroll & HR + Staff Self-Service Payslips Fixed
 
 Built `15-PAYROLL-AND-HR-SALARIES-STATUTORY-DEDUCTIONS-PAYSLIPS-AND-PEOPLE.md`: separate account/HR/salary/run/slip records; access; Salaries fields; Run Payroll/period/overtime; coded PAYE/SHIF/NSSF/AHL and current-law warning; run list/detail; Approve & Lock; PDFs; HR/lifecycle/leave/BOM distinctions; external payment/P9 status boundaries; monthly example, errors and 14-step verification.
