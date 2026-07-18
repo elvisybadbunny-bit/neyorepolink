@@ -1,3 +1,15 @@
+## 2026-07-18 (part 51) — Founder Manual V2 Module 17 LMS, Videos & Online Classes + Online-Class Scope Fixed
+
+Built `17-LMS-HOMEWORK-QUIZZES-DISCUSSIONS-VIDEOS-AND-ONLINE-CLASSES.md`: LMS roles; Quiz builder/options/correct answer/publish/results; Hand-ins/late/re-submit/grade; Discussions/locks; family LMS; video search fallback/save/watch/cast/history; Online Class request/notify/board/status; room mobile/TV/mic/video/share/fullscreen/PiP/peers/questions/teacher controls; P2P limitations, example, errors and 15-step verification.
+
+Following gap-fix rule, found a real privacy/UI defect: `onlineClassBoard()` returned every class and 50 sessions to any signed-in tenant user, while UI showed Request/Start/End controls even when backend later rejected mutations. Fixed board scoping: teachers use real teacherClassIds, leadership receives oversight, Parent/Student use `scopeWhere()` linked class ids; sessions filtered to allowed classes. Board returns `canManage`, each session returns exact `canControl`; UI hides Request form and Start/End accordingly. No schema change.
+
+Static source/diff verification and `git diff --check`; docs mirrored/byte-compared. Node modules unavailable, no unsupported lint/typecheck claim.
+
+**Next:** Module 18 Library.
+
+---
+
 ## 2026-07-18 (part 50) — Founder Manual V2 Module 16 Communication, Messages, Notifications & Calendar
 
 Built `16-COMMUNICATION-MESSAGES-NOTIFICATIONS-AND-CALENDAR.md`: correct tool selection; broadcast permissions/teacher restriction; audience cards and sibling phone dedupe; SMS/In-app; mandatory recipients/cost/quota preview and send; teacher approval; sent ledger; channel cascade; direct/group/class/announcement messaging; compose/attachments/read/ack/delivery reports/fallback; notification bell/native push/preferences; Calendar views/keyboard/new event/audience/invites; recurrence; holidays; iCal/private feed copy/rotate/revoke; examples, errors and 17-step verification.

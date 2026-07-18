@@ -114,6 +114,7 @@ making this index unreadable:
 - **[Module 14 — Finance](../founder-manual-v2/14-FINANCE-FEES-INVOICES-MPESA-CASH-RECONCILIATION-AND-ACTIVITIES.md)**
 - **[Module 15 — Payroll & Human Resources](../founder-manual-v2/15-PAYROLL-AND-HR-SALARIES-STATUTORY-DEDUCTIONS-PAYSLIPS-AND-PEOPLE.md)**
 - **[Module 16 — Communication, Messages, Notifications & Calendar](../founder-manual-v2/16-COMMUNICATION-MESSAGES-NOTIFICATIONS-AND-CALENDAR.md)**
+- **[Module 17 — LMS, Videos & Online Classes](../founder-manual-v2/17-LMS-HOMEWORK-QUIZZES-DISCUSSIONS-VIDEOS-AND-ONLINE-CLASSES.md)**
 
 ## Levels planned
 

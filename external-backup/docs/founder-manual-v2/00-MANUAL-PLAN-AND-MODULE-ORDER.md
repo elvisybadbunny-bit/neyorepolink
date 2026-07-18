@@ -39,6 +39,7 @@ language:
 - [Module 14 — Finance](./14-FINANCE-FEES-INVOICES-MPESA-CASH-RECONCILIATION-AND-ACTIVITIES.md)
 - [Module 15 — Payroll & Human Resources](./15-PAYROLL-AND-HR-SALARIES-STATUTORY-DEDUCTIONS-PAYSLIPS-AND-PEOPLE.md)
 - [Module 16 — Communication, Messages, Notifications & Calendar](./16-COMMUNICATION-MESSAGES-NOTIFICATIONS-AND-CALENDAR.md)
+- [Module 17 — LMS, Videos & Online Classes](./17-LMS-HOMEWORK-QUIZZES-DISCUSSIONS-VIDEOS-AND-ONLINE-CLASSES.md)
 
 ## The standard chapter format
 

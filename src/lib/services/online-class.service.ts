@@ -4,6 +4,8 @@ import { withTenant } from "@/lib/core/tenant-context";
 import { tenantDb } from "@/lib/core/tenant-db";
 import { notify } from "@/lib/services/notification.service";
 import type { SessionUser } from "@/lib/core/session";
+import { teacherClassIds } from "@/lib/services/teacher-portal.service";
+import { scopeWhere } from "@/lib/services/student.service";
 
 export class OnlineClassError extends Error {
   constructor(public code: "NOT_FOUND" | "FORBIDDEN" | "STATE", message: string) {
@@ -30,13 +32,30 @@ async function classRecipientIds(classId: string) {
 
 export async function onlineClassBoard(user: SessionUser) {
   return withTenant(user.tenantId, async () => {
+    const canManage = TEACHER_ROLES.has(user.role) || (!!user.secondaryRole && TEACHER_ROLES.has(user.secondaryRole));
+    let allowedClassIds: string[] | null = null;
+    if (canManage) {
+      allowedClassIds = await teacherClassIds(user); // null = leadership oversight
+    } else {
+      const students = await tenantDb().student.findMany({
+        where: { AND: [await scopeWhere(user), { classId: { not: null }, deletedAt: null }] },
+        select: { classId: true },
+      });
+      allowedClassIds = Array.from(new Set(students.map((student) => student.classId).filter((id): id is string => Boolean(id))));
+    }
+    const classWhere = allowedClassIds === null ? { archived: false } : { archived: false, id: { in: allowedClassIds.length ? allowedClassIds : ["__none__"] } };
+    const sessionWhere = allowedClassIds === null ? {} : { classId: { in: allowedClassIds.length ? allowedClassIds : ["__none__"] } };
     const [classes, sessions] = await Promise.all([
-      tenantDb().schoolClass.findMany({ where: { archived: false }, orderBy: [{ level: "asc" }, { stream: "asc" }] }),
-      tenantDb().onlineClassSession.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
+      tenantDb().schoolClass.findMany({ where: classWhere, orderBy: [{ level: "asc" }, { stream: "asc" }] }),
+      tenantDb().onlineClassSession.findMany({ where: sessionWhere, orderBy: { createdAt: "desc" }, take: 50 }),
     ]);
     return {
+      canManage,
       classes: classes.map((c) => ({ id: c.id, name: classLabel(c) })),
-      sessions,
+      sessions: sessions.map((session) => ({
+        ...session,
+        canControl: session.teacherId === user.id || ["PRINCIPAL", "DEPUTY_PRINCIPAL", "SCHOOL_OWNER"].includes(user.role),
+      })),
       runningByClass: sessions.filter((s) => s.status === "RUNNING").map((s) => ({ classId: s.classId, className: s.className, title: s.title, joinUrl: s.joinUrl, tvAccessCode: s.tvAccessCode })),
     };
   });
