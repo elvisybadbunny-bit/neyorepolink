@@ -30,6 +30,7 @@ language:
 - [Module 05 — Students, Guardians, Classes, Imports, Transfers & Alumni](./05-STUDENTS-GUARDIANS-CLASSES-IMPORTS-TRANSFERS-AND-ALUMNI.md)
 - [Module 06 — Admissions](./06-ADMISSIONS-INQUIRIES-APPLICATIONS-INTERVIEWS-OFFERS-AND-ADMIT.md)
 - [Module 07 — Attendance](./07-ATTENDANCE-CLASS-REGISTERS-STAFF-GPS-OFFLINE-SMS-AND-INSIGHTS.md)
+- [Module 08 — Academics Foundation](./08-ACADEMICS-SUBJECTS-DEPARTMENTS-TERMS-LESSON-PLANS-AND-CURRICULUM.md)
 
 ## The standard chapter format
 

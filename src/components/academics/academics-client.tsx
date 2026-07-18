@@ -140,7 +140,7 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
       {tab === "computation" && <ComputationDashboardClient canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
       {tab === "reports" && <ReportBuilderClient canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
       {tab === "curriculum-versions" && <CurriculumVersionManagerClient canManage={canManage} />}
-      {tab === "pathways" && <PathwayManagerClient subjects={[]} />}
+      {tab === "pathways" && <PathwayManagerClient subjects={subjects} />}
       {tab === "subject-selection" && <SubjectSelectionManager subjects={subjects} />}
       {tab === "generator" && <TimetableGeneratorTab canManage={canManage} />}
       {tab === "smart-timetable" && <TimetableEngineTab canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}

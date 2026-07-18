@@ -1,3 +1,15 @@
+## 2026-07-18 (part 42) — Founder Manual V2 Module 08 Academics Foundation + Senior Pathway Subject Wiring Fixed
+
+Founder requested Module 08 (Module 07 was already completed). Built `08-ACADEMICS-SUBJECTS-DEPARTMENTS-TERMS-LESSON-PLANS-AND-CURRICULUM.md`: access/HOD scope, complete inventory of all 20 conditional Academics tabs, Subjects and CBE/8-4-4 presets, Departments/HOD/subject mapping, Co-curricular foundation, Terms/current behavior, Lesson Plans/resources/observations/coverage, Record of Work distinction, Curriculum Versions, Senior Pathways, Subject Selection, grading/report foundations, specialized-tab ownership, setup example, exact timetable wiring, troubleshooting and founder verification.
+
+Following the gap-fix rule, found and fixed a real Senior Pathways UI defect: Academics fetched the tenant's real subjects into state and correctly passed them to Subject Selection, but rendered `<PathwayManagerClient subjects={[]}>`, guaranteeing an empty catalog. Changed it to `subjects={subjects}`. No schema/API/service change required because the real Subject fetch and Pathway manager already existed.
+
+Static diff/source verification and `git diff --check`; docs synchronized/byte-compared. Sandbox currently lacks compatible installed node_modules after wipe, so no false lint/typecheck claim.
+
+**Next:** Module 09 — complete Timetable and Smart Timetable manual, including every prerequisite, manual grid, schedule rules, class needs, teacher allocation/import, constraints, venues/labs, combinations, elective blocks, generation, preview, publish/draft, prints, conflict handling and all buttons.
+
+---
+
 ## 2026-07-18 (part 41) — Founder Manual V2 Module 07 Attendance + QR Attendance Entry Point Fixed
 
 Built `07-ATTENDANCE-CLASS-REGISTERS-STAFF-GPS-OFFLINE-SMS-AND-INSIGHTS.md` with exact role/scope, P/A/L/E meaning, all three original tabs, date controls, Principal Master Override, every class card state, fresh-register Present default versus actual Save, status cycling, sticky save/SMS/offline behavior, idempotent replay, historical correction, staff clock/GPS/geofence/day sheet, all four Insights cards, hostel/hardware distinctions, daily example, troubleshooting, 16-point verification and edit paths.
