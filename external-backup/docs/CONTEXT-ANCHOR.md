@@ -1,3 +1,13 @@
+## 2026-07-18 (part 55) — Founder Manual V2 Module 21 Inventory, Uniforms, Assets, Suppliers, Procurement & Expenses
+
+Built `21-INVENTORY-UNIFORMS-ASSETS-SUPPLIERS-PROCUREMENT-AND-EXPENSES.md`: access; all six tabs; stores/items/reorder/expiry/FIFO; stock In/Out/Sell→invoice; Uniform per-size/master sync and Parent order/delivery; assets/tags/depreciation/maintenance; suppliers/categories/ratings/contracts/expiry; procurement request/quotes/best-price/PO threshold/self-approval/send/delivery/three-way match; expenses/categories/cost centers/receipt/threshold approval/reject/reports; example/errors/verification.
+
+Render/service/API audit found all six tabs wired; no orphaned control. Manual flags Asset/Capital Asset/Fleet boundaries to avoid duplicate registers. `git diff --check`; docs mirrored. No code change required.
+
+**Next:** Module 22 Cafeteria & Pocket Wallet.
+
+---
+
 ## 2026-07-18 (part 54) — Founder Manual V2 Module 20 Transport & Fleet
 
 Built `20-TRANSPORT-ROUTES-SHIFTS-RIDERS-FLEET-DRIVERS-FUEL-AND-REQUESTS.md`: records/tabs/permissions; transport settings and mid-term billing; Routes/stops/fees; Riders/stop/capacity/auto allocation/release; idempotent invoicing; Shifts/edit/archive/overrides; Fleet vehicle/compliance/file; Fuel/odometer/kmL; Maintenance; Drivers/licence; Parent route-change approval/decline/billing; GPS hardware honesty; example, errors and 14-step verification.

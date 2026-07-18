@@ -118,6 +118,7 @@ making this index unreadable:
 - **[Module 18 — Library](../founder-manual-v2/18-LIBRARY-CATALOG-COPIES-ISSUE-RETURN-FINES-IMPORT-AND-QR.md)**
 - **[Module 19 — Hostel](../founder-manual-v2/19-HOSTEL-DORMS-BEDS-CURFEW-FEES-EXEAT-DAMAGE-AND-VISITORS.md)**
 - **[Module 20 — Transport & Fleet](../founder-manual-v2/20-TRANSPORT-ROUTES-SHIFTS-RIDERS-FLEET-DRIVERS-FUEL-AND-REQUESTS.md)**
+- **[Module 21 — Inventory, Uniforms, Assets, Suppliers, Procurement & Expenses](../founder-manual-v2/21-INVENTORY-UNIFORMS-ASSETS-SUPPLIERS-PROCUREMENT-AND-EXPENSES.md)**
 
 ## Levels planned
 
