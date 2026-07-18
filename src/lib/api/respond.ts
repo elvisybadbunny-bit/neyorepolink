@@ -57,6 +57,8 @@ import { LibraryError } from "@/lib/services/library.service";
 import { ClassChatError } from "@/lib/services/class-chat.service";
 import { ClassVoiceError } from "@/lib/services/class-voice.service";
 import { HostelError } from "@/lib/services/hostel.service";
+import { KenyanExtensionError } from "@/lib/services/kenyan-extensions.service";
+import { FeatureReleaseError } from "@/lib/services/early-access-release.service";
 import { TransportError } from "@/lib/services/transport.service";
 import { InventoryError } from "@/lib/services/inventory.service";
 import { SupplierError } from "@/lib/services/supplier.service";
@@ -866,6 +868,23 @@ export function handleError(err: unknown) {
   // Rate limiting (A.14) -> 429.
   if (err instanceof RateLimitError) {
     return fail("RATE_LIMITED", err.message, 429);
+  }
+
+  // Ideas 1-12 "Next-Gen Kenyan School Management" extension suites (real
+  // 404/422/403 codes for BoardingExeatPass, TreasuryCheck, PocketWallet,
+  // KNEC studio, BOM vault, Lost & Found, etc. -- was previously falling
+  // through to a generic, unhelpful 500 INTERNAL_ERROR for every single
+  // one of these routes since this error class was never registered here).
+  if (err instanceof KenyanExtensionError) {
+    const status = err.code === "NOT_FOUND" ? 404 : err.code === "FORBIDDEN" ? 403 : err.code === "PAUSED" ? 423 : 422;
+    return fail(err.code, err.message, status);
+  }
+
+  // Early Access / Feature Release Controller (e.g. moe.nemis_sync,
+  // finance.pocket_wallet, hostel.exeat_pass toggled off in NEYO Ops).
+  if (err instanceof FeatureReleaseError) {
+    const status = err.code === "FORBIDDEN" ? 403 : 423;
+    return fail(err.code, err.message, status);
   }
 
   // Cross-tenant access attempt -> 403 (should never reach a normal user).
