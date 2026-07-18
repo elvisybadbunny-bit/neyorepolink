@@ -59,13 +59,15 @@ import { DemoRequestsOpsTab } from "@/components/founder/demo-requests-ops-tab";
 import { SupportImpersonationOpsTab } from "@/components/founder/support-impersonation-ops-tab";
 import { PlatformMaintenanceOpsTab } from "@/components/founder/platform-maintenance-ops-tab";
 import { StorageArchiveTiersOpsTab } from "@/components/founder/storage-archive-tiers-ops-tab";
+import { TenantHealthDefconTab } from "@/components/founder/tenant-health-defcon-tab";
+import { SmsHealthMonitorTab } from "@/components/founder/sms-health-monitor-tab";
 import { FeatureReleaseControlsTab } from "@/components/founder/feature-release-controls-tab";
 import { BundiOcrConfigTab } from "@/components/founder/bundi-ocr-config-tab";
 import { TrialLimitsOpsTab } from "@/components/founder/trial-limits-ops-tab";
 import { FounderCredentialsVault } from "@/components/founder/founder-credentials-vault";
 import { UiVersionToggleOpsCard } from "@/components/founder/ui-version-toggle-ops-card";
 
-const TABS = ["Overview", "Founder Dashboard", "Credentials & Secrets Vault", "Demo Requests", "Diagnostic Replay", "Maintenance Ops", "Trial Limits", "Release Whitelists", "Bundi OCR Quotas", "Unit Economics", "Build log", "Metrics", "Cadence", "Interviews", "Platform Flags", "Feature Toggles", "Revenue Grants", "Custom Feature Requests", "Discount Campaigns", "Influencer Codes", "Pathway Guide", "Revenue Ops", "Pricing Engine", "Storage Intelligence", "Storage Archive Tiers", "Developer Center", "Bundi Import", "Curriculum Library", "Business Operations", "Ecosystem Trends", "Team & Access"] as const;
+const TABS = ["Overview", "Founder Dashboard", "Credentials & Secrets Vault", "Demo Requests", "Diagnostic Replay", "Maintenance Ops", "Trial Limits", "Release Whitelists", "Bundi OCR Quotas", "Tenant Health Radar", "SMS Health Monitor", "Unit Economics", "Build log", "Metrics", "Cadence", "Interviews", "Platform Flags", "Feature Toggles", "Revenue Grants", "Custom Feature Requests", "Discount Campaigns", "Influencer Codes", "Pathway Guide", "Revenue Ops", "Pricing Engine", "Storage Intelligence", "Storage Archive Tiers", "Developer Center", "Bundi Import", "Curriculum Library", "Business Operations", "Ecosystem Trends", "Team & Access"] as const;
 type Tab = (typeof TABS)[number];
 
 type Dashboard = {
@@ -813,6 +815,8 @@ export function FounderOpsClient() {
       {tab === "Diagnostic Replay" && <SupportImpersonationOpsTab />}
       {tab === "Maintenance Ops" && <PlatformMaintenanceOpsTab />}
       {tab === "Trial Limits" && <TrialLimitsOpsTab />}
+      {tab === "Tenant Health Radar" && <TenantHealthDefconTab />}
+      {tab === "SMS Health Monitor" && <SmsHealthMonitorTab />}
       {tab === "Release Whitelists" && <FeatureReleaseControlsTab />}
       {tab === "Bundi OCR Quotas" && <BundiOcrConfigTab />}
       {tab === "Storage Archive Tiers" && <StorageArchiveTiersOpsTab />}
