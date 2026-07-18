@@ -27,6 +27,7 @@ language:
 - [Module 02 — Login, Security, User Menu & Navigation](./02-LOGIN-SECURITY-USER-MENU-AND-NAVIGATION.md)
 - [Module 03 — School Setup, Profile, Modules, Branding & Settings](./03-SCHOOL-SETUP-PROFILE-MODULES-BRANDING-AND-SETTINGS.md)
 - [Module 04 — Users, Roles, Staff Access & Invitations](./04-USERS-ROLES-STAFF-ACCESS-AND-INVITATIONS.md)
+- [Module 05 — Students, Guardians, Classes, Imports, Transfers & Alumni](./05-STUDENTS-GUARDIANS-CLASSES-IMPORTS-TRANSFERS-AND-ALUMNI.md)
 
 ## The standard chapter format
 

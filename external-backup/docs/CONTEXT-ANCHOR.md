@@ -1,3 +1,15 @@
+## 2026-07-18 (part 39) — Founder Manual V2 Module 05 + Orphaned Student Approvals UI Repaired
+
+Continued Manual V2 with `05-STUDENTS-GUARDIANS-CLASSES-IMPORTS-TRANSFERS-AND-ALUMNI.md`: learner record chain; role/scoping rules; every Students header/toolbar/filter/saved-view/list/Kanban action; manual registration and guardian login; profile status/documents/guardians/requirements; correct transfer/letter/undo workflow; class/stream/class-teacher/capacity controls; three-step import including subjects/custom fields/conflicts; alumni/graduation; promotion/reshuffle/Allocate Class/continuity; ID/newsletter/class list/duties prints; cross-module wiring; troubleshooting and 16-point founder verification.
+
+Following the founder's standing instruction to fix gaps when found, repaired an orphaned Student Approval workflow: `ApprovalsDialog` and state existed but no button ever set it open and it was never rendered. Added permission-aware **Student approvals** next to New student and mounted the existing dialog; authorized staff can now load pending requests and Approve/Reject through the real API. Focused ESLint has zero errors (two pre-existing unused `busy` state warnings), `git diff --check` passes, and mirrors byte-compare.
+
+Previous Modules 01–04 were rechecked against their documented gaps: Dashboard five fixes remain closed; Module 02 had no declared broken workflow; Module 03 missing structure fields are wired; Module 04 invitation and staff lifecycle controls are implemented. The staff assignment transfer manual retains an explicit post-transfer human-review scope for combination/elective/duty/external/asset responsibilities rather than claiming those unrelated systems are silently reassigned.
+
+**Next manual chapter:** Module 06 — Admissions, including inquiry → application → review/interview/offer/deposit/admit, letters and student creation.
+
+---
+
 ## 2026-07-18 (part 38) — Staff Lifecycle Gap Fixed Full Stack: Deactivate, Reactivate, Terminate, Revoke Sessions & Transfer Assignments
 
 **Founder instruction:** when the manual finds a gap, fix it full-stack and report it rather than only documenting it.

@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import {
   Plus, Search, LayoutGrid, List as ListIcon, Loader2, AlertCircle,
-  GraduationCap, Users, UserCheck, X, Printer, CalendarRange,
+  GraduationCap, Users, UserCheck, X, Printer, CalendarRange, ClipboardCheck,
 } from "lucide-react";
 import { StudentDutiesModal } from "@/components/students/student-duties-modal";
 import { StatCard } from "@/components/ui/stat-card";
@@ -408,7 +408,10 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
             <button onClick={()=>setView("list")} className={"rounded-full p-1.5 "+(view==="list"?"bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900":"text-navy-400")} aria-label="List view"><ListIcon className="h-4 w-4" /></button>
             <button onClick={()=>setView("kanban")} className={"rounded-full p-1.5 "+(view==="kanban"?"bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900":"text-navy-400")} aria-label="Kanban view"><LayoutGrid className="h-4 w-4" /></button>
           </div>
-          {canCreate && <Button onClick={()=>setDialog(true)}><Plus className="h-4 w-4" /> New student</Button>}
+          {canCreate && <>
+            <Button variant="secondary" onClick={() => setApprovalsOpen(true)}><ClipboardCheck className="h-4 w-4" /> Student approvals</Button>
+            <Button onClick={()=>setDialog(true)}><Plus className="h-4 w-4" /> New student</Button>
+          </>}
           {students && students.length > 0 && (
             <>
               <Button variant="secondary" onClick={() => setIdPrintOpen(true)}>
@@ -589,6 +592,7 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
         <KanbanBoard students={students} onMoved={load} />
       )}
 
+      {approvalsOpen && <ApprovalsDialog onClose={() => { setApprovalsOpen(false); load(); }} />}
       {dialog && <NewStudentDialog classes={classes} onClose={()=>setDialog(false)} onSaved={(adm)=>{ setDialog(false); toast({title:`Student registered · ${adm}`, tone:"success"}); load(); }} />}
       {dutiesModalOpen && <StudentDutiesModal open={dutiesModalOpen} onOpenChange={setDutiesModalOpen} classes={classes} currentClassId={classId} canManage={canCreate} />}
       </div>

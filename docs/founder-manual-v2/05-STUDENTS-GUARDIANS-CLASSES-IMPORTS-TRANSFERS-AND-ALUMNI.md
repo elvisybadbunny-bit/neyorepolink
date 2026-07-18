@@ -1,0 +1,421 @@
+# NEYO Founder Manual V2 — Module 05: Students, Guardians, Classes, Imports, Transfers & Alumni
+
+**Pages:** `/students`, `/students/[id]`, `/classes`, `/students/import`, `/students/alumni`,
+`/students/promotion`  
+**Last verified against code:** 2026-07-18
+
+---
+
+## 1. The learner record chain
+
+A reliable learner setup links:
+
+`Student → SchoolClass → Guardian(s) → portal User (optional) → requirements/documents → subjects/
+pathway → attendance/exams/invoices/operations`
+
+Do not create duplicate students to fix a wrong class, guardian or status. Edit/transfer/promote the
+existing identity so history remains connected.
+
+---
+
+## 2. Who can see Students
+
+`student.view` opens the page, but `scopeWhere()` limits rows:
+
+- leadership/authorized office roles: whole tenant;
+- Teacher/Class Teacher: classes genuinely linked through class-teacher, subject need, combination
+  or timetable assignment;
+- Parent: linked children;
+- Student: own linked record where the page is used;
+- unrelated tenant: blocked.
+
+`student.create` controls New Student/Import/approvals; `student.edit` controls profile/status/
+guardians/transfer; `class.manage` controls classes/new year.
+
+---
+
+## 3. Students header buttons
+
+- **Alumni:** opens graduated directory.
+- **Import:** CSV/XLSX/Sheets import (create permission).
+- **Manage classes:** class/stream setup (class manage).
+- **New year:** promotion, reshuffle, allocation and continuity tools.
+
+Inside toolbar:
+
+- Search name/admission (backend also supports phone through service/API).
+- Class, stream, status, gender filters.
+- List/Kanban view.
+- **Student approvals** (newly restored reachable UI).
+- **New student**.
+- When records exist: Print ID Cards, Print Newsletters, Print Class List, Student Duties.
+
+---
+
+## 4. Summary and list views
+
+Stats show visible total/active/classes. List rows link name/admission to profile. Checkboxes power
+bulk tools. Kanban groups status and can move status through real API where authorized.
+
+Filter combinations are ANDed with server row scope—they cannot reveal another class/child.
+
+### Saved views
+
+Set filters → **Save this view** → name → Save View. Saved pills reapply filters; X deletes saved
+view, not student data. **All Students** clears filters.
+
+---
+
+## 5. Register New Student
+
+Press **New student**.
+
+Fields:
+
+- first/last required by validation;
+- middle optional;
+- gender;
+- date of birth;
+- class or Unassigned;
+- existing school admission number optional;
+- UPI/NEMIS optional;
+- birth certificate optional;
+- primary guardian optional: name/phone/relationship and Create parent portal login.
+
+Buttons: Cancel, **Register student**.
+
+On success:
+
+- Student created in tenant;
+- NEYO admission number generated atomically;
+- optional existing number preserved separately;
+- guardian normalized/reused/linked;
+- optional guardian login created;
+- School Profile joining requirements copied;
+- audit written;
+- toast shows admission number and directory reloads.
+
+Registration does not automatically create invoices, subject choices or attendance history.
+
+---
+
+## 6. Student approvals
+
+The component and API existed but were unreachable because `approvalsOpen` was never opened/rendered.
+This chapter fixed it: authorized creators now see **Student approvals**.
+
+Modal loads pending approval requests. Buttons:
+
+- **Approve:** changes request to approved through real approvals API.
+- **Reject:** rejects.
+- Close/backdrop returns and reloads directory.
+
+Approval is not the same as admission unless the specific request workflow creates/updates the
+student. Read request details before deciding.
+
+---
+
+## 7. Student profile header and documents
+
+Profile shows identity, class/admission/status and actions:
+
+- ID card
+- Transcript
+- Mzazi card where permitted
+- Portfolio
+- Status dropdown
+- Transfer out
+
+Documents card **Add** opens label/hardcopy location/File upload. The uploaded file uses tenant
+storage; record preserves label/location. Never upload unrelated family IDs or expose files to
+unauthorized roles.
+
+Legacy admission number can be edited separately from NEYO id.
+
+---
+
+## 8. Status changes
+
+Statuses include Active, Inactive, Graduated, Transferred, Suspended.
+
+Use meaningfully:
+
+- Active: enrolled/current.
+- Inactive: temporarily not active without transfer/graduation.
+- Graduated: alumni fields/final class/year handling.
+- Transferred: use Transfer workflow, not status dropdown alone, because transfer needs destination,
+  date, reason and letter.
+- Suspended: temporary learner status; discipline workflow may also hold detailed suspension record.
+
+Status changes are audited. Do not use status to erase balances/results/history.
+
+---
+
+## 9. Guardians
+
+Guardians card supports:
+
+- **Add Guardian:** name, phone, relationship, primary/login choices according to dialog.
+- **Edit:** update the existing guardian instead of adding duplicate.
+- **Make primary:** controls principal family contact/notification choice.
+- **Message:** opens conversation when User account exists.
+
+Guardian may be shared by siblings. Changing shared guardian details can affect all linked children;
+confirm identity/phone first. Parent portal access remains row-scoped by links.
+
+---
+
+## 10. Joining requirements
+
+Each requirement appears as a clickable/toggleable row for editors. Toggling records fulfillment on
+that student. Master list comes from School Profile at creation time; changing master later does not
+silently rewrite historical student copies.
+
+---
+
+## 11. Transfer out
+
+Press **Transfer out…**.
+
+Enter destination school, county/date/reason/note as dialog requires. **Transfer student**:
+
+- creates `StudentTransfer`;
+- stores previous class for undo;
+- sets Student TRANSFERRED;
+- clears class seat;
+- audits;
+- profile shows amber banner.
+
+Banner actions:
+
+- **Transfer letter:** branded QR-verifiable PDF.
+- **Undo:** reverses active transfer and restores previous class if still available.
+
+Do not transfer by only selecting TRANSFERRED status; use workflow.
+
+---
+
+## 12. Classes & Streams
+
+Open **Manage classes**.
+
+Rows show level, stream, curriculum, capacity/student count and class teacher. Authorized actions:
+
+- inline Class Teacher selector;
+- edit pencil;
+- **New class**;
+- **Bulk create streams**.
+
+### New Class
+
+Enter level, stream, curriculum/capacity as current dialog provides → **Create class**. Duplicate
+rules apply.
+
+### Bulk Create Streams
+
+Enter level and stream naming/count inputs. Preview computed names; **Create streams** creates only
+missing classes and prepares default timetable configuration. It does not add students/subjects or
+teachers.
+
+### Edit Class
+
+Edit level, stream, curriculum, capacity and homeroom Class Teacher → Save changes. Subject teachers
+are separate in Academics Smart Timetable.
+
+Capacity informs overflow decisions; it does not automatically move learners until allocation/
+grouping workflow.
+
+---
+
+## 13. Bulk Student Import — Step 1
+
+Open Import.
+
+Choose:
+
+- automatic class from file; or
+- one selected target class.
+
+Provide CSV/XLSX or paste spreadsheet data. Header mapping supports student/guardian/class/subjects
+and custom fields. Press file area or **Preview pasted rows**.
+
+Do not commit before preview.
+
+---
+
+## 14. Import — Step 2 Preview
+
+Review:
+
+- total/valid/invalid;
+- auto column mapping;
+- first sample students;
+- duplicate/conflict warnings;
+- unknown classes/subjects/custom fields;
+- rows carrying subject choices;
+- compulsory subject selection;
+- declared level for classless intake where required.
+
+Correct mapping/conflicts and refresh preview. Unlabeled custom columns block commit. Choose
+skip-invalid policy only after understanding which rows will fail.
+
+Button **Import students** writes valid rows; Back returns upload.
+
+---
+
+## 15. Import — Step 3
+
+Shows created, updated and failed rows with reasons, subject selections count and import history.
+
+Buttons:
+
+- Import more
+- View students
+- Allocate class when subject selections were written
+
+Import is not proof every row succeeded. Export/correct failed rows and rerun those only.
+
+---
+
+## 16. Alumni
+
+Alumni page groups Class of year and displays final class. **Graduate a class**:
+
+- choose class/year;
+- preview count;
+- confirm;
+- sets Graduated, graduationYear/finalClassLabel;
+- clears class seat;
+- audits.
+
+Click alumnus opens retained profile. Graduation differs from transfer and does not delete records.
+
+---
+
+## 17. New Year / Promotion
+
+Promotion page contains several advanced panels.
+
+### New academic year
+
+Preview source→destination levels; final level graduates; missing destination classes can be
+created. Confirm commits top-level-first and records `PromotionRun`. Run history **Undo** restores
+prior class/status once.
+
+### Reshuffle streams
+
+Choose level and strategy (size, gender, alphabetical; performance only where real exam strategy is
+implemented). Preview movement, then apply. Do not reshuffle without class capacity/staff impact
+review.
+
+### Allocate Class
+
+For imported/selected subject combinations: choose level, use existing or create new classes,
+preview groups/capacity warnings, explicitly allow overflow or split, optionally seed subject needs
+and generate timetable. Print subject-combination/venue rosters where available.
+
+### Continuity and transfer review
+
+Analyze teacher continuity, keep/auto-assign replacements and regenerate timetable. This is related
+to Staff lifecycle but should not duplicate/contradict a completed termination transfer.
+
+---
+
+## 18. Printing and bulk operations
+
+### ID Cards
+
+Choose A4 batch or single-card, dimensions/template/stamp options. Save as school default if
+authorized; Print generates server PDF/print flow. Select rows when bulk toolbar appears.
+
+### Newsletters
+
+Title/content, personalization and 1/2/4-up format → server PDF. Preview content for privacy and dates.
+
+### Class List
+
+Uses browser print on current filtered list. Clear filters/select class intentionally.
+
+### Student Duties
+
+Choose class/duty rules and auto-assign through real duty service. Review capacity/gender balancing;
+do not treat generated duty as attendance.
+
+---
+
+## 19. Cross-module wiring
+
+| Student action | Downstream |
+|---|---|
+| Assign class | attendance, timetable, homework, exams, class chat |
+| Guardian link/login | portal, SMS, fees, pickup, messages |
+| Subjects/pathway | timetable, exams, Senior School grouping |
+| Status transfer/graduate | seat, directory, portal and historical reports |
+| Joining requirements | admission/profile tracking |
+| Invoice/service charge | Finance/Portal |
+| Student User | own shared portal |
+| Documents/photo | IDs/reports/profile |
+
+---
+
+## 20. Troubleshooting
+
+| Problem | Check |
+|---|---|
+| New Student button missing | `student.create` |
+| Student not visible to teacher | real class/subject/timetable assignment |
+| Parent sees wrong/no child | Guardian/User/StudentGuardian links |
+| Duplicate guardian | search/reuse by normalized phone; edit existing |
+| Class dropdown empty | create classes first; permission/module |
+| Import valid=0 | mapping/date/gender/phone/class errors |
+| Unknown subject | exact code/name catalog and compulsory mapping |
+| Transfer status without banner | status changed manually; use proper transfer workflow |
+| Undo cannot restore class | previous class removed/archived; assign manually with audit |
+| Graduate wrong class | use PromotionRun Undo promptly, verify history |
+| Approval button absent | requires create permission; restored UI in this chapter |
+| Print wrong learners | active filters/selection |
+
+---
+
+## 21. Founder verification checklist
+
+1. Principal sees all header management actions; teacher sees scoped roster/no create.
+2. Register learner with guardian/login; admission and requirements created.
+3. Parent login sees only linked child.
+4. Search/filter cannot widen teacher/parent scope.
+5. Student approvals opens and approve/reject works.
+6. Guardian edit/reuse/primary works without duplicate sibling contact.
+7. Document upload/serve cross-tenant blocked.
+8. Transfer → letter → seat freed → undo restores.
+9. Create/edit class and class teacher.
+10. Bulk streams create only missing classes.
+11. Import preview catches bad/duplicate/unknown values; commit reports exact results.
+12. Subject selections lead to Allocate Class.
+13. Graduate class → Alumni → Undo promotion where applicable.
+14. ID/newsletter/class list outputs match filter/branding.
+15. Cross-tenant direct profile blocked.
+16. 360px/glass themes and all four states work.
+
+---
+
+## 22. Product gap fixed during this chapter
+
+`ApprovalsDialog` and `approvalsOpen` existed in `students-client.tsx`, but no button opened it and it
+was never rendered—an orphaned real UI workflow. Added permission-aware **Student approvals** and
+mounted the existing dialog so authorized staff can reach approve/reject actions.
+
+No other new Student behavior was invented; the manual documents current services/pages.
+
+---
+
+## 23. Edit points
+
+- Students page/list/dialog/approvals/printing: `src/app/(app)/students/page.tsx`,
+  `src/components/students/students-client.tsx`
+- Student profile/guardian/transfer/docs: `student-profile-client.tsx`
+- Classes: `classes-client.tsx`
+- Import: `import-wizard.tsx`, `student-import.service.ts`
+- Alumni: `alumni-client.tsx`
+- Promotion/allocation/continuity: `promotion-client.tsx`
+- Student service/scoping: `student.service.ts`
+- APIs: `src/app/api/students/`, `/api/classes`, `/api/promotion*`
