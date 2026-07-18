@@ -21,8 +21,9 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
-import { StudentSearchSelect } from "@/components/students/student-search-select";
+import { StudentSearchSelect, type StudentSearchOption } from "@/components/students/student-search-select";
 import { HostelVandalismSuite } from "@/components/extensions-v2/hostel-vandalism-suite";
+import { ExeatPassSuite } from "@/components/extensions-v2/exeat-pass-suite";
 
 const kes = (n: number) => `KES ${n.toLocaleString("en-KE")}`;
 
@@ -35,11 +36,20 @@ interface StudentOpt { id: string; name: string; admissionNo: string; gender: st
 const GENDER_LABEL: Record<string, string> = { BOYS: "Boys", GIRLS: "Girls", MIXED: "Mixed" };
 
 export function HostelClient({ canManage }: { canManage: boolean }) {
-  const [tab, setTab] = React.useState<"dorms" | "curfew" | "vandalism">("dorms");
+  const [tab, setTab] = React.useState<"dorms" | "curfew" | "vandalism" | "exeat">("dorms");
+  const [students, setStudents] = React.useState<StudentSearchOption[]>([]);
+  React.useEffect(() => {
+    fetch("/api/students?status=ACTIVE").then((r) => r.json()).then((j) => {
+      if (j.ok) setStudents(j.data.students.map((s: { id: string; name?: string; firstName: string; middleName?: string | null; lastName: string; admissionNo: string; gender: string }) => ({
+        id: s.id, name: s.name ?? [s.firstName, s.middleName, s.lastName].filter(Boolean).join(" "), admissionNo: s.admissionNo,
+      })));
+    }).catch(() => {});
+  }, []);
   const tabs = [
     { key: "dorms" as const, label: "Dorms & beds", icon: BedDouble },
     { key: "curfew" as const, label: "Curfew register", icon: MoonStar },
     { key: "vandalism" as const, label: "Inspections & Damage Billing (`Idea 17`)", icon: BedDouble },
+    { key: "exeat" as const, label: "Exeat Passes (`Idea 5`)", icon: DoorOpen },
   ];
   return (
     <div className="space-y-4">
@@ -61,6 +71,7 @@ export function HostelClient({ canManage }: { canManage: boolean }) {
       {tab === "dorms" && <DormsTab canManage={canManage} />}
       {tab === "curfew" && <CurfewTab canManage={canManage} />}
       {tab === "vandalism" && <HostelVandalismSuite />}
+      {tab === "exeat" && <ExeatPassSuite students={students} canApprove={canManage} canGate={canManage} />}
     </div>
   );
 }
