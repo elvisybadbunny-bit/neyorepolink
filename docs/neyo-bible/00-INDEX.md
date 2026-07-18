@@ -27,12 +27,17 @@ was: **"Delete it, rebuild for real."** This is that rebuild.
   the real 3-layer multi-tenancy enforcement mechanism, auth/session/permission system, the two
   real feature-flag systems, the real cron/job registry, document generation, and the real
   regression-testing culture.
+- **[03 — Product Surface Map](./03-PRODUCT-SURFACE-MAP.md)** — all 42 real top-level app modules,
+  grouped by real function, each with its real page-guard permission and a grounded one-line
+  description of what it actually does.
+- **[04 — Operations & SOPs](./04-OPERATIONS-AND-SOPS.md)** — the real production deployment
+  pipeline, the real NEYO Ops console tab inventory grouped by function, the sandbox recovery SOP,
+  the documentation-sync SOP, and a seed of dated real operational incidents (to grow into Level 05).
 
 ## Levels planned (not yet started — will be added one at a time, never all at once)
 
-- 03 — Product Surface Map (every real top-level app module, what it does, who can see it)
-- 04 — Operations & SOPs (how NEYO Ops actually runs the company day to day)
 - 05 — Founder Decision Log (a real, dated record of founder directives that changed the product,
-  going forward from this point — not a reconstruction of history that can't be verified)
+  going forward from this point — not a reconstruction of history that can't be verified; a small
+  seed of this already exists at the bottom of Level 04, to be split out and grown from here)
 - Further levels to be defined as the founder confirms priority — see the note at the bottom of
   Level 01 about the original ~15-level spec.
