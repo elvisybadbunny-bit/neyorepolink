@@ -51,6 +51,20 @@ was: **"Delete it, rebuild for real."** This is that rebuild.
 - **[09 — Pricing, Billing & Revenue Operations](./09-PRICING-BILLING-AND-REVENUE-OPERATIONS.md)** —
   the current dual pricing models, quote-to-customer path, trial/subscription lifecycle, central
   M-Pesa collection, referrals, campaigns, SMS margin, repricing governance, and revenue close SOPs.
+- **[10 — Product Management & Feature Delivery](./10-PRODUCT-MANAGEMENT-AND-FEATURE-DELIVERY.md)** —
+  idea classification, definition of ready, the 8-chunk build protocol, database/security/UI gates,
+  release controls, verification ladder, evidence vocabulary, audit workflow, and documentation
+  closeout.
+- **[11 — Data Architecture & Domain Model](./11-DATA-ARCHITECTURE-AND-DOMAIN-MODEL.md)** — a
+  conceptual map of all 341 Prisma models by real domain, tenancy categories, state/history
+  patterns, schema-change protocol, and safe query rules.
+- **[12 — Integrations, Jobs, Storage & Observability](./12-INTEGRATIONS-JOBS-STORAGE-AND-OBSERVABILITY.md)** —
+  real provider seams and activation/failure runbooks for M-Pesa, communications, R2, OAuth,
+  API/webhooks, background jobs, cron, logging, health, analytics, and secret rotation.
+- **[13 — Bundi Intelligence, OCR & Safety](./13-BUNDI-INTELLIGENCE-OCR-AND-SAFETY.md)** — real Bundi
+  surfaces and services, deterministic-first extraction, staged import/review/commit, learned
+  corrections, quota/top-ups, release/access/privacy controls, outage behavior, quality metrics,
+  and the Bundi copy law.
 
 ## Levels planned (not yet started — will be added one at a time, never all at once)
 

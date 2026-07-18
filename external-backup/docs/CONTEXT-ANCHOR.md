@@ -1,3 +1,20 @@
+## 2026-07-18 (part 30) — Genuine NEYO Bible Continued in Detail: Levels 10, 11, 12, and 13
+
+**Founder's instruction:** "10 11 12 and 13 next making them as detailed as posible and reflecting to the real code please."
+
+Built four detailed, source-grounded institutional levels:
+
+1. `10-PRODUCT-MANAGEMENT-AND-FEATURE-DELIVERY.md` — the authority hierarchy, idea classification, definition of ready, exact 8-chunk full-stack protocol, database/service/security/UI/release gates, role/tenant test matrix, verification ladder, precise evidence vocabulary, bug/audit workflow, immediate commit/push rule, documentation closeout, and definition of done. It records current repository evidence (19 migrations, 390 `*-test.ts` scripts) without treating file existence as a passing test.
+2. `11-DATA-ARCHITECTURE-AND-DOMAIN-MODEL.md` — a conceptual catalog of the current 341 Prisma models grouped by identity/access, people/admissions, curriculum/evidence, timetable/electives, exams/learning, school finance, NEYO revenue, communications, campus modules, files/APIs/jobs, Bundi, and company operations. It explains tenant/platform/mixed ownership, state/history patterns, schema-change protocol, and query rules rather than copying the schema line-by-line.
+3. `12-INTEGRATIONS-JOBS-STORAGE-AND-OBSERVABILITY.md` — provider inventory and real source seams for Daraja, Africa's Talking, Resend, WhatsApp, Web Push, R2/local storage, Redis/BullMQ, OAuth, YouTube, public APIs/webhooks, iCal, Sentry/Better Stack/PostHog; detailed activation/failure procedures; file upload/CAS/lifecycle rules; current job registry; Nairobi cron behavior; safe logging; incident and secret-rotation runbooks.
+4. `13-BUNDI-INTELLIGENCE-OCR-AND-SAFETY.md` — the real Bundi pages/components and three service layers (`bundi-intelligent`, `bundi-import`, `bundi-ocr-quota`), deterministic-first OCR pipeline, confidence/human review, staged session states, mark-sheet/exam-paper/question-bank/paper-quiz workflows, school-data validation, learned-correction safety, quota/top-up semantics, layered release/access controls, privacy/retention, provider outage behavior, quality metrics, test matrix, and product copy law. It explicitly preserves the rule that every core workflow remains usable without Bundi.
+
+Verified current counts directly (`341` Prisma models, `19` tracked migrations, `198` service files, `473` API route files, `390` test scripts), checked every named core source file, updated the Bible index, synchronized all four levels/index/anchor across both repository backup trees plus the anchor upload mirror, byte-compared copies, and ran `git diff --check`.
+
+**Next NEYO Bible work:** Level 14 should cover Deployment, Environments & Disaster Recovery in deeper production detail; Level 15 can become the Master Wiki / ownership and document-governance layer tying Levels 01–14 together without duplicating them.
+
+---
+
 ## 2026-07-18 (part 29) — Genuine NEYO Bible Continued: Levels 07, 08, and 09
 
 **Founder's instruction:** "Go to 7 and 8 and 9."
