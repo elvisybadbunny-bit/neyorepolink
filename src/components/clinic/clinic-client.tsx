@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { StudentSearchSelect } from "@/components/students/student-search-select";
+import { DosageLogSuite } from "@/components/extensions-v2/dosage-log-suite";
 
 interface Visit { id: string; studentName: string; admissionNo: string; date: string; complaint: string; treatment: string; medicationGiven: string | null; referredTo: string | null; recordedByName: string; parentNotifiedAt: string | null }
 interface AllergyRow { studentId: string; studentName: string; admissionNo: string; className: string | null; allergies: string[]; conditions: string | null }
@@ -34,7 +35,7 @@ export function ClinicClient({ canManage }: { canManage: boolean }) {
   const { toast } = useToast();
   const [data, setData] = React.useState<Data | null>(null);
   const [error, setError] = React.useState(false);
-  const [tab, setTab] = React.useState<"visits" | "allergies" | "meds" | "report">("visits");
+  const [tab, setTab] = React.useState<"visits" | "allergies" | "meds" | "dosageLog" | "report">("visits");
   const [students, setStudents] = React.useState<StudentOpt[]>([]);
   const [dialog, setDialog] = React.useState<"visit" | "profile" | "medication" | null>(null);
 
@@ -82,6 +83,7 @@ export function ClinicClient({ canManage }: { canManage: boolean }) {
     { key: "visits" as const, label: "Visits", icon: Stethoscope },
     { key: "allergies" as const, label: "Allergy register", icon: ShieldAlert },
     { key: "meds" as const, label: "Medications", icon: Pill },
+    { key: "dosageLog" as const, label: "Dosage Roll-Call (`Idea 6`)", icon: Pill },
     { key: "report" as const, label: "Health report", icon: FileBarChart },
   ];
 
@@ -187,6 +189,10 @@ export function ClinicClient({ canManage }: { canManage: boolean }) {
             </div>
           )}
         </div>
+      )}
+
+      {tab === "dosageLog" && (
+        <DosageLogSuite students={students.map((s) => ({ id: s.id, name: s.name, admissionNo: s.admissionNo }))} />
       )}
 
       {tab === "report" && (
