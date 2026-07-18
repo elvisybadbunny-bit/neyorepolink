@@ -428,10 +428,10 @@ ALTER TABLE "TextbookFineRecovery" ADD CONSTRAINT "TextbookFineRecovery_tenantId
 ALTER TABLE "MasterSchoolDiaryEvent" ADD CONSTRAINT "MasterSchoolDiaryEvent_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- RenameIndex
-ALTER INDEX "KnecCandidateRegistration_tenantId_candidateType_indexNumber_id" RENAME TO "KnecCandidateRegistration_tenantId_candidateType_indexNumbe_idx";
+ALTER INDEX "KnecCandidateRegistration_tenantId_candidateType_indexNumber_id" RENAME TO "KnecCandidateRegistration_tenant_type_index_idx";
 
 -- RenameIndex
-ALTER INDEX "KnecCandidateRegistration_tenantId_knecCentreCode_indexNumber_k" RENAME TO "KnecCandidateRegistration_tenantId_knecCentreCode_indexNumb_key";
+ALTER INDEX "KnecCandidateRegistration_tenantId_knecCentreCode_indexNumber_k" RENAME TO "KnecCandidateRegistration_tenant_centre_index_key";
 
 -- RenameIndex
-ALTER INDEX "PlatformMaintenanceWindow_status_scheduledStartAt_scheduledEndA" RENAME TO "PlatformMaintenanceWindow_status_scheduledStartAt_scheduled_idx";
+ALTER INDEX "PlatformMaintenanceWindow_status_scheduledStartAt_scheduledEndA" RENAME TO "PlatformMaintenanceWindow_status_window_idx";

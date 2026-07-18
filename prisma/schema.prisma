@@ -8416,7 +8416,11 @@ model PlatformMaintenanceWindow {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  @@index([status, scheduledStartAt, scheduledEndAt])
+  // REAL BUG FIX (2026-07-18): same 63-byte Postgres identifier limit
+  // issue as KnecCandidateRegistration above — the default generated name
+  // here was 68 characters and got silently truncated by Postgres at
+  // creation time. Explicit short map name fixes it permanently.
+  @@index([status, scheduledStartAt, scheduledEndAt], map: "PlatformMaintenanceWindow_status_window_idx")
 }
 
 // Idea 1.5: SMS Gateway Delivery Route & DND Health Monitor
@@ -8659,8 +8663,19 @@ model KnecCandidateRegistration {
   status           String   @default("REGISTERED") // REGISTERED | EXPORTED
   createdAt        DateTime @default(now())
 
-  @@unique([tenantId, knecCentreCode, indexNumber])
-  @@index([tenantId, candidateType, indexNumber])
+  // REAL BUG FIX (2026-07-18): the default Prisma-generated names for
+  // these two indexes are 64 and 65 characters — over Postgres' hard
+  // 63-byte identifier limit. Postgres silently TRUNCATES an over-long
+  // identifier at creation time rather than erroring, so the index this
+  // model believed it owned never actually existed under the name Prisma
+  // itself expected — confirmed live: a later `prisma migrate diff`-
+  // generated migration tried `ALTER INDEX "...instance..." RENAME TO
+  // "...idx"` and failed with `relation ... does not exist` because the
+  // "long" name was never the real one Postgres stored. Fixed with an
+  // explicit short `map` name on each, which is what Prisma should have
+  // generated in the first place for a model name this long.
+  @@unique([tenantId, knecCentreCode, indexNumber], map: "KnecCandidateRegistration_tenant_centre_index_key")
+  @@index([tenantId, candidateType, indexNumber], map: "KnecCandidateRegistration_tenant_type_index_idx")
 }
 
 // Idea 8: Co-Curricular Sports & Tournament Trip Organizer
