@@ -23,6 +23,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TableContainer, Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { useBiometricGate } from "@/components/auth/biometric-gate";
+import { TournamentTripSuite } from "@/components/extensions-v2/tournament-trip-suite";
+import type { StudentSearchOption } from "@/components/students/student-search-select";
 
 const kes = (n: number) => `KES ${n.toLocaleString("en-KE")}`;
 
@@ -56,6 +58,8 @@ export function ActivitiesClient({ canManage, canRecord }: { canManage: boolean;
   const [error, setError] = React.useState(false);
   const [createOpen, setCreateOpen] = React.useState(false);
   const [openActivity, setOpenActivity] = React.useState<string | null>(null);
+  const [topTab, setTopTab] = React.useState<"activities" | "tournaments">("activities");
+  const [students, setStudents] = React.useState<StudentSearchOption[]>([]);
 
   const load = React.useCallback(async () => {
     setError(false);
@@ -65,7 +69,14 @@ export function ActivitiesClient({ canManage, canRecord }: { canManage: boolean;
       if (json.ok) setActivities(json.data.activities); else setError(true);
     } catch { setError(true); }
   }, []);
-  React.useEffect(() => { load(); }, [load]);
+  React.useEffect(() => {
+    load();
+    fetch("/api/students?status=ACTIVE").then((r) => r.json()).then((j) => {
+      if (j.ok) setStudents(j.data.students.map((s: { id: string; name?: string; firstName: string; middleName?: string | null; lastName: string; admissionNo: string; className: string | null }) => ({
+        id: s.id, name: s.name ?? [s.firstName, s.middleName, s.lastName].filter(Boolean).join(" "), admissionNo: s.admissionNo, className: s.className,
+      })));
+    }).catch(() => {});
+  }, [load]);
 
   if (openActivity) {
     return <RosterView activityId={openActivity} canManage={canManage} canRecord={canRecord} onBack={() => { setOpenActivity(null); load(); }} />;
@@ -82,10 +93,24 @@ export function ActivitiesClient({ canManage, canRecord }: { canManage: boolean;
             Optional fee collection for trips and activities — never a compulsory fee balance unless a student is confirmed going without paying yet.
           </p>
         </div>
-        {canManage && <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> New activity</Button>}
+        {canManage && topTab === "activities" && <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> New activity</Button>}
       </div>
 
-      {error ? <LoadError onRetry={load} /> : activities === null ? (
+      <div className="inline-flex flex-wrap rounded-full border border-navy-200 p-0.5 dark:border-navy-700">
+        {([["activities", "Fee collection"], ["tournaments", "Tournament Trips (`Idea 8`)"]] as const).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setTopTab(k)}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium ${topTab === k ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {topTab === "tournaments" && <TournamentTripSuite students={students} />}
+
+      {topTab === "activities" && (error ? <LoadError onRetry={load} /> : activities === null ? (
         <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div>
       ) : activities.length === 0 ? (
         <EmptyState icon={Plane} title="No trips or activities yet" description="Create one for a class or a whole grade — every real student in those classes is added to the roster automatically. Nobody owes anything until they actually pay or a waiver is recorded." />
@@ -129,9 +154,9 @@ export function ActivitiesClient({ canManage, canRecord }: { canManage: boolean;
             </button>
           ))}
         </div>
-      )}
+      ))}
 
-      {createOpen && <CreateActivityDialog onClose={() => setCreateOpen(false)} onDone={() => { setCreateOpen(false); load(); toast({ title: "Activity created", tone: "success" }); }} />}
+      {topTab === "activities" && createOpen && <CreateActivityDialog onClose={() => setCreateOpen(false)} onDone={() => { setCreateOpen(false); load(); toast({ title: "Activity created", tone: "success" }); }} />}
     </div>
   );
 }

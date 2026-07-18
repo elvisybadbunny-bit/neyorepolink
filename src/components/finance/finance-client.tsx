@@ -26,6 +26,8 @@ import { queuedPost } from "@/lib/offline/queue";
 import { MpesaSuspenseClientTab } from "@/components/finance/mpesa-suspense-client-tab";
 import { PayrollSuite } from "@/components/extensions-v2/payroll-suite";
 import { FarmSuite } from "@/components/extensions-v2/farm-suite";
+import { TreasuryCheckSuite } from "@/components/extensions-v2/treasury-check-suite";
+import type { StudentSearchOption } from "@/components/students/student-search-select";
 import { V2HeroCard } from "@/components/ui/v2/v2-hero-card";
 import { V2ActionPill } from "@/components/ui/v2/v2-action-pill";
 import { V2MobileCardRow } from "@/components/ui/v2/v2-mobile-card-row";
@@ -40,11 +42,19 @@ interface LeaderboardRow { classId: string; className: string; classTeacherName:
 const STATUS_TONE: Record<string, "green" | "amber" | "red"> = { PAID: "green", PARTIAL: "amber", UNPAID: "red" };
 
 export function FinanceClient({ canStructure, canInvoice, canRecord, canDiscount, canManageSiblingDiscount }: { canStructure: boolean; canInvoice: boolean; canRecord: boolean; canDiscount?: boolean; canManageSiblingDiscount?: boolean }) {
-  const [tab, setTab] = React.useState<"overview" | "invoices" | "structures" | "promises" | "cashReminders" | "suspense" | "payroll" | "farm">("overview");
+  const [tab, setTab] = React.useState<"overview" | "invoices" | "structures" | "promises" | "cashReminders" | "suspense" | "payroll" | "farm" | "treasuryChecks">("overview");
+  const [students, setStudents] = React.useState<StudentSearchOption[]>([]);
+  React.useEffect(() => {
+    fetch("/api/students?status=ACTIVE").then((r) => r.json()).then((j) => {
+      if (j.ok) setStudents(j.data.students.map((s: { id: string; name?: string; firstName: string; middleName?: string | null; lastName: string; admissionNo: string; className: string | null }) => ({
+        id: s.id, name: s.name ?? [s.firstName, s.middleName, s.lastName].filter(Boolean).join(" "), admissionNo: s.admissionNo, className: s.className,
+      })));
+    }).catch(() => {});
+  }, []);
   return (
     <div className="space-y-5">
       <div className="inline-flex flex-wrap rounded-full border border-navy-200 p-0.5 dark:border-navy-700">
-        {([["overview", "Overview"], ["invoices", "Invoices"], ["structures", "Fee structures"], ["promises", "Promises Calendar"], ["suspense", "M-Pesa Suspense (`Reconciler`)"], ["payroll", "BOM Payroll"], ["farm", "School Farm"], ...(canRecord ? [["cashReminders", "Cash & reminders"]] as const : [])] as const).map(([k, label]) => (
+        {([["overview", "Overview"], ["invoices", "Invoices"], ["structures", "Fee structures"], ["promises", "Promises Calendar"], ["suspense", "M-Pesa Suspense (`Reconciler`)"], ["treasuryChecks", "Bank Clearing (`Idea 3`)"], ["payroll", "BOM Payroll"], ["farm", "School Farm"], ...(canRecord ? [["cashReminders", "Cash & reminders"]] as const : [])] as const).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k as any)} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === k ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
             {label}
           </button>
@@ -58,6 +68,7 @@ export function FinanceClient({ canStructure, canInvoice, canRecord, canDiscount
       {tab === "promises" && <PromisesTab />}
       {tab === "cashReminders" && canRecord && <CashAndRemindersTab />}
       {tab === "suspense" && <MpesaSuspenseClientTab canManage={canRecord} />}
+      {tab === "treasuryChecks" && <TreasuryCheckSuite students={students} />}
       {tab === "payroll" && <PayrollSuite />}
       {tab === "farm" && <FarmSuite />}
     </div>
