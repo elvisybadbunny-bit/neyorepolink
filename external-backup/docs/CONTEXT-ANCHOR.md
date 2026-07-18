@@ -1,3 +1,13 @@
+## 2026-07-18 (part 56) — Founder Manual V2 Module 22 Cafeteria & Pocket Wallet
+
+Built `22-CAFETERIA-MENUS-MEAL-CARDS-TABLES-QUEUE-RATIONING-AND-POCKET-WALLET.md`: all nine conditional tabs; policy enable; Kitchen Today/menu/headcount; Inventory food issue; Meal Cards invoice-first/sync/cancel; Fee Plans/bulk issue; Parent Requests decisions; Table allocation; Meal Queue; Store/Ration/LPO; Pocket Wallet credit/debit/balance distinction; example/errors/verification.
+
+Render/service/API audit found all tabs wired; no orphaned action. Manual records Inventory Kitchen Store and extension rationing coordination to avoid double stock issue. `git diff --check`; docs mirrored. No code change required.
+
+**Next:** Module 23 Discipline, Clinic, Security/Gate & Reception.
+
+---
+
 ## 2026-07-18 (part 55) — Founder Manual V2 Module 21 Inventory, Uniforms, Assets, Suppliers, Procurement & Expenses
 
 Built `21-INVENTORY-UNIFORMS-ASSETS-SUPPLIERS-PROCUREMENT-AND-EXPENSES.md`: access; all six tabs; stores/items/reorder/expiry/FIFO; stock In/Out/Sell→invoice; Uniform per-size/master sync and Parent order/delivery; assets/tags/depreciation/maintenance; suppliers/categories/ratings/contracts/expiry; procurement request/quotes/best-price/PO threshold/self-approval/send/delivery/three-way match; expenses/categories/cost centers/receipt/threshold approval/reject/reports; example/errors/verification.

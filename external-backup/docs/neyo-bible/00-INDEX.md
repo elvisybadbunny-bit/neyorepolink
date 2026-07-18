@@ -119,6 +119,7 @@ making this index unreadable:
 - **[Module 19 — Hostel](../founder-manual-v2/19-HOSTEL-DORMS-BEDS-CURFEW-FEES-EXEAT-DAMAGE-AND-VISITORS.md)**
 - **[Module 20 — Transport & Fleet](../founder-manual-v2/20-TRANSPORT-ROUTES-SHIFTS-RIDERS-FLEET-DRIVERS-FUEL-AND-REQUESTS.md)**
 - **[Module 21 — Inventory, Uniforms, Assets, Suppliers, Procurement & Expenses](../founder-manual-v2/21-INVENTORY-UNIFORMS-ASSETS-SUPPLIERS-PROCUREMENT-AND-EXPENSES.md)**
+- **[Module 22 — Cafeteria & Pocket Wallet](../founder-manual-v2/22-CAFETERIA-MENUS-MEAL-CARDS-TABLES-QUEUE-RATIONING-AND-POCKET-WALLET.md)**
 
 ## Levels planned
 
