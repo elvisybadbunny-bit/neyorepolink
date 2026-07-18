@@ -41,6 +41,16 @@ was: **"Delete it, rebuild for real."** This is that rebuild.
   workflows for leadership, teachers, Finance, Reception, families, Library, Hostel, and Clinic;
   documents shared-record hand-offs, role boundaries, exception handling, and the source services
   behind each workflow.
+- **[07 — Customer Success & School Lifecycle](./07-CUSTOMER-SUCCESS-AND-SCHOOL-LIFECYCLE.md)** —
+  quote/demo through onboarding, trial activation, rollout milestones, support intake, diagnostic
+  replay, tenant health intervention, renewal/recovery, and lawful offboarding/data portability.
+- **[08 — Security, Privacy & Compliance](./08-SECURITY-PRIVACY-AND-COMPLIANCE.md)** — implemented
+  authentication, authorization, tenant isolation, encryption, audit and payment controls; data
+  classification, incident response, secure-development gates, and clearly identified open
+  founder/operator compliance obligations.
+- **[09 — Pricing, Billing & Revenue Operations](./09-PRICING-BILLING-AND-REVENUE-OPERATIONS.md)** —
+  the current dual pricing models, quote-to-customer path, trial/subscription lifecycle, central
+  M-Pesa collection, referrals, campaigns, SMS margin, repricing governance, and revenue close SOPs.
 
 ## Levels planned (not yet started — will be added one at a time, never all at once)
 

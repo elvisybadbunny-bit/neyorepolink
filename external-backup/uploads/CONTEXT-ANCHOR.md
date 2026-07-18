@@ -1,3 +1,19 @@
+## 2026-07-18 (part 29) — Genuine NEYO Bible Continued: Levels 07, 08, and 09
+
+**Founder's instruction:** "Go to 7 and 8 and 9."
+
+Built three further source-grounded NEYO Bible levels, each kept to one distinct institutional responsibility:
+
+1. `07-CUSTOMER-SUCCESS-AND-SCHOOL-LIFECYCLE.md` — the real lifecycle from public quote/demo through `signupSchool()`, 30-day trial, assisted rollout milestones, narrow NEYO Support ownership, customer threads, short-lived diagnostic replay, tenant-health intervention, renewal/grace recovery, and audited data export/lawful offboarding. Grounded in the quote, demo, onboarding, support, customer-hub, tenant-health, billing, retention, and export services/routes.
+2. `08-SECURITY-PRIVACY-AND-COMPLIANCE.md` — implemented authentication, permissions, three-layer tenant isolation, envelope encryption, browser/network headers, append-only audit controls, data classification, data-subject request handling, retention, incident response, secure-development release gate, account-compromise/payment runbooks, and an explicit separation between controls already implemented and external founder/operator obligations still open in `SECURITY.md` (ODPC/DPO, independent penetration test, production RLS verification, distributed rate limiting/monitoring, counsel-reviewed retention/contracts). No external action was falsely marked complete.
+3. `09-PRICING-BILLING-AND-REVENUE-OPERATIONS.md` — separates school fee finance from NEYO company revenue; documents the current Capacity Complete vs Modular User & Module models, pricing governance, quote-to-customer flow, trial/active/grace/suspended lifecycle, central subscription M-Pesa, renewal construction, referrals, campaigns, SMS margin, reprice controls, daily and close SOPs, dispute evidence, and company-role access boundaries. Explicitly preserves the founder decision that retired named packages must not return as school-selectable plans.
+
+Updated the Bible index, verified the named source files/functions against the checkout, synchronized all three levels/index/anchor to both repository backup trees and the anchor upload mirror, byte-compared copies, and ran `git diff --check`.
+
+**Next NEYO Bible work:** Level 10 should cover Product Management & Feature Delivery (idea intake, checklist governance, chunk planning, release controls, evidence, screenshots, audits, regression and documentation closeout). Levels beyond 10 should continue one grounded institutional area at a time.
+
+---
+
 ## 2026-07-18 (part 28) — Genuine NEYO Bible Continued: Level 06 School Operations Playbook
 
 **Founder's instruction:** "Continue."
