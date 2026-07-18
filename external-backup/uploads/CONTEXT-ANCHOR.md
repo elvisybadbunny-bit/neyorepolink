@@ -1,3 +1,20 @@
+## 2026-07-18 (part 32) — Genuine NEYO Bible Expanded: Levels 17–20 and the Full Institutional Document Taxonomy
+
+**Founder's instruction:** requested Levels 17–20 plus a comprehensive library spanning Governance & Leadership, Product Management, Technical & Engineering, Security & Compliance, Operations, Sales & Partnerships, Marketing & Brand, Customer Documentation, Finance, HR, Legal, AI-specific governance, and the Founder's Personal Knowledge Base.
+
+Built four detailed umbrella levels that cover every requested artifact while explicitly distinguishing real implemented foundations, operating templates, external evidence, and documents still requiring qualified approval:
+
+1. `17-GOVERNANCE-LEADERSHIP-AND-FOUNDER-HANDBOOK.md` — founder duties, internal company constitution, reserved matters, evidence-based decision framework, a detailed Support/Ops/Founder/Board delegation matrix, board-minutes and annual-strategy templates, business continuity roles/priorities, temporary/permanent succession, leadership cadence, founder personal knowledge collections, document register, and conflict-of-interest rules.
+2. `18-PRODUCT-AND-ENGINEERING-HANDBOOK.md` — product vision; PRD and feature-spec templates; backlog/roadmap/changelog/release/lifecycle/deprecation policy; current architecture/database/API/coding standards; Git/branching, testing and QA; deployment/infrastructure/backup/DR/monitoring/integration references; internal AI-assisted development and code-review standards; technical-debt and known-issues registers; change management.
+3. `19-SECURITY-OPERATIONS-AND-CUSTOMER-SUPPORT-MANUAL.md` — information-security/password/access/retention policies; incident and vulnerability process; security audit, DPIA and Kenya Data Protection Act operational checklists; risk register; SOP format; daily/weekly/monthly operations; customer support, bug escalation, feature request and change management; concise Administrator, Teacher, Student, Parent, Finance and ICT guides; help article/video/troubleshooting templates.
+4. `20-COMMERCIAL-BRAND-FINANCE-HR-LEGAL-AND-AI-LIBRARY.md` — a truthful artifact status register; sales playbook/demo/pilot/onboarding; partnership/MoU/service-agreement outlines; pricing/FAQ; brand/logo/tone/social/content/press/launch/case-study standards; financial model/budget/cash/pricing/cost/vendor/asset frameworks; employee/recruitment/interview/job/onboarding/performance/training/exit frameworks; legal document register; internal AI usage/prompt/workflow/verification/human-review/limitations/evaluation/version-history framework; founder knowledge continuation.
+
+Crucially, the new levels do **not** claim that an annual budget, signed board minutes, ODPC evidence, approved DPA/SLA/NDA/employment templates, audited financials, investor data room, or formal AI evaluation register already exists merely because a template is now documented. Each such item is labeled as requiring owner, approval and external evidence. Verified references against the current Founder Ops, contract, quote/demo/onboarding, pricing, security, brand, HR/payroll, deployment and Bundi foundations. Updated the index, synchronized all four levels/index/anchor to both repository backup trees and anchor upload mirror, byte-compared copies, and ran `git diff --check`.
+
+**Next:** The genuine NEYO Bible now has Levels 01–20. The highest-value follow-up is not automatic Level 21; it is converting the highest-priority template-only artifacts into separately approved real company documents, starting with founder choice among Company Constitution, Business Continuity/Succession, Sales Demo/Pilot pack, DPA/SLA legal review pack, or Financial Model/Budget—each with real evidence and authority.
+
+---
+
 ## 2026-07-18 (part 31) — Genuine NEYO Bible Continued: Levels 14, 15, and 16
 
 **Founder's instruction:** "Do 14 15 16."

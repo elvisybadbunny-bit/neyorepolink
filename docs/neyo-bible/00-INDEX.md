@@ -76,6 +76,20 @@ was: **"Delete it, rebuild for real."** This is that rebuild.
 - **[16 — Founder, Corporate Governance & Investor Readiness](./16-FOUNDER-CORPORATE-GOVERNANCE-AND-INVESTOR-READINESS.md)** —
   real Founder Ops records and cadence, metric definitions, customer interviews, contracts,
   governance/risk/access controls, investor update/data-room evidence, and founder continuity.
+- **[17 — Governance, Leadership & Founder Handbook](./17-GOVERNANCE-LEADERSHIP-AND-FOUNDER-HANDBOOK.md)** —
+  internal company constitution, founder duties, decision framework, delegation matrix, board and
+  annual-strategy templates, business continuity, succession, cadence and personal knowledge base.
+- **[18 — Product & Engineering Handbook](./18-PRODUCT-AND-ENGINEERING-HANDBOOK.md)** — product
+  vision, PRD/spec/backlog/roadmap/release/deprecation standards plus architecture, database/API,
+  coding/Git/testing/QA/deployment/monitoring/integration, AI-assisted development, debt and known
+  issues governance.
+- **[19 — Security, Operations & Customer Support Manual](./19-SECURITY-OPERATIONS-AND-CUSTOMER-SUPPORT-MANUAL.md)** —
+  security/access/password/retention/incident/vulnerability policies, DPIA and Kenya DPA checklists,
+  operations cadence, support/bug/feature/change processes, and role-based customer quick guides.
+- **[20 — Commercial, Brand, Finance, HR, Legal & AI Library](./20-COMMERCIAL-BRAND-FINANCE-HR-LEGAL-AND-AI-LIBRARY.md)** —
+  sales/demo/pilot/onboarding/partnership templates, brand/marketing/customer documentation,
+  financial/HR/legal artifact frameworks, internal AI governance library, and founder knowledge
+  continuation—with explicit status boundaries where approved artifacts do not yet exist.
 
 ## Levels planned (not yet started — will be added one at a time, never all at once)
 
