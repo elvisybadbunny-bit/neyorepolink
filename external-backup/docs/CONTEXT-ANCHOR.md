@@ -1,3 +1,15 @@
+## 2026-07-18 (part 59) — Founder Manual V2 Module 25 Bundi Imports/OCR/Quota/Safety + Privacy Copy Correction
+
+Built `25-BUNDI-IMPORTS-OCR-REVIEW-QUOTAS-TOPUPS-AND-SAFETY.md`: paused preview; shared Student/Staff/Library/Allocation wizard steps/buttons; premium unlock-code handwritten path; encrypted upload; deterministic/local OCR; confidence/source badges; review/edit/remove/commit; quota/top-up payment; mark sheet/exam paper/paper quiz/question scan; learned corrections; privacy/provider behavior; prohibited actions, errors and verification.
+
+Following gap-fix rule, corrected main Bundi preview's absolute `Nothing leaves your school` claim, which contradicted the real optional approved provider escalation for genuinely uncertain cells. Replaced with accurate local-first/protected-processing/access-rule/human-review copy while preserving Bundi law/no vendor names.
+
+`git diff --check`; docs mirrored. Node modules unavailable, no unsupported lint/typecheck claim.
+
+**Next:** Module 26 NEYO Support & Founder Ops.
+
+---
+
 ## 2026-07-18 (part 58) — Module 24 Documents/Print + Periods Hard-Coding Audit and Repair
 
 Founder explicitly reported period count felt hard-coded to 8 and requested all surrounding paths be checked/fixed. Audit confirmed the main L.7 Smart Engine was already per-class dynamic, but six peripheral/manual paths still constrained/forced eight. Repaired:

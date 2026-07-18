@@ -122,8 +122,7 @@ export function BundiClient({ paused, note }: { paused: boolean; note: string | 
       </div>
 
       <p className="text-center text-xs text-navy-400 dark:text-navy-500">
-        Bundi only reads what your school already keeps in NEYO. Nothing leaves
-        your school, and a teacher approves anything Bundi writes.
+        Bundi starts with protected local reading and uses only approved processing when a scan genuinely needs help. Your school&apos;s access rules still apply, and a teacher reviews anything Bundi writes before it becomes a record.
       </p>
     </div>
   );

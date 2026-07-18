@@ -47,6 +47,7 @@ language:
 - [Module 22 — Cafeteria & Pocket Wallet](./22-CAFETERIA-MENUS-MEAL-CARDS-TABLES-QUEUE-RATIONING-AND-POCKET-WALLET.md)
 - [Module 23 — Discipline, Clinic, Security/Gate & Reception](./23-DISCIPLINE-CLINIC-SECURITY-GATE-AND-RECEPTION.md)
 - [Module 24 — Documents, Print Station, Exports, Verification & Dynamic Periods](./24-DOCUMENTS-PRINT-STATION-EXPORTS-VERIFICATION-AND-DYNAMIC-PERIODS.md)
+- [Module 25 — Bundi Imports, OCR, Review, Quotas & Safety](./25-BUNDI-IMPORTS-OCR-REVIEW-QUOTAS-TOPUPS-AND-SAFETY.md)
 
 ## The standard chapter format
 
