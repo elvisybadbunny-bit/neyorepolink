@@ -33,6 +33,8 @@ import { useBiometricGate } from "@/components/auth/biometric-gate";
 import { queuedPost } from "@/lib/offline/queue";
 import { GateSecuritySuite } from "@/components/extensions-v2/gate-security-suite";
 import { FleetSuite } from "@/components/extensions-v2/fleet-suite";
+import { LostAndFoundSuite } from "@/components/extensions-v2/lost-and-found-suite";
+import type { StudentSearchOption } from "@/components/students/student-search-select";
 import { V2HeroCard } from "@/components/ui/v2/v2-hero-card";
 import { V2ActionPill } from "@/components/ui/v2/v2-action-pill";
 import { V2MobileCardRow } from "@/components/ui/v2/v2-mobile-card-row";
@@ -72,6 +74,7 @@ export function ReceptionDesk({ schoolName }: { schoolName: string }) {
   const [badge, setBadge] = React.useState<Visitor | null>(null);
   const [busy, setBusy] = React.useState<string | null>(null);
   const [uiVersion, setUiVersion] = React.useState<"v1" | "v2">("v1");
+  const [students, setStudents] = React.useState<StudentSearchOption[]>([]);
 
   const load = React.useCallback(async () => {
     setError(false);
@@ -88,7 +91,14 @@ export function ReceptionDesk({ schoolName }: { schoolName: string }) {
     }
   }, []);
 
-  React.useEffect(() => { load(); }, [load]);
+  React.useEffect(() => {
+    load();
+    fetch("/api/students?status=ACTIVE").then((r) => r.json()).then((j) => {
+      if (j.ok) setStudents(j.data.students.map((s: { id: string; name?: string; firstName: string; middleName?: string | null; lastName: string; admissionNo: string }) => ({
+        id: s.id, name: s.name ?? [s.firstName, s.middleName, s.lastName].filter(Boolean).join(" "), admissionNo: s.admissionNo,
+      })));
+    }).catch(() => {});
+  }, [load]);
 
   async function signOut(id: string) {
     setBusy(id);
@@ -163,6 +173,7 @@ export function ReceptionDesk({ schoolName }: { schoolName: string }) {
         </div>
 
         <div className="pt-6 border-t border-white/10 space-y-8">
+          <LostAndFoundSuite students={students} />
           <GateSecuritySuite />
           <FleetSuite />
         </div>
@@ -327,6 +338,10 @@ export function ReceptionDesk({ schoolName }: { schoolName: string }) {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      <div className="pt-6 border-t border-navy-100 dark:border-white/10 space-y-8">
+        <LostAndFoundSuite students={students} />
       </div>
 
       {/* dialogs */}
