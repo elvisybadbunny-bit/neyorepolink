@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "academics.view");
+    await requirePermission("academics.view");
 
     const candidateType = new URL(req.url).searchParams.get("candidateType") || "ALL";
     const candidates = await listKnecCandidates(user.tenantId, candidateType);
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "academics.manage");
+    await requirePermission("academics.manage");
 
     const body = await req.json().catch(() => ({}));
     const { knecCentreCode, candidateType, indexingMode, placementExamId } = body;

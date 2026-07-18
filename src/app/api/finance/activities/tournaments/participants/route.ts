@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "finance.record_payment");
+    await requirePermission("finance.record_payment");
 
     const body = await req.json().catch(() => ({}));
     const { action, tripId, studentId, busSeatNo, parentConsentStatus } = body;

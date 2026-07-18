@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "student.view");
+    await requirePermission("student.view");
 
     const studentId = new URL(req.url).searchParams.get("studentId");
     if (!studentId) return handleError(new Error("studentId required."));

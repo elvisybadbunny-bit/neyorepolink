@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "academics.view");
+    await requirePermission("academics.view");
 
     const returns = await listMoeReturns(user.tenantId);
     return ok({ returns });
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "academics.manage");
+    await requirePermission("academics.manage");
 
     const { returnType, termKey } = await req.json().catch(() => ({}));
     if (returnType !== "FORM_A" && returnType !== "FORM_B") {

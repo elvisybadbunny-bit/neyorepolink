@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "student.view");
+    await requirePermission("student.view");
 
     const { id, studentId } = await req.json().catch(() => ({}));
     if (!id || !studentId) return handleError(new Error("id and studentId required."));

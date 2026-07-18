@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "platform.founder_ops");
+    await requirePermission("platform.founder_ops");
 
     const requests = await db.demoRequest.findMany({
       orderBy: { requestedAt: "desc" },

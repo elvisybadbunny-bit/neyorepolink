@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "student.view");
+    await requirePermission("student.view");
 
     const dosages = await listTodayInfirmaryDosages(user.tenantId);
     return ok({ dosages });
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "student.edit");
+    await requirePermission("student.edit");
 
     const body = await req.json().catch(() => ({}));
     const { studentId, studentName, medicationPlanId, doseName, scheduledTime, status, notes } = body;

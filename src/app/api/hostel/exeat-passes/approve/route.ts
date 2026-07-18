@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "attendance.record");
+    await requirePermission("attendance.record");
 
     const { id, status } = await req.json().catch(() => ({}));
     if (!id || (status !== "APPROVED" && status !== "REJECTED")) {

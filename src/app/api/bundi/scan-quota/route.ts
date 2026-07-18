@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "academics.view");
+    await requirePermission("academics.view");
 
     const status = await getBundiOcrQuotaStatus(user.tenantId);
     return ok({ quota: status });

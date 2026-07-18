@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "academics.view");
+    await requirePermission("academics.view");
 
     const candidateType = new URL(req.url).searchParams.get("candidateType") || "ALL";
     const manifest = await exportKnecCandidatesManifest(user.tenantId, candidateType);

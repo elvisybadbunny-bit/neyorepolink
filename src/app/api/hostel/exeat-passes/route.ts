@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "student.view");
+    await requirePermission("student.view");
 
     const passes = await listBoardingExeatPasses(user.tenantId);
     return ok({ passes });
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "attendance.record");
+    await requirePermission("attendance.record");
 
     const body = await req.json().catch(() => ({}));
     const { studentId, reason, departureTime, expectedReturnTime } = body;

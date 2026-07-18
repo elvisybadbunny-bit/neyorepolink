@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "tenant.manage_settings"); // Principal / Owner only
+    await requirePermission("tenant.manage_settings"); // Principal / Owner only
 
     const body = await req.json().catch(() => ({}));
     const { bundleKey } = body;

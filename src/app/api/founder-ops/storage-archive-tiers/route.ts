@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "platform.founder_ops");
+    await requirePermission("platform.founder_ops");
 
     const summaries = await listAllTenantArchiveTiers();
     return ok({ summaries });
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "platform.founder_ops");
+    await requirePermission("platform.founder_ops");
 
     const { tenantId } = await req.json().catch(() => ({}));
     if (tenantId) {

@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "tenant.manage_settings");
+    await requirePermission("tenant.manage_settings");
 
     const { documentId, vote } = await req.json().catch(() => ({}));
     if (!documentId || (vote !== "YES" && vote !== "NO")) {

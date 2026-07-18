@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "tenant.manage_settings");
+    await requirePermission("tenant.manage_settings");
 
     const { newPricingMode } = await req.json().catch(() => ({}));
     if (newPricingMode !== "SIZE_BASED_V2" && newPricingMode !== "MODULAR_USERS_V1") {

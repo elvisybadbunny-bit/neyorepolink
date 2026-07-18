@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "platform.founder_ops");
+    await requirePermission("platform.founder_ops");
 
     const windows = await listAllMaintenanceWindows();
     return ok({ windows });
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "platform.founder_ops");
+    await requirePermission("platform.founder_ops");
 
     const body = await req.json().catch(() => ({}));
     const { action, id, status, title, description, scheduledStartAt, scheduledEndAt, isReadOnlyLock } = body;

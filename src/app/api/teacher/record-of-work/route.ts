@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "academics.view");
+    await requirePermission("academics.view");
 
     const teacherId = new URL(req.url).searchParams.get("teacherId") || "ALL";
     const subjectId = new URL(req.url).searchParams.get("subjectId") || "ALL";
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "academics.manage");
+    await requirePermission("academics.manage");
 
     const body = await req.json().catch(() => ({}));
     const { teacherId, teacherName, subjectId, classId, strandName, substrandName, weekNumber, dateCovered, status, supervisorComment } = body;

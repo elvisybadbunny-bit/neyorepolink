@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "finance.view");
+    await requirePermission("finance.view");
 
     // Founder Ops can see all suspense; school bursar sees only their tenant's or unassigned suspense
     const tenantId = user.role === "FOUNDER" || user.role === "SUPER_ADMIN" ? null : user.tenantId;
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "finance.record_payment");
+    await requirePermission("finance.record_payment");
 
     const body = await req.json().catch(() => ({}));
     const { transId, transTime, transAmount, billRefNumber, mpesaSenderPhone, mpesaSenderName, tenantId } = body;

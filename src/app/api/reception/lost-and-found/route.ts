@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "student.view");
+    await requirePermission("student.view");
 
     const body = await req.json().catch(() => ({}));
     const { title, description, category, locationFound, photoUrl } = body;

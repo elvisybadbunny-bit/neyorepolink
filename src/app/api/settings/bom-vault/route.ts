@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "tenant.manage_settings");
+    await requirePermission("tenant.manage_settings");
 
     const category = new URL(req.url).searchParams.get("category") || "ALL";
     const documents = await listBomGovernanceDocuments(user.tenantId, category);
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return handleError(new Error("Unauthorized"));
-    requirePermission(user as any, "tenant.manage_settings");
+    await requirePermission("tenant.manage_settings");
 
     const body = await req.json().catch(() => ({}));
     const { title, category, fileUrl, requiresVote } = body;
