@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { LogOut, Loader2, MonitorSmartphone, Eye, Languages } from "lucide-react";
+import Link from "next/link";
+import { LogOut, Loader2, MonitorSmartphone, Eye, Languages, ReceiptText } from "lucide-react";
 import { ViewAsLauncher } from "./view-as-launcher";
 import { useT } from "@/components/i18n/lang-provider";
 import { LANGUAGES } from "@/lib/i18n/dictionaries";
@@ -10,10 +11,12 @@ import { LANGUAGES } from "@/lib/i18n/dictionaries";
 export function UserMenu({
   userName,
   userRole,
+  rawRole,
   canViewAs = false,
 }: {
   userName: string;
   userRole: string;
+  rawRole?: string;
   canViewAs?: boolean;
 }) {
   const [viewAsOpen, setViewAsOpen] = React.useState(false);
@@ -89,6 +92,17 @@ export function UserMenu({
               <Eye className="h-4 w-4" />
               View as staff…
             </button>
+          )}
+
+          {rawRole && !["PARENT", "STUDENT", "SUPER_ADMIN", "FOUNDER", "NEYO_OPS", "NEYO_SUPPORT"].includes(rawRole) && (
+            <Link
+              href="/my-payslips"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2.5 border-b border-navy-100 px-4 py-3 text-sm text-navy-700 transition-colors hover:bg-navy-50 dark:border-navy-800 dark:text-navy-200 dark:hover:bg-navy-800"
+            >
+              <ReceiptText className="h-4 w-4" />
+              My payslips
+            </Link>
           )}
 
           {/* Language switcher (A.15) */}

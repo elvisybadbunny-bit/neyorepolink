@@ -1,3 +1,15 @@
+## 2026-07-18 (part 49) — Founder Manual V2 Module 15 Payroll & HR + Staff Self-Service Payslips Fixed
+
+Built `15-PAYROLL-AND-HR-SALARIES-STATUTORY-DEDUCTIONS-PAYSLIPS-AND-PEOPLE.md`: separate account/HR/salary/run/slip records; access; Salaries fields; Run Payroll/period/overtime; coded PAYE/SHIF/NSSF/AHL and current-law warning; run list/detail; Approve & Lock; PDFs; HR/lifecycle/leave/BOM distinctions; external payment/P9 status boundaries; monthly example, errors and 14-step verification.
+
+Following gap-fix rule, found own-payslip PDF authorization existed but ordinary staff had no list/entry point and needed an unknown payslip id. Added `/my-payslips` server page restricted to school staff, querying only own tenant/user APPROVED runs, sorted period cards with gross/deductions/net and existing secure PDF link. Added User Menu **My payslips** for school staff only by passing raw role through Topbar; excludes Parent/Student/company roles. No schema/API duplicate required.
+
+Static source/diff verification and `git diff --check`; docs mirrored/byte-compared. Node modules unavailable, no unsupported lint/typecheck claim.
+
+**Next:** Module 16 Communication, Messages, Notifications & Calendar.
+
+---
+
 ## 2026-07-18 (part 48) — Founder Manual V2 Module 14 Finance
 
 Built `14-FINANCE-FEES-INVOICES-MPESA-CASH-RECONCILIATION-AND-ACTIVITIES.md`: unified invoice/payment truth; permissions; every Finance tab/link; Overview metrics/reminders/digests/leaderboard/aging; Fee Structure fields/items/sibling discount/batch idempotency; invoice search/actions; Manual/M-Pesa/Cash/Discount/Print; Payments; Suspense human allocation; Promises/installment plans; Teacher Cash policy/confirm/reject; reminder schedule/never-logged/SMS spend; Treasury bank clearing; Trips & Activities/Tournament rosters/consent; BOM Payroll/Farm distinctions; jobs; worked example, errors and 18-step verification.

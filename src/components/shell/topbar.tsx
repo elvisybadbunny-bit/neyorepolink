@@ -106,7 +106,7 @@ export function Topbar({
           <NotificationBell />
           <OfflineIndicator />
           <ThemeToggle />
-          <UserMenu userName={userName} userRole={userRole} canViewAs={canViewAs} />
+          <UserMenu userName={userName} userRole={userRole} rawRole={rawRole} canViewAs={canViewAs} />
         </div>
       </div>
 
@@ -116,7 +116,7 @@ export function Topbar({
           <BackgroundJobsBadge />
           <OfflineIndicator />
           <ThemeToggle />
-          <UserMenu userName={userName} userRole={userRole} canViewAs={canViewAs} />
+          <UserMenu userName={userName} userRole={userRole} rawRole={rawRole} canViewAs={canViewAs} />
         </div>
       )}
     </header>
