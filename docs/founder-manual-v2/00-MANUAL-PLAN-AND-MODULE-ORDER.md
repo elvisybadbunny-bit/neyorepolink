@@ -28,6 +28,7 @@ language:
 - [Module 03 — School Setup, Profile, Modules, Branding & Settings](./03-SCHOOL-SETUP-PROFILE-MODULES-BRANDING-AND-SETTINGS.md)
 - [Module 04 — Users, Roles, Staff Access & Invitations](./04-USERS-ROLES-STAFF-ACCESS-AND-INVITATIONS.md)
 - [Module 05 — Students, Guardians, Classes, Imports, Transfers & Alumni](./05-STUDENTS-GUARDIANS-CLASSES-IMPORTS-TRANSFERS-AND-ALUMNI.md)
+- [Module 06 — Admissions](./06-ADMISSIONS-INQUIRIES-APPLICATIONS-INTERVIEWS-OFFERS-AND-ADMIT.md)
 
 ## The standard chapter format
 

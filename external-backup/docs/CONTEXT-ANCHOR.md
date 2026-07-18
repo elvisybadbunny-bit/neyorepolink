@@ -1,3 +1,19 @@
+## 2026-07-18 (part 40) — Manual Completeness Correction + Module 06 Admissions
+
+**Founder correction:** Module 05 summary did not explicitly explain Bundi Intelligent imports or every New Year button/tab. Founder asked whether features were being left out. Corrected the standard immediately.
+
+Expanded Module 05 with a full section for both Bundi paths: shared open Bundi Intelligent (describe columns/context → encrypted upload → deterministic-first extraction → source/confidence badges → edit/remove rows → reviewed commit/result) and premium unlock-code handwritten `/students/import/bundi` (redeem → template → JPG/PNG/PDF page → honest unavailable state → review → commit/results). Added exact safety, quota, release, manual fallback and no-invented-record rules.
+
+Also documented all seven New Year tabs and their buttons: New academic year/confirm/history Undo; Reshuffle strategies Preview/Apply; Auto grouping Save rule/Preview/Commit and Allow/Split capacity decisions; Allocate Class previews, two roster prints, new-class preview, capacity decisions, Generate timetable checkbox and Confirm; Teacher continuity Analyse and per-subject/class replacement+regeneration; Teacher allocation review Keep/Auto/Apply/history; Teacher transfer Analyse/Apply and distinction from Staff termination lifecycle.
+
+Created Manual V2 Module 06 Admissions: permissions/sources, public and walk-in forms, Reception inquiry conversion, every Kanban/closed state, drawer actions (Start review, Schedule interview+Calendar, Offer/deposit, Admit+Student creation), letters/profile, Waitlist/Reject/Withdraw, Entrance Exam Paper Vault upload/download/print, state machine, full example, cross-module wiring, limitations, troubleshooting, 17-point verification and edit paths. No new Admissions gap requiring code was found in this pass; invalid transitions/deposit gate/tenant scope already live.
+
+Focused source inspection and `git diff --check`; docs mirrored/byte-compared. The manual's ongoing rule is strengthened: enumerate every visible tab/action, not only major workflows.
+
+**Next:** Module 07 Attendance (class register, offline queue, absentee SMS, staff GPS attendance, insights, hostel linkage and hardware/QR surfaces).
+
+---
+
 ## 2026-07-18 (part 39) — Founder Manual V2 Module 05 + Orphaned Student Approvals UI Repaired
 
 Continued Manual V2 with `05-STUDENTS-GUARDIANS-CLASSES-IMPORTS-TRANSFERS-AND-ALUMNI.md`: learner record chain; role/scoping rules; every Students header/toolbar/filter/saved-view/list/Kanban action; manual registration and guardian login; profile status/documents/guardians/requirements; correct transfer/letter/undo workflow; class/stream/class-teacher/capacity controls; three-step import including subjects/custom fields/conflicts; alumni/graduation; promotion/reshuffle/Allocate Class/continuity; ID/newsletter/class list/duties prints; cross-module wiring; troubleshooting and 16-point founder verification.

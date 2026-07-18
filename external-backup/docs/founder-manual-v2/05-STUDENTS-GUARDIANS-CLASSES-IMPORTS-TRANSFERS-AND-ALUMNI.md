@@ -358,7 +358,105 @@ do not treat generated duty as attendance.
 
 ---
 
-## 20. Troubleshooting
+## 20. Bundi Intelligent and Handwritten Student Import — full operation
+
+You were right to ask for this explicitly. There are two real Bundi paths:
+
+### A. Bundi Intelligent inside the standard import family
+
+The shared `BundiIntelligentWizard` is available for STUDENT imports where surfaced/released. It is
+open without the legacy unlock-code flow, but still subject to platform release, permission and scan
+quota.
+
+1. **Describe columns:** enter each physical register column label and map it to a NEYO field. Use
+   **Add another column** or trash to remove. Optional Context (for example “Grade 7 East register”)
+   helps ambiguous reading. **Continue** saves the reusable field template; Cancel closes.
+2. **Choose photo/scanned page:** JPG/PNG, one page. Upload is encrypted; a Bundi import session is
+   created; extraction runs local/deterministic first.
+3. **Review every cell:** colour/source badges mean Please check, Auto-fixed/Remembered, Bundi
+   confirmed or Manual. Click/edit any value; trash removes an incorrect row. Back returns upload.
+4. **Import N rows:** saves the reviewed session then commits through real Student domain validation.
+   Result shows created/failed; **Done** returns.
+
+Bundi cannot invent unknown classes/students/guardians. Uncertain values must be corrected.
+
+### B. Premium handwritten `/students/import/bundi`
+
+1. **Enter unlock code** issued by NEYO Ops → Redeem.
+2. **Describe your register's columns** → Add/remove fields → Save template & continue.
+3. **Upload scan/photo/PDF** (one page). If provider/extraction is unavailable, the red honest state
+   says Bundi cannot read it yet; no fake rows are committed.
+4. **Review reading:** edit cells, remove rows, Back or **Import N students**.
+5. Result shows created and skipped rows; **View students** opens directory.
+
+An unlock code is not a permission bypass and a scan top-up is not automatic approval of content.
+Use standard CSV/manual registration whenever Bundi is paused, quota-limited or uncertain.
+
+---
+
+## 21. New Year page — every tab and button
+
+The page has seven real tabs:
+
+### New academic year
+
+- Expand a class row: inspect destination/learners.
+- **Start new academic year:** opens confirmation.
+- **Cancel:** closes without writes.
+- Final confirm: promotes/moves/graduates and creates PromotionRun.
+- Run History **Undo:** reverses one not-yet-undone run.
+
+### Reshuffle streams
+
+- Level dropdown.
+- Strategy pills: Balance class sizes, Balance boys & girls, Alphabetical.
+- **Preview reshuffle:** calculates without moving.
+- **Apply reshuffle:** commits preview.
+
+### Auto grouping
+
+- Level/rule fields configure continuity/grouping behavior.
+- **Save continuity rule** persists rule.
+- **Preview grouping** shows proposed placements/capacity warnings.
+- **Commit grouping** writes only after decisions.
+- Capacity warning: **Allow all anyway** or **Split into a new class** → name → Create/Cancel.
+
+### Allocate class
+
+- Enter Level → **Preview class allocation** using existing classes.
+- Print buttons open Subject-combination roster and Subject roster.
+- If no classes: choose number/capacity/naming and **Preview new classes**.
+- Resolve every capacity warning with Allow or Split.
+- Checkbox **Generate the timetable now** only runs when real needs/teachers exist.
+- **Confirm allocation** writes classes/placements/needs and optional job.
+
+### Teacher continuity
+
+- Select level → **Analyse continuity**.
+- Subject rows: **Apply replacement + regenerate timetable**.
+- Class-teacher rows: **Apply class teacher + regenerate timetable**.
+- Recommendations show fair alternatives; no automatic write before button.
+
+### Teacher allocation review
+
+- Select level → load review.
+- For each Subject/Class-teacher row choose **Keep** or **Let NEYO auto-assign**.
+- **Apply decisions + regenerate timetable** commits selected decisions.
+- Review history can expand; Graduated class history can expand.
+
+### Teacher transfer impact
+
+- Select departing teacher/reason as current fields require.
+- **Analyse impact** creates preview/recommendations.
+- **Apply best replacements + regenerate** commits. For termination/access revocation use Staff →
+  Access lifecycle, which adds session revocation and HR end date.
+
+Never press multiple generation buttons concurrently. Wait for the real background job/result and
+review timetable.
+
+---
+
+## 22. Troubleshooting
 
 | Problem | Check |
 |---|---|
@@ -377,7 +475,7 @@ do not treat generated duty as attendance.
 
 ---
 
-## 21. Founder verification checklist
+## 23. Founder verification checklist
 
 1. Principal sees all header management actions; teacher sees scoped roster/no create.
 2. Register learner with guardian/login; admission and requirements created.
@@ -398,7 +496,7 @@ do not treat generated duty as attendance.
 
 ---
 
-## 22. Product gap fixed during this chapter
+## 24. Product gap fixed during this chapter
 
 `ApprovalsDialog` and `approvalsOpen` existed in `students-client.tsx`, but no button opened it and it
 was never rendered—an orphaned real UI workflow. Added permission-aware **Student approvals** and
@@ -408,7 +506,7 @@ No other new Student behavior was invented; the manual documents current service
 
 ---
 
-## 23. Edit points
+## 25. Edit points
 
 - Students page/list/dialog/approvals/printing: `src/app/(app)/students/page.tsx`,
   `src/components/students/students-client.tsx`
