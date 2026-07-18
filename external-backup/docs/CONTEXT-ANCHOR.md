@@ -1,3 +1,15 @@
+## 2026-07-18 (part 35) — Founder Manual V2 Module 02: Login, Security, User Menu & Navigation
+
+Continued the requested beginner-facing product manual with `docs/founder-manual-v2/02-LOGIN-SECURITY-USER-MENU-AND-NAVIGATION.md`, grounded in the 1,138-line real Login page, auth/security APIs, Security Settings cards, permission matrix, Topbar, Sidebar, two shell versions, notifications/search/help/offline controls, user menu and parent multi-school switcher.
+
+The chapter explains every current sign-in path button-by-button (phone OTP, email/password, SMS password reset, magic link, passkey, TOTP/recovery code, first-login password, demo and new-school setup), expected redirects and errors; every Security card (passkeys, device unlock, OAuth accounts, 2FA, finance biometric policy, personal V1/V2 layout); desktop/mobile top bar including the current double-tap-notification gesture for hidden mobile utilities; parent school linking/switching; Cmd/Ctrl+K; notifications/native push; jobs/offline/theme; View As; single/all-device logout; sidebar filtering by module+permission+owner hide+platform pause; V1/V2 shells, banners and recommended home by role. Includes troubleshooting, 18-point founder verification and exact edit paths.
+
+Updated the Manual V2 plan with completed chapter links and the Bible companion index. Verified named pages/components/APIs against current source, synchronized the manual/index/anchor mirrors, byte-compared and ran `git diff --check`.
+
+**Next manual chapter:** Module 03 — School Setup, School Profile, Modules, Branding and core Settings. This must establish the real prerequisites before Users/Roles, Students and Timetable.
+
+---
+
 ## 2026-07-18 (part 34) — Dashboard Accuracy Repair: All Five Founder-Selected Manual Findings Fixed
 
 **Founder's instruction:** fix all five Dashboard findings before continuing Manual V2.

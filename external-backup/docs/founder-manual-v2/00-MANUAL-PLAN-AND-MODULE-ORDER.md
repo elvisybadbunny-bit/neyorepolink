@@ -21,6 +21,11 @@ language:
 - what a role is not allowed to do;
 - mobile, offline, print and safety notes.
 
+## Chapters completed
+
+- [Module 01 — Dashboard & Role-Based Home](./01-DASHBOARD-AND-ROLE-BASED-HOME.md)
+- [Module 02 — Login, Security, User Menu & Navigation](./02-LOGIN-SECURITY-USER-MENU-AND-NAVIGATION.md)
+
 ## The standard chapter format
 
 Every module chapter will contain:

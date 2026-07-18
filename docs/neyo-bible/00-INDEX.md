@@ -99,6 +99,7 @@ making this index unreadable:
 
 - **[Manual plan and module order](../founder-manual-v2/00-MANUAL-PLAN-AND-MODULE-ORDER.md)**
 - **[Module 01 — Dashboard & Role-Based Home](../founder-manual-v2/01-DASHBOARD-AND-ROLE-BASED-HOME.md)**
+- **[Module 02 — Login, Security, User Menu & Navigation](../founder-manual-v2/02-LOGIN-SECURITY-USER-MENU-AND-NAVIGATION.md)**
 
 ## Levels planned
 
