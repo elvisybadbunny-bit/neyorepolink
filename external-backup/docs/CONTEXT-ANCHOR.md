@@ -1,3 +1,15 @@
+## 2026-07-18 (part 27) — Genuine NEYO Bible Continued: Level 05 Founder Decision Log
+
+**Founder's instruction:** "Do this Continuing the genuine NEYO Bible."
+
+Continued the evidence-grounded NEYO Bible one real level at a time, following the anti-padding rules in `docs/neyo-bible/00-INDEX.md`. Added `docs/neyo-bible/05-FOUNDER-DECISION-LOG.md`: 16 durable founder/product/engineering decisions, each with a date/status, decision, reason, implementation consequence, and named evidence. The level covers the checklist source-of-truth rule, zero-placeholder full-stack standard, Liquid Glass, the Bundi Rule, Kenya-first requirements, current dual pricing models and retired package names, school-controlled timetable policy, invoice integration for chargeable student services, the shared family portal, company-role separation, tenant-isolation security, human review for uncertain scans, separate timetable reference prints, the genuine-Bible standard, immediate commit/push discipline, and implementation-first auditing. It also includes a compact superseded-decisions table and a maintenance protocol so future directives update current-state documentation without erasing history or creating false completion claims.
+
+Updated `docs/neyo-bible/00-INDEX.md` to mark Level 05 built and removed its old "planned" placeholder. Verified every directly cited implementation file exists in the current checkout. Synced the Bible files to both repository backup trees under `external-backup/docs/neyo-bible/` and `external-backup/neyo-project/docs/neyo-bible/`, then byte-compared the mirrors.
+
+**Next NEYO Bible work:** define and build Level 06 from the broader knowledge-system areas recorded in Level 01 §9. The strongest grounded next candidate is Customer & School Operations Documentation (role-based daily workflows and hand-offs), but it should remain one focused level rather than generating all remaining levels in one pass.
+
+---
+
 ## 2026-07-18 (part 26) — EE.6 Missing UI Fix Committed, EE.4-EE.9 Test Suites Re-Verified (66/66), Question Bank Count Corrected (227→2,670), G.23/V.3/Z.3 Original Builds Independently Re-Audited
 
 **Founder's explicit request (verbatim, all-caps typing style)**: "CHECK EE4 TO EE 9 AND CONFIRM THE NUMMBER OF QUESTION IIN EE8 AND CAPTURE SCREENSHOTS OF ALLTHE EE4 TO EE9 THEN IN FEATURES LIST ALSO CHECK G 23 AND AUDIT AAND SEE IF THEY WERE BUILT IN FULL STACK ALSO V3 IN FEATURES CHEDCKLIST TOO ALSO Z3 TOO AND CHECK IF THE FIXES WERE DONE WELL AND ALSO START THE NEYO BIBLE CREATION AS WELL" — a 5-part request. This entry also closes an anchor-hygiene gap: a real EE.6 UI fix was built in the immediately-preceding (now-compacted) session window but never committed before the sandbox wiped, so it had to be rebuilt from scratch this window before anything else.
