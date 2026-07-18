@@ -65,6 +65,17 @@ was: **"Delete it, rebuild for real."** This is that rebuild.
   surfaces and services, deterministic-first extraction, staged import/review/commit, learned
   corrections, quota/top-ups, release/access/privacy controls, outage behavior, quality metrics,
   and the Bundi copy law.
+- **[14 — Deployment, Environments & Disaster Recovery](./14-DEPLOYMENT-ENVIRONMENTS-AND-DISASTER-RECOVERY.md)** —
+  current Vercel/Neon/Fly/R2/Redis topology, environment boundaries, production gates, migration
+  policy, smoke tests, web/worker/database rollback, backup/restore, disaster scenarios, and
+  incident closeout.
+- **[15 — Master Wiki & Knowledge Governance](./15-MASTER-WIKI-AND-KNOWLEDGE-GOVERNANCE.md)** —
+  canonical-source hierarchy, level ownership, document status/citation/writing standards, review
+  cadence, synchronization, decision/audit handling, sensitive knowledge, archival, and save-game
+  continuity.
+- **[16 — Founder, Corporate Governance & Investor Readiness](./16-FOUNDER-CORPORATE-GOVERNANCE-AND-INVESTOR-READINESS.md)** —
+  real Founder Ops records and cadence, metric definitions, customer interviews, contracts,
+  governance/risk/access controls, investor update/data-room evidence, and founder continuity.
 
 ## Levels planned (not yet started — will be added one at a time, never all at once)
 

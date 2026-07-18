@@ -1,3 +1,19 @@
+## 2026-07-18 (part 31) — Genuine NEYO Bible Continued: Levels 14, 15, and 16
+
+**Founder's instruction:** "Do 14 15 16."
+
+Built three further detailed institutional levels grounded in current deployment files, operational services/models, and repository governance:
+
+1. `14-DEPLOYMENT-ENVIRONMENTS-AND-DISASTER-RECOVERY.md` — current Vercel (`fra1`) web/API, Neon Postgres plan, Fly (`fra`) worker, Redis/BullMQ, R2 and wildcard-domain topology; local/preview/production boundaries; exact current Vercel build order; secret classes; predeploy/migration/deployment/smoke gates; Vercel/Fly/code/database rollback distinctions; managed backup/PITR and restore procedure; provider/database/storage/queue/DNS disaster scenarios; recovery-objective honesty; and incident closeout. Explicitly distinguishes disposable sandbox recovery from production disaster recovery and flags that CODEOWNERS still contains a placeholder handle rather than falsely claiming repository review enforcement is fully configured.
+2. `15-MASTER-WIKI-AND-KNOWLEDGE-GOVERNANCE.md` — canonical source hierarchy (Checklist, Anchor, prompts, Bible, schema/migrations, services, routes, UI, tests), ownership and purpose of every Level 00–16, document statuses, citation/writing standards, change triggers, weekly/monthly/quarterly review, tracked mirror synchronization, discoverability, decision supersession, audit correction, sensitive-knowledge rules, external evidence register, save-game protocol, archival, and a quality test for every future Bible level.
+3. `16-FOUNDER-CORPORATE-GOVERNANCE-AND-INVESTOR-READINESS.md` — real company-control records (`NeyoBuildLog`, `NeyoMetricSnapshot`, `NeyoFounderOpsEntry`, `NeyoCustomerInterview`, `NeyoContract`, customer/compliance/cost/team records), daily/weekly/monthly/quarterly/annual founder cadence, build-log and metric integrity, customer interview discipline, real public contract-signing flow and its legal-review boundary, secure investor data-room index, investor update format, least-privilege/key-person controls, risk register, evidence separation, and founder continuity pack. It explicitly avoids claiming that a listed corporate/legal/investor artifact exists merely because the framework says it should.
+
+Verified the real deployment configuration (`vercel.json`, `fly.toml`, `Dockerfile.worker`), package scripts, deploy/go-live docs, Founder Ops/contract/customer services and Prisma company models before writing. Updated the index, synchronized all three levels/index/anchor to both repository backup trees and the anchor upload mirror, byte-compared copies, and ran `git diff --check`.
+
+**Next NEYO Bible work:** Levels 01–16 now form a coherent genuine institutional knowledge base. Future work should deepen an existing level when implementation changes rather than create arbitrary extra levels for volume. A new level should only be added for a genuinely distinct, founder-approved institutional responsibility.
+
+---
+
 ## 2026-07-18 (part 30) — Genuine NEYO Bible Continued in Detail: Levels 10, 11, 12, and 13
 
 **Founder's instruction:** "10 11 12 and 13 next making them as detailed as posible and reflecting to the real code please."
