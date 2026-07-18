@@ -60,11 +60,16 @@ async function main() {
   console.log("G.22 console list:", flags.length >= 7 && flags.every((f) => !f.paused) ? `✓ ${flags.length} pausable modules` : "✗");
 
   // ===== G.23 DETAILED PACKAGES =====
-  console.log("G.23 plans:", PLANS.length === 4 && PLANS.some((pl) => pl.key === "msingi") ? "✓ 4 packages (Free Karibu/Msingi/Pro/Elite)" : "✗");
+  // NOTE (2026-07-18 audit): originally asserted 4 packages (Free Karibu/Msingi/Pro/Elite)
+  // with hostel gated to Pro-only. Per the founder's 2026-07-17 directive, Free Karibu and
+  // Elite were REMOVED -- new signups get a 30-day free trial on Msingi or Pro, both of which
+  // are "Neyo Complete" (ALL modules unlocked, including hostel). Updated these assertions to
+  // match the real, current, intentionally-changed product behavior instead of the old model.
+  console.log("G.23 plans:", PLANS.length === 2 && PLANS.some((pl) => pl.key === "msingi") && PLANS.some((pl) => pl.key === "pro") ? "✓ 2 packages (Msingi/Pro, Free Karibu + Elite removed 2026-07-17)" : "✗");
   console.log("G.23 add-ons:", ADD_ONS.length >= 6 ? `✓ ${ADD_ONS.length} add-ons` : "✗");
   const pro = getPlan("pro")!;
-  console.log("G.23 module entitlements:", pro.includedModules.includes("hostel") && !getPlan("msingi")!.includedModules.includes("hostel")
-    ? "✓ Pro has hostel, Msingi doesn't" : "✗");
+  console.log("G.23 module entitlements:", pro.includedModules.includes("hostel") && getPlan("msingi")!.includedModules.includes("hostel")
+    ? "✓ Both Msingi and Pro have hostel (Neyo Complete, all modules unlocked on both plans per 2026-07-17 directive)" : "✗");
   const cost = estimateTermCost(pro, 300, ["sms_topup_1000", "priority_support"]);
   console.log("G.23 cost estimate:", cost === 9000 + 800 + 3000 ? "✓ 9,000 + add-ons = 12,800" : "✗ " + cost);
 
