@@ -32,6 +32,7 @@ language:
 - [Module 07 — Attendance](./07-ATTENDANCE-CLASS-REGISTERS-STAFF-GPS-OFFLINE-SMS-AND-INSIGHTS.md)
 - [Module 08 — Academics Foundation](./08-ACADEMICS-SUBJECTS-DEPARTMENTS-TERMS-LESSON-PLANS-AND-CURRICULUM.md)
 - [Module 09 — Timetable & Smart Timetable](./09-TIMETABLE-AND-SMART-TIMETABLE-COMPLETE-GUIDE.md)
+- [Module 10 — Exams & Exam Timetable](./10-EXAMS-MARKS-REPORTS-PAPER-SCANS-AND-EXAM-TIMETABLE.md)
 
 ## The standard chapter format
 

@@ -46,6 +46,7 @@ export default async function ExamsPage() {
       )}
       <ExamAnalyticsClient />
       <AdvancedAnalyticsClient />
+      <ExamPrintClient />
       <ExamsClient
         canManage={has("exam.manage")}
         canEnterMarks={has("exam.enter_marks")}

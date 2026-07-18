@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Printer, Search } from "lucide-react";
+import { Loader2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";

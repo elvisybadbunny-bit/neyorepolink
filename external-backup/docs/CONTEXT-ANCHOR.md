@@ -1,3 +1,15 @@
+## 2026-07-18 (part 44) — Founder Manual V2 Module 10 Exams & Exam Timetable + Bulk Print UI Restored
+
+Built `10-EXAMS-MARKS-REPORTS-PAPER-SCANS-AND-EXAM-TIMETABLE.md`: permissions; top multi-term/advanced analytics; New Exam fields/subject mapping; Results/Marks tabs; autosave/Save now; Mark Sheet print/scan/delta review; Exam Paper Tidying/LMS export; national sharing/clone; contests; positions/means/comparisons/reports; release request/return/approve/publish; standalone and Academics Exam Timetable; manual slots; invigilator pools; Auto-Generator periods/classes/options-block/per-student safety; Materials; KNEC batches/completeness/export; worked example; troubleshooting and 17-step founder verification.
+
+Following gap-fix rule, found `ExamPrintClient` imported by Exams page but never rendered anywhere, leaving its real `/api/academics/exams/print-roster` and **Print Stream-Wise Report** unreachable. Rendered it after analytics and removed unused Search import. No schema/service/API change needed.
+
+Static source/diff verification and `git diff --check`; docs mirrored/byte-compared. Node modules unavailable after sandbox wipe, no unsupported lint/typecheck claim.
+
+**Next:** Module 11 — CBC/CBE, Competencies, Assessments, Syllabus, Question Bank, videos, paper quiz rubrics, portfolios and reports.
+
+---
+
 ## 2026-07-18 (part 43) — Founder Manual V2 Module 09 Complete Timetable & Smart Timetable Guide
 
 Built `09-TIMETABLE-AND-SMART-TIMETABLE-COMPLETE-GUIDE.md`, the requested founder/non-coder complete workflow: 13 prerequisites; Timetable vs Smart Timetable distinction; class grid/manual cell Save/Clear; all class/teacher/venue prints; Schedule Rules fields and class/level/group saves; Auto-fill and Saturday scheduler; Draft protection; Publish/Draft; pre-generation Free Study confirmation; Master Button/job states/warnings/unplaced; flagged teacher rotation; every constraint/time-off/blocked-slot action; every ClassSubjectNeed field; qualification/allocation distinction; combinations; venues/labs/capacity/support; teacher print codes; teacher allocation import; every elective/options block field/button; build-from-choices; overflow venues; solver invariant list; review/publish/correction strategy; errors and 17-step founder test.
