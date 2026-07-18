@@ -33,6 +33,7 @@ import { cn, curriculumLabel } from "@/lib/utils";
 import { BundiIntelligentWizard } from "@/components/bundi/bundi-intelligent-wizard";
 import { KnecCandidateStudio } from "@/components/academics/knec-candidate-studio";
 import { MoeReturnsClientTab } from "@/components/academics/moe-returns-client-tab";
+import { RecordOfWorkClientTab } from "@/components/academics/record-of-work-client-tab";
 import { DisciplineSuite } from "@/components/extensions-v2/discipline-suite";
 import { TextbookFineSuite } from "@/components/extensions-v2/textbook-fine-suite";
 import { V2HeroCard } from "@/components/ui/v2/v2-hero-card";
@@ -53,7 +54,7 @@ const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurriculumEngineEnabled = false, schoolLevelActivation }: { canManage: boolean; canAppointHod: boolean; isScopedHod: boolean; isCurriculumEngineEnabled?: boolean; schoolLevelActivation?: { shouldShowPathwayTools: boolean; shouldShowSubjectSelectionTools: boolean; isJuniorSchool: boolean; isSeniorSchool: boolean; isMixedSchool: boolean; educationLevelsOffered: string[] } }) {
   const [subjects, setSubjects] = React.useState<Subject[]>([]);
-  const [tab, setTab] = React.useState<"subjects" | "departments" | "cocurricular" | "terms" | "timetable" | "exam-timetable" | "exam-auto-generator" | "lessons" | "generator" | "smart-timetable" | "roster" | "reports" | "curriculum-versions" | "pathways" | "computation" | "subject-selection" | "knec-studio" | "moe-returns" | "discipline" | "library-recovery">("subjects");
+  const [tab, setTab] = React.useState<"subjects" | "departments" | "cocurricular" | "terms" | "timetable" | "exam-timetable" | "exam-auto-generator" | "lessons" | "generator" | "smart-timetable" | "roster" | "reports" | "curriculum-versions" | "pathways" | "computation" | "subject-selection" | "knec-studio" | "moe-returns" | "discipline" | "library-recovery" | "record-of-work">("subjects");
 
   React.useEffect(() => {
     fetch("/api/academics/subjects")
@@ -78,6 +79,7 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
     { key: "exam-auto-generator" as const, label: "Exam Auto-Generator", icon: Sparkles },
     { key: "knec-studio" as const, label: "KNEC Candidate Studio (`Idea 7`)", icon: Award },
     { key: "moe-returns" as const, label: "MOE Statutory Returns (`Idea 2`)", icon: FileText },
+    { key: "record-of-work" as const, label: "Record of Work (`Idea 9`)", icon: ClipboardList },
     { key: "lessons" as const, label: "Lesson plans", icon: NotebookPen },
     ...(isCurriculumEngineEnabled ? [
       { key: "computation" as const, label: "Grading Engine", icon: Calculator },
@@ -133,6 +135,7 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
       {tab === "library-recovery" && <TextbookFineSuite />}
       {tab === "knec-studio" && <KnecCandidateStudio canManage={canManage} />}
       {tab === "moe-returns" && <MoeReturnsClientTab canManage={canManage} />}
+      {tab === "record-of-work" && <RecordOfWorkClientTab canManage={canManage} />}
       {tab === "lessons" && <LessonsTab />}
       {tab === "computation" && <ComputationDashboardClient canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
       {tab === "reports" && <ReportBuilderClient canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
