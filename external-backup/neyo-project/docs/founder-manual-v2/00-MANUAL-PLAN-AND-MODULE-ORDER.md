@@ -35,6 +35,7 @@ language:
 - [Module 10 — Exams & Exam Timetable](./10-EXAMS-MARKS-REPORTS-PAPER-SCANS-AND-EXAM-TIMETABLE.md)
 - [Module 11 — CBE, Competencies, Assessments & Learning Evidence](./11-CBE-COMPETENCIES-ASSESSMENTS-SYLLABUS-PORTFOLIO-QUESTION-BANK-AND-VIDEOS.md)
 - [Module 12 — Teacher Portal](./12-TEACHER-PORTAL-MY-CLASSES-HOMEWORK-NOTES-REPORTS-AND-SUBSTITUTION.md)
+- [Module 13 — Parent & Student Shared Portal](./13-PARENT-STUDENT-SHARED-PORTAL-FEES-RESULTS-HOMEWORK-SAFETY-AND-SERVICES.md)
 
 ## The standard chapter format
 

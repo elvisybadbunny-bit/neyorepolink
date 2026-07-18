@@ -1,3 +1,13 @@
+## 2026-07-18 (part 47) — Founder Manual V2 Module 13 Parent & Student Shared Portal
+
+Built `13-PARENT-STUDENT-SHARED-PORTAL-FEES-RESULTS-HOMEWORK-SAFETY-AND-SERVICES.md`: shared portal rationale/ownership scope; My Children and family split plan; child header/Portfolio/Class Chat; invoices/STK/promises/receipts; published results/reports; growth/competency/pathway; attendance; permanent/one-time pickup; parent photo/document approval requests; transport and cafeteria requests; timetable/substitutes; homework submissions/re-submission/grade lock; notes; uniform ordering/invoicing/size stock; library/fines; family-safe health; school contacts/messages; PTA; Diary; Alumni Campaign; subject selection/pathways; LMS quizzes/discussions; complete example, errors and 18-step verification.
+
+Full render-chain audit found no orphaned Portal component: all imported child-service cards/suites are rendered. The manual flags Alumni Campaign placement as a future product-choice review, not a wiring defect. Static source/diff verification and `git diff --check`; docs mirrored/byte-compared. No code change required in this chapter.
+
+**Next:** Module 14 Finance (structures, invoices, M-Pesa, manual/desk/teacher payments, discounts, promises, aging, reminders, suspense, reconciliation, prints, activities and all buttons).
+
+---
+
 ## 2026-07-18 (part 46) — Founder Manual V2 Module 12 Teacher Portal + Record of Work Tab Restored
 
 Built `12-TEACHER-PORTAL-MY-CLASSES-HOMEWORK-NOTES-REPORTS-AND-SUBSTITUTION.md`: assignment-union scope; all conditional tabs; Mwalimu Day-Pack; substitute alert; today/weekly timetable; class cards and Register/Marks/Roster links; lesson plan route; Homework and Notes fields/files/delete/family handoff; Class Report metrics/table; Leave/Substitution; PTA booking; policy-gated pending Cash Payments; daily example, continuity, troubleshooting and 15-step verification.
