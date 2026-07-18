@@ -12,6 +12,16 @@ import { syncSyllabusFromAssessment, getAcademicsSyllabusCoverageReport, deleteS
 import { teacherClassIds, teacherHome } from "@/lib/services/teacher-portal.service";
 import { deleteCbcAssessment, saveAssessments } from "@/lib/services/cbc.service";
 import { deleteLessonObservation } from "@/lib/services/academics.service";
+// REAL TEST-SCRIPT BUG FIX (found while re-verifying this suite): withTenant
+// must be statically imported here, not dynamically re-imported mid-test.
+// `tsx`'s dynamic import() of a path-aliased module creates a SEPARATE
+// module instance with its own AsyncLocalStorage -- tenant scope set by the
+// statically-imported withTenant below is invisible to a dynamically
+// re-imported copy of the same module, throwing "No tenant in scope" even
+// though the real application code (which never does this dynamic
+// re-import pattern anywhere in src/) works correctly. Test-script-only
+// issue, not a real product bug -- confirmed via a standalone repro script.
+import { withTenant } from "@/lib/core/tenant-context";
 
 const db = new PrismaClient();
 
@@ -117,7 +127,6 @@ async function runTest() {
     checksPassed++;
 
     // 3. Verify Instant Teacher Allocation & Record Continuity ("My Classes" tab)
-    const { withTenant } = await import("@/lib/core/tenant-context");
     await withTenant(tenant!.id, async () => {
       const kevinClasses = await teacherClassIds(kevinUser);
       assert(kevinClasses!.includes(cls!.id), "Teacher Kevin should instantly see the assigned class");

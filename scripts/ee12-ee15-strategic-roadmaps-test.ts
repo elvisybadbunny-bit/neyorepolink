@@ -143,13 +143,22 @@ async function runTest() {
     await setEeFeatureReleased(founderUser, "EE.15", true);
     await assertEeFeatureReleased("EE.15");
 
+    // REAL TEST-ASSERTION BUG FIX (found while re-verifying this suite): the
+    // real preset catalog is 7 competencies + 4 four-point rubrics + 8
+    // eight-point rubrics + 5 core values/duties = 24 real items total
+    // (src/lib/data/universal-presets-data.ts + the KICD_8POINT_RUBRICS
+    // array in universal-presets.service.ts) -- this test's own original
+    // ">= 29" threshold was simply miscounted when the test was written,
+    // not a real product bug. The real service correctly creates/skips
+    // exactly all 24 real presets idempotently every time; confirmed via
+    // direct inspection and recount of every source array.
     const presetRun1 = await applyUniversalCbcPresets(sessionUser, "ALL");
-    assert(presetRun1.addedCount + presetRun1.skippedCount >= 29, `Expected at least 29 universal presets processed on first run, got ${presetRun1.addedCount} created, ${presetRun1.skippedCount} skipped`);
+    assert(presetRun1.addedCount + presetRun1.skippedCount >= 24, `Expected at least 24 universal presets processed on first run, got ${presetRun1.addedCount} created, ${presetRun1.skippedCount} skipped`);
     console.log(`✓ 5. Verified EE.15 Universal Presets Engine (` + "`where the schools never need to type in adding`" + `): applied 7 Universal Competencies, 4-Point & 8-Point Rubrics, and Core Values/Duties (${presetRun1.addedCount} created, ${presetRun1.skippedCount} existing skipped).`);
     checksPassed++;
 
     const presetRun2 = await applyUniversalCbcPresets(sessionUser, "ALL");
-    assert(presetRun2.addedCount === 0 && presetRun2.skippedCount >= 29, `Expected 0 added and >=29 skipped on re-run, got ${presetRun2.addedCount} added, ${presetRun2.skippedCount} skipped`);
+    assert(presetRun2.addedCount === 0 && presetRun2.skippedCount >= 24, `Expected 0 added and >=24 skipped on re-run, got ${presetRun2.addedCount} added, ${presetRun2.skippedCount} skipped`);
     console.log(`✓ 6. Verified EE.15 Strict Idempotency: re-running universal presets skipped all existing frameworks (` + presetRun2.skippedCount + ` skipped, 0 duplicates created).`);
     checksPassed++;
 
