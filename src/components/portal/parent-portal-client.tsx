@@ -30,6 +30,7 @@ import { LearnerJourneyCard } from "@/components/learner-journey/learner-journey
 import { ParentGrowthTab } from "./parent-growth-tab";
 import { MasterDiarySuite } from "@/components/extensions-v2/master-diary-suite";
 import { AlumniCampaignSuite } from "@/components/extensions-v2/alumni-campaign-suite";
+import { PtaBookingSuite } from "@/components/extensions-v2/pta-booking-suite";
 import { ParentPathwayCard } from "./parent-pathway-card";
 import { ParentPathwayGuideCard } from "./parent-pathway-guide-card";
 import { TransportRequestCard } from "./transport-request-card";
@@ -423,6 +424,7 @@ function ChildView({ id, onBack, isCurriculumEngineEnabled = false }: { id: stri
       </Card>
 
       <div className="pt-6 border-t border-white/10 space-y-8">
+        <PtaBookingSuite forTeacher={false} studentId={data.child.id} studentName={data.child.name} />
         <MasterDiarySuite />
         <AlumniCampaignSuite />
       </div>
