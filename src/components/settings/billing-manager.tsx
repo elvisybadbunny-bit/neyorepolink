@@ -84,7 +84,6 @@ export function BillingManager({
 }) {
   const { toast } = useToast();
   const [sub, setSub] = React.useState(data.subscription);
-  const [pending, setPending] = React.useState<string | null>(null);
   const [supportSubject, setSupportSubject] = React.useState("Billing question");
   const [supportBody, setSupportBody] = React.useState("");
   const [supportPriority, setSupportPriority] = React.useState("NORMAL");
@@ -93,30 +92,13 @@ export function BillingManager({
   const [currentMode, setCurrentMode] = React.useState(data.dualPricing?.currentMode || sub.pricingMode || "SIZE_BASED_V2");
   const [switchingModel, setSwitchingModel] = React.useState<string | null>(null);
 
-  async function subscribe(planKey: string) {
-    setPending(planKey);
-    try {
-      const res = await fetch("/api/billing/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planKey }),
-      });
-      const json = await res.json();
-      if (!json.ok) {
-        toast({ title: json.error?.message || "Could not change plan.", tone: "error" });
-        return;
-      }
-      setSub((s) => ({
-        ...s,
-        planKey: json.data.planKey,
-        planName: json.data.planName,
-        status: json.data.status,
-      }));
-      toast({ title: `You're now on ${json.data.planName}`, tone: "success" });
-    } finally {
-      setPending(null);
-    }
-  }
+  // Legacy `subscribe(planKey)` (the old named-tier "Msingi/Pro" picker)
+  // REMOVED per founder directive (2026-07-18): NEYO no longer sells named
+  // tiers. Every school is on one of the two real Dual Pricing Models below
+  // -- Capacity Complete (pay for every module, one flat quote) or Modular
+  // User & Module (pay only for active users + the specific optional
+  // modules a school actually opens). `switchModel()` below is the only
+  // real, current way a school changes its pricing.
 
   async function switchModel(mode: "SIZE_BASED_V2" | "MODULAR_USERS_V1") {
     setSwitchingModel(mode);
@@ -356,73 +338,10 @@ export function BillingManager({
         </div>
       )}
 
-      {/* Plan picker */}
-      <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-navy-400 dark:text-navy-500">
-          Plans
-        </h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {data.plans.map((p) => {
-            const isCurrent = p.key === sub.planKey;
-            return (
-              <Card
-                key={p.key}
-                className={
-                  isCurrent ? "ring-2 ring-green-500/50" : undefined
-                }
-              >
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-semibold text-navy-900 dark:text-navy-50">
-                      {p.name}
-                    </h3>
-                    {isCurrent && <Badge tone="green">Current</Badge>}
-                  </div>
-                  <p className="mt-1 text-xl font-semibold text-navy-900 dark:text-navy-50">
-                    {p.pricePerTerm > 0 ? formatKES(p.pricePerTerm) : "Free"}
-                    {p.pricePerTerm > 0 && (
-                      <span className="text-sm font-normal text-navy-400">
-                        {" "}
-                        / term
-                      </span>
-                    )}
-                  </p>
-                  <ul className="mt-4 space-y-2">
-                    {p.highlights.map((h) => (
-                      <li
-                        key={h}
-                        className="flex items-start gap-2 text-sm text-navy-600 dark:text-navy-300"
-                      >
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-                        {h}
-                      </li>
-                    ))}
-                  </ul>
-                  {canManage && !isCurrent && (
-                    <Button
-                      className="mt-5 w-full"
-                      onClick={() => subscribe(p.key)}
-                      disabled={pending !== null}
-                    >
-                      {pending === p.key ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Zap className="h-4 w-4" />
-                      )}
-                      {p.pricePerTerm > sub.price ? "Upgrade" : "Switch"}
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-        {!canManage && (
-          <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">
-            Only school leadership can change the plan.
-          </p>
-        )}
-      </div>
+      {/* Legacy named-tier "Plan picker" (Msingi/Pro) REMOVED per founder
+          directive (2026-07-18): NEYO no longer sells named tiers. The real
+          Dual Pricing Model Selector above (Capacity Complete vs Modular
+          User & Module) is the only real, current way a school is priced. */}
     </div>
   );
 }
