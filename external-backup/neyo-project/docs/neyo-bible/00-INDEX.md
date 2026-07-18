@@ -115,6 +115,7 @@ making this index unreadable:
 - **[Module 15 — Payroll & Human Resources](../founder-manual-v2/15-PAYROLL-AND-HR-SALARIES-STATUTORY-DEDUCTIONS-PAYSLIPS-AND-PEOPLE.md)**
 - **[Module 16 — Communication, Messages, Notifications & Calendar](../founder-manual-v2/16-COMMUNICATION-MESSAGES-NOTIFICATIONS-AND-CALENDAR.md)**
 - **[Module 17 — LMS, Videos & Online Classes](../founder-manual-v2/17-LMS-HOMEWORK-QUIZZES-DISCUSSIONS-VIDEOS-AND-ONLINE-CLASSES.md)**
+- **[Module 18 — Library](../founder-manual-v2/18-LIBRARY-CATALOG-COPIES-ISSUE-RETURN-FINES-IMPORT-AND-QR.md)**
 
 ## Levels planned
 

@@ -40,6 +40,7 @@ language:
 - [Module 15 — Payroll & Human Resources](./15-PAYROLL-AND-HR-SALARIES-STATUTORY-DEDUCTIONS-PAYSLIPS-AND-PEOPLE.md)
 - [Module 16 — Communication, Messages, Notifications & Calendar](./16-COMMUNICATION-MESSAGES-NOTIFICATIONS-AND-CALENDAR.md)
 - [Module 17 — LMS, Videos & Online Classes](./17-LMS-HOMEWORK-QUIZZES-DISCUSSIONS-VIDEOS-AND-ONLINE-CLASSES.md)
+- [Module 18 — Library](./18-LIBRARY-CATALOG-COPIES-ISSUE-RETURN-FINES-IMPORT-AND-QR.md)
 
 ## The standard chapter format
 

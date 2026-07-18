@@ -1,3 +1,15 @@
+## 2026-07-18 (part 52) — Founder Manual V2 Module 18 Library + Fine-Policy Copy Corrected
+
+Built `18-LIBRARY-CATALOG-COPIES-ISSUE-RETURN-FINES-IMPORT-AND-QR.md`: Book/Copy/Issue distinction; permissions/tabs; catalog/search/add/digital file; standard/Bundi import; per-copy generation/status/QR label printing; ISBN/copy QR/camera/manual scan; borrower/due/issue constraints; Out Now/return; configurable fine/Sunday rule; Collect Cash/Add to Invoice; Portal history; lost/coursebook double-charge boundary; example, errors and 14-step verification.
+
+Following gap-fix rule, corrected Library page subtitle that claimed fixed `KES 10 per day` while real service exposes school-configurable fines on/off and amount. Subtitle now says configured overdue-fine policy. No calculation/schema/API change.
+
+Static source/diff verification and `git diff --check`; docs mirrored/byte-compared. Node modules unavailable, no unsupported lint/typecheck claim.
+
+**Next:** Module 19 Hostel.
+
+---
+
 ## 2026-07-18 (part 51) — Founder Manual V2 Module 17 LMS, Videos & Online Classes + Online-Class Scope Fixed
 
 Built `17-LMS-HOMEWORK-QUIZZES-DISCUSSIONS-VIDEOS-AND-ONLINE-CLASSES.md`: LMS roles; Quiz builder/options/correct answer/publish/results; Hand-ins/late/re-submit/grade; Discussions/locks; family LMS; video search fallback/save/watch/cast/history; Online Class request/notify/board/status; room mobile/TV/mic/video/share/fullscreen/PiP/peers/questions/teacher controls; P2P limitations, example, errors and 15-step verification.
