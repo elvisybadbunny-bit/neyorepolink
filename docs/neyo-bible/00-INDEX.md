@@ -120,6 +120,7 @@ making this index unreadable:
 - **[Module 20 — Transport & Fleet](../founder-manual-v2/20-TRANSPORT-ROUTES-SHIFTS-RIDERS-FLEET-DRIVERS-FUEL-AND-REQUESTS.md)**
 - **[Module 21 — Inventory, Uniforms, Assets, Suppliers, Procurement & Expenses](../founder-manual-v2/21-INVENTORY-UNIFORMS-ASSETS-SUPPLIERS-PROCUREMENT-AND-EXPENSES.md)**
 - **[Module 22 — Cafeteria & Pocket Wallet](../founder-manual-v2/22-CAFETERIA-MENUS-MEAL-CARDS-TABLES-QUEUE-RATIONING-AND-POCKET-WALLET.md)**
+- **[Module 23 — Discipline, Clinic, Security/Gate & Reception](../founder-manual-v2/23-DISCIPLINE-CLINIC-SECURITY-GATE-AND-RECEPTION.md)**
 
 ## Levels planned
 
