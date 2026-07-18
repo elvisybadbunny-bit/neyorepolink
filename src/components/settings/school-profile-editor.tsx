@@ -324,6 +324,10 @@ export function SchoolProfileEditor() {
           logoUrl: p.logoUrl, brandPrimary: p.brandPrimary, brandAccent: p.brandAccent,
           socialLinks: p.socialLinks,
           joiningRequirements: p.joiningRequirements.filter((r) => r.label.trim()),
+          educationLevelsOffered: p.educationLevelsOffered,
+          schoolType: p.schoolType,
+          uniformSupplierName: p.uniformSupplierName,
+          uniformSupplierPhone: p.uniformSupplierPhone,
           gpsLat: p.gpsLat ?? "",
           gpsLng: p.gpsLng ?? "",
           gpsRadiusM: p.gpsRadiusM ?? "",
@@ -386,6 +390,80 @@ export function SchoolProfileEditor() {
               </div>
             </Field>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Real school structure — these fields drive which level-aware tools
+          appear across Curriculum, Academics, pathways and boarding. */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-green-600" />
+            School structure & services
+          </CardTitle>
+          <p className="text-xs text-navy-400">
+            Choose every education level the school genuinely offers and whether it is day, boarding, or both. These choices control level-aware and boarding tools across NEYO.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <Label>Education levels offered</Label>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {EDUCATION_LEVELS.map((level) => {
+                const selected = p.educationLevelsOffered.includes(level.id);
+                return (
+                  <button
+                    key={level.id}
+                    type="button"
+                    onClick={() => set(
+                      "educationLevelsOffered",
+                      selected
+                        ? p.educationLevelsOffered.filter((id) => id !== level.id)
+                        : [...p.educationLevelsOffered, level.id]
+                    )}
+                    className={`rounded-2xl border p-3 text-left text-sm transition ${selected
+                      ? "border-green-500 bg-green-500/10 font-semibold text-green-800 dark:text-green-200"
+                      : "border-navy-100 bg-white text-navy-600 hover:bg-navy-50 dark:border-navy-800 dark:bg-navy-950 dark:text-navy-300"}`}
+                    aria-pressed={selected}
+                  >
+                    {level.label}
+                  </button>
+                );
+              })}
+            </div>
+            {p.educationLevelsOffered.length === 0 && (
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                Select at least one real level before configuring curriculum, classes or timetables.
+              </p>
+            )}
+          </div>
+
+          <Field label="School attendance type">
+            <select
+              value={p.schoolType}
+              onChange={(e) => set("schoolType", e.target.value)}
+              className="w-full rounded-2xl border border-navy-200 bg-white px-3.5 py-2.5 text-sm dark:border-navy-700 dark:bg-navy-900"
+            >
+              <option value="DAY">Day school</option>
+              <option value="BOARDING">Boarding school</option>
+              <option value="DAY_AND_BOARDING">Day and boarding</option>
+            </select>
+          </Field>
+          <p className="text-xs text-navy-400">
+            Saving Day school automatically switches the Hostel module off. Boarding choices do not allocate beds automatically; configure Hostel separately.
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Uniform supplier / tailor name">
+              <Input value={p.uniformSupplierName} onChange={(e) => set("uniformSupplierName", e.target.value)} placeholder="e.g. Nairobi Schoolwear Ltd" />
+            </Field>
+            <Field label="Uniform supplier phone">
+              <Input value={p.uniformSupplierPhone} onChange={(e) => set("uniformSupplierPhone", e.target.value)} placeholder="+254 712 345 678" />
+            </Field>
+          </div>
+          <p className="text-xs text-navy-400">
+            Uniform orders use these supplier details when the school's uniform workflow is enabled.
+          </p>
         </CardContent>
       </Card>
 

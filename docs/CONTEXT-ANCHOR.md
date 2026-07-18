@@ -1,3 +1,15 @@
+## 2026-07-18 (part 36) — Founder Manual V2 Module 03 + Missing School-Level/Profile Controls Repaired
+
+Continued Manual V2 with `03-SCHOOL-SETUP-PROFILE-MODULES-BRANDING-AND-SETTINGS.md`: a beginner-facing, current-code manual for the permission-filtered Settings hub, School Profile load/save, identity/logo/colours, real school structure, platform/personal appearance controls, shell versions, vision/contacts/socials, GPS clock-in geofence, joining requirements, module registry/toggles, Curriculum activation, menu visibility, joint owners, public website, payments/data/printing/recycle/developer settings, a complete setup example, timetable dependencies, troubleshooting, founder verification and edit points.
+
+A real full-stack UI wiring gap was found and fixed before documenting it: `educationLevelsOffered`, `schoolType`, `uniformSupplierName`, and `uniformSupplierPhone` already existed in Profile types, validation, service and database, and the editor fetched them—but rendered no controls and omitted them from its PUT body. Schools therefore could not perform the product's own instruction to select active levels in School Profile. Added a real `School structure & services` card with multi-select ECDE/Primary/Junior/Senior buttons, Day/Boarding/Both selector, supplier/tailor name/phone, warnings/explanations, and wired all fields into Save. Saving Day continues to invoke the existing service rule that switches Hostel off; level values now feed the existing Curriculum/Academics activation summary.
+
+Validation performed: named settings/service/API files inspected; focused ESLint on `school-profile-editor.tsx`; static grep confirms new fields are both rendered and submitted; `git diff --check`; manual mirrors byte-compared. Full typecheck remains environment-blocked by Prisma engine download/TLS as recorded in part 34, so no false green typecheck is claimed.
+
+**Next manual chapter:** Module 04 — Users, Roles, Staff Access and Invitations. This establishes who can create/edit each operational record before Students and timetable configuration.
+
+---
+
 ## 2026-07-18 (part 35) — Founder Manual V2 Module 02: Login, Security, User Menu & Navigation
 
 Continued the requested beginner-facing product manual with `docs/founder-manual-v2/02-LOGIN-SECURITY-USER-MENU-AND-NAVIGATION.md`, grounded in the 1,138-line real Login page, auth/security APIs, Security Settings cards, permission matrix, Topbar, Sidebar, two shell versions, notifications/search/help/offline controls, user menu and parent multi-school switcher.
