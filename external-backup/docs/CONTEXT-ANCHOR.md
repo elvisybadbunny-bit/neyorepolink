@@ -1,3 +1,13 @@
+## 2026-07-18 (part 54) — Founder Manual V2 Module 20 Transport & Fleet
+
+Built `20-TRANSPORT-ROUTES-SHIFTS-RIDERS-FLEET-DRIVERS-FUEL-AND-REQUESTS.md`: records/tabs/permissions; transport settings and mid-term billing; Routes/stops/fees; Riders/stop/capacity/auto allocation/release; idempotent invoicing; Shifts/edit/archive/overrides; Fleet vehicle/compliance/file; Fuel/odometer/kmL; Maintenance; Drivers/licence; Parent route-change approval/decline/billing; GPS hardware honesty; example, errors and 14-step verification.
+
+Core render-chain audit found no orphaned Transport action. Manual distinguishes core Fleet source from separately wired Reception Fleet safety extension and flags duplicate-record avoidance as product policy/consolidation decision, not missing code. Static source/diff verification, `git diff --check`, docs mirrored/byte-compared. No code change required.
+
+**Next:** Module 21 Inventory, Uniforms, Suppliers, Procurement & Expenses.
+
+---
+
 ## 2026-07-18 (part 53) — Founder Manual V2 Module 19 Hostel + Boarder Visitors UI Restored
 
 Built `19-HOSTEL-DORMS-BEDS-CURFEW-FEES-EXEAT-DAMAGE-AND-VISITORS.md`: hostel/room/bed records and permissions; New Hostel; occupancy; Invoice Boarders; Add Room; allocate/release rules; Auto-Allocate strategies; Curfew IN/OUT/LEAVE and guardian SMS dedupe; Exeat request/approval/QR exit-return; damage inspection/invoice; worked example, errors and 13-step verification.
