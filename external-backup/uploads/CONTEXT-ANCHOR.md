@@ -1,3 +1,20 @@
+## 2026-07-18 (part 33) — Founder Manual V2 Started: Deep Button-by-Button Dashboard & Role Manual
+
+**Founder's correction/request:** the 20-level Bible felt too shallow for a founder with no coding experience. Founder requested a new version explaining every module, role, prerequisite, button, expected result, configuration change and full wiring, built progressively starting with Dashboard and all users/roles.
+
+Created a separate `docs/founder-manual-v2/` manual series so detailed screen operations do not get mixed into the institutional Bible:
+
+1. `00-MANUAL-PLAN-AND-MODULE-ORDER.md` — explains why Manual V2 exists, the standard 12-part chapter format, truth rule, and a 30-module progression from Dashboard/login/setup through Students, Attendance, Academics, timetable generation, Exams/CBE, portals, Finance, operations, Bundi, Founder Ops, integrations and master operating checklists.
+2. `01-DASHBOARD-AND-ROLE-BASED-HOME.md` — a deep current-code analysis of `/dashboard`: login/Founder redirect; exact role-by-role visibility for all 19 roles; prerequisites; greeting and holiday behavior; every metric card's source, formula, click destination and troubleshooting; attendance action labels; collections graph; Staff Intercom buttons/states; Principal Delegation fields/buttons/authority; Bundle Saver toggle/sync/clear and shared-device safety; activity logs; Bundi browser audio; cross-module source map; role-specific first action; full founder test checklist; and edit points.
+
+The Dashboard analysis also found and honestly recorded five current product accuracy/polish issues rather than inventing explanations: `Term 2 · Week 6` is hard-coded; Staff subtitle is narrower than its query; absent subscription falls back to legacy `pro/ACTIVE`; empty attendance days appear as zero in the seven-day sparkline; and teacher-facing Total Enrolled is a whole-school headline although the destination roster is scoped. No behavior was changed yet—these are candidates for a focused Dashboard fix after founder review.
+
+Updated the Bible index with a Companion Manual V2 section, verified every named Dashboard component/API/service/permission against current source, synchronized the new manual to both repository backup trees, and ran `git diff --check`.
+
+**Next manual chapter:** Module 02 — Login, Account Security, User Menu and Navigation Shell. After that Module 03 School Setup, then Users/Roles, then Students. The timetable chapter will come after school structure/terms/subjects/teachers/classes so it can explain every real prerequisite in correct order.
+
+---
+
 ## 2026-07-18 (part 32) — Genuine NEYO Bible Expanded: Levels 17–20 and the Full Institutional Document Taxonomy
 
 **Founder's instruction:** requested Levels 17–20 plus a comprehensive library spanning Governance & Leadership, Product Management, Technical & Engineering, Security & Compliance, Operations, Sales & Partnerships, Marketing & Brand, Customer Documentation, Finance, HR, Legal, AI-specific governance, and the Founder's Personal Knowledge Base.

@@ -91,7 +91,17 @@ was: **"Delete it, rebuild for real."** This is that rebuild.
   financial/HR/legal artifact frameworks, internal AI governance library, and founder knowledge
   continuation—with explicit status boundaries where approved artifacts do not yet exist.
 
-## Levels planned (not yet started — will be added one at a time, never all at once)
+## Companion: Founder Manual V2 (button-by-button product operations)
 
-- Further levels will be defined from the broader knowledge-system areas recorded in Level 01 §9,
-  one at a time and only when their scope can be grounded in real source material.
+The Bible explains institutional knowledge, architecture, policy and governance. The founder's new
+beginner-facing, button-by-button module manual is separate so it can explain every screen without
+making this index unreadable:
+
+- **[Manual plan and module order](../founder-manual-v2/00-MANUAL-PLAN-AND-MODULE-ORDER.md)**
+- **[Module 01 — Dashboard & Role-Based Home](../founder-manual-v2/01-DASHBOARD-AND-ROLE-BASED-HOME.md)**
+
+## Levels planned
+
+- Levels 01–20 now cover the identified institutional areas. Deepen existing levels when the real
+  implementation changes. Add another Bible level only for a genuinely distinct responsibility;
+  continue screen-by-screen product instructions in Founder Manual V2.
