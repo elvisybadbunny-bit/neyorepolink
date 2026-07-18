@@ -1,3 +1,13 @@
+## 2026-07-18 (part 43) — Founder Manual V2 Module 09 Complete Timetable & Smart Timetable Guide
+
+Built `09-TIMETABLE-AND-SMART-TIMETABLE-COMPLETE-GUIDE.md`, the requested founder/non-coder complete workflow: 13 prerequisites; Timetable vs Smart Timetable distinction; class grid/manual cell Save/Clear; all class/teacher/venue prints; Schedule Rules fields and class/level/group saves; Auto-fill and Saturday scheduler; Draft protection; Publish/Draft; pre-generation Free Study confirmation; Master Button/job states/warnings/unplaced; flagged teacher rotation; every constraint/time-off/blocked-slot action; every ClassSubjectNeed field; qualification/allocation distinction; combinations; venues/labs/capacity/support; teacher print codes; teacher allocation import; every elective/options block field/button; build-from-choices; overflow venues; solver invariant list; review/publish/correction strategy; errors and 17-step founder test.
+
+No new orphaned timetable control was found in this pass. Specialized Exam Timetable and Duty Roster remain explicitly inventoried and will receive their own detailed chapters rather than being omitted. Static source/API/service inspection and `git diff --check`; docs mirrored/byte-compared. Node modules remain unavailable after sandbox wipe, so no unsupported lint/typecheck claim.
+
+**Next:** Module 10 — Exams & Exam Timetable (setup, subject mapping, marks, release approvals, analytics/reports, paper scans, exam timetable/invigilators/auto-generator and every button).
+
+---
+
 ## 2026-07-18 (part 42) — Founder Manual V2 Module 08 Academics Foundation + Senior Pathway Subject Wiring Fixed
 
 Founder requested Module 08 (Module 07 was already completed). Built `08-ACADEMICS-SUBJECTS-DEPARTMENTS-TERMS-LESSON-PLANS-AND-CURRICULUM.md`: access/HOD scope, complete inventory of all 20 conditional Academics tabs, Subjects and CBE/8-4-4 presets, Departments/HOD/subject mapping, Co-curricular foundation, Terms/current behavior, Lesson Plans/resources/observations/coverage, Record of Work distinction, Curriculum Versions, Senior Pathways, Subject Selection, grading/report foundations, specialized-tab ownership, setup example, exact timetable wiring, troubleshooting and founder verification.

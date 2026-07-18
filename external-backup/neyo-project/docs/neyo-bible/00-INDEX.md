@@ -106,6 +106,7 @@ making this index unreadable:
 - **[Module 06 — Admissions](../founder-manual-v2/06-ADMISSIONS-INQUIRIES-APPLICATIONS-INTERVIEWS-OFFERS-AND-ADMIT.md)**
 - **[Module 07 — Attendance](../founder-manual-v2/07-ATTENDANCE-CLASS-REGISTERS-STAFF-GPS-OFFLINE-SMS-AND-INSIGHTS.md)**
 - **[Module 08 — Academics Foundation](../founder-manual-v2/08-ACADEMICS-SUBJECTS-DEPARTMENTS-TERMS-LESSON-PLANS-AND-CURRICULUM.md)**
+- **[Module 09 — Timetable & Smart Timetable](../founder-manual-v2/09-TIMETABLE-AND-SMART-TIMETABLE-COMPLETE-GUIDE.md)**
 
 ## Levels planned
 
