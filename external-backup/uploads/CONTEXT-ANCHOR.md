@@ -1,3 +1,21 @@
+## 2026-07-18 (part 34) — Dashboard Accuracy Repair: All Five Founder-Selected Manual Findings Fixed
+
+**Founder's instruction:** fix all five Dashboard findings before continuing Manual V2.
+
+Repaired `src/app/(app)/dashboard/page.tsx`:
+
+1. Removed hard-coded `Term 2 · Week 6`. The header now uses the real current `AcademicTerm.term` and computes week from its `startDate`; if no current term exists it says `No current term configured`. The displayed date now explicitly uses `Africa/Nairobi`.
+2. Corrected staff subtitle from `Active Teachers & HODs` to `Active school staff`, matching the real query (active non-parent/non-student school users, excluding legacy Super Admin).
+3. Removed fake missing-subscription fallback `pro / ACTIVE`. The card now renders the real dual pricing mode (`SIZE_BASED_V2` → `Capacity Complete`, `MODULAR_USERS_V1` → `Modular User & Module`) and real status, or an amber `Not configured · Open Billing to finish setup` state when no subscription row exists.
+4. Rebuilt attendance trend from one recent-range query grouped by dates that actually contain submitted attendance rows. It now takes the latest seven marked dates within 20 days and omits weekends/holidays/unmarked dates instead of falsely adding 0%; a genuinely marked 0%-present day still remains 0%.
+5. Applied the existing `scopeWhere(currentUser)` security helper to the active learner headline and six-month enrollment trend. Teacher/Class Teacher now sees `My Learners` in genuinely assigned classes; Parent sees `My Children`; leadership/office roles retain `Total Enrolled`. The card and destination roster no longer disagree.
+
+Updated Founder Manual V2 Module 01 throughout (behavior descriptions, subscription section, troubleshooting table and audit findings) to reflect the repaired code. Validation: `npx eslint 'src/app/(app)/dashboard/page.tsx'` passes with zero errors. A cache-free whole-project typecheck was attempted after `npm install`, but Prisma client generation is blocked in this sandbox because `binaries.prisma.sh` disconnected before TLS; without a generated Prisma client, the repository-wide typecheck reports widespread pre-existing implicit-any/unknown errors across hundreds of database call sites. Filtering confirms the Dashboard's reported errors are the same missing-generated-client inference class on pre-existing callbacks, not syntax errors from this change. This environment limitation is recorded honestly rather than claiming a green typecheck.
+
+**Next:** continue Founder Manual V2 Module 02 only after this stable Dashboard fix is committed/pushed.
+
+---
+
 ## 2026-07-18 (part 33) — Founder Manual V2 Started: Deep Button-by-Button Dashboard & Role Manual
 
 **Founder's correction/request:** the 20-level Bible felt too shallow for a founder with no coding experience. Founder requested a new version explaining every module, role, prerequisite, button, expected result, configuration change and full wiring, built progressively starting with Dashboard and all users/roles.

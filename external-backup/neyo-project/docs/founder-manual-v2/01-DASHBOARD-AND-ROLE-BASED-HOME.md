@@ -128,16 +128,14 @@ The first name comes from the signed-in user's `fullName`. Time is interpreted i
 - 12:00–16:59: Good afternoon
 - otherwise: Good evening
 
-Below it is a line currently rendered as:
+Below it is a live line such as:
 
 > Term 2 · Week 6 · Monday, 18 July
 
-### Important current limitation
-
-The weekday/date is live, but **“Term 2 · Week 6” is currently hard-coded in the page markup**. It
-is not computed from `AcademicTerm`. Therefore, do not use that text as proof of the real term/week.
-Use Academics → Terms as the source of truth. This should be corrected in a future dashboard polish
-so the label uses the same `currentTerm()` data already fetched for the metrics.
+The term comes from the current `AcademicTerm`. The week is calculated from the term's real
+`startDate` in seven-day blocks, with Week 1 as the minimum. If the school has not marked any term
+as current, the Dashboard says **“No current term configured”** instead of inventing a term. Open
+Academics → Terms to create/correct dates or choose the current term.
 
 ### Attendance button
 
@@ -240,11 +238,10 @@ do not edit source code or browser text.
 
 **Press:** opens `/attendance`.
 
-**Sparkline:** last seven calendar days; days with no rows display 0. This means weekends/non-school
-days may visually lower the line if no filtering is applied.
-
-**If misleading:** verify registers and school calendar; do not infer absence from a day with zero
-marked rows.
+**Sparkline:** the latest seven dates (within the recent 20-day window) that actually contain
+attendance rows. Weekends, holidays and unmarked dates are omitted rather than falsely displayed as
+0% attendance. A genuine submitted register with zero present learners still correctly displays
+0%.
 
 ---
 
@@ -257,9 +254,14 @@ marked rows.
 **Press:** `/students`.  
 **Sparkline:** count of non-deleted students admitted by each month-end across six months.
 
-A teacher may click through to Students, where service-level row scope controls which learners are
-actually listed. The Dashboard headline currently uses tenant active count rather than per-teacher
-class count, so the detailed destination remains the authoritative scoped roster.
+The headline uses the same student row scope as the destination module:
+
+- Teacher/Class Teacher: **My Learners** in genuinely assigned classes.
+- Parent: **My Children** linked through the guardian record.
+- Leadership/authorized office roles: **Total Enrolled** for the school.
+
+The six-month enrollment sparkline uses that same scope, so the card and destination no longer
+disagree.
 
 ### 8.2 Total Staff
 
@@ -267,9 +269,8 @@ class count, so the detailed destination remains the authoritative scoped roster
 **Source:** active users excluding Parent, Student and Super Admin roles.  
 **Press:** `/staff`.
 
-The subtitle says “Active Teachers & HODs,” but the query counts broader active staff roles. Treat
-the numeric count as active non-parent/non-student school users, not only teachers and HODs. This
-copy should be clarified in future polish.
+The subtitle says **“Active school staff,”** matching the query's broader count of active school
+users while excluding Parent, Student and legacy Super Admin accounts.
 
 ### 8.3 Events & Reminders
 
@@ -284,16 +285,19 @@ copy should be clarified in future polish.
 The combined number is not only Calendar events. The subtitle separates event and reminder counts.
 Use the notification bell for individual unread notifications.
 
-### 8.4 Subscription Plan
+### 8.4 Subscription
 
 **Visible to:** School Owner and Principal.  
-**Source:** tenant subscription plan key/status.  
+**Source:** the real tenant subscription `pricingMode` and status.
 **Press:** `/settings/billing`.
 
-If no subscription exists, the current UI falls back to plan name `pro` and status `ACTIVE`. This is
-legacy fallback behavior and must not be used to conclude the school is genuinely paid. Billing's
-real subscription record is authoritative and this fallback should be reviewed against the current
-dual-pricing model.
+Current labels are:
+
+- `SIZE_BASED_V2` → **Capacity Complete**
+- `MODULAR_USERS_V1` → **Modular User & Module**
+- no subscription row → **Not configured · Open Billing to finish setup**
+
+The Dashboard no longer invents legacy `pro / ACTIVE` values when the subscription row is missing.
 
 ### Expiry notification
 
@@ -497,10 +501,10 @@ Always correct the source module rather than trying to edit a Dashboard card.
 | Bursar cannot see money cards | Cards require `owner.dashboard` | Open Finance; this is current permission design |
 | Money total wrong | term/invoice/payment/discount mismatch | Verify Terms then Finance and reconciliation |
 | Attendance shows dash | no register rows today | Open Attendance and mark/inspect register |
-| Attendance trend falls on weekend | no rows represented as zero | Interpret with school calendar; consider future chart polish |
-| “Term 2 Week 6” wrong | currently hard-coded | Trust Academics → Terms; log dashboard polish issue |
-| Staff subtitle/count mismatch | query counts broader staff | Trust underlying count definition; clarify copy in product fix |
-| Plan says Pro without subscription | legacy fallback | Verify Billing record; do not treat fallback as payment proof |
+| Attendance trend has fewer than seven points | fewer than seven marked dates exist in the recent 20-day window | Complete missing registers; unmarked/weekend dates are intentionally omitted |
+| Term/week wrong | current term dates/current flag are wrong or absent | Correct Academics → Terms; refresh Dashboard |
+| Staff count unexpected | active school user role/status differs | Check Staff user status/role; subtitle now matches the broad count |
+| Subscription says Not configured | no real Subscription row | Open Billing and complete authorized setup |
 | Delegation card missing | not assigner and no own tasks | Expected; ask Principal to assign if appropriate |
 | Teacher missing from delegation list | inactive or wrong role | Fix User role/status through authorized user management |
 | Intercom Call disabled | target offline/busy | Refresh, confirm presence/network |
@@ -548,19 +552,19 @@ Test with separate real role accounts:
 
 ---
 
-## 19. Current product issues discovered while documenting
+## 19. Dashboard accuracy fixes completed after the first manual audit
 
-These are documentation findings, not automatically fixed in this manual-writing step:
+The founder requested all five audit findings be fixed before continuing the manual. The Dashboard
+now:
 
-1. Header text “Term 2 · Week 6” is hard-coded instead of using current term/week.
-2. Staff count subtitle says “Teachers & HODs” while query counts broader active staff.
-3. Subscription card falls back to legacy `pro`/`ACTIVE` when no record exists, which can conflict
-   with current dual-pricing truth.
-4. Attendance seven-day sparkline treats days with no rows as zero, including possible weekends.
-5. Teacher-facing Total Enrolled headline uses tenant active count while destination roster is
-   row-scoped; consider whether headline should be scoped or labeled school total.
+1. derives Term and Week from the real current `AcademicTerm` and reports when none is configured;
+2. labels the staff card “Active school staff,” matching its query;
+3. shows the current dual pricing mode/status or “Not configured,” never fake legacy `pro/ACTIVE`;
+4. omits unmarked/weekend/holiday dates from attendance trend instead of treating them as 0%;
+5. applies `scopeWhere()` to the learner headline and six-month trend, with role-aware labels.
 
-These should be reviewed as a focused Dashboard accuracy/polish task before editing behavior.
+These corrections live in `src/app/(app)/dashboard/page.tsx` and are included in the founder test
+checklist.
 
 ---
 

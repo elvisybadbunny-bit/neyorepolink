@@ -24,6 +24,7 @@ import { PwaDataSaverCard } from "@/components/dashboard/pwa-data-saver";
 import { BundiAudioButton } from "@/components/dashboard/bundi-audio-button";
 import { PrincipalDelegationCard } from "@/components/dashboard/principal-delegation-card";
 import { createInApp } from "@/lib/services/notification.service";
+import { scopeWhere } from "@/lib/services/student.service";
 
 // Read fresh DB counts on every request (not at build time).
 export const dynamic = "force-dynamic";
@@ -168,7 +169,13 @@ export default async function DashboardPage() {
     }
 
     // ---- 1) Enrolled students & counts ----
-    const activeStudentsCount = await tdb.student.count({ where: { status: "ACTIVE" } });
+    // Keep the headline inside the same student row-scope as the destination
+    // module: teachers see learners in classes they genuinely teach, parents
+    // see linked children, and leadership/office roles see the school total.
+    const studentScope = await scopeWhere(currentUser);
+    const activeStudentsCount = await tdb.student.count({
+      where: { AND: [{ status: "ACTIVE" }, studentScope] },
+    });
     const ownClassCount = await tdb.schoolClass.count({ where: { archived: false, classTeacherId: currentUser.id } });
     const totalStaffCount = await tdb.user.count({
       where: { isActive: true, role: { notIn: ["PARENT", "STUDENT", "SUPER_ADMIN"] } },
@@ -250,19 +257,40 @@ export default async function DashboardPage() {
 
     const feeCollectionTrend = graphPoints.map((p) => p.actual);
 
-    const attendanceTrend: number[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 24 * 3600_000).toISOString().slice(0, 10);
-      const rows = await tdb.attendanceRecord.findMany({ where: { date: d }, select: { status: true } });
-      const present = rows.filter((r) => r.status === "P" || r.status === "L").length;
-      attendanceTrend.push(rows.length ? Math.round((present / rows.length) * 100) : 0);
+    // Use the latest seven days that actually have a submitted register.
+    // Calendar days with no rows (weekends, holidays, or not-yet-marked days)
+    // are omitted instead of being misrepresented as 0% attendance.
+    const attendanceFrom = new Date(now.getTime() - 20 * 24 * 3600_000).toISOString().slice(0, 10);
+    const attendanceRows = await tdb.attendanceRecord.findMany({
+      where: { date: { gte: attendanceFrom, lte: today } },
+      select: { date: true, status: true },
+      orderBy: { date: "asc" },
+    });
+    const attendanceByDate = new Map<string, string[]>();
+    for (const row of attendanceRows) {
+      const statuses = attendanceByDate.get(row.date) ?? [];
+      statuses.push(row.status);
+      attendanceByDate.set(row.date, statuses);
     }
+    const attendanceTrend = Array.from(attendanceByDate.entries())
+      .map(([, statuses]) => {
+        const present = statuses.filter((status) => status === "P" || status === "L").length;
+        return Math.round((present / statuses.length) * 100);
+      })
+      .slice(-7);
 
     const enrollmentTrend: number[] = [];
     for (let i = 5; i >= 0; i--) {
       const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i + 1, 0, 23, 59, 59));
-      enrollmentTrend.push(await tdb.student.count({ where: { admittedOn: { lte: monthEnd }, deletedAt: null } }));
+      enrollmentTrend.push(await tdb.student.count({
+        where: { AND: [{ admittedOn: { lte: monthEnd }, deletedAt: null }, studentScope] },
+      }));
     }
+
+    const termWeek = term
+      ? Math.max(1, Math.floor((new Date(`${today}T00:00:00.000Z`).getTime() - new Date(`${term.startDate}T00:00:00.000Z`).getTime()) / (7 * 24 * 3600_000)) + 1)
+      : null;
+    const termDisplay = term ? `Term ${term.term} · Week ${termWeek}` : "No current term configured";
 
     return {
       activeStudentsCount,
@@ -287,13 +315,31 @@ export default async function DashboardPage() {
       feeCollectionTrend,
       attendanceTrend,
       enrollmentTrend,
-      planName: tenant?.subscription?.planKey || "pro",
-      planStatus: tenant?.subscription?.status || "ACTIVE",
+      termDisplay,
+      pricingMode: tenant?.subscription?.pricingMode ?? null,
+      planStatus: tenant?.subscription?.status ?? null,
       daysToPlanEnd,
     };
   });
 
   const holiday = getHolidayGreeting();
+  const studentCountLabel = ["TEACHER", "CLASS_TEACHER"].includes(currentUser.role)
+    ? "My Learners"
+    : currentUser.role === "PARENT"
+      ? "My Children"
+      : "Total Enrolled";
+  const studentCountDescription = ["TEACHER", "CLASS_TEACHER"].includes(currentUser.role)
+    ? "Active learners in my classes"
+    : currentUser.role === "PARENT"
+      ? "Linked active learners"
+      : "Active learners";
+  const pricingModeLabel = stats.pricingMode === "SIZE_BASED_V2"
+    ? "Capacity Complete"
+    : stats.pricingMode === "MODULAR_USERS_V1"
+      ? "Modular User & Module"
+      : stats.pricingMode
+        ? stats.pricingMode.replaceAll("_", " ").toLowerCase()
+        : null;
 
   return (
     <div className="space-y-6 text-left">
@@ -314,10 +360,11 @@ export default async function DashboardPage() {
             {greeting}, {firstName}
           </h1>
           <p className="mt-1 text-sm text-navy-500 dark:text-navy-400">
-            Term 2 · Week 6 · {new Date().toLocaleDateString("en-KE", {
+            {stats.termDisplay} · {new Date().toLocaleDateString("en-KE", {
               weekday: "long",
               day: "numeric",
               month: "long",
+              timeZone: "Africa/Nairobi",
             })}
           </p>
         </div>
@@ -393,9 +440,9 @@ export default async function DashboardPage() {
         {canSeeStudentsCard && <Link href="/students">
           <div className="rounded-3xl border border-navy-100 bg-white/70 p-5 shadow-sm hover:shadow-md transition cursor-pointer text-left dark:border-navy-800 dark:bg-navy-900/60 flex items-center justify-between">
             <div className="space-y-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-navy-400">Total Enrolled</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-navy-400">{studentCountLabel}</span>
               <p className="text-2xl font-black text-navy-950 dark:text-white">{stats.activeStudentsCount}</p>
-              <p className="text-[9px] text-navy-400">Active Learners</p>
+              <p className="text-[9px] text-navy-400">{studentCountDescription}</p>
               <MiniSparkline data={stats.enrollmentTrend} stroke="#2563eb" label="Enrollment trend" />
             </div>
             <div className="p-3 bg-green-500/10 text-green-600 rounded-2xl"><Users className="h-5 w-5" /></div>
@@ -407,7 +454,7 @@ export default async function DashboardPage() {
             <div className="space-y-0.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-navy-400">Total Staff</span>
               <p className="text-2xl font-black text-navy-950 dark:text-white">{stats.totalStaffCount}</p>
-              <p className="text-[9px] text-navy-400">Active Teachers & HODs</p>
+              <p className="text-[9px] text-navy-400">Active school staff</p>
             </div>
             <div className="p-3 bg-blue-500/10 text-blue-600 rounded-2xl"><Users className="h-5 w-5" /></div>
           </div>
@@ -427,11 +474,15 @@ export default async function DashboardPage() {
         {canSeeBillingCard && <Link href="/settings/billing">
           <div className="rounded-3xl border border-navy-100 bg-white/70 p-5 shadow-sm hover:shadow-md transition cursor-pointer text-left dark:border-navy-800 dark:bg-navy-900/60 flex items-center justify-between">
             <div className="space-y-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-navy-400">Subscription Plan</span>
-              <p className="text-2xl font-black text-green-700 dark:text-green-400 capitalize">{stats.planName.replace(/_/g, " ")}</p>
-              <p className="text-[9px] text-navy-400">Status: <strong className="text-green-600">{stats.planStatus}</strong></p>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-navy-400">Subscription</span>
+              <p className={`text-lg font-black ${pricingModeLabel ? "text-green-700 dark:text-green-400" : "text-amber-700 dark:text-amber-300"}`}>
+                {pricingModeLabel ?? "Not configured"}
+              </p>
+              <p className="text-[9px] text-navy-400">
+                {stats.planStatus ? <>Status: <strong className="text-green-600">{stats.planStatus}</strong></> : "Open Billing to finish setup"}
+              </p>
             </div>
-            <div className="p-3 bg-green-500/10 text-green-600 rounded-2xl"><CreditCard className="h-5 w-5" /></div>
+            <div className={`rounded-2xl p-3 ${pricingModeLabel ? "bg-green-500/10 text-green-600" : "bg-amber-500/10 text-amber-600"}`}><CreditCard className="h-5 w-5" /></div>
           </div>
         </Link>}
       </div>
