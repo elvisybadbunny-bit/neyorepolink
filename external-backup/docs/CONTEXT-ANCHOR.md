@@ -1,3 +1,15 @@
+## 2026-07-18 (part 45) — Founder Manual V2 Module 11 CBE, Competencies, Assessments & Learning Evidence
+
+Built `11-CBE-COMPETENCIES-ASSESSMENTS-SYLLABUS-PORTFOLIO-QUESTION-BANK-AND-VIDEOS.md`: connected evidence model; CBE Strands/Assess/Report; New Strand/sub-strands; Primary/Junior/Senior curriculum libraries; Universal Presets; EE/ME/AE/BE and append-only observations; Paper Quiz score-to-rubric; Comment Bank; learner PDF; Competency groups/evidence/approval/heatmap/summary; Flexible Assessment types/plans/sheets/evidence/moderation/release; Syllabus topics and VERIFIED_COVERED/SELF_REPORTED; Question Bank practice/print/scan/weakness/seeding; YouTube search fallback/save/watch/cast/history/national vetting; Portfolio submission/review/export; workflow example, errors and 15-step verification.
+
+Following gap-fix rule, removed a contradictory stale duplicate Senior curriculum heading: the same card showed both `Grade 10–12` and `Grade 10` with two descriptions. It now has one accurate Grade 10–12 title and combined explanation. No schema/API/service change needed.
+
+Static source/diff verification and `git diff --check`; docs mirrored/byte-compared. Node modules unavailable after wipe; no unsupported lint/typecheck claim.
+
+**Next:** Module 12 Teacher Portal (My Classes, attendance/marks links, timetable, homework, notes, class reports, PTA, Record of Work, leave/substitution and day-one continuity).
+
+---
+
 ## 2026-07-18 (part 44) — Founder Manual V2 Module 10 Exams & Exam Timetable + Bulk Print UI Restored
 
 Built `10-EXAMS-MARKS-REPORTS-PAPER-SCANS-AND-EXAM-TIMETABLE.md`: permissions; top multi-term/advanced analytics; New Exam fields/subject mapping; Results/Marks tabs; autosave/Save now; Mark Sheet print/scan/delta review; Exam Paper Tidying/LMS export; national sharing/clone; contests; positions/means/comparisons/reports; release request/return/approve/publish; standalone and Academics Exam Timetable; manual slots; invigilator pools; Auto-Generator periods/classes/options-block/per-student safety; Materials; KNEC batches/completeness/export; worked example; troubleshooting and 17-step founder verification.

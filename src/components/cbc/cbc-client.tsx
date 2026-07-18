@@ -453,9 +453,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Senior School curriculum library (Grade 10–12)</CardTitle>
-            <p className="text-xs text-navy-400">Real KICD Grade 10, 11, and 12 core and pathway strands/sub-strands (STEM electives, Applied/Business, Social Sciences, Languages, and Core Mathematics/English/Kiswahili/CSL).</p>
-            <CardTitle className="text-base">Senior School curriculum library (Grade 10)</CardTitle>
-            <p className="text-xs text-navy-400">Real KICD strands and sub-strands for the compulsory Senior School core subjects — pick a grade and subject, preview what will be added, then apply.</p>
+            <p className="text-xs text-navy-400">Real KICD Grade 10, 11, and 12 core and pathway strands/sub-strands (STEM electives, Applied/Business, Social Sciences, Languages, and Core Mathematics/English/Kiswahili/CSL). Pick a grade and subject, preview what will be added, then apply.</p>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-2">

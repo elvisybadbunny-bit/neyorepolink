@@ -33,6 +33,7 @@ language:
 - [Module 08 — Academics Foundation](./08-ACADEMICS-SUBJECTS-DEPARTMENTS-TERMS-LESSON-PLANS-AND-CURRICULUM.md)
 - [Module 09 — Timetable & Smart Timetable](./09-TIMETABLE-AND-SMART-TIMETABLE-COMPLETE-GUIDE.md)
 - [Module 10 — Exams & Exam Timetable](./10-EXAMS-MARKS-REPORTS-PAPER-SCANS-AND-EXAM-TIMETABLE.md)
+- [Module 11 — CBE, Competencies, Assessments & Learning Evidence](./11-CBE-COMPETENCIES-ASSESSMENTS-SYLLABUS-PORTFOLIO-QUESTION-BANK-AND-VIDEOS.md)
 
 ## The standard chapter format
 
