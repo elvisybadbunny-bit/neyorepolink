@@ -79,7 +79,7 @@ Press **Schedule rules**.
 
 Core fields persisted in `TimetableConfig` include:
 
-- Periods per day
+- Periods per day (1–20; every grid/dropdown/generator/print follows the saved class/grade configuration)
 - School day start
 - Lesson duration minutes
 - Short break after period/minutes

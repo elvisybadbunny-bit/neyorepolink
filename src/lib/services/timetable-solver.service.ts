@@ -604,10 +604,6 @@ export async function generateWholeSchoolTimetable(user: SessionUser) {
       if (day === SATURDAY_DAY) return cfg?.saturdayPeriodsCount ?? 4;
       return cfg?.periodsPerDay ?? 8;
     }
-    // Kept as a fallback constant only for the fixed co-curricular block below,
-    // which is deliberately Friday-only and unaffected by Saturday.
-    const MAX_PERIODS = 8;
-
     // Grid states for checking constraints in-memory (Academic)
     const classGrid = new Map<string, string>();
     const teacherGrid = new Map<string, string>();

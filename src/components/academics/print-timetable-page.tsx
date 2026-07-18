@@ -317,7 +317,7 @@ export function PrintTimetablePage({
 
   const hasSaturday = config?.hasSaturday !== false && slots.some((s) => s.dayOfWeek === 6);
   const days = hasSaturday ? DAY_NAMES : DAY_NAMES.slice(0, 5);
-  const periodsPerDay = config?.periodsPerDay || Math.max(1, ...slots.map((s) => s.period), 8);
+  const periodsPerDay = config?.periodsPerDay || Math.max(1, ...slots.map((s) => s.period));
   const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
 
   const mergedNonLessonMap = React.useMemo(() => getMergedNonLessonPeriods(slots, days.length, config), [slots, days.length, config]);

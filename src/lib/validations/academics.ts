@@ -34,7 +34,7 @@ export const slotSchema = z.object({
   teacherId: z.string().optional().or(z.literal("")),
   venue: z.string().trim().max(80).optional().or(z.literal("")),
   dayOfWeek: z.coerce.number().int().min(1).max(6),
-  period: z.coerce.number().int().min(1).max(8),
+  period: z.coerce.number().int().min(1).max(20),
 });
 
 export const autoFillSchema = z.object({

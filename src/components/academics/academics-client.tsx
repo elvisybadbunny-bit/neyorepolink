@@ -3304,7 +3304,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                 </select>
                 <select value={w.period} onChange={(e) => setTimeOffWindows((prev) => prev.map((x, i) => i === index ? { ...x, period: Number(e.target.value) } : x))} className="rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
                   <option value={0}>Whole day</option>
-                  {Array.from({ length: 8 }, (_, i) => i + 1).map((p) => <option key={p} value={p}>Period {p}</option>)}
+                  {Array.from({ length: Math.max(8, ...(payload?.configs ?? []).map((cfg: any) => Number(cfg.periodsPerDay || 0))) }, (_, i) => i + 1).map((p) => <option key={p} value={p}>Period {p}</option>)}
                 </select>
                 <Input value={w.note} onChange={(e) => setTimeOffWindows((prev) => prev.map((x, i) => i === index ? { ...x, note: e.target.value } : x))} placeholder="Reason" />
                 <Button size="sm" variant="ghost" onClick={() => setTimeOffWindows((prev) => prev.filter((_, i) => i !== index))}><Trash2 className="h-4 w-4" /></Button>
@@ -3363,7 +3363,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
               <div>
                 <Label>Period</Label>
                 <select value={blockedSlotForm.period} onChange={(e) => setBlockedSlotForm((f: any) => ({ ...f, period: Number(e.target.value) }))} className="mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
-                  {Array.from({ length: 10 }, (_, i) => i + 1).map((p) => <option key={p} value={p}>Period {p}</option>)}
+                  {Array.from({ length: Math.max(8, ...(payload?.configs ?? []).map((cfg: any) => Number(cfg.periodsPerDay || 0))) }, (_, i) => i + 1).map((p) => <option key={p} value={p}>Period {p}</option>)}
                 </select>
               </div>
               <label className="col-span-2 flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
@@ -4625,7 +4625,7 @@ function ClassConfigModal({ classId, classes, currentConfig, onClose, onSaved }:
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label htmlFor="cfg-periods">Periods Per Day</Label>
-            <Input id="cfg-periods" type="number" min={4} max={10} value={f.periodsPerDay} onChange={(e) => set("periodsPerDay", Number(e.target.value))} />
+            <Input id="cfg-periods" type="number" min={1} max={20} value={f.periodsPerDay} onChange={(e) => set("periodsPerDay", Number(e.target.value))} />
           </div>
           <div>
             <Label htmlFor="cfg-duration">Lesson Duration (mins)</Label>

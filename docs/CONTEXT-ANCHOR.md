@@ -1,3 +1,25 @@
+## 2026-07-18 (part 58) — Module 24 Documents/Print + Periods Hard-Coding Audit and Repair
+
+Founder explicitly reported period count felt hard-coded to 8 and requested all surrounding paths be checked/fixed. Audit confirmed the main L.7 Smart Engine was already per-class dynamic, but six peripheral/manual paths still constrained/forced eight. Repaired:
+
+- manual Timetable slot Zod max 8 → configurable 1–20;
+- simple `autoFill()` now fetches class TimetableConfig and iterates its real periods/day, removing fixed PERIODS constant;
+- fair Saturday filter max 8 → 20 (Saturday eligibility/config still enforced);
+- Smart Time-Off and Blocked Slot period dropdowns now derive maximum real configured school periods, fallback 8 only when unconfigured;
+- Schedule Rules input range 4–10 → 1–20;
+- print timetable fallback no longer forces minimum eight columns; uses config/highest real slot;
+- removed obsolete unused solver MAX_PERIODS=8.
+
+Default 8 remains legitimate only for newly created/unconfigured class/template; saved school values now flow through manual grid, Auto-Fill, Smart engine, time-off/blocks and prints. Updated Module 09 accordingly.
+
+Built `24-DOCUMENTS-PRINT-STATION-EXPORTS-VERIFICATION-AND-DYNAMIC-PERIODS.md`: document types, Print Station/queue/printers/class batch, limits/approvals, browser/PDF distinctions, CSV/XLSX, QR verification, branding, complete period-change procedure, reduction/increase consequences, errors and verification matrix.
+
+Static grep confirms no remaining operational eight-period cap in timetable validation/autoFill/dropdowns/print; remaining `8` values are documented defaults/templates or unrelated question/layout constants. `git diff --check`; docs mirrored. Node modules unavailable, no unsupported lint/typecheck claim.
+
+**Next:** Module 25 Bundi imports/OCR/review/quota/safety.
+
+---
+
 ## 2026-07-18 (part 57) — Founder Manual V2 Module 23 Discipline, Clinic, Security/Gate & Reception
 
 Built `23-DISCIPLINE-CLINIC-SECURITY-GATE-AND-RECEPTION.md`: Discipline incidents/approval/SMS/demerits/suspensions/counseling confidentiality; Clinic visits/allergies/profiles/medication/dosage/reports; Security passes/pickup/alternate codes/panic/QR; Reception visitors/badges/payments/bank/STK/report day/inquiries/calls/day close/lost-found/fleet; example, error boundaries and founder verification.

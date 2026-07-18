@@ -264,7 +264,6 @@ export async function currentTerm(tenantId: string) {
 // ---------------------------------------------------------------------------
 
 export const DAYS = [1, 2, 3, 4, 5] as const;
-export const PERIODS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
 export async function getTimetable(user: SessionUser, classId: string) {
   return withTenant(user.tenantId, async () => {
@@ -536,7 +535,11 @@ export async function autoFill(
     if (input.clearExisting) {
       await db.timetableSlot.deleteMany({ where: { tenantId: user.tenantId, classId: input.classId } });
     }
-    const existing = await tenantDb().timetableSlot.findMany({ where: { classId: input.classId } });
+    const [existing, config] = await Promise.all([
+      tenantDb().timetableSlot.findMany({ where: { classId: input.classId } }),
+      tenantDb().timetableConfig.findFirst({ where: { classId: input.classId } }),
+    ]);
+    const periods = Array.from({ length: Math.max(1, config?.periodsPerDay ?? 8) }, (_, index) => index + 1);
     const taken = new Set(existing.map((s) => `${s.dayOfWeek}|${s.period}`));
 
     // Teacher busy map across the whole school.
@@ -560,7 +563,7 @@ export async function autoFill(
           if (remaining <= 0) break;
           const dayKey = `${subjectId}|${day}`;
           if (!allowDouble && (subjectDayCount.get(dayKey) ?? 0) > 0) continue;
-          for (const period of PERIODS) {
+          for (const period of periods) {
             if (remaining <= 0) break;
             const cellKey = `${day}|${period}`;
             if (taken.has(cellKey)) continue;
@@ -734,7 +737,7 @@ export async function fairSaturdaySchedule(
 ) {
   return withTenant(user.tenantId, async () => {
     const classIds = Array.from(new Set(input.classIds.filter(Boolean)));
-    const periodIds = Array.from(new Set(input.periodIds.map((p) => Math.trunc(p)).filter((p) => p >= 1 && p <= 8))).sort((a, b) => a - b);
+    const periodIds = Array.from(new Set(input.periodIds.map((p) => Math.trunc(p)).filter((p) => p >= 1 && p <= 20))).sort((a, b) => a - b);
     const subjectIds = Array.from(new Set(input.subjectIds.filter(Boolean)));
     if (classIds.length === 0) throw new AcademicsError("NOT_FOUND", "Select at least one class.");
     if (periodIds.length === 0) throw new AcademicsError("NOT_FOUND", "Select at least one Saturday period.");
