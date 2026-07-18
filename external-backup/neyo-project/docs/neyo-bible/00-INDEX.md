@@ -116,6 +116,7 @@ making this index unreadable:
 - **[Module 16 — Communication, Messages, Notifications & Calendar](../founder-manual-v2/16-COMMUNICATION-MESSAGES-NOTIFICATIONS-AND-CALENDAR.md)**
 - **[Module 17 — LMS, Videos & Online Classes](../founder-manual-v2/17-LMS-HOMEWORK-QUIZZES-DISCUSSIONS-VIDEOS-AND-ONLINE-CLASSES.md)**
 - **[Module 18 — Library](../founder-manual-v2/18-LIBRARY-CATALOG-COPIES-ISSUE-RETURN-FINES-IMPORT-AND-QR.md)**
+- **[Module 19 — Hostel](../founder-manual-v2/19-HOSTEL-DORMS-BEDS-CURFEW-FEES-EXEAT-DAMAGE-AND-VISITORS.md)**
 
 ## Levels planned
 

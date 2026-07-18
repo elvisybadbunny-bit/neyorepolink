@@ -1,3 +1,15 @@
+## 2026-07-18 (part 53) — Founder Manual V2 Module 19 Hostel + Boarder Visitors UI Restored
+
+Built `19-HOSTEL-DORMS-BEDS-CURFEW-FEES-EXEAT-DAMAGE-AND-VISITORS.md`: hostel/room/bed records and permissions; New Hostel; occupancy; Invoice Boarders; Add Room; allocate/release rules; Auto-Allocate strategies; Curfew IN/OUT/LEAVE and guardian SMS dedupe; Exeat request/approval/QR exit-return; damage inspection/invoice; worked example, errors and 13-step verification.
+
+Following gap-fix rule, found `boarderVisitors()` and `/api/hostel?visitors=` existed but no Hostel UI called them. Added **Visitors** beside occupied beds and a read-only modal showing Reception-linked last 30 visitor names/phones/purposes/badges/sign-in/on-site/signed-out. Reception remains source for sign-in/out, avoiding duplicate ledger/schema.
+
+Static source/diff verification and `git diff --check`; docs mirrored/byte-compared. Node modules unavailable, no unsupported lint/typecheck claim.
+
+**Next:** Module 20 Transport & Fleet.
+
+---
+
 ## 2026-07-18 (part 52) — Founder Manual V2 Module 18 Library + Fine-Policy Copy Corrected
 
 Built `18-LIBRARY-CATALOG-COPIES-ISSUE-RETURN-FINES-IMPORT-AND-QR.md`: Book/Copy/Issue distinction; permissions/tabs; catalog/search/add/digital file; standard/Bundi import; per-copy generation/status/QR label printing; ISBN/copy QR/camera/manual scan; borrower/due/issue constraints; Out Now/return; configurable fine/Sunday rule; Collect Cash/Add to Invoice; Portal history; lost/coursebook double-charge boundary; example, errors and 14-step verification.

@@ -207,6 +207,7 @@ function RoomBoard({ hostel, canManage, onBack }: { hostel: HostelRow; canManage
   const [allocating, setAllocating] = React.useState<{ roomId: string; roomName: string; bedNo: number } | null>(null);
   const [addingRoom, setAddingRoom] = React.useState(false);
   const [autoAllocOpen, setAutoAllocOpen] = React.useState(false);
+  const [visitorStudent, setVisitorStudent] = React.useState<{ id: string; name: string } | null>(null);
 
   const load = React.useCallback(async () => {
     const res = await fetch(`/api/hostel?board=${hostel.id}`);
@@ -270,13 +271,16 @@ function RoomBoard({ hostel, canManage, onBack }: { hostel: HostelRow; canManage
                           <span className="text-navy-300 dark:text-navy-500">empty</span>
                         )}
                       </span>
-                      {canManage && (b.allocationId ? (
-                        <button onClick={() => release(b.allocationId!, b.studentName!)} className="rounded-full p-1 text-navy-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20" aria-label={`Release bed ${b.bedNo}`}>
-                          <UserMinus className="h-4 w-4" />
-                        </button>
-                      ) : (
-                        <Button size="sm" variant="secondary" onClick={() => setAllocating({ roomId: r.id, roomName: r.name, bedNo: b.bedNo })}>Allocate</Button>
-                      ))}
+                      <span className="flex items-center gap-1">
+                        {b.studentId && <Button size="sm" variant="ghost" onClick={() => setVisitorStudent({ id: b.studentId!, name: b.studentName! })}><Users className="h-3.5 w-3.5" /> Visitors</Button>}
+                        {canManage && (b.allocationId ? (
+                          <button onClick={() => release(b.allocationId!, b.studentName!)} className="rounded-full p-1 text-navy-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20" aria-label={`Release bed ${b.bedNo}`}>
+                            <UserMinus className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <Button size="sm" variant="secondary" onClick={() => setAllocating({ roomId: r.id, roomName: r.name, bedNo: b.bedNo })}>Allocate</Button>
+                        ))}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -295,6 +299,7 @@ function RoomBoard({ hostel, canManage, onBack }: { hostel: HostelRow; canManage
           onDone={() => { setAllocating(null); load(); }}
         />
       )}
+      {visitorStudent && <BoarderVisitorsDialog student={visitorStudent} onClose={() => setVisitorStudent(null)} />}
       {addingRoom && <AddRoomDialog hostelId={hostel.id} onClose={() => setAddingRoom(false)} onDone={() => { setAddingRoom(false); load(); }} />}
       {autoAllocOpen && (
         <AutoAllocateDormDialog
@@ -305,6 +310,12 @@ function RoomBoard({ hostel, canManage, onBack }: { hostel: HostelRow; canManage
       )}
     </div>
   );
+}
+
+function BoarderVisitorsDialog({ student, onClose }: { student: { id: string; name: string }; onClose: () => void }) {
+  const [rows, setRows] = React.useState<any[] | null>(null);
+  React.useEffect(() => { fetch(`/api/hostel?visitors=${student.id}`).then((r) => r.json()).then((j) => setRows(j.ok ? j.data : [])).catch(() => setRows([])); }, [student.id]);
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/40 p-4 backdrop-blur-sm" onClick={onClose}><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}><div className="mb-4 flex justify-between"><div><h3 className="font-semibold">Visitors — {student.name}</h3><p className="text-xs text-navy-400">Reception-linked visitor history</p></div><button onClick={onClose}><X className="h-4 w-4" /></button></div>{rows === null ? <Skeleton className="h-28 rounded-2xl" /> : rows.length === 0 ? <p className="rounded-2xl border border-dashed border-navy-200 p-6 text-center text-sm text-navy-400">No linked visitors recorded.</p> : <ul className="space-y-2">{rows.map((v) => <li key={v.id} className="rounded-xl bg-warm-50 p-3 text-sm dark:bg-navy-800"><p className="font-medium">{v.name} · {v.badgeNo}</p><p className="text-xs text-navy-400">{v.phone} · {v.purpose} · {new Date(v.signedInAt).toLocaleString("en-KE")}{v.signedOutAt ? " · signed out" : " · on site"}</p></li>)}</ul>}</div></div>;
 }
 
 function AllocateDialog({ target, students, hostelGender, onClose, onDone }: {

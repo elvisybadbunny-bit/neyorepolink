@@ -41,6 +41,7 @@ language:
 - [Module 16 — Communication, Messages, Notifications & Calendar](./16-COMMUNICATION-MESSAGES-NOTIFICATIONS-AND-CALENDAR.md)
 - [Module 17 — LMS, Videos & Online Classes](./17-LMS-HOMEWORK-QUIZZES-DISCUSSIONS-VIDEOS-AND-ONLINE-CLASSES.md)
 - [Module 18 — Library](./18-LIBRARY-CATALOG-COPIES-ISSUE-RETURN-FINES-IMPORT-AND-QR.md)
+- [Module 19 — Hostel](./19-HOSTEL-DORMS-BEDS-CURFEW-FEES-EXEAT-DAMAGE-AND-VISITORS.md)
 
 ## The standard chapter format
 
