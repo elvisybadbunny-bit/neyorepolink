@@ -1,3 +1,15 @@
+## 2026-07-18 (part 46) — Founder Manual V2 Module 12 Teacher Portal + Record of Work Tab Restored
+
+Built `12-TEACHER-PORTAL-MY-CLASSES-HOMEWORK-NOTES-REPORTS-AND-SUBSTITUTION.md`: assignment-union scope; all conditional tabs; Mwalimu Day-Pack; substitute alert; today/weekly timetable; class cards and Register/Marks/Roster links; lesson plan route; Homework and Notes fields/files/delete/family handoff; Class Report metrics/table; Leave/Substitution; PTA booking; policy-gated pending Cash Payments; daily example, continuity, troubleshooting and 15-step verification.
+
+Following gap-fix rule, found `/api/teacher/record-of-work`, real service/model and reusable `RecordOfWorkClientTab` existed, but Teacher Portal omitted the feature entirely. Added **Record of Work** tab and rendered the existing component with teacher assignment permission. No schema/API/duplicate logic needed.
+
+Static source/diff verification and `git diff --check`; docs mirrored/byte-compared. Node modules unavailable, no unsupported lint/typecheck claim.
+
+**Next:** Module 13 Parent & Student shared Portal (children, attendance, results, fees/STK, homework/LMS, notes, library/health, pickup, transport, PTA, pathway, chats and all buttons).
+
+---
+
 ## 2026-07-18 (part 45) — Founder Manual V2 Module 11 CBE, Competencies, Assessments & Learning Evidence
 
 Built `11-CBE-COMPETENCIES-ASSESSMENTS-SYLLABUS-PORTFOLIO-QUESTION-BANK-AND-VIDEOS.md`: connected evidence model; CBE Strands/Assess/Report; New Strand/sub-strands; Primary/Junior/Senior curriculum libraries; Universal Presets; EE/ME/AE/BE and append-only observations; Paper Quiz score-to-rubric; Comment Bank; learner PDF; Competency groups/evidence/approval/heatmap/summary; Flexible Assessment types/plans/sheets/evidence/moderation/release; Syllabus topics and VERIFIED_COVERED/SELF_REPORTED; Question Bank practice/print/scan/weakness/seeding; YouTube search fallback/save/watch/cast/history/national vetting; Portfolio submission/review/export; workflow example, errors and 15-step verification.

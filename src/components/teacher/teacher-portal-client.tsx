@@ -27,6 +27,7 @@ import { useToast } from "@/components/ui/toast";
 import { ClassChatButton } from "@/components/portal/library-card";
 import { TeacherSubstitutionSuite } from "@/components/extensions-v2/teacher-substitution-suite";
 import { PtaBookingSuite } from "@/components/extensions-v2/pta-booking-suite";
+import { RecordOfWorkClientTab } from "@/components/academics/record-of-work-client-tab";
 
 interface ClassCard { id: string; label: string; curriculum: string; isClassTeacher: boolean; students: number; subjects: string[]; openHomework: number }
 interface TodayLesson { period: number; subjectName: string; subjectCode: string; className: string; classId: string }
@@ -47,7 +48,7 @@ const DAYS = ["", "Mon", "Tue", "Wed", "Thu", "Fri"];
 export function TeacherPortalClient({ canAssign }: { canAssign: boolean }) {
   const [home, setHome] = React.useState<Home | null>(null);
   const [error, setError] = React.useState(false);
-  const [tab, setTab] = React.useState<"overview" | "homework" | "notes" | "report" | "cash" | "substitution" | "ptaBooking">("overview");
+  const [tab, setTab] = React.useState<"overview" | "homework" | "notes" | "report" | "recordOfWork" | "cash" | "substitution" | "ptaBooking">("overview");
   const [subjects, setSubjects] = React.useState<Subject[]>([]);
   const [allowCash, setAllowCash] = React.useState(false);
   const [me, setMe] = React.useState<{ id: string; fullName: string } | null>(null);
@@ -76,6 +77,7 @@ export function TeacherPortalClient({ canAssign }: { canAssign: boolean }) {
     { key: "homework" as const, label: "Homework", icon: BookOpen },
     { key: "notes" as const, label: "Notes", icon: FileText },
     { key: "report" as const, label: "Class report", icon: BarChart3 },
+    { key: "recordOfWork" as const, label: "Record of Work", icon: ClipboardList },
     { key: "substitution" as const, label: "Leave & Substitution (`Idea 19`)", icon: UserCog },
     { key: "ptaBooking" as const, label: "PTA Booking (`Idea 10`)", icon: CalendarDays },
     ...(allowCash ? [{ key: "cash" as const, label: "Cash payments", icon: Banknote }] : []),
@@ -110,6 +112,7 @@ export function TeacherPortalClient({ canAssign }: { canAssign: boolean }) {
       {tab === "homework" && <HomeworkTab classes={home.classes} subjects={subjects} canAssign={canAssign} />}
       {tab === "notes" && <NotesTab classes={home.classes} subjects={subjects} canAssign={canAssign} />}
       {tab === "report" && <ReportTab classes={home.classes} />}
+      {tab === "recordOfWork" && <RecordOfWorkClientTab canManage={canAssign} />}
       {tab === "substitution" && <TeacherSubstitutionSuite />}
       {tab === "ptaBooking" && <PtaBookingSuite forTeacher teacherId={me?.id} teacherName={me?.fullName} />}
       {tab === "cash" && <CashPaymentsTab />}
