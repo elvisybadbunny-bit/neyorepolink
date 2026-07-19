@@ -305,8 +305,6 @@ export function ImportWizard() {
   // processed. The school can keep working elsewhere; NEYO notifies them
   // (via the Topbar's real "tasks running" badge + a real notification)
   // the moment it's actually done.
-  const LARGE_IMPORT_ROW_THRESHOLD = 50;
-
   // DD.2 — a "Custom field" column with no real label typed yet (the
   // preview step now genuinely allows this in-progress state instead of
   // 422'ing immediately — see columnMappingSchema's own comment) must
@@ -319,7 +317,11 @@ export function ImportWizard() {
   async function commit() {
     if (!preview) return;
     setBusy(true);
-    const runInBackground = preview.rows.length > LARGE_IMPORT_ROW_THRESHOLD;
+    // Vercel can freeze fire-and-forget work as soon as the HTTP response is
+    // returned. Until a durable external worker owns this payload, keep the
+    // import attached to this request so it actually finishes instead of
+    // remaining at 5% indefinitely. The route has a five-minute budget.
+    const runInBackground = false;
     // DD.1 — real subject NAMES resolved from the school's own clicked
     // buttons (never typed text), sent exactly like the pre-existing
     // compulsorySubjects contract expects (the service already resolves

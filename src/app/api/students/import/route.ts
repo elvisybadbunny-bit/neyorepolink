@@ -19,6 +19,7 @@ import { createInApp } from "@/lib/services/notification.service";
 import { runBackgroundJob } from "@/lib/services/background-job.service";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 export async function GET() {
   try {
@@ -34,7 +35,11 @@ export async function POST(req: NextRequest) {
     const user = await requirePermission("student.create");
     const body = importCommitSchema.parse(await req.json());
 
-    if (body.runInBackground) {
+    // In-process fire-and-forget work is unsafe on Vercel: the invocation may
+    // freeze immediately after returning, leaving the job at 5% forever.
+    // Keep Vercel imports attached to the request until a durable Redis worker
+    // owns serialised import payloads.
+    if (body.runInBackground && process.env.VERCEL !== "1") {
       const job = await runBackgroundJob(
         user,
         { kind: "STUDENT_IMPORT", label: `Importing ${body.rows.length} row${body.rows.length === 1 ? "" : "s"} from ${body.fileName || "a pasted list"}` },

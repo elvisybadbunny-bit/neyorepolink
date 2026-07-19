@@ -119,7 +119,7 @@ export function StemSimulationStation() {
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-navy-500">
                 <Badge tone="green">{filteredIdeas.length} interactive simulations</Badge>
-                <span>250 live simulations completed in five verified batches toward the 500-simulation Grade 7–12 CBE roadmap.</span>
+                <span>350 live simulations completed in seven verified batches toward the 500-simulation Grade 7–12 CBE roadmap.</span>
               </div>
               <p className="text-xs text-navy-500">Every item shown here has live controls and a calculated response. NEYO will add further verified subject batches toward 500 rather than duplicating one activity under empty names.</p>
             </CardContent>
@@ -437,6 +437,26 @@ function ConfigurableSimulation({ idea }: { idea: StemLearningIdea }) {
     case "trainingLoad": output = a * b; break;
     case "solarEnergy": output = a * b; break;
     case "waterHarvest": output = a * b; break;
+    case "kineticEnergy": output = 0.5 * a * b * b; break;
+    case "potentialEnergy": output = a * 9.81 * b; break;
+    case "machineEfficiency": output = Math.min(100, (a / Math.max(0.01, b)) * 100); break;
+    case "solidPressure": output = a / Math.max(0.0001, b); break;
+    case "solutionConcentration": output = a / Math.max(0.01, b); break;
+    case "molarity": output = a / Math.max(0.01, b); break;
+    case "halfLife": output = a * Math.pow(0.5, b); break;
+    case "magnification": output = a / Math.max(0.0001, b); break;
+    case "respirationIndex": output = Math.max(0, Math.min(100, (1 - Math.abs(a - 35) / 30) * b)); break;
+    case "biodiversityIndex": output = Math.min(100, (a / Math.max(1, b)) * 100); break;
+    case "irrigationNeed": output = Math.max(0, a - b); break;
+    case "fertilizerRate": output = a * b; break;
+    case "seedRate": output = a * b; break;
+    case "fuelCost": output = a * b; break;
+    case "exchangeRate": output = a * b; break;
+    case "vatTotal": output = a * (1 + b / 100); break;
+    case "arithmeticMean": output = a / Math.max(1, b); break;
+    case "gradient": output = a / Math.max(0.01, b); break;
+    case "wavePeriod": output = b / Math.max(1, a); break;
+    case "thermalEnergy": output = a * 4.2 * b; break;
   }
   const rounded = Math.round(output * 100) / 100;
   const span = Math.max(1, Math.abs(idea.maxA * Math.max(1, idea.maxB)));
