@@ -4,6 +4,12 @@
 **Started:** 2026-07-18.  
 **Status:** Built progressively, one real module at a time. Dashboard is Module 01.
 
+## Complete editions and audit
+
+- [Consolidated Markdown manual](./NEYO-FOUNDER-MANUAL-V2.md)
+- [Print-ready HTML manual](./NEYO-FOUNDER-MANUAL-V2.html)
+- [Completion and freshness audit — 2026-07-18](./MANUAL-AUDIT-2026-07-18.md)
+
 ## Why this manual exists
 
 The NEYO Bible explains the company, architecture, policies, and institutional knowledge. It is not

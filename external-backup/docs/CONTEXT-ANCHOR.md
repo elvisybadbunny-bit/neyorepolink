@@ -1,3 +1,13 @@
+## 2026-07-18 (part 66) — Founder Manual V2 Consolidated Markdown/HTML + Completion/Freshness Audit
+
+After completing planned Modules 01–30, generated `NEYO-FOUNDER-MANUAL-V2.md` (approximately 306 KB) from the 31 canonical plan/chapter files and a styled print-ready `NEYO-FOUNDER-MANUAL-V2.html` with A4 CSS, readable tables/code and chapter page breaks. Added `MANUAL-AUDIT-2026-07-18.md` documenting inventory (8,978 source lines), link check (no missing relative Markdown targets), source-of-truth/regeneration rule, actual environment test status, and next verification steps. Updated Manual index with all three deliverables.
+
+The consolidated files are generated copies; individual module chapters remain canonical and must be edited first. `git diff --check` passed. Mirrors synchronized/byte-compared. Playwright Chromium install was attempted for PDF rendering, but the CDN repeatedly reset TLS and browser installation failed; HTML is print-ready but no false PDF-success claim is made.
+
+**Next recommended action:** once Prisma binary access works, execute full typecheck/role/regression/browser tests, capture chapter screenshots, then render and visually inspect a PDF from the consolidated HTML.
+
+---
+
 ## 2026-07-18 (part 65) — Founder Manual V2 Module 30 Master Operating Checklists — Planned Manual Complete
 
 Built `30-MASTER-DAILY-WEEKLY-TERM-AND-YEAR-END-CHECKLISTS.md`: one-time school setup; daily Principal/Teacher/Reception/Finance/operations; weekly/monthly reviews; pre/post exam; term opening/closing; new academic year; NEYO Founder/Support cadence; incident checklist; universal definition-of-done verification.
