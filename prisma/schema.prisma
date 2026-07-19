@@ -9129,3 +9129,24 @@ model MasterSchoolDiaryEvent {
   @@index([tenantId, category, eventDate])
 }
 
+
+/// Internal company operating system. Global company data; never tenant-facing.
+model FounderOperatingTask {
+  id         String   @id @default(cuid())
+  presetKey  String?  @unique
+  category   String
+  title      String
+  why        String?
+  nextAction String?
+  status     String   @default("TODO") // TODO | DOING | BLOCKED | DONE | NOT_NOW
+  priority   String   @default("MEDIUM") // CRITICAL | HIGH | MEDIUM | LOW
+  cadence    String   @default("ONCE") // DAILY | WEEKLY | MONTHLY | QUARTERLY | ONCE
+  dueDate    DateTime?
+  evidence   String?
+  owner      String   @default("Founder")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([status, priority])
+  @@index([category, status])
+}

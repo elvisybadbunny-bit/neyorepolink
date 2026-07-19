@@ -67,8 +67,9 @@ import { BundiOcrConfigTab } from "@/components/founder/bundi-ocr-config-tab";
 import { TrialLimitsOpsTab } from "@/components/founder/trial-limits-ops-tab";
 import { FounderCredentialsVault } from "@/components/founder/founder-credentials-vault";
 import { UiVersionToggleOpsCard } from "@/components/founder/ui-version-toggle-ops-card";
+import { NeyoWayOpsTab } from "@/components/founder/neyo-way-ops-tab";
 
-const TABS = ["Overview", "Founder Dashboard", "Credentials & Secrets Vault", "Demo Requests", "Diagnostic Replay", "Maintenance Ops", "Trial Limits", "Release Whitelists", "Bundi OCR Quotas", "Tenant Health Radar", "SMS Health Monitor", "Exam Sharing Approval", "Unit Economics", "Build log", "Metrics", "Cadence", "Interviews", "Platform Flags", "Feature Toggles", "Revenue Grants", "Custom Feature Requests", "Discount Campaigns", "Influencer Codes", "Pathway Guide", "Revenue Ops", "Pricing Engine", "Storage Intelligence", "Storage Archive Tiers", "Developer Center", "Bundi Import", "Curriculum Library", "Business Operations", "Ecosystem Trends", "Team & Access"] as const;
+const TABS = ["Overview", "The NEYO Way", "Founder Dashboard", "Credentials & Secrets Vault", "Demo Requests", "Diagnostic Replay", "Maintenance Ops", "Trial Limits", "Release Whitelists", "Bundi OCR Quotas", "Tenant Health Radar", "SMS Health Monitor", "Exam Sharing Approval", "Unit Economics", "Build log", "Metrics", "Cadence", "Interviews", "Platform Flags", "Feature Toggles", "Revenue Grants", "Custom Feature Requests", "Discount Campaigns", "Influencer Codes", "Pathway Guide", "Revenue Ops", "Pricing Engine", "Storage Intelligence", "Storage Archive Tiers", "Developer Center", "Bundi Import", "Curriculum Library", "Business Operations", "Ecosystem Trends", "Team & Access"] as const;
 type Tab = (typeof TABS)[number];
 
 type Dashboard = {
@@ -789,6 +790,7 @@ export function FounderOpsClient() {
       </div>
 
       {tab === "Overview" && <Overview dashboard={d} />}
+      {tab === "The NEYO Way" && <NeyoWayOpsTab />}
       {tab === "Founder Dashboard" && <FounderMorningDashboardTab />}
       {tab === "Credentials & Secrets Vault" && <FounderCredentialsVault />}
       {tab === "Unit Economics" && <UnitEconomicsTab />}
