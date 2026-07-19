@@ -129,6 +129,7 @@ export function ImportWizard() {
   // completes, so the next import starts genuinely fresh.
   const [subjects, setSubjects] = React.useState<SubjectOption[] | null>(null);
   const [compulsorySubjectIds, setCompulsorySubjectIds] = React.useState<string[]>([]);
+  const [addingMissingSubjects, setAddingMissingSubjects] = React.useState(false);
 
   // BB.4 — a real, optional declared level for a fresh intake that hasn't
   // been placed into any real class yet (no Class column, no single-class
@@ -274,6 +275,29 @@ export function ImportWizard() {
       const json = await res.json();
       if (json.ok) setPreview(json.data);
     } finally { setBusy(false); }
+  }
+
+  async function addMissingSubjects() {
+    if (!preview?.unknownSubjects?.length) return;
+    setAddingMissingSubjects(true);
+    try {
+      const curricula = [...relevantCurricula];
+      const curriculum = curricula.length === 1 && (curricula[0] === "CBC" || curricula[0] === "8-4-4") ? curricula[0] : "CBC";
+      const res = await fetch("/api/academics/subjects/bulk", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ names: preview.unknownSubjects, curriculum }),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        toast({ title: json.error?.message || "Could not add the missing subjects. Academic-management permission is required.", tone: "error" });
+        return;
+      }
+      const subjectsRes = await fetch("/api/academics/subjects");
+      const subjectsJson = await subjectsRes.json();
+      if (subjectsJson.ok) setSubjects(subjectsJson.data.subjects);
+      toast({ title: `${json.data.created.length} subject(s) added to the school catalog`, description: json.data.skipped.length ? `${json.data.skipped.length} already existed.` : "The import preview is being checked again.", tone: "success" });
+      await refreshPreviewSubjects(compulsorySubjectIds);
+    } finally { setAddingMissingSubjects(false); }
   }
 
   // T.5a — a genuinely large import runs as a real tracked background job
@@ -647,7 +671,12 @@ export function ImportWizard() {
               {(preview.unknownSubjects && preview.unknownSubjects.length > 0) && (
                 <div className="mt-2.5 rounded-xl border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
                   <span className="font-bold flex items-center gap-1 mb-1"><AlertCircle className="h-3.5 w-3.5 shrink-0" /> Warning — {preview.unknownSubjects.length} unmapped subject name(s):</span>
-                  The following subject names from your sheet or compulsory list were not found in this school&apos;s subject catalog (`Academics &gt; Subjects`) and will be skipped unless created first: <span className="font-mono font-semibold">{preview.unknownSubjects.join(", ")}</span>
+                  <p>The following subject names from your sheet or compulsory list were not found in this school&apos;s subject catalog and will be skipped unless created first: <span className="font-mono font-semibold">{preview.unknownSubjects.join(", ")}</span></p>
+                  <Button type="button" size="sm" variant="secondary" className="mt-3 w-full border-amber-400 bg-white text-amber-900 hover:bg-amber-100 sm:w-auto" onClick={addMissingSubjects} disabled={addingMissingSubjects || busy}>
+                    {addingMissingSubjects ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                    Add all {preview.unknownSubjects.length} subjects now
+                  </Button>
+                  <p className="mt-2 text-[11px]">This creates real CBE subject records for this school, records an audit entry, and checks the import again. Academic-management permission is required.</p>
                 </div>
               )}
             </div>
