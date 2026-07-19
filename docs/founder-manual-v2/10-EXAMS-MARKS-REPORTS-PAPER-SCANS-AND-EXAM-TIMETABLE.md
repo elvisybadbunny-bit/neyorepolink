@@ -352,3 +352,40 @@ existed.
 - Mark sheet/tidy/share/contest components and services
 - Exam timetable: Academics client, `exam-timetable*.service.ts`, timetable APIs
 - Materials/KNEC: `exam-materials-client.tsx` and services/routes
+
+## Real term workflow: timetable to confirmed raw marks to released results
+
+This is the order a real school should use. Do not compute first and attempt to correct raw marks later.
+
+1. **Academic office creates the exam and publishes the exam timetable.** Each timetable row identifies the real class, scheduled subject and paper. This timetable is the source used to prepare marks-entry subjects; a teacher does not receive every subject in the school.
+2. **Academic leadership opens marks entry:** go to **Academics → Grading Engine**, choose the academic term, enter a clear portal name and closing date, then press **Open Marks Entry**. NEYO checks that an exam and timetable exist, and attaches the scheduled subjects to the matching exam.
+3. **Teacher enters marks:** go to **Exams**, open the exam, select **Enter marks**, then select the class. The Subject list now contains only subjects scheduled for that class in that exam timetable. Marks autosave, but only while the portal is open and before its closing time.
+4. **Leadership closes entry:** press **Close & Review Raw Marks**. This immediately blocks further saves.
+5. **Print learner-confirmation data:** press **Print Raw Marks**. The printout explicitly shows unweighted marks as entered, before grades, weighting, means or positions. Learners check the rows and report discrepancies using the final column.
+6. **Corrections, when genuinely required:** leadership presses **Open Corrections**. This creates a controlled correction window; teachers correct only the reported entries. Leadership then closes the portal again and prints/rechecks the raw sheet.
+7. **Compute:** only a closed portal can be computed. NEYO normalises configured papers, applies term aggregation rules, uses the school's saved grading scale, calculates subject and overall positions, and writes idempotent master-report rows.
+8. **Review and release:** leadership reviews the master report. Principal or Deputy chooses whether to tick **Send SMS notification to parents**, then presses **Release Results**. Releasing works without SMS; SMS is an optional notification channel, not a condition of release.
+
+### What each action changes
+
+- **Open Marks Entry:** creates a real `MarksPortal` record and synchronises `ExamSubject` records from the existing timetable.
+- **Teacher autosave:** upserts `ExamResult` rows for allowed learners, exam and subject. Closed portals reject writes.
+- **Close & Review:** changes the portal to `CLOSED`; it does not compute or publish anything.
+- **Open Corrections:** changes the unreleased portal to `CORRECTION_OPEN`, resets stale computation progress and permits time-limited edits.
+- **Start Computation:** reads raw `ExamResult` rows and writes/updates `MasterReportCard` rows. It cannot run while entry is open.
+- **Release Results:** marks the portal released and makes the relevant exams visible. Parent SMS is sent only when leadership explicitly selected it.
+
+### Founder verification
+
+1. Build an exam timetable containing two of a class's subjects.
+2. Open marks entry and sign in as that class's assigned teacher.
+3. Confirm the marks Subject dropdown shows those two subjects, not the full catalog.
+4. Save a mark, close the portal, and confirm another save is rejected.
+5. Print raw marks and verify that it contains the original mark and no computed grade.
+6. Reopen corrections, change the mark, close again, and print again.
+7. Compute and check the master report.
+8. Release once with SMS unticked in a safe test tenant; confirm release does not require SMS.
+
+## School grading scale
+
+In **Academics → Grading Engine**, academic leadership can edit each grade and its minimum percentage, then press **Save Grading Scale**. This writes one tenant-scoped `GradingScale` record; it does not alter historical raw marks. The next computation reads this scale. Grade labels and minimum marks must be unique, between 0 and 100. If the school has never saved a scale, NEYO uses the displayed Kenyan default. To change it later, edit the boundary, save, reopen/close the correction workflow if needed, and recompute before release. Founder test: change one boundary in a test school, compute a learner near that boundary, and verify the master report uses the test school's scale without changing another tenant.

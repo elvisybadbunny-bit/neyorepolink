@@ -62,6 +62,9 @@ export function HelpOverlay() {
       const typing =
         target.tagName === "INPUT" ||
         target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.tagName === "BUTTON" ||
+        target.tagName === "A" ||
         target.isContentEditable;
       
       if (typing) return;
@@ -162,9 +165,11 @@ export function HelpOverlay() {
             </p>
             <div className="grid grid-cols-2 gap-2">
               {visibleHotkeys.map(([key, info]) => (
-                <div
+                <button
+                  type="button"
                   key={key}
-                  className="flex items-center justify-between rounded-xl border border-navy-50 bg-navy-50/40 p-2.5 hover:border-green-100 dark:border-navy-800 dark:bg-navy-950/40"
+                  onClick={() => { setOpen(false); router.push(info.route); }}
+                  className="flex w-full items-center justify-between rounded-xl border border-navy-50 bg-navy-50/40 p-2.5 text-left hover:border-green-300 hover:bg-green-50/50 focus:outline-none focus:ring-2 focus:ring-green-500/40 dark:border-navy-800 dark:bg-navy-950/40"
                 >
                   <span className="min-w-0 truncate text-xs text-navy-600 dark:text-navy-300 font-medium">
                     {info.label}<span className="ml-1 text-[10px] font-normal text-navy-400">{info.help}</span>
@@ -172,7 +177,7 @@ export function HelpOverlay() {
                   <kbd className="h-5 w-5 flex items-center justify-center rounded border border-navy-200 bg-white text-xs font-bold uppercase text-green-700 shadow-sm dark:border-navy-700 dark:bg-navy-800 dark:text-green-400">
                     {key}
                   </kbd>
-                </div>
+                </button>
               ))}
             </div>
           </div>

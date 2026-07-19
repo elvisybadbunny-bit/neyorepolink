@@ -186,12 +186,21 @@ export async function publishExam(user: SessionUser, examId: string, published: 
 // ---------------------------------------------------------------------------
 
 /** The marks sheet for one exam+subject+class: students + existing marks. */
+async function assertCanEnterClassSubject(user: SessionUser, classId: string, subjectId: string) {
+  if (["PRINCIPAL", "DEPUTY_PRINCIPAL", "DEAN_OF_STUDIES", "SUPER_ADMIN"].includes(user.role)) return;
+  const assigned = await tenantDb().timetableSlot.findFirst({ where: { classId, subjectId, teacherId: user.id } });
+  if (!assigned) throw new ExamError("FORBIDDEN", "You are not assigned to teach this subject to this class.");
+}
+
 export async function getMarksSheet(user: SessionUser, examId: string, subjectId: string, classId: string) {
   return withTenant(user.tenantId, async () => {
     const exam = await tenantDb().exam.findUnique({ where: { id: examId }, include: { subjects: true } });
     if (!exam) throw new ExamError("NOT_FOUND", "Exam not found.");
     if (!exam.subjects.some((s) => s.subjectId === subjectId))
       throw new ExamError("INVALID", "That subject is not part of this exam.");
+    const scheduled = await tenantDb().examTimetableSlot.findFirst({ where: { examName: exam.name, classId, subjectId } });
+    if (!scheduled) throw new ExamError("INVALID", "This subject is not scheduled for this class in the exam timetable.");
+    await assertCanEnterClassSubject(user, classId, subjectId);
 
     // Row-scoping: teachers can only open sheets for their own classes.
     const scope = await scopeWhere(user);
@@ -223,6 +232,13 @@ export async function saveMarks(user: SessionUser, input: { examId: string; subj
   return withTenant(user.tenantId, async () => {
     const exam = await tenantDb().exam.findUnique({ where: { id: input.examId } });
     if (!exam) throw new ExamError("NOT_FOUND", "Exam not found.");
+    const scheduled = await tenantDb().examTimetableSlot.findFirst({ where: { examName: exam.name, classId: input.classId, subjectId: input.subjectId } });
+    if (!scheduled) throw new ExamError("INVALID", "This subject is not scheduled for this class in the exam timetable.");
+    await assertCanEnterClassSubject(user, input.classId, input.subjectId);
+    const portal = await tenantDb().marksPortal.findFirst({
+      where: { term: { year: exam.year, term: exam.term }, status: { in: ["OPEN", "CORRECTION_OPEN"] }, openDate: { lte: new Date() }, closeDate: { gt: new Date() } },
+    });
+    if (!portal) throw new ExamError("FORBIDDEN", "Marks entry is closed. Academic leadership can reopen a correction window from the Grading Engine.");
 
     // Validate marks against maxMarks + row-scope the students.
     const scope = await scopeWhere(user);

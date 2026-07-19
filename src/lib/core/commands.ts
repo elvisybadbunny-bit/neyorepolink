@@ -139,7 +139,14 @@ export const APP_COMMANDS: AppCommand[] = [
     label: "Go to Exams & Results Summary",
     href: "/exams",
     permission: "exam.view",
-    keywords: ["marks", "grading", "stream mean", "positions"],
+    keywords: ["marks", "stream mean", "positions"],
+  },
+  {
+    id: "go-grading-engine",
+    label: "Open Grading Engine",
+    href: "/academics?tab=grading",
+    permission: "academics.view",
+    keywords: ["compute results", "marks portal", "release results", "master report"],
   },
   {
     id: "go-cbc",

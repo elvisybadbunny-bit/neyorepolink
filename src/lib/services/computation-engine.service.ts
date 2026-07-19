@@ -110,20 +110,9 @@ function cbcLevelFromMark(mark: number): number {
   return 1;
 }
 
-/** Standard KNEC 8-4-4 letter grade from a 0..100 mark. */
-function letterGradeFromMark(mark: number): string {
-  if (mark >= 80) return "A";
-  if (mark >= 75) return "A-";
-  if (mark >= 70) return "B+";
-  if (mark >= 65) return "B";
-  if (mark >= 60) return "B-";
-  if (mark >= 55) return "C+";
-  if (mark >= 50) return "C";
-  if (mark >= 45) return "C-";
-  if (mark >= 40) return "D+";
-  if (mark >= 35) return "D";
-  if (mark >= 30) return "D-";
-  return "E";
+const DEFAULT_GRADE_BOUNDARIES = [{ grade: "A", min: 80 }, { grade: "A-", min: 75 }, { grade: "B+", min: 70 }, { grade: "B", min: 65 }, { grade: "B-", min: 60 }, { grade: "C+", min: 55 }, { grade: "C", min: 50 }, { grade: "C-", min: 45 }, { grade: "D+", min: 40 }, { grade: "D", min: 35 }, { grade: "D-", min: 30 }, { grade: "E", min: 0 }];
+function letterGradeFromMark(mark: number, boundaries = DEFAULT_GRADE_BOUNDARIES): string {
+  return [...boundaries].sort((a, b) => b.min - a.min).find((boundary) => mark >= boundary.min)?.grade ?? boundaries[boundaries.length - 1]?.grade ?? "—";
 }
 
 /**
@@ -295,6 +284,12 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
       sorted.forEach((row, i) => overallRank.set(row.studentId, { rank: i + 1, outOf: sorted.length }));
     }
 
+    // Use this school's saved grading boundaries; preserve the Kenyan default
+    // when the school has not configured its own scale.
+    const scaleRow = await tDb.gradingScale.findUnique({ where: { tenantId } });
+    let gradeBoundaries = DEFAULT_GRADE_BOUNDARIES;
+    try { if (scaleRow) gradeBoundaries = JSON.parse(scaleRow.boundariesJson); } catch { gradeBoundaries = DEFAULT_GRADE_BOUNDARIES; }
+
     // Persist (idempotent upsert) subject rows + overall summary rows.
     let written = 0;
     for (const row of subjectRows) {
@@ -305,7 +300,7 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
           tenantId, termId, classId: row.classId ?? "", studentId: row.studentId, subjectId: row.subjectId,
           finalMark: row.finalMark,
           cbcLevel: curriculumOn ? cbcLevelFromMark(row.finalMark) : null,
-          letterGrade: letterGradeFromMark(row.finalMark),
+          letterGrade: letterGradeFromMark(row.finalMark, gradeBoundaries),
           rank: rk.rank || null, outOf: rk.outOf || null,
           isTraditional: row.isTraditional,
           componentsJson: JSON.stringify(row.components),
@@ -313,7 +308,7 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
         update: {
           classId: row.classId ?? "", finalMark: row.finalMark,
           cbcLevel: curriculumOn ? cbcLevelFromMark(row.finalMark) : null,
-          letterGrade: letterGradeFromMark(row.finalMark),
+          letterGrade: letterGradeFromMark(row.finalMark, gradeBoundaries),
           rank: rk.rank || null, outOf: rk.outOf || null,
           isTraditional: row.isTraditional,
           componentsJson: JSON.stringify(row.components),
@@ -334,7 +329,7 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
         classId: row.classId ?? "",
         finalMark: row.mean,
         cbcLevel: curriculumOn ? cbcLevelFromMark(row.mean) : null,
-        letterGrade: letterGradeFromMark(row.mean),
+        letterGrade: letterGradeFromMark(row.mean, gradeBoundaries),
         rank: rk.rank || null,
         outOf: rk.outOf || null,
         isTraditional: true,
@@ -370,14 +365,14 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
  *
  * Returns the number of evidence rows written/updated.
  */
-export async function syncResultsToCompetencyEvidence(tenantId: string, term: number): Promise<number> {
+export async function syncResultsToCompetencyEvidence(tenantId: string, term: number, year: number): Promise<number> {
   if (!(await isCurriculumEngineEnabled())) return 0;
 
   return withTenant(tenantId, async () => {
     const tDb = tenantDb();
 
     const results = await tDb.examResult.findMany({
-      where: { exam: { term } },
+      where: { exam: { term, year } },
       select: { id: true, studentId: true, subjectId: true, marks: true, updatedAt: true },
     });
     if (results.length === 0) return 0;
@@ -457,6 +452,8 @@ export async function syncResultsToCompetencyEvidence(tenantId: string, term: nu
 }
 
 export async function triggerTermComputation(tenantId: string, portalId: string) {
+  const portal = await withTenant(tenantId, () => tenantDb().marksPortal.findUnique({ where: { id: portalId } }));
+  if (!portal || portal.status !== "CLOSED") throw new ComputationError("Close marks entry and review the raw marks before computation.");
   // We don't await this inside the API route. We fire and forget.
   _runBackgroundComputation(tenantId, portalId).catch(console.error);
   return { status: "COMPUTING", message: "Computation started in the background." };
@@ -475,7 +472,7 @@ async function _runBackgroundComputation(tenantId: string, portalId: string) {
     if (!portal || !portal.termId) throw new ComputationError("Invalid portal configuration");
 
     // Get all exams belonging to this term to compute their micro-weights first
-    const exams = await tDb.exam.findMany({ where: { term: portal.term!.term } });
+    const exams = await tDb.exam.findMany({ where: { term: portal.term!.term, year: portal.term!.year } });
     for (const ex of exams) {
       await computeSubjectExamScores(tenantId, ex.id);
     }
@@ -501,9 +498,9 @@ async function _runBackgroundComputation(tenantId: string, portalId: string) {
     // reads CompetencyEvidence). This is a BEST-EFFORT enrichment: it only runs
     // when the curriculum engine (Part-J) is ON, and any failure here must NEVER
     // break the core computation/release. Normal results work with J OFF.
-    const results = await tDb.examResult.findMany({ where: { exam: { term: portal.term!.term } } });
+    const results = await tDb.examResult.findMany({ where: { exam: { term: portal.term!.term, year: portal.term!.year } } });
     try {
-      await syncResultsToCompetencyEvidence(tenantId, portal.term!.term);
+      await syncResultsToCompetencyEvidence(tenantId, portal.term!.term, portal.term!.year);
     } catch (err) {
       console.error("K.6 CBC sync skipped (non-fatal):", err);
     }
@@ -538,7 +535,7 @@ async function _runBackgroundComputation(tenantId: string, portalId: string) {
 }
 
 // 3. K.7 & K.8 Joint Release Workflow
-export async function releaseTermResults(tenantId: string, portalId: string, releaserId: string) {
+export async function releaseTermResults(tenantId: string, portalId: string, releaserId: string, notifyParentsBySms = false) {
   return withTenant(tenantId, async () => {
     const tDb = tenantDb();
     
@@ -552,7 +549,7 @@ export async function releaseTermResults(tenantId: string, portalId: string, rel
 
     // Make all underlying exams visible to parents
     await tDb.exam.updateMany({
-      where: { term: portal.term!.term },
+      where: { term: portal.term!.term, year: portal.term!.year },
       data: { published: true }
     });
 
@@ -575,9 +572,9 @@ export async function releaseTermResults(tenantId: string, portalId: string, rel
     // guardians of students who actually have a result in this term, deduped by
     // phone, using the shared sender (which records the SMS margin ledger, M.2).
     let smsSent = 0;
-    try {
+    if (notifyParentsBySms) try {
       const termResults = await tDb.examResult.findMany({
-        where: { exam: { term: portal.term!.term } },
+        where: { exam: { term: portal.term!.term, year: portal.term!.year } },
         select: { studentId: true },
       });
       const studentIds = Array.from(new Set(termResults.map((r) => r.studentId)));

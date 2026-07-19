@@ -311,6 +311,7 @@ function MarksEntry({ examId, examName, maxMarks, subjects, classes, onSaved }: 
   const { toast } = useToast();
   const [subjectId, setSubjectId] = React.useState("");
   const [classId, setClassId] = React.useState("");
+  const [scheduledSubjects, setScheduledSubjects] = React.useState<Subject[]>([]);
   const [students, setStudents] = React.useState<SheetStudent[] | null>(null);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [savedAt, setSavedAt] = React.useState<string | null>(null);
@@ -321,6 +322,15 @@ function MarksEntry({ examId, examName, maxMarks, subjects, classes, onSaved }: 
   const [contestModalOpen, setContestModalOpen] = React.useState(false);
   const dirtyRef = React.useRef(false);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    setSubjectId("");
+    setScheduledSubjects([]);
+    if (!classId) return;
+    fetch(`/api/exams/${examId}/eligible-subjects?classId=${encodeURIComponent(classId)}`)
+      .then((res) => res.json()).then((json) => { if (json.ok) setScheduledSubjects(json.data.subjects); })
+      .catch(() => setScheduledSubjects([]));
+  }, [classId, examId]);
 
   const loadSheet = React.useCallback(async () => {
     if (!subjectId || !classId) { setStudents(null); return; }
@@ -386,8 +396,9 @@ function MarksEntry({ examId, examName, maxMarks, subjects, classes, onSaved }: 
         </select>
         <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className="rounded-full border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900">
           <option value="">Subject…</option>
-          {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          {scheduledSubjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
+        {classId && scheduledSubjects.length === 0 && <span className="text-xs text-amber-600">No scheduled exam subjects for this class.</span>}
         {classId && subjectId && (
           <>
             <Button

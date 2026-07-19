@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       if (!["PRINCIPAL", "DEPUTY_PRINCIPAL", "SUPER_ADMIN"].includes(user.role)) {
         return fail("FORBIDDEN", "Only Principal or Deputy can release results.", 403);
       }
-      const res = await releaseTermResults(user.tenantId, body.portalId, user.id);
+      const res = await releaseTermResults(user.tenantId, body.portalId, user.id, body.sendSms === true);
       return ok(res);
     }
 

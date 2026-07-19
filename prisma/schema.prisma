@@ -523,6 +523,8 @@ model Tenant {
   masterSchoolDiaryEvents      MasterSchoolDiaryEvent[] @relation("MasterSchoolDiaryEvents")
 
   @@index([osKey])
+  gradingScale GradingScale?
+
 }
 
 // B.9 extended staff record (User holds login/role; this holds HR facts).
@@ -7032,6 +7034,15 @@ model GlobalCurriculumTemplate {
 // =============================================================================
 
 // Controls the window for teachers to enter marks.
+model GradingScale {
+  id             String   @id @default(cuid())
+  tenantId       String   @unique
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  boundariesJson String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 model MarksPortal {
   id       String        @id @default(cuid())
   tenantId String

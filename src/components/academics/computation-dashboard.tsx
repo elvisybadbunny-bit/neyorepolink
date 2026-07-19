@@ -13,6 +13,10 @@ export function ComputationDashboardClient({ canManage, schoolLevelActivation }:
   const [portals, setPortals] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [reportPortal, setReportPortal] = React.useState<any | null>(null);
+  const [sendSmsOnRelease, setSendSmsOnRelease] = React.useState(false);
+  const [terms, setTerms] = React.useState<Array<{ id: string; year: number; term: number }>>([]);
+  const [newPortal, setNewPortal] = React.useState({ termId: "", name: "", closeDate: "" });
+  const [gradeBoundaries, setGradeBoundaries] = React.useState<Array<{ grade: string; min: number }>>([]);
   const { toast } = useToast();
 
   const load = React.useCallback(async () => {
@@ -30,7 +34,26 @@ export function ComputationDashboardClient({ canManage, schoolLevelActivation }:
 
   React.useEffect(() => {
     void load();
+    fetch("/api/academics/terms").then((r) => r.json()).then((json) => { if (json.ok) setTerms(json.data.terms ?? []); }).catch(() => {});
+    fetch("/api/academics/grading/scale").then((r) => r.json()).then((json) => { if (json.ok) setGradeBoundaries(json.data.boundaries ?? []); }).catch(() => {});
   }, [load]);
+
+  async function saveGradingScale() {
+    const res = await fetch("/api/academics/grading/scale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ boundaries: gradeBoundaries }) });
+    const json = await res.json();
+    toast({ title: json.ok ? "Grading scale saved" : json.error?.message || "Could not save grading scale.", tone: json.ok ? "success" : "error" });
+    if (json.ok) setGradeBoundaries(json.data.boundaries);
+  }
+
+  async function portalAction(action: "OPEN" | "CLOSE" | "REOPEN_CORRECTION", portalId?: string) {
+    const body = action === "OPEN" ? { action, ...newPortal } : { action, portalId };
+    const res = await fetch("/api/academics/grading/portals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const json = await res.json();
+    if (!json.ok) { toast({ title: json.error?.message || "Could not update marks entry.", tone: "error" }); return; }
+    toast({ title: action === "OPEN" ? "Marks entry opened" : action === "CLOSE" ? "Marks entry closed" : "Correction window opened", tone: "success" });
+    setNewPortal({ termId: "", name: "", closeDate: "" });
+    await load();
+  }
 
   // Poll for progress if computing
   React.useEffect(() => {
@@ -65,11 +88,11 @@ export function ComputationDashboardClient({ canManage, schoolLevelActivation }:
   };
 
   const releaseResults = async (id: string) => {
-    if (!confirm("Are you sure? This will send SMS to all parents and lock results.")) return;
+    if (!confirm(`Release and lock these results?${sendSmsOnRelease ? " Parent SMS notifications will also be sent." : " No SMS will be sent."}`)) return;
     try {
       const res = await fetch("/api/academics/grading/computation", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "RELEASE", portalId: id })
+        body: JSON.stringify({ action: "RELEASE", portalId: id, sendSms: sendSmsOnRelease })
       });
       if (res.ok) {
         toast({ title: "Results Released Successfully!", tone: "success" });
@@ -101,9 +124,19 @@ export function ComputationDashboardClient({ canManage, schoolLevelActivation }:
           <h2 className="text-xl font-black text-navy-950 dark:text-white flex items-center gap-2">
             <Calculator className="h-5 w-5 text-blue-600" /> Grading Engine & Result Release
           </h2>
-          <p className="text-sm font-medium text-navy-500">Close marks entry, compute weighted averages asynchronously, and blast SMS results to parents.</p>
+          <p className="text-sm font-medium text-navy-500">Close marks entry, review raw marks, compute weighted averages, and optionally notify parents by SMS.</p>
         </div>
       </div>
+
+      {canManage && gradeBoundaries.length > 0 && <Card><CardHeader><CardTitle className="text-base">School grading scale</CardTitle></CardHeader><CardContent><p className="mb-3 text-xs text-navy-500">Set the minimum percentage for each grade. The saved scale is used during the next computation.</p><div className="flex flex-wrap gap-2">{gradeBoundaries.map((boundary, index) => <div key={`${boundary.grade}-${index}`} className="flex items-center gap-1 rounded-xl border border-navy-200 p-2 dark:border-navy-700"><input aria-label="Grade" value={boundary.grade} onChange={(e) => setGradeBoundaries((rows) => rows.map((row, i) => i === index ? { ...row, grade: e.target.value } : row))} className="w-12 bg-transparent text-sm font-bold outline-none"/><span className="text-xs">from</span><input aria-label={`Minimum mark for ${boundary.grade}`} type="number" min="0" max="100" value={boundary.min} onChange={(e) => setGradeBoundaries((rows) => rows.map((row, i) => i === index ? { ...row, min: Number(e.target.value) } : row))} className="w-14 rounded border px-1 py-0.5 text-sm dark:bg-navy-900"/><span className="text-xs">%</span></div>)}</div><Button className="mt-3" variant="secondary" onClick={saveGradingScale}>Save Grading Scale</Button></CardContent></Card>}
+
+      {canManage && <Card><CardHeader><CardTitle className="text-base">Open marks entry from the exam timetable</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-4">
+        <select value={newPortal.termId} onChange={(e) => setNewPortal((old) => ({ ...old, termId: e.target.value }))} className="h-11 rounded-xl border border-navy-200 bg-white px-3 text-sm dark:border-navy-700 dark:bg-navy-900"><option value="">Academic term…</option>{terms.map((term) => <option key={term.id} value={term.id}>Term {term.term}, {term.year}</option>)}</select>
+        <input value={newPortal.name} onChange={(e) => setNewPortal((old) => ({ ...old, name: e.target.value }))} placeholder="For example: Term 2 marks entry" className="h-11 rounded-xl border border-navy-200 px-3 text-sm dark:border-navy-700 dark:bg-navy-900" />
+        <input type="datetime-local" value={newPortal.closeDate} onChange={(e) => setNewPortal((old) => ({ ...old, closeDate: e.target.value }))} className="h-11 rounded-xl border border-navy-200 px-3 text-sm dark:border-navy-700 dark:bg-navy-900" />
+        <Button onClick={() => portalAction("OPEN")} disabled={!newPortal.termId || !newPortal.name || !newPortal.closeDate}>Open Marks Entry</Button>
+        <p className="text-xs text-navy-500 sm:col-span-4">NEYO uses the published exam timetable to prepare only the scheduled subjects. Teachers can enter marks until the closing time.</p>
+      </CardContent></Card>}
 
       {portals.length === 0 ? (
         <EmptyState
@@ -129,20 +162,29 @@ export function ComputationDashboardClient({ canManage, schoolLevelActivation }:
                       <h3 className="font-black text-lg text-navy-950 dark:text-white">{p.name}</h3>
                     </div>
                     <div>
-                      {p.status === "OPEN" && isClosed && canManage && (
-                        <Button onClick={() => triggerCompute(p.id)} className="bg-blue-600 hover:bg-blue-700 rounded-full shadow-pop text-white">
-                          <PlayCircle className="h-4 w-4 mr-2" /> Start Computation
-                        </Button>
+                      {(p.status === "OPEN" || p.status === "CORRECTION_OPEN") && canManage && (
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <div className="flex items-center text-sm font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200"><Unlock className="h-4 w-4 mr-2" />{p.status === "CORRECTION_OPEN" ? "Correction Window Open" : isClosed ? "Closing Time Reached" : "Marks Entry Live"}</div>
+                          <Button variant="secondary" onClick={() => portalAction("CLOSE", p.id)}><Lock className="h-4 w-4 mr-1"/>Close & Review Raw Marks</Button>
+                        </div>
                       )}
-                      {p.status === "OPEN" && !isClosed && (
-                        <div className="flex items-center text-sm font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200">
-                          <Unlock className="h-4 w-4 mr-2" /> Marks Entry is Live
+                      {p.status === "CLOSED" && canManage && (
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button variant="secondary" onClick={() => window.open(`/api/academics/grading/raw-marks?portalId=${p.id}`, "_blank")}><Table2 className="h-4 w-4 mr-1"/>Print Raw Marks</Button>
+                          <Button variant="secondary" onClick={() => portalAction("REOPEN_CORRECTION", p.id)}><Unlock className="h-4 w-4 mr-1"/>Open Corrections</Button>
+                          <Button onClick={() => triggerCompute(p.id)} className="bg-blue-600 hover:bg-blue-700 rounded-full text-white"><PlayCircle className="h-4 w-4 mr-2"/>Start Computation</Button>
                         </div>
                       )}
                       {p.status === "PENDING_RELEASE" && (
-                        <Button onClick={() => releaseResults(p.id)} className="bg-green-600 hover:bg-green-700 rounded-full shadow-pop text-white">
-                          <Mail className="h-4 w-4 mr-2" /> Joint Release & Send SMS
-                        </Button>
+                        <div className="flex flex-col items-end gap-2">
+                          <label className="flex items-center gap-2 text-xs text-navy-600 dark:text-navy-300">
+                            <input type="checkbox" checked={sendSmsOnRelease} onChange={(e) => setSendSmsOnRelease(e.target.checked)} />
+                            Send SMS notification to parents
+                          </label>
+                          <Button onClick={() => releaseResults(p.id)} className="bg-green-600 hover:bg-green-700 rounded-full shadow-pop text-white">
+                            <Mail className="h-4 w-4 mr-2" /> Release Results
+                          </Button>
+                        </div>
                       )}
                       {p.status === "RELEASED" && (
                         <div className="flex items-center gap-2">

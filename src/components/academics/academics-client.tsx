@@ -54,7 +54,12 @@ const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurriculumEngineEnabled = false, schoolLevelActivation }: { canManage: boolean; canAppointHod: boolean; isScopedHod: boolean; isCurriculumEngineEnabled?: boolean; schoolLevelActivation?: { shouldShowPathwayTools: boolean; shouldShowSubjectSelectionTools: boolean; isJuniorSchool: boolean; isSeniorSchool: boolean; isMixedSchool: boolean; educationLevelsOffered: string[] } }) {
   const [subjects, setSubjects] = React.useState<Subject[]>([]);
-  const [tab, setTab] = React.useState<"subjects" | "departments" | "cocurricular" | "terms" | "timetable" | "exam-timetable" | "exam-auto-generator" | "lessons" | "generator" | "smart-timetable" | "roster" | "reports" | "curriculum-versions" | "pathways" | "computation" | "subject-selection" | "knec-studio" | "moe-returns" | "discipline" | "library-recovery" | "record-of-work">("subjects");
+  type AcademicsTab = "subjects" | "departments" | "cocurricular" | "terms" | "timetable" | "exam-timetable" | "exam-auto-generator" | "lessons" | "generator" | "smart-timetable" | "roster" | "reports" | "curriculum-versions" | "pathways" | "computation" | "subject-selection" | "knec-studio" | "moe-returns" | "discipline" | "library-recovery" | "record-of-work";
+  const [tab, setTab] = React.useState<AcademicsTab>(() => {
+    if (typeof window === "undefined") return "subjects";
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    return requested === "grading" || requested === "computation" ? "computation" : "subjects";
+  });
 
   React.useEffect(() => {
     fetch("/api/academics/subjects")

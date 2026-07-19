@@ -540,3 +540,7 @@ Test intended and denied accounts:
 - Search/help/notifications: `command-palette.tsx`, `help-overlay.tsx`, `notification-bell.tsx`
 
 Change both manual and tests when visible behavior changes.
+
+## Keyboard and clickable shortcuts
+
+Press **Ctrl/Command + K** to open permission-aware command search. Search for actions such as **Open Grading Engine**, **Record a payment** or **Import students**, use arrow keys, and press Enter. Press **?** for the shortcut panel. Every quick-navigation card in that panel is also clickable/tappable, so the same workflow works without a keyboard. Single-letter navigation is ignored while focus is in an input, textarea, dropdown, button, link or editable field; irreversible operations are deliberately not assigned a one-key shortcut.

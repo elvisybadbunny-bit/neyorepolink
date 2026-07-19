@@ -306,6 +306,7 @@ export const TENANT_OWNED_MODELS = [
   "communityServiceActivity",
   "careerDiscoveryRecord",
   "marksPortal",
+  "gradingScale",
   "termAggregationRule",
   "subjectPaperConfig",
   "paperResult",

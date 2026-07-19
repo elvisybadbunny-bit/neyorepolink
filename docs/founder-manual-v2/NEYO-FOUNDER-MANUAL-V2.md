@@ -9108,3 +9108,9 @@ articles rather than creating duplicate contradictory manuals.
 
 
 ---
+
+---
+
+## Addendum — Real marks-entry, correction, computation and release workflow
+
+The exam timetable is the source for class-specific marks subjects. Academic leadership opens a term marks portal only after the exam and timetable exist. Teachers choose a class and see only its scheduled exam subjects. Closing the portal blocks writes. Leadership prints raw, unweighted marks for learner checking; a closed unreleased portal can be reopened for a controlled correction window and closed again. Computation is allowed only after closure and uses the school's saved grading scale. During release, parent SMS is optional and must be explicitly selected. See Module 10 for button-by-button records, troubleshooting and founder verification.
