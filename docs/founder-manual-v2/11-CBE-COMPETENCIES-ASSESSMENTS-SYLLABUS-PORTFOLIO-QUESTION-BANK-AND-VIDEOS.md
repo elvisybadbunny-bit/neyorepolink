@@ -331,8 +331,9 @@ Grade 10–12 heading and combined explanation. No schema/API/service change req
 - Portfolio: `portfolio-client.tsx`, `portfolio.service.ts`
 - Standalone videos: `learning-videos-client.tsx`, `youtube-learning.service.ts`
 
-## STEM learning activity library
 
-The STEM station now opens with **500 Learning Activities**: exactly 50 curated curriculum topics multiplied by 10 genuinely different learning formats. Teachers can search by topic, subject, grade or outcome and filter by subject. To protect small phones and slow connections, the screen renders 60 cards initially and adds 60 only when **Show 60 more activities** is pressed.
+## Interactive CBE simulation roadmap
 
-Selecting a card shows how to run it, the intended learning outcome, ordinary materials and grade band. These 500 records are teacher-led activity blueprints, not falsely labelled as fully coded virtual simulations. The three separately named tabs—Ohm's Law, Levers and Moments, and Pythagoras—remain the currently interactive slider/SVG labs. This distinction must remain visible when demonstrating the module.
+The founder clarified that the target is 500 genuinely interactive Grade 7–12 CBE simulations, not 500 static lesson ideas. The earlier blueprint catalog was removed. Delivery now proceeds in scientifically reviewable batches of 50. The first batch contains 50 live, variable-driven simulations built from ten distinct mathematical/scientific models and five challenge contexts. Every displayed item has sliders, immediate calculated output, reset, visual response, grade band and learning outcome. The existing detailed Ohm’s Law, Levers/Moments and Pythagoras SVG labs remain separate.
+
+The interface says this is the first verified batch toward 500; it must not claim 500 are complete. Future batches should broaden from core STEM into the founder-selected all-CBE scope, using interactive learning experiences where a non-STEM learning area does not have a legitimate laboratory equation. Each batch requires curriculum review, mobile testing, scientific/pedagogical checks and explicit status before release.

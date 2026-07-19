@@ -14,7 +14,7 @@ import { Sparkles, Zap, Scale, Triangle, RefreshCw, BookOpen, Search } from "luc
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { STEM_LEARNING_IDEAS } from "@/lib/data/stem-learning-ideas";
+import { STEM_LEARNING_IDEAS, type StemLearningIdea } from "@/lib/data/stem-learning-ideas";
 
 export function StemSimulationStation() {
   const [activeLab, setActiveLab] = React.useState<"catalog" | "circuit" | "levers" | "pythagoras">("catalog");
@@ -75,7 +75,7 @@ export function StemSimulationStation() {
             onClick={() => setActiveLab("catalog")}
             className="rounded-full font-bold"
           >
-            <BookOpen className="mr-1 h-4 w-4 text-green-500" /> 500 Learning Activities
+            <BookOpen className="mr-1 h-4 w-4 text-green-500" /> Interactive Simulation Library
           </Button>
           <Button
             variant={activeLab === "circuit" ? "primary" : "secondary"}
@@ -118,21 +118,19 @@ export function StemSimulationStation() {
                 </select>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-navy-500">
-                <Badge tone="green">{filteredIdeas.length} activities</Badge>
-                <span>500 teacher-led blueprints across 50 curriculum topics and 10 learning formats.</span>
+                <Badge tone="green">{filteredIdeas.length} interactive simulations</Badge>
+                <span>First verified batch toward the 500-simulation Grade 7–12 CBE roadmap.</span>
               </div>
-              <p className="text-xs text-navy-500">These are practical lesson blueprints with manual materials and outcomes. They are not falsely presented as 500 fully coded simulations. The three tabs beside this catalog are the currently interactive virtual labs.</p>
+              <p className="text-xs text-navy-500">Every item shown here has live controls and a calculated response. NEYO will add further verified subject batches toward 500 rather than duplicating one activity under empty names.</p>
             </CardContent>
           </Card>
 
           {selectedIdea && (
             <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-900/40 dark:bg-blue-950/10">
               <CardHeader className="pb-2"><div className="flex items-start justify-between gap-3"><div><Badge tone="blue">Selected activity</Badge><CardTitle className="mt-2">{selectedIdea.title}</CardTitle></div><Button size="sm" variant="ghost" onClick={() => setSelectedIdeaId(null)}>Close</Button></div></CardHeader>
-              <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
-                <div><p className="text-xs font-bold uppercase text-navy-400">How to run it</p><p className="mt-1 text-navy-700 dark:text-navy-200">{selectedIdea.summary}</p></div>
-                <div><p className="text-xs font-bold uppercase text-navy-400">Learning outcome</p><p className="mt-1 text-navy-700 dark:text-navy-200">{selectedIdea.learningOutcome}</p></div>
-                <div><p className="text-xs font-bold uppercase text-navy-400">Materials</p><p className="mt-1 text-navy-700 dark:text-navy-200">{selectedIdea.materials}</p></div>
-                <div><p className="text-xs font-bold uppercase text-navy-400">Level</p><p className="mt-1 text-navy-700 dark:text-navy-200">{selectedIdea.subject} · {selectedIdea.gradeBand}</p></div>
+              <CardContent className="space-y-4 text-sm">
+                <div className="grid gap-3 sm:grid-cols-2"><div><p className="text-xs font-bold uppercase text-navy-400">Challenge</p><p className="mt-1 text-navy-700 dark:text-navy-200">{selectedIdea.context}</p></div><div><p className="text-xs font-bold uppercase text-navy-400">Learning outcome</p><p className="mt-1 text-navy-700 dark:text-navy-200">{selectedIdea.learningOutcome}</p></div></div>
+                <ConfigurableSimulation idea={selectedIdea} />
               </CardContent>
             </Card>
           )}
@@ -381,4 +379,42 @@ export function StemSimulationStation() {
       )}
     </div>
   );
+}
+
+function ConfigurableSimulation({ idea }: { idea: StemLearningIdea }) {
+  const [a, setA] = React.useState(idea.initialA);
+  const [b, setB] = React.useState(idea.initialB);
+  React.useEffect(() => { setA(idea.initialA); setB(idea.initialB); }, [idea.id, idea.initialA, idea.initialB]);
+  let output = 0;
+  switch (idea.model) {
+    case "ohm": output = a / Math.max(0.01, b); break;
+    case "electricPower": output = a * b; break;
+    case "speed": output = a / Math.max(0.01, b); break;
+    case "density": output = a / Math.max(0.01, b); break;
+    case "moments": output = a * b; break;
+    case "pythagoras": output = Math.sqrt(a * a + b * b); break;
+    case "linear": output = a * b + 2; break;
+    case "ph": output = Math.min(14, Math.max(0, a + b)); break;
+    case "photosynthesis": output = Math.min(a, b); break;
+    case "population": output = a * (1 + b / 100); break;
+  }
+  const rounded = Math.round(output * 100) / 100;
+  const span = Math.max(1, Math.abs(idea.maxA * Math.max(1, idea.maxB)));
+  const visual = Math.max(4, Math.min(100, Math.abs(output) / span * 100));
+  return <div className="grid gap-4 rounded-2xl border border-navy-200 bg-white p-4 dark:border-navy-700 dark:bg-navy-900 md:grid-cols-[1fr_16rem]">
+    <div className="space-y-5">
+      <SimulationSlider label={idea.variableA} unit={idea.unitA} min={idea.minA} max={idea.maxA} step={idea.stepA} value={a} onChange={setA} />
+      <SimulationSlider label={idea.variableB} unit={idea.unitB} min={idea.minB} max={idea.maxB} step={idea.stepB} value={b} onChange={setB} />
+      <Button size="sm" variant="secondary" onClick={() => { setA(idea.initialA); setB(idea.initialB); }}><RefreshCw className="h-3.5 w-3.5" />Reset simulation</Button>
+    </div>
+    <div className="flex flex-col justify-center rounded-2xl bg-navy-950 p-5 text-center text-white">
+      <p className="text-xs font-bold uppercase tracking-wide text-navy-300">{idea.outputLabel}</p>
+      <p className="mt-2 break-words text-3xl font-black text-green-400">{rounded} {idea.outputUnit}</p>
+      <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-green-500 transition-all duration-300" style={{ width: `${visual}%` }} /></div>
+      <p className="mt-3 text-[11px] text-navy-400">Move either control and observe the calculated response immediately.</p>
+    </div>
+  </div>;
+}
+function SimulationSlider({ label, unit, min, max, step, value, onChange }: { label: string; unit: string; min: number; max: number; step: number; value: number; onChange: (value: number) => void }) {
+  return <label className="block"><span className="mb-2 flex justify-between gap-3 text-sm font-bold"><span>{label}</span><span className="font-mono text-green-700 dark:text-green-400">{value} {unit}</span></span><input type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} className="w-full cursor-pointer accent-green-600"/><span className="mt-1 flex justify-between text-[10px] text-navy-400"><span>{min} {unit}</span><span>{max} {unit}</span></span></label>;
 }

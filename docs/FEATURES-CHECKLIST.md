@@ -4836,8 +4836,10 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 
 
 
-### STEM learning activity catalog expansion — 2026-07-20
-- [x] Added an exact 500-item teacher-led STEM activity catalog: 50 curated Mathematics, Physics, Chemistry, Biology, Agriculture, Geography, Computer Science, Business Studies and Integrated Science topics × 10 distinct evidence-led learning formats.
-- [x] Search, subject filtering, activity-detail view, learning outcome, materials and grade band.
-- [x] Slow-connection/mobile protection: first 60 cards only, explicit 60-at-a-time expansion.
-- [x] Truth boundary retained: catalog entries say they are teacher-led blueprints; only the existing Ohm's Law, Levers/Moments and Pythagoras tabs claim live interactive simulation behaviour.
+
+### Interactive CBE simulation roadmap — 2026-07-20
+- [x] Corrected scope after founder clarification: target is 500 genuinely interactive Grade 7–12 CBE simulations, not static activity cards.
+- [x] Removed the 500-blueprint claim and static catalog implementation.
+- [x] First verified batch: 50 live simulations from 10 distinct models × 5 challenge contexts; every listed item has two live controls, calculated output, visual response and reset.
+- [x] UI truthfully states “first verified batch toward 500.”
+- [ ] Continue in reviewed batches of 50 across the selected all-CBE learning-area scope; never inflate the count through empty renaming.
