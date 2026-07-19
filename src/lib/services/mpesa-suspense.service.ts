@@ -36,6 +36,7 @@ export async function recordSuspenseReceipt(input: {
     // Check if phone matches any guardian across the platform
     const guardian = await db.guardian.findFirst({
       where: {
+        ...(bestTenantId ? { tenantId: bestTenantId } : {}),
         OR: [
           { phone: { contains: cleanPhone } },
           { phone: { contains: cleanPhone.slice(-9) } },
@@ -109,63 +110,48 @@ export async function allocateSuspenseReceipt(
   if (receipt.status === "ALLOCATED") throw new MpesaSuspenseError("ALREADY_ALLOCATED", "This receipt is already allocated.");
 
   const student = await db.student.findUnique({ where: { id: targetStudentId } });
-  if (!student) throw new MpesaSuspenseError("NOT_FOUND", "Target student not found.");
-
-  // If an invoice is specified, allocate payment to it
-  if (targetInvoiceId) {
-    const invoice = await db.invoice.findUnique({ where: { id: targetInvoiceId } });
-    if (invoice && invoice.tenantId === student.tenantId) {
-      const newPaid = invoice.paidKes + receipt.transAmount;
-      const netTotal = invoice.totalKes - invoice.discountKes;
-      const newStatus = newPaid >= netTotal ? "PAID" : newPaid > 0 ? "PARTIAL" : "UNPAID";
-      await db.invoice.update({
-        where: { id: invoice.id },
-        data: { paidKes: newPaid, status: newStatus },
-      });
-    }
+  if (!student || student.tenantId !== actor.tenantId || (receipt.tenantId && receipt.tenantId !== actor.tenantId)) {
+    throw new MpesaSuspenseError("NOT_FOUND", "Receipt or student not found for this school.");
   }
+  const duplicatePayment = await db.payment.findUnique({ where: { mpesaRef: receipt.transId } });
+  if (duplicatePayment) throw new MpesaSuspenseError("ALREADY_ALLOCATED", "This M-Pesa reference is already recorded.");
 
   const stName = `${student.firstName} ${student.lastName}`.trim();
+  return db.$transaction(async (tx) => {
+    // Claim the receipt atomically. A second click/request updates zero rows and
+    // cannot post the same receipt or increase an invoice twice.
+    const claimed = await tx.mpesaSuspenseReceipt.updateMany({
+      where: { id: receipt.id, status: "UNMATCHED" },
+      data: { status: "ALLOCATING" },
+    });
+    if (claimed.count !== 1) throw new MpesaSuspenseError("ALREADY_ALLOCATED", "This receipt is already being allocated or was allocated.");
 
-  // Create payment record in student ledger
-  await db.payment.create({
-    data: {
-      tenantId: student.tenantId,
-      invoiceId: targetInvoiceId || undefined,
-      accountRef: student.admissionNo,
-      phone: receipt.mpesaSenderPhone,
-      amount: receipt.transAmount,
-      provider: "mpesa_daraja",
-      mpesaRef: receipt.transId,
-      status: "PAID",
-      description: `Suspense allocation by ${actor.fullName}`,
-      paidAt: new Date(),
-    } as any,
-  });
+    if (targetInvoiceId) {
+      const invoice = await tx.invoice.findUnique({ where: { id: targetInvoiceId } });
+      if (!invoice || invoice.tenantId !== student.tenantId || invoice.studentId !== student.id) {
+        throw new MpesaSuspenseError("INVALID", "The selected invoice does not belong to this student.");
+      }
+      const newPaid = invoice.paidKes + receipt.transAmount;
+      const netTotal = invoice.totalKes - invoice.discountKes;
+      await tx.invoice.update({ where: { id: invoice.id }, data: { paidKes: newPaid, status: newPaid >= netTotal ? "PAID" : "PARTIAL" } });
+    }
 
-  const updated = await db.mpesaSuspenseReceipt.update({
-    where: { id: receipt.id },
-    data: {
-      status: "ALLOCATED",
-      tenantId: student.tenantId,
-      allocatedToStudentId: student.id,
-      allocatedToInvoiceId: targetInvoiceId || null,
-      allocatedAt: new Date(),
-      allocatedBy: actor.fullName,
-    },
-  });
+    await tx.payment.create({ data: {
+      tenantId: student.tenantId, invoiceId: targetInvoiceId || undefined,
+      accountRef: student.admissionNo, phone: receipt.mpesaSenderPhone,
+      amount: receipt.transAmount, provider: "mpesa_daraja", mpesaRef: receipt.transId,
+      status: "PAID", description: `Suspense allocation by ${actor.fullName}`, paidAt: new Date(),
+    } as any });
 
-  await db.auditLog.create({
-    data: {
-      tenantId: student.tenantId,
-      actorId: actor.id,
-      actorName: actor.fullName,
-      action: "finance.mpesa_suspense_allocated",
-      entityType: "MpesaSuspenseReceipt",
-      entityId: updated.id,
+    const updated = await tx.mpesaSuspenseReceipt.update({ where: { id: receipt.id }, data: {
+      status: "ALLOCATED", tenantId: student.tenantId, allocatedToStudentId: student.id,
+      allocatedToInvoiceId: targetInvoiceId || null, allocatedAt: new Date(), allocatedBy: actor.fullName,
+    } });
+    await tx.auditLog.create({ data: {
+      tenantId: student.tenantId, actorId: actor.id, actorName: actor.fullName,
+      action: "finance.mpesa_suspense_allocated", entityType: "MpesaSuspenseReceipt", entityId: updated.id,
       metadata: JSON.stringify({ transId: receipt.transId, amount: receipt.transAmount, studentId: student.id, studentName: stName }),
-    },
-  }).catch(() => {});
-
-  return updated;
+    } });
+    return updated;
+  });
 }

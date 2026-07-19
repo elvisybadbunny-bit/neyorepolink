@@ -27,13 +27,13 @@ export async function POST(req: NextRequest) {
     await requirePermission("finance.record_payment");
 
     const body = await req.json().catch(() => ({}));
-    const { transId, transTime, transAmount, billRefNumber, mpesaSenderPhone, mpesaSenderName, tenantId } = body;
+    const { transId, transTime, transAmount, billRefNumber, mpesaSenderPhone, mpesaSenderName } = body;
     if (!transId || !transTime || !transAmount || !mpesaSenderPhone) {
       return handleError(new Error("transId, transTime, transAmount, and mpesaSenderPhone required."));
     }
 
     const created = await recordSuspenseReceipt({
-      tenantId: tenantId || user.tenantId,
+      tenantId: user.tenantId,
       transId,
       transTime,
       transAmount: Number(transAmount),
