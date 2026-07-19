@@ -119,7 +119,7 @@ export function StemSimulationStation() {
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-navy-500">
                 <Badge tone="green">{filteredIdeas.length} interactive simulations</Badge>
-                <span>350 live simulations completed in seven verified batches toward the 500-simulation Grade 7–12 CBE roadmap.</span>
+                <span>550 live Grade 7–12 CBE simulations completed in eleven verified batches, exceeding the original 500 target.</span>
               </div>
               <p className="text-xs text-navy-500">Every item shown here has live controls and a calculated response. NEYO will add further verified subject batches toward 500 rather than duplicating one activity under empty names.</p>
             </CardContent>
@@ -457,6 +457,46 @@ function ConfigurableSimulation({ idea }: { idea: StemLearningIdea }) {
     case "gradient": output = a / Math.max(0.01, b); break;
     case "wavePeriod": output = b / Math.max(1, a); break;
     case "thermalEnergy": output = a * 4.2 * b; break;
+    case "seriesResistance": output = a + b; break;
+    case "parallelResistance": output = (a * b) / Math.max(0.01, a + b); break;
+    case "electricalEnergy": output = a * b; break;
+    case "voltageDrop": output = a * b; break;
+    case "cableLoss": output = a * a * b; break;
+    case "capacitorCharge": output = (a * b) / 1000; break;
+    case "acFrequency": output = (a * b) / 60; break;
+    case "motorEfficiency": output = Math.min(100, (a / Math.max(0.01, b)) * 100); break;
+    case "torque": output = a * b; break;
+    case "mechanicalPower": output = a / Math.max(0.01, b); break;
+    case "gearOutputSpeed": output = a / Math.max(0.01, b); break;
+    case "engineDisplacement": output = a * b; break;
+    case "fuelEfficiency": output = a / Math.max(0.01, b); break;
+    case "brakingDistance": output = (a * a) / Math.max(0.01, 2 * b); break;
+    case "wheelDistance": output = Math.PI * a * b; break;
+    case "workDone": output = a * b; break;
+    case "concreteVolume": output = a * b; break;
+    case "brickCount": output = Math.ceil(a * b); break;
+    case "roofPitch": output = Math.atan(a / Math.max(0.01, b)) * 180 / Math.PI; break;
+    case "timberVolume": output = (a / 10000) * b; break;
+    case "paintCoverage": output = a / Math.max(0.01, b); break;
+    case "floorTiles": output = Math.ceil(a / Math.max(0.0001, b)); break;
+    case "tankVolume": output = a * b * 1000; break;
+    case "drainageFall": output = a * b; break;
+    case "cuttingSpeed": output = Math.PI * (a / 1000) * b; break;
+    case "materialWaste": output = a * (1 + b / 100); break;
+    case "weldingEnergy": output = a * (b / 60); break;
+    case "woodMoisture": output = Math.max(0, ((a - b) / Math.max(0.01, b)) * 100); break;
+    case "videoFrames": output = a * b; break;
+    case "audioSamples": output = a * b; break;
+    case "pixelCount": output = (a * b) / 1000000; break;
+    case "compressionSize": output = a * (b / 100); break;
+    case "hookeLaw": output = a * b; break;
+    case "buoyantForce": output = a * 9.81 * b; break;
+    case "specificHeat": output = a * 4.18 * b; break;
+    case "titration": output = a * b; break;
+    case "idealGasMoles": output = (a * b) / (8.314 * 298); break;
+    case "enzymeIndex": output = Math.max(0, Math.min(100, (1 - Math.abs(a - 37) / 43) * b)); break;
+    case "transpirationIndex": output = Math.max(0, Math.min(100, (a / 50) * (100 - b))); break;
+    case "ecologicalEfficiency": output = Math.min(100, (b / Math.max(0.01, a)) * 100); break;
   }
   const rounded = Math.round(output * 100) / 100;
   const span = Math.max(1, Math.abs(idea.maxA * Math.max(1, idea.maxB)));

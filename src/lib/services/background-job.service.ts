@@ -35,7 +35,14 @@ export class BackgroundJobError extends Error {
 /** Real, live list of a user's own background jobs (Topbar badge + panel). */
 export async function myBackgroundJobs(user: SessionUser) {
   return withTenant(user.tenantId, async () => {
-    const rows = await tenantDb().backgroundJob.findMany({
+    const tdb = tenantDb();
+    // An in-process task interrupted by a serverless freeze must not remain
+    // "running" forever. Close stale rows honestly so the user can retry.
+    await tdb.backgroundJob.updateMany({
+      where: { startedById: user.id, status: { in: ["QUEUED", "RUNNING"] }, startedAt: { lt: new Date(Date.now() - 15 * 60_000) } },
+      data: { status: "FAILED", error: "The previous serverless task was interrupted. Please retry; large imports now run in the request until complete.", finishedAt: new Date() },
+    });
+    const rows = await tdb.backgroundJob.findMany({
       where: { startedById: user.id },
       orderBy: { startedAt: "desc" },
       take: 20,
@@ -51,7 +58,12 @@ export async function myBackgroundJobs(user: SessionUser) {
 /** Real, live count of a user's currently RUNNING/QUEUED jobs (Topbar badge). */
 export async function activeBackgroundJobCount(user: SessionUser) {
   return withTenant(user.tenantId, async () => {
-    return tenantDb().backgroundJob.count({ where: { startedById: user.id, status: { in: ["QUEUED", "RUNNING"] } } });
+    const tdb = tenantDb();
+    await tdb.backgroundJob.updateMany({
+      where: { startedById: user.id, status: { in: ["QUEUED", "RUNNING"] }, startedAt: { lt: new Date(Date.now() - 15 * 60_000) } },
+      data: { status: "FAILED", error: "The previous serverless task was interrupted. Please retry; large imports now run in the request until complete.", finishedAt: new Date() },
+    });
+    return tdb.backgroundJob.count({ where: { startedById: user.id, status: { in: ["QUEUED", "RUNNING"] } } });
   });
 }
 

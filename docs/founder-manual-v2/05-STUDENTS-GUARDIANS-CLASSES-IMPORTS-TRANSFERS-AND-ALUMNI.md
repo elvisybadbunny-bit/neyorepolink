@@ -537,3 +537,5 @@ This is not a cosmetic dismissal. It changes the real Academics → Subjects cat
 ## Vercel large-import completion rule
 
 NEYO no longer starts a 50+ row import as an in-process fire-and-forget task on Vercel. Vercel may freeze that invocation immediately after the HTTP response, which left real imports appearing to run at 5% indefinitely. Imports now remain attached to the request with a five-minute route budget and return the real result before the wizard says they are complete. Keep the import tab open during this operation. A future background mode must store a serialised payload in a durable Redis-backed worker before it is re-enabled; a database status row alone is not a worker.
+
+Previously interrupted serverless jobs are automatically marked **FAILED** after 15 minutes instead of remaining permanently `RUNNING`; the task badge and job list then tell the user to retry under the corrected attached-request workflow.

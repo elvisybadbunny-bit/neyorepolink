@@ -4840,11 +4840,12 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 ### Interactive CBE simulation roadmap — 2026-07-20
 - [x] Corrected scope after founder clarification: target is 500 genuinely interactive Grade 7–12 CBE simulations, not static activity cards.
 - [x] Removed the 500-blueprint claim and static catalog implementation.
-- [x] First seven verified batches: 350 live simulations from 70 distinct models × 5 challenge contexts; every listed item has two live controls, calculated output, visual response and reset.
+- [x] Eleven verified batches: 550 live simulations from 110 distinct models × 5 challenge contexts; every listed item has two live controls, calculated output, visual response and reset. The founder explicitly raised the final target from 500 to 550 by choosing “add 200.”
 - [x] Batch 2 broadened into Business Studies, Geography, Agriculture, Computer Science, English, History and Citizenship, Creative Arts and Health Education.
 - [x] Batch 3 added quadratic and wave models, inheritance probability, map scale, construction-material quantity, English comprehension, Kiswahili oral fluency, civic decisions, ethical reasoning and visual-design scale.
 - [x] Batch 4 adds percentage change, simple interest, gear ratios, ideal transformers, mechanical advantage, recipe scaling, fabric costing, media storage, Indigenous Language accuracy and fisheries sustainability.
 - [x] Batch 5 adds gas pressure and reaction-rate indices, cardiac output, osmosis gradient, livestock feed cost, data-transfer time, break-even quantity, training load, solar energy and rainwater harvesting.
 - [x] Batches 6–7 add kinetic/potential/thermal energy, machine efficiency, pressure, solution concentration, molarity, radioactive half-life, microscopy magnification, respiration, biodiversity, irrigation, fertilizer and seed rates, transport/fuel cost, exchange rate, tax-inclusive price, arithmetic mean, gradient and wave period.
-- [x] UI truthfully states 350 completed toward 500.
-- [ ] Continue in reviewed batches of 50 across the selected all-CBE learning-area scope; 150 remain. Never inflate the count through empty renaming.
+- [x] Batches 8–11 add 200 science/practical simulations with strong technical emphasis: electrical circuits and machines, power mechanics, construction quantities, metal/wood/media technology, elasticity, buoyancy, heat, titration, gas quantities, enzymes, transpiration and ecology.
+- [x] UI truthfully states 550 completed, exceeding the original 500 target.
+- [x] Target complete: 550 interactive models/contexts available. Continue accuracy review and curriculum mapping; never inflate future counts through empty renaming.
