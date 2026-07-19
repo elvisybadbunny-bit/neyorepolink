@@ -269,7 +269,7 @@ export function PublicSiteEditor() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={() => window.open(`/?tenant=${data.school?.slug || "karibu-high"}`, "_blank", "noopener,noreferrer")}><Eye className="mr-2 h-4 w-4" />Preview</Button>
+            <Button variant="secondary" disabled={!data.school?.slug} onClick={() => data.school?.slug && window.open(`/?tenant=${data.school.slug}`, "_blank", "noopener,noreferrer")}><Eye className="mr-2 h-4 w-4" />Preview</Button>
             <Button onClick={saveSettings} disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}Save story</Button>
           </div>
         </CardContent>

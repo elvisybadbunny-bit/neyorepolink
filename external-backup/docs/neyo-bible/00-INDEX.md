@@ -125,6 +125,7 @@ making this index unreadable:
 - **[Module 25 — Bundi Imports, OCR, Review, Quotas & Safety](../founder-manual-v2/25-BUNDI-IMPORTS-OCR-REVIEW-QUOTAS-TOPUPS-AND-SAFETY.md)**
 - **[Module 26 — NEYO Support & Founder Operations](../founder-manual-v2/26-NEYO-SUPPORT-AND-FOUNDER-OPERATIONS.md)**
 - **[Module 27 — NEYO Billing, Subscription & Pricing](../founder-manual-v2/27-NEYO-BILLING-SUBSCRIPTION-PRICING-TRIALS-AND-RENEWAL.md)**
+- **[Module 28 — Public School Website & Marketing](../founder-manual-v2/28-PUBLIC-SCHOOL-WEBSITE-NEWS-GALLERY-SEO-AND-BRAND.md)**
 
 ## Levels planned
 

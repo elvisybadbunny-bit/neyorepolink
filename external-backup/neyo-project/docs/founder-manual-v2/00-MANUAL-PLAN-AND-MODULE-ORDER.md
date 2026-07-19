@@ -50,6 +50,7 @@ language:
 - [Module 25 — Bundi Imports, OCR, Review, Quotas & Safety](./25-BUNDI-IMPORTS-OCR-REVIEW-QUOTAS-TOPUPS-AND-SAFETY.md)
 - [Module 26 — NEYO Support & Founder Operations](./26-NEYO-SUPPORT-AND-FOUNDER-OPERATIONS.md)
 - [Module 27 — NEYO Billing, Subscription & Pricing](./27-NEYO-BILLING-SUBSCRIPTION-PRICING-TRIALS-AND-RENEWAL.md)
+- [Module 28 — Public School Website & Marketing](./28-PUBLIC-SCHOOL-WEBSITE-NEWS-GALLERY-SEO-AND-BRAND.md)
 
 ## The standard chapter format
 

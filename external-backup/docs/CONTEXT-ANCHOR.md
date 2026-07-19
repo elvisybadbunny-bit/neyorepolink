@@ -1,3 +1,13 @@
+## 2026-07-18 (part 63) — Founder Manual V2 Module 28 Public Website + Safe Preview Tenant Fix
+
+Built `28-PUBLIC-SCHOOL-WEBSITE-NEWS-GALLERY-SEO-AND-BRAND.md`: access; Story/News/Gallery/People/Activities/SEO tabs; Preview/Save; hero/proof points; News CRUD/public detail; gallery consent/alt; leaders/testimonials; activities; SEO/OG/map; Admissions CTA; brand/launch/errors/verification.
+
+Following gap-fix rule, Public Site Preview used fallback `karibu-high` when school slug missing, risking preview of wrong tenant. Removed fallback; Preview disabled until real current-school slug and opens only that slug. Focused ESLint on editor passes 0 errors (existing warnings if any not treated as failure); `git diff --check`; docs mirrored.
+
+**Next:** Module 29 Developer APIs, Webhooks, Storage & Integrations.
+
+---
+
 ## 2026-07-18 (part 62) — Founder Manual V2 Module 27 Billing + Hidden Dual Pricing Selector Fixed
 
 Built `27-NEYO-BILLING-SUBSCRIPTION-PRICING-TRIALS-AND-RENEWAL.md`: Finance separation; current model/status/price/renewal; Capacity and Modular cards/switches; advisor; usage; trial/lifecycle; central M-Pesa; referral/influencer; Support; Founder Ops; example/errors/verification.
