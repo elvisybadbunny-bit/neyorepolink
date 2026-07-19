@@ -107,7 +107,7 @@ export function SyllabusClient() {
               <EmptyState icon={BookOpenCheck} title="No active class-subject pairs" description="Assign teachers to classes and subjects to track verified syllabus progress." />
             ) : (
               <div className="overflow-x-auto rounded-2xl border border-navy-100 dark:border-navy-800">
-                <table className="w-full border-collapse bg-white text-xs dark:bg-navy-900">
+                <table className="w-full min-w-[640px] border-collapse bg-white text-xs dark:bg-navy-900">
                   <thead>
                     <tr className="bg-warm-50 border-b border-navy-100 text-left font-bold text-navy-700 dark:bg-navy-800 dark:border-navy-700 dark:text-navy-200">
                       <th className="p-3">Class &amp; Subject</th>

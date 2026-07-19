@@ -140,7 +140,7 @@ function PerSchoolSection() {
         </p>
       )}
       <div className="overflow-x-auto rounded-2xl border border-navy-100 dark:border-navy-800">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-navy-50 text-left text-xs uppercase tracking-wide text-navy-500 dark:bg-navy-900 dark:text-navy-400">
             <tr>
               <th className="px-4 py-3">School</th>

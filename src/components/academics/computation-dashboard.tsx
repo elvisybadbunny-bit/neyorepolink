@@ -267,7 +267,7 @@ function MasterReportModal({ portal, onClose }: { portal: any; onClose: () => vo
           <p className="py-6 text-center text-sm italic text-navy-400">No computed master report for this class yet. Run computation first.</p>
         ) : (
           <div className="max-h-[60vh] overflow-auto">
-            <table className="w-full text-xs">
+            <table className="w-full min-w-[720px] text-xs">
               <thead className="sticky top-0 bg-white dark:bg-navy-950">
                 <tr className="text-left text-navy-400">
                   <th className="p-2">Pos</th>

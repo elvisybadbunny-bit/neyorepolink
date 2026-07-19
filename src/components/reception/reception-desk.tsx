@@ -524,7 +524,7 @@ function ReportCardDayModal({ onClose }: { onClose: () => void }) {
               <EmptyRow icon={Users} text="No parents checked in yet today." />
             ) : (
               <TableContainer>
-                <table className="w-full min-w-full text-xs text-left bg-white dark:bg-navy-900">
+                <table className="w-full min-w-[680px] text-xs text-left bg-white dark:bg-navy-900">
                   <thead>
                     <tr className="bg-navy-50/60 dark:bg-navy-900/40 text-[10px] text-navy-400 font-semibold uppercase">
                       <th className="p-2">Q#</th>

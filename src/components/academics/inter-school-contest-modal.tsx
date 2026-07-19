@@ -554,8 +554,8 @@ export function InterSchoolContestModal({
                   <h4 className="text-xs font-bold uppercase tracking-wider text-navy-400">
                     Individual National Contestants (Top 50)
                   </h4>
-                  <div className="max-h-64 overflow-y-auto rounded-xl border border-navy-200 dark:border-navy-700">
-                    <table className="w-full text-left text-xs">
+                  <div className="max-h-64 max-w-full overflow-auto overscroll-x-contain rounded-xl border border-navy-200 dark:border-navy-700">
+                    <table className="w-full min-w-[640px] text-left text-xs">
                       <thead className="sticky top-0 bg-navy-100 font-semibold text-navy-700 dark:bg-navy-800 dark:text-navy-200">
                         <tr>
                           <th className="p-2.5 w-14 text-center">Rank</th>

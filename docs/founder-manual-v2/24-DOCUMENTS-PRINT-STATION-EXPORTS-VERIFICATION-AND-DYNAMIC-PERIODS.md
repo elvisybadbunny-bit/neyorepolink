@@ -133,3 +133,9 @@ The daily limit is not restricted to preset dropdown values. An authorised Princ
 When a queued document opens the browser print dialog, NEYO asks **Did this document print successfully?** Pressing OK marks the real queue record printed and increments the count. Pressing Cancel keeps it in the queue and pauses automatic processing. This avoids losing a job when the user cancels, the printer jams or paper is unavailable.
 
 Founder verification: add and remove a station label; set a non-preset limit such as 37 and reload on another authorised session; open one queued document, cancel the success confirmation and verify it remains queued; then print and confirm it disappears only after confirmation.
+
+## Mobile wide-card and table behaviour
+
+NEYO's shared operational table card now has a universal mobile rule: it stays inside the phone viewport, preserves the table's useful width, and scrolls horizontally with touch when the columns cannot fit. This applies across academics, assessments, competencies, finance, staff, payroll, classes, imports, promotion, settings jobs and other modules that use the shared table. Dense specialist grids—including marks, scan review, contest results, formative scores, subject-selection responses, payment lists, reception queues, payroll extensions, syllabus and exam timetable—also declare a practical minimum width inside a horizontal scroll surface. Vertical page scrolling remains available.
+
+Founder verification at 360px: open each role's main list and any dense review modal, swipe inside the card, confirm the rightmost action/field is reachable, then swipe vertically outside and inside the card to confirm the page is not trapped. Also verify the desktop table remains fully visible and print-only documents retain their print layout.

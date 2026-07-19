@@ -3191,8 +3191,8 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                   <strong>{preGenSummary.classesWithGapsExceedingCap}</strong> class{preGenSummary.classesWithGapsExceedingCap === 1 ? "" : "es"} {preGenSummary.classesWithGapsExceedingCap === 1 ? "has" : "have"} a gap bigger than its own configured Free Study Period count — some periods will be left completely empty (no lesson, no Free label) rather than all becoming Frees, since NEYO only ever fills up to the number a school explicitly set.
                 </div>
               )}
-              <div className="mt-4 max-h-64 overflow-y-auto rounded-2xl border border-navy-100 dark:border-navy-800">
-                <table className="w-full text-left text-xs">
+              <div className="mt-4 max-h-64 max-w-full overflow-auto overscroll-x-contain rounded-2xl border border-navy-100 dark:border-navy-800">
+                <table className="w-full min-w-[640px] text-left text-xs">
                   <thead className="sticky top-0 bg-warm-50 dark:bg-navy-900">
                     <tr>
                       <th className="px-3 py-2 font-bold text-navy-500 dark:text-navy-400">Class</th>
@@ -4215,8 +4215,8 @@ function TeacherAllocationImportModal({ onClose, onDone }: { onClose: () => void
 
           {preview && !result && (
             <div className="space-y-3">
-              <div className="max-h-64 overflow-y-auto rounded-2xl border border-navy-100 dark:border-navy-800">
-                <table className="w-full text-left text-xs">
+              <div className="max-h-64 max-w-full overflow-auto overscroll-x-contain touch-auto rounded-2xl border border-navy-100 dark:border-navy-800">
+                <table className="w-full min-w-[640px] text-left text-xs">
                   <thead className="sticky top-0 bg-navy-50 dark:bg-navy-800">
                     <tr>
                       <th className="p-2">Row</th><th className="p-2">Teacher</th><th className="p-2">Subject</th><th className="p-2">Class</th><th className="p-2">Outcome</th>
@@ -5204,7 +5204,7 @@ function DutyRosterTab({ canManage }: { canManage: boolean }) {
               <span className="text-xs text-navy-400">Reshuffle: {rotationLabel}</span>
             </div>
             <div className="overflow-x-auto rounded-2xl border border-navy-100 print:border-none">
-              <table className="w-full border-collapse bg-white text-xs dark:bg-navy-900">
+              <table className="w-full min-w-[640px] border-collapse bg-white text-xs dark:bg-navy-900">
                 <thead>
                   <tr className="bg-warm-50 border-b border-navy-100 dark:bg-navy-800">
                     <th className="p-3 text-left font-bold text-navy-700">Block</th>

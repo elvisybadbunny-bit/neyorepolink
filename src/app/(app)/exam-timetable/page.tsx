@@ -28,7 +28,7 @@ export default async function ExamTimetablePage() {
             <div className="rounded-2xl border border-dashed border-navy-200 p-8 text-center text-sm text-navy-400 dark:border-navy-800">No exam timetable slots yet. Add slots from the exam timetable API or upcoming timetable tools.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[640px] text-sm">
                 <thead className="text-left text-xs uppercase tracking-wide text-navy-400"><tr><th className="py-2">Date</th><th>Time</th><th>Class</th><th>Subject</th><th>Exam</th><th>Venue</th></tr></thead>
                 <tbody className="divide-y divide-navy-100 dark:divide-navy-800">
                   {board.slots.map((s) => (

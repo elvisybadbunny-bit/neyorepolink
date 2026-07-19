@@ -222,7 +222,8 @@ function SelectionReportDialog({ portalId, onClose }: any) {
 
             <div>
               <h3 className="font-bold text-navy-950 dark:text-white mb-2">Student Responses</h3>
-              <table className="w-full text-xs text-left">
+              <div className="max-w-full overflow-x-auto overscroll-x-contain touch-auto" aria-label="Scrollable student responses">
+              <table className="w-full min-w-[640px] text-xs text-left">
                 <thead className="bg-navy-50 dark:bg-navy-900">
                   <tr>
                     <th className="p-2 border border-navy-100 dark:border-navy-800">Student Name</th>
@@ -244,6 +245,7 @@ function SelectionReportDialog({ portalId, onClose }: any) {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         )}

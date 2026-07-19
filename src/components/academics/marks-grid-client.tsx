@@ -94,7 +94,7 @@ export function MarksGridClient({ examId, subjectId, classId, className }: any) 
       </div>
       
       <div className="overflow-x-auto rounded-xl border border-navy-200 shadow-sm bg-white dark:border-navy-800 dark:bg-navy-950">
-        <table className="w-full text-sm text-left">
+        <table className="w-full min-w-[640px] text-sm text-left">
           <thead className="bg-navy-50 dark:bg-navy-900 border-b border-navy-200 dark:border-navy-800">
             <tr>
               <th className="p-3 font-bold text-navy-900 dark:text-white">Student Name</th>

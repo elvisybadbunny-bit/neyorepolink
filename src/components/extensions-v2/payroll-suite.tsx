@@ -144,7 +144,7 @@ export function PayrollSuite() {
             <div className="h-32 flex items-center justify-center text-slate-500 text-sm">No payroll run for this period yet.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
+              <table className="w-full min-w-[680px] text-left text-xs text-slate-300">
                 <thead className="border-b border-white/10 text-slate-400 font-medium">
                   <tr>
                     <th className="py-2 px-3">Staff Member</th>

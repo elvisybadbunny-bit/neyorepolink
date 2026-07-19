@@ -51,7 +51,8 @@ export default async function DevelopersPage() {
       </pre>
 
       <h2 className="text-lg font-semibold text-navy-900 dark:text-navy-50">Example endpoints</h2>
-      <table className="w-full text-sm">
+      <div className="max-w-full overflow-x-auto overscroll-x-contain touch-auto">
+      <table className="w-full min-w-[640px] text-sm">
         <thead>
           <tr className="text-left text-navy-500 dark:text-navy-400">
             <th className="pb-2">Endpoint</th>
@@ -67,6 +68,7 @@ export default async function DevelopersPage() {
           </tr>
         </tbody>
       </table>
+      </div>
       <p className="text-xs text-navy-400">More endpoints are added as real Platform Operations needs and partner integrations grow — this list always reflects what genuinely exists today, never an aspirational roadmap.</p>
 
       <h2 className="text-lg font-semibold text-navy-900 dark:text-navy-50">Real-time webhook events</h2>

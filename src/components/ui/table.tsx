@@ -23,7 +23,7 @@ export function TableContainer({
   return (
     <div
       className={cn(
-        "overflow-x-auto rounded-2xl border border-navy-100 bg-white",
+        "min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-auto rounded-2xl border border-navy-100 bg-white",
         "dark:border-navy-800 dark:bg-navy-900",
         className
       )}
@@ -37,7 +37,7 @@ export function Table({
   ...props
 }: React.TableHTMLAttributes<HTMLTableElement>) {
   return (
-    <table className={cn("w-full border-collapse text-sm", className)} {...props} />
+    <table className={cn("w-max min-w-full border-collapse text-sm", className)} {...props} />
   );
 }
 
