@@ -4840,6 +4840,7 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 ### Interactive CBE simulation roadmap — 2026-07-20
 - [x] Corrected scope after founder clarification: target is 500 genuinely interactive Grade 7–12 CBE simulations, not static activity cards.
 - [x] Removed the 500-blueprint claim and static catalog implementation.
-- [x] First verified batch: 50 live simulations from 10 distinct models × 5 challenge contexts; every listed item has two live controls, calculated output, visual response and reset.
-- [x] UI truthfully states “first verified batch toward 500.”
-- [ ] Continue in reviewed batches of 50 across the selected all-CBE learning-area scope; never inflate the count through empty renaming.
+- [x] First two verified batches: 100 live simulations from 20 distinct models × 5 challenge contexts; every listed item has two live controls, calculated output, visual response and reset.
+- [x] Batch 2 broadens beyond core STEM into Business Studies, Geography, Agriculture, Computer Science, English, History and Citizenship, Creative Arts and Health Education.
+- [x] UI truthfully states 100 completed toward 500.
+- [ ] Continue in reviewed batches of 50 across the selected all-CBE learning-area scope; 400 remain. Never inflate the count through empty renaming.
