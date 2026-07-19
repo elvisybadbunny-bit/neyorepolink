@@ -25,9 +25,13 @@ function nextMondayIso(year: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-// Dev password for ALL seeded staff so email+password login is testable.
-// Change/remove for production seeds.
-const DEV_PASSWORD = "Karibu2026!";
+// One password is used for the founder + demo-school accounts in an explicitly
+// requested seed. Production must provide it privately; never print or hardcode it.
+const DEV_PASSWORD = process.env.NEYO_SEED_PASSWORD
+  || (process.env.NODE_ENV !== "production" ? "Karibu2026!" : "");
+if (!DEV_PASSWORD) {
+  throw new Error("NEYO_SEED_PASSWORD is required when seeding a production database.");
+}
 
 // Helper: assert a phone normalizes, so a typo here fails loudly at seed time.
 function phone(input: string): string {
@@ -185,7 +189,7 @@ async function main() {
     });
   }
 
-  console.log(`\n   All staff dev password: ${DEV_PASSWORD}`);
+  console.log("\n   Demo login password loaded securely from the environment (not printed).");
 
   // ---- A SECOND school, to prove tenant isolation (A.2) ----
   const tenant2 = await db.tenant.upsert({

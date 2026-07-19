@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Wrench, ShieldAlert, Clock, AlertTriangle, ExternalLink, Sparkles } from "lucide-react";
+import { Wrench, ShieldAlert, Clock, AlertTriangle, ExternalLink, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface MaintenanceWindow {
@@ -19,6 +19,9 @@ export function PlatformMaintenanceAndDiagnosticBanner() {
   const [windowData, setWindowData] = React.useState<MaintenanceWindow | null>(null);
   const [isDiagnostic, setIsDiagnostic] = React.useState(false);
   const [subStatus, setSubStatus] = React.useState<string | null>(null);
+  const [trialBannerDismissed, setTrialBannerDismissed] = React.useState(() =>
+    typeof window !== "undefined" && localStorage.getItem("neyo_trial_banner_dismissed") === "true"
+  );
 
   React.useEffect(() => {
     // Check if diagnostic impersonate token is present in document.cookie
@@ -52,7 +55,7 @@ export function PlatformMaintenanceAndDiagnosticBanner() {
   return (
     <>
       {/* 30-Day Free Trial & Pricing Model Choice Welcome Banner */}
-      {subStatus === "TRIAL" && (
+      {subStatus === "TRIAL" && !trialBannerDismissed && (
         <div className="sticky top-0 z-[104] flex flex-col sm:flex-row items-center justify-between gap-3 bg-green-700 px-4 py-2 text-xs font-bold text-white shadow-md animate-fade-in">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 shrink-0 animate-pulse text-amber-300" />
@@ -60,12 +63,26 @@ export function PlatformMaintenanceAndDiagnosticBanner() {
               ⚡ WELCOME TO YOUR 30-DAY FREE TRIAL ACROSS NEYO OS! All modules are unlocked with Platform Operations trial safety limits.
             </span>
           </div>
-          <a
-            href="/settings/billing"
-            className="rounded-full bg-white px-3.5 py-1 text-[11px] font-black text-green-900 shadow-sm hover:bg-green-100 shrink-0 transition-transform active:scale-95"
-          >
-            Go to Settings → Billing to Choose Pricing Model ↗
-          </a>
+          <div className="flex shrink-0 items-center gap-2">
+            <a
+              href="/settings/billing"
+              className="rounded-full bg-white px-3.5 py-1 text-[11px] font-black text-green-900 shadow-sm hover:bg-green-100 transition-transform active:scale-95"
+            >
+              Go to Settings → Billing to Choose Pricing Model ↗
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem("neyo_trial_banner_dismissed", "true");
+                setTrialBannerDismissed(true);
+              }}
+              className="rounded-full border border-white/40 p-1.5 text-white hover:bg-white/15"
+              aria-label="Dismiss trial pricing banner"
+              title="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
 

@@ -112,3 +112,11 @@ component found.
 
 Developer panel/API key/webhook services/routes; bearer auth; Storage Vault/storage providers/CAS/
 lifecycle; integration credentials and activation docs; jobs/observability.
+
+## One-time Vercel preview database bootstrap
+
+An empty database has no founder or school login. For an explicitly disposable Preview/demo database, set Vercel environment variables `SEED_DEMO_DATA=true` and `NEYO_SEED_PASSWORD` to a strong private password, then use the repository's `npm run vercel-build` build command. The command generates Prisma, deploys migrations, conditionally runs the idempotent demo seed, and builds Next.js. The seed creates `founder@neyo.co.ke` and the documented Kenyan demo schools. It never prints the password.
+
+Immediately after one successful bootstrap, change `SEED_DEMO_DATA` to `false` and redeploy. Do not leave automatic demo seeding enabled, and do not use this process on a real live-school production database. Every demo account initially receives the private seed password, so change/disable demo access before public launch. If an existing database contains encrypted credentials, preserve its original `NEYO_MASTER_KEK`.
+
+The green trial/pricing banner has a dismiss button. Dismissal is stored on that browser. The new founder operating pages explicitly set readable navy text and tinted card backgrounds in light mode, with corresponding dark-mode colours.
