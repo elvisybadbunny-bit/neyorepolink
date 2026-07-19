@@ -1,3 +1,13 @@
+## 2026-07-18 (part 64) — Founder Manual V2 Module 29 Developer APIs, Webhooks, Storage & Integrations
+
+Built `29-DEVELOPER-API-KEYS-WEBHOOKS-STORAGE-AND-INTEGRATIONS.md`: access/secrets; API key name/scopes/expiry/Test-Live/create/copy-once/hash/revoke/rotation/Bearer/rate/usage; Webhook URL/events/secret/test/pause/remove/HMAC/replay/idempotency/retries; Storage Vault/provider/encryption/health/config/upgrade/external link/recheck/unlink; R2 presign/confirm/serve/image; CAS/lifecycle; integration credential inventory/activation; errors and verification.
+
+Audit found Developer/Storage actions wired; external provider/link provisioning remains correctly activation-dependent. No orphaned component/code change. `git diff --check`; docs mirrored.
+
+**Next:** Module 30 Master daily/weekly/term/year-end operating checklists and Manual V2 closeout.
+
+---
+
 ## 2026-07-18 (part 63) — Founder Manual V2 Module 28 Public Website + Safe Preview Tenant Fix
 
 Built `28-PUBLIC-SCHOOL-WEBSITE-NEWS-GALLERY-SEO-AND-BRAND.md`: access; Story/News/Gallery/People/Activities/SEO tabs; Preview/Save; hero/proof points; News CRUD/public detail; gallery consent/alt; leaders/testimonials; activities; SEO/OG/map; Admissions CTA; brand/launch/errors/verification.
