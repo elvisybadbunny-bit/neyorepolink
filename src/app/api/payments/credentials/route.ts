@@ -1,23 +1,36 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { requirePermission } from "@/lib/core/session";
-import {
-  savePaymentCredentials,
-  getPaymentConfigStatus,
-} from "@/lib/services/payment.service";
+import { savePaymentCredentials, getPaymentConfigStatus } from "@/lib/services/payment.service";
 import { ok, handleError } from "@/lib/api/respond";
 
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  shortcode: z.string().trim().min(4, "Enter your Paybill/Till number"),
+  connectionMode: z.enum(["STK_PAYBILL", "STK_TILL", "PAYBILL_ONLY", "MANUAL"]),
+  shortcode: z.string().trim().default(""),
   environment: z.enum(["sandbox", "production"]).default("sandbox"),
-  consumerKey: z.string().trim().min(1, "Consumer key is required"),
-  consumerSecret: z.string().trim().min(1, "Consumer secret is required"),
-  passkey: z.string().trim().min(1, "Passkey is required"),
+  consumerKey: z.string().trim().optional(),
+  consumerSecret: z.string().trim().optional(),
+  passkey: z.string().trim().optional(),
+  accountReferenceFormat: z.string().trim().max(120).optional(),
+}).superRefine((value, ctx) => {
+  const usesStk = value.connectionMode === "STK_PAYBILL" || value.connectionMode === "STK_TILL";
+  const needsShortcode = usesStk || value.connectionMode === "PAYBILL_ONLY";
+  if (needsShortcode && value.shortcode.length < 4) {
+    ctx.addIssue({ code: "custom", path: ["shortcode"], message: "Enter the school’s Paybill or Till number" });
+  }
+  if (usesStk) {
+    for (const [field, message] of [
+      ["consumerKey", "Consumer key is required for STK Push"],
+      ["consumerSecret", "Consumer secret is required for STK Push"],
+      ["passkey", "Online Passkey is required for STK Push"],
+    ] as const) {
+      if (!value[field]) ctx.addIssue({ code: "custom", path: [field], message });
+    }
+  }
 });
 
-/** GET — non-secret config status. */
 export async function GET() {
   try {
     const user = await requirePermission("tenant.manage_settings");
@@ -27,13 +40,12 @@ export async function GET() {
   }
 }
 
-/** POST — save (encrypted) Daraja credentials. Leadership only. */
 export async function POST(req: NextRequest) {
   try {
     const user = await requirePermission("tenant.manage_settings");
     const input = schema.parse(await req.json().catch(() => ({})));
     await savePaymentCredentials(user.tenantId, input);
-    return ok({ configured: true });
+    return ok(await getPaymentConfigStatus(user.tenantId));
   } catch (err) {
     return handleError(err);
   }

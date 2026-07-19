@@ -33,6 +33,7 @@ export interface ProviderCredentials {
   consumerKey: string;
   consumerSecret: string;
   passkey: string;
+  shortcodeType?: "PAYBILL" | "TILL";
 }
 
 export interface PaymentProvider {

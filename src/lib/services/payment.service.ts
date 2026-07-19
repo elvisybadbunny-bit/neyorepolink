@@ -10,6 +10,7 @@ import { encryptForTenant, decryptForTenant } from "@/lib/services/encryption.se
 import { DarajaProvider } from "@/lib/payments/daraja-provider";
 import { MockProvider } from "@/lib/payments/mock-provider";
 import type { PaymentProvider, ProviderCredentials } from "@/lib/payments/provider";
+import { appBaseUrl } from "@/lib/notifications/email";
 
 const daraja = new DarajaProvider();
 const mock = new MockProvider();
@@ -26,44 +27,54 @@ export class PaymentError extends Error {
 
 // --- Credentials ---
 
+export type PaymentConnectionMode = "STK_PAYBILL" | "STK_TILL" | "PAYBILL_ONLY" | "MANUAL";
+
 export interface SaveCredsInput {
+  connectionMode: PaymentConnectionMode;
   shortcode: string;
   environment: "sandbox" | "production";
-  consumerKey: string;
-  consumerSecret: string;
-  passkey: string;
+  consumerKey?: string;
+  consumerSecret?: string;
+  passkey?: string;
+  accountReferenceFormat?: string;
 }
 
-/** Save (encrypted) Daraja credentials for a tenant. */
+/** Save payment mode and encrypted Daraja credentials without deleting an existing setup. */
 export async function savePaymentCredentials(
   tenantId: string,
   input: SaveCredsInput
 ): Promise<void> {
-  const [ck, cs, pk] = await Promise.all([
-    encryptForTenant(tenantId, input.consumerKey),
-    encryptForTenant(tenantId, input.consumerSecret),
-    encryptForTenant(tenantId, input.passkey),
-  ]);
+  const usesStk = input.connectionMode === "STK_PAYBILL" || input.connectionMode === "STK_TILL";
+  const encrypted = usesStk
+    ? await Promise.all([
+        encryptForTenant(tenantId, input.consumerKey!),
+        encryptForTenant(tenantId, input.consumerSecret!),
+        encryptForTenant(tenantId, input.passkey!),
+      ])
+    : [undefined, undefined, undefined];
+  const [ck, cs, pk] = encrypted;
+  const common = {
+    provider: "mpesa_daraja",
+    shortcode: input.shortcode || null,
+    environment: input.environment,
+    connectionMode: input.connectionMode,
+    shortcodeType: input.connectionMode === "STK_TILL" ? "TILL" : "PAYBILL",
+    connectionStatus: usesStk ? "SAVED_NOT_TESTED" : "MANUAL",
+    accountReferenceFormat: input.accountReferenceFormat || null,
+    isActive: usesStk,
+  };
   await db.paymentCredential.upsert({
     where: { tenantId },
     update: {
-      provider: "mpesa_daraja",
-      shortcode: input.shortcode,
-      environment: input.environment,
-      consumerKeyEnc: ck,
-      consumerSecretEnc: cs,
-      passkeyEnc: pk,
-      isActive: true,
+      ...common,
+      ...(usesStk ? { consumerKeyEnc: ck, consumerSecretEnc: cs, passkeyEnc: pk } : {}),
     },
     create: {
       tenantId,
-      provider: "mpesa_daraja",
-      shortcode: input.shortcode,
-      environment: input.environment,
+      ...common,
       consumerKeyEnc: ck,
       consumerSecretEnc: cs,
       passkeyEnc: pk,
-      isActive: true,
     },
   });
 }
@@ -76,6 +87,10 @@ export async function getPaymentConfigStatus(tenantId: string) {
     provider: c?.provider ?? "mpesa_daraja",
     shortcode: c?.shortcode ?? null,
     environment: c?.environment ?? "sandbox",
+    connectionMode: (c?.connectionMode ?? "STK_PAYBILL") as PaymentConnectionMode,
+    shortcodeType: c?.shortcodeType ?? "PAYBILL",
+    connectionStatus: c?.connectionStatus ?? "SAVED_NOT_TESTED",
+    accountReferenceFormat: c?.accountReferenceFormat ?? null,
   };
 }
 
@@ -105,6 +120,7 @@ async function resolveCredentials(
     consumerKey,
     consumerSecret,
     passkey,
+    shortcodeType: c.shortcodeType === "TILL" ? "TILL" : "PAYBILL",
   };
 }
 
@@ -161,7 +177,12 @@ export async function initiateStkPush(
     },
   });
 
-  const result = await provider.stkPush(creds, input);
+  const tenant = await db.tenant.findUnique({ where: { id: tenantId }, select: { slug: true } });
+  const token = process.env.DARAJA_WEBHOOK_TOKEN;
+  const callbackUrl = tenant
+    ? `${appBaseUrl()}/api/payments/webhook/${encodeURIComponent(tenant.slug)}${token ? `?t=${encodeURIComponent(token)}` : ""}`
+    : undefined;
+  const result = await provider.stkPush(creds, { ...input, callbackUrl });
   if (!result.ok || !result.checkoutRequestId) {
     await db.payment.update({
       where: { id: payment.id },

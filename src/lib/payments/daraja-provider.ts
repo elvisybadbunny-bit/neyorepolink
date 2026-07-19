@@ -81,7 +81,7 @@ export class DarajaProvider implements PaymentProvider {
             BusinessShortCode: creds.shortcode,
             Password: password,
             Timestamp: ts,
-            TransactionType: "CustomerPayBillOnline",
+            TransactionType: creds.shortcodeType === "TILL" ? "CustomerBuyGoodsOnline" : "CustomerPayBillOnline",
             Amount: input.amount,
             PartyA: darajaMsisdn(input.phone),
             PartyB: creds.shortcode,

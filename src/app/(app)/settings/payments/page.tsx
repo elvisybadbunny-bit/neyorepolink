@@ -24,6 +24,9 @@ export default async function PaymentsSettingsPage() {
           configured: status.configured,
           shortcode: status.shortcode,
           environment: status.environment,
+          connectionMode: status.connectionMode,
+          connectionStatus: status.connectionStatus,
+          accountReferenceFormat: status.accountReferenceFormat,
         }}
       />
     </div>

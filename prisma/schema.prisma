@@ -3703,6 +3703,10 @@ model PaymentCredential {
   // Non-secret config:
   shortcode         String? // Paybill / Till number
   environment       String   @default("sandbox") // sandbox | production
+  connectionMode    String   @default("STK_PAYBILL") // STK_PAYBILL | STK_TILL | PAYBILL_ONLY | MANUAL
+  shortcodeType     String   @default("PAYBILL") // PAYBILL | TILL
+  connectionStatus  String   @default("SAVED_NOT_TESTED") // SAVED_NOT_TESTED | CREDENTIALS_VERIFIED | ACTION_REQUIRED | MANUAL
+  accountReferenceFormat String?
   // Encrypted secrets (ciphertext from A.2.7 encryptForTenant):
   consumerKeyEnc    String?
   consumerSecretEnc String?
