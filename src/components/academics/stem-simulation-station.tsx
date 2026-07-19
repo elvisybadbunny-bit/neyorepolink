@@ -119,7 +119,7 @@ export function StemSimulationStation() {
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-navy-500">
                 <Badge tone="green">{filteredIdeas.length} interactive simulations</Badge>
-                <span>200 live simulations completed in four verified batches toward the 500-simulation Grade 7–12 CBE roadmap.</span>
+                <span>250 live simulations completed in five verified batches toward the 500-simulation Grade 7–12 CBE roadmap.</span>
               </div>
               <p className="text-xs text-navy-500">Every item shown here has live controls and a calculated response. NEYO will add further verified subject batches toward 500 rather than duplicating one activity under empty names.</p>
             </CardContent>
@@ -427,6 +427,16 @@ function ConfigurableSimulation({ idea }: { idea: StemLearningIdea }) {
     case "mediaStorage": output = (a * b * 60) / 8; break;
     case "languageAccuracy": output = Math.min(100, (a / Math.max(1, b)) * 100); break;
     case "environmentRisk": output = Math.max(0, Math.min(100, b - a * 0.7 + 35)); break;
+    case "gasPressureIndex": output = (a / Math.max(0.01, b)) * 4; break;
+    case "reactionRateIndex": output = (a / 100) * (b / 25); break;
+    case "cardiacOutput": output = (a * b) / 1000; break;
+    case "osmosisGradient": output = a - b; break;
+    case "feedCost": output = a * b; break;
+    case "dataTransferTime": output = (a * 8) / Math.max(0.01, b); break;
+    case "breakEvenUnits": output = Math.ceil(a / Math.max(0.01, b)); break;
+    case "trainingLoad": output = a * b; break;
+    case "solarEnergy": output = a * b; break;
+    case "waterHarvest": output = a * b; break;
   }
   const rounded = Math.round(output * 100) / 100;
   const span = Math.max(1, Math.abs(idea.maxA * Math.max(1, idea.maxB)));
