@@ -4,16 +4,23 @@ import { ExamsClient } from "@/components/exams/exams-client";
 import { ExamAnalyticsClient } from "@/components/exams/exam-analytics-client";
 import { ExamPrintClient } from "@/components/exams/exam-print-client";
 import { AdvancedAnalyticsClient } from "@/components/exams/advanced-analytics-client";
-import { isCurriculumEngineEnabled } from "@/lib/services/launch-control.service";
 import { getSchoolLevelActivationSummary } from "@/lib/services/school-profile.service";
 
 export const dynamic = "force-dynamic";
 
 /** B.5 Examination — exams, marks entry, positions, report cards. */
 export default async function ExamsPage() {
-  const isCurriculumEngineEnabledFlag = await isCurriculumEngineEnabled();
   const user = await requirePagePermission("exam.view");
-  const schoolLevelActivation = await getSchoolLevelActivationSummary(user.tenantId);
+  // School-level guidance is helpful but must never take the entire operational
+  // Exams page down if an older/newly-migrated profile is temporarily incomplete.
+  const schoolLevelActivation = await getSchoolLevelActivationSummary(user.tenantId).catch(() => ({
+    shouldShowPathwayTools: false,
+    shouldShowSubjectSelectionTools: false,
+    isJuniorSchool: false,
+    isSeniorSchool: false,
+    isMixedSchool: false,
+    educationLevelsOffered: [] as string[],
+  }));
 
   const has = (permission: Parameters<typeof can>[1]) => can(user.role, permission) || (user.secondaryRole ? can(user.secondaryRole, permission) : false);
   const requestRoles = ["HOD", "DEAN_OF_STUDIES", "DEPUTY_PRINCIPAL", "PRINCIPAL", "SCHOOL_OWNER", "SUPER_ADMIN"];
