@@ -10,13 +10,28 @@
  * 3. Pythagoras & Right Triangle Lab (`Mathematics · Grade 7–10`): c = √(a² + b²)
  */
 import * as React from "react";
-import { Sparkles, Zap, Scale, Triangle, RefreshCw, CheckCircle2, Sliders } from "lucide-react";
+import { Sparkles, Zap, Scale, Triangle, RefreshCw, BookOpen, Search } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { STEM_LEARNING_IDEAS } from "@/lib/data/stem-learning-ideas";
 
 export function StemSimulationStation() {
-  const [activeLab, setActiveLab] = React.useState<"circuit" | "levers" | "pythagoras">("circuit");
+  const [activeLab, setActiveLab] = React.useState<"catalog" | "circuit" | "levers" | "pythagoras">("catalog");
+  const [ideaSearch, setIdeaSearch] = React.useState("");
+  const [subjectFilter, setSubjectFilter] = React.useState("ALL");
+  const [selectedIdeaId, setSelectedIdeaId] = React.useState<string | null>(null);
+  const [visibleIdeaCount, setVisibleIdeaCount] = React.useState(60);
+  const subjects = React.useMemo(() => ["ALL", ...Array.from(new Set(STEM_LEARNING_IDEAS.map((idea) => idea.subject))).sort()], []);
+  const filteredIdeas = React.useMemo(() => {
+    const query = ideaSearch.trim().toLowerCase();
+    return STEM_LEARNING_IDEAS.filter((idea) =>
+      (subjectFilter === "ALL" || idea.subject === subjectFilter) &&
+      (!query || `${idea.title} ${idea.subject} ${idea.gradeBand} ${idea.learningOutcome}`.toLowerCase().includes(query))
+    );
+  }, [ideaSearch, subjectFilter]);
+  const selectedIdea = STEM_LEARNING_IDEAS.find((idea) => idea.id === selectedIdeaId) ?? null;
+  React.useEffect(() => { setVisibleIdeaCount(60); }, [ideaSearch, subjectFilter]);
 
   // Lab 1: Ohm's Law Circuit
   const [voltage, setVoltage] = React.useState(12); // Volts
@@ -55,12 +70,20 @@ export function StemSimulationStation() {
         </div>
         <div className="flex flex-wrap gap-1.5">
           <Button
+            variant={activeLab === "catalog" ? "primary" : "secondary"}
+            size="sm"
+            onClick={() => setActiveLab("catalog")}
+            className="rounded-full font-bold"
+          >
+            <BookOpen className="mr-1 h-4 w-4 text-green-500" /> 500 Learning Activities
+          </Button>
+          <Button
             variant={activeLab === "circuit" ? "primary" : "secondary"}
             size="sm"
             onClick={() => setActiveLab("circuit")}
             className="rounded-full font-bold"
           >
-            <Zap className="h-4 w-4 mr-1 text-amber-400" /> Ohm&apos;s Law Circuit (`PHY`)
+            <Zap className="h-4 w-4 mr-1 text-amber-400" /> Ohm&apos;s Law Circuit
           </Button>
           <Button
             variant={activeLab === "levers" ? "primary" : "secondary"}
@@ -68,7 +91,7 @@ export function StemSimulationStation() {
             onClick={() => setActiveLab("levers")}
             className="rounded-full font-bold"
           >
-            <Scale className="h-4 w-4 mr-1 text-green-500" /> Levers &amp; Moments (`ISC`)
+            <Scale className="h-4 w-4 mr-1 text-green-500" /> Levers &amp; Moments
           </Button>
           <Button
             variant={activeLab === "pythagoras" ? "primary" : "secondary"}
@@ -76,17 +99,64 @@ export function StemSimulationStation() {
             onClick={() => setActiveLab("pythagoras")}
             className="rounded-full font-bold"
           >
-            <Triangle className="h-4 w-4 mr-1 text-blue-500" /> Pythagoras Geometry (`MAT`)
+            <Triangle className="h-4 w-4 mr-1 text-blue-500" /> Pythagoras Geometry
           </Button>
         </div>
       </div>
+
+      {activeLab === "catalog" && (
+        <div className="space-y-4">
+          <Card className="border-green-200 bg-green-50/40 dark:border-green-900/40 dark:bg-green-950/10">
+            <CardContent className="space-y-3 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex flex-1 items-center gap-2 rounded-2xl border border-navy-200 bg-white px-3 dark:border-navy-700 dark:bg-navy-900">
+                  <Search className="h-4 w-4 text-navy-400" />
+                  <input value={ideaSearch} onChange={(event) => setIdeaSearch(event.target.value)} placeholder="Search topic, subject, grade or outcome" className="h-11 w-full bg-transparent text-sm outline-none" />
+                </div>
+                <select value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value)} className="h-11 rounded-2xl border border-navy-200 bg-white px-3 text-sm dark:border-navy-700 dark:bg-navy-900">
+                  {subjects.map((subject) => <option key={subject} value={subject}>{subject === "ALL" ? "All subjects" : subject}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-navy-500">
+                <Badge tone="green">{filteredIdeas.length} activities</Badge>
+                <span>500 teacher-led blueprints across 50 curriculum topics and 10 learning formats.</span>
+              </div>
+              <p className="text-xs text-navy-500">These are practical lesson blueprints with manual materials and outcomes. They are not falsely presented as 500 fully coded simulations. The three tabs beside this catalog are the currently interactive virtual labs.</p>
+            </CardContent>
+          </Card>
+
+          {selectedIdea && (
+            <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-900/40 dark:bg-blue-950/10">
+              <CardHeader className="pb-2"><div className="flex items-start justify-between gap-3"><div><Badge tone="blue">Selected activity</Badge><CardTitle className="mt-2">{selectedIdea.title}</CardTitle></div><Button size="sm" variant="ghost" onClick={() => setSelectedIdeaId(null)}>Close</Button></div></CardHeader>
+              <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
+                <div><p className="text-xs font-bold uppercase text-navy-400">How to run it</p><p className="mt-1 text-navy-700 dark:text-navy-200">{selectedIdea.summary}</p></div>
+                <div><p className="text-xs font-bold uppercase text-navy-400">Learning outcome</p><p className="mt-1 text-navy-700 dark:text-navy-200">{selectedIdea.learningOutcome}</p></div>
+                <div><p className="text-xs font-bold uppercase text-navy-400">Materials</p><p className="mt-1 text-navy-700 dark:text-navy-200">{selectedIdea.materials}</p></div>
+                <div><p className="text-xs font-bold uppercase text-navy-400">Level</p><p className="mt-1 text-navy-700 dark:text-navy-200">{selectedIdea.subject} · {selectedIdea.gradeBand}</p></div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredIdeas.slice(0, visibleIdeaCount).map((idea) => (
+              <button key={idea.id} type="button" onClick={() => setSelectedIdeaId(idea.id)} className="rounded-2xl border border-navy-200 bg-white p-4 text-left shadow-sm transition hover:border-green-400 hover:bg-green-50/40 dark:border-navy-700 dark:bg-navy-900 dark:hover:bg-green-950/10">
+                <div className="flex flex-wrap gap-1"><Badge tone="neutral">{idea.subject}</Badge><Badge tone="blue">{idea.gradeBand}</Badge></div>
+                <h3 className="mt-2 text-sm font-bold text-navy-950 dark:text-white">{idea.title}</h3>
+                <p className="mt-1 line-clamp-2 text-xs text-navy-500 dark:text-navy-400">{idea.learningOutcome}</p>
+              </button>
+            ))}
+          </div>
+          {visibleIdeaCount < filteredIdeas.length && <div className="flex justify-center"><Button variant="secondary" onClick={() => setVisibleIdeaCount((count) => Math.min(filteredIdeas.length, count + 60))}>Show 60 more activities</Button></div>}
+          {filteredIdeas.length === 0 && <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-navy-400">No learning activities match this search.</p>}
+        </div>
+      )}
 
       {activeLab === "circuit" && (
         <Card className="rounded-3xl border-2 border-amber-300/60 bg-gradient-to-br from-white to-amber-50/30 p-6 shadow-card dark:from-navy-900 dark:to-navy-950">
           <CardHeader className="p-0 mb-4 flex flex-row items-center justify-between">
             <div>
               <Badge tone="amber" className="mb-1">Physics · Grade 7–10</Badge>
-              <CardTitle className="text-lg font-black">Ohm&apos;s Law &amp; Circuit Brightness Lab (`I = V / R`)</CardTitle>
+              <CardTitle className="text-lg font-black">Ohm&apos;s Law &amp; Circuit Brightness Lab — I = V ÷ R</CardTitle>
             </div>
             <Button size="sm" variant="secondary" onClick={() => { setVoltage(12); setResistance(6); }} className="rounded-full">
               <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reset Lab
@@ -174,7 +244,7 @@ export function StemSimulationStation() {
           <CardHeader className="p-0 mb-4 flex flex-row items-center justify-between">
             <div>
               <Badge tone="green" className="mb-1">Integrated Science · Grade 8</Badge>
-              <CardTitle className="text-lg font-black">Levers &amp; Moments Balance Lab (`Principle of Moments`)</CardTitle>
+              <CardTitle className="text-lg font-black">Levers &amp; Moments Balance Lab — Principle of Moments</CardTitle>
             </div>
             <Button size="sm" variant="secondary" onClick={() => { setEffortForce(50); setEffortArm(2.0); setLoadForce(100); setLoadArm(1.0); }} className="rounded-full">
               <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reset Lab
@@ -253,7 +323,7 @@ export function StemSimulationStation() {
           <CardHeader className="p-0 mb-4 flex flex-row items-center justify-between">
             <div>
               <Badge tone="blue" className="mb-1">Mathematics · Grade 7–10</Badge>
-              <CardTitle className="text-lg font-black">Right-Angled Triangle &amp; Pythagoras Lab (`c = √(a² + b²)`)</CardTitle>
+              <CardTitle className="text-lg font-black">Right-Angled Triangle &amp; Pythagoras Lab — c = √(a² + b²)</CardTitle>
             </div>
             <Button size="sm" variant="secondary" onClick={() => { setSideA(6); setSideB(8); }} className="rounded-full">
               <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reset Lab

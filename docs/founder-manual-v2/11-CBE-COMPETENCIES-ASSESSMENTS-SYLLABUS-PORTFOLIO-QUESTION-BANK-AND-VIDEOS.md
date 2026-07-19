@@ -330,3 +330,9 @@ Grade 10–12 heading and combined explanation. No schema/API/service change req
 - Question Bank/Paper Quiz/Video modals and corresponding services
 - Portfolio: `portfolio-client.tsx`, `portfolio.service.ts`
 - Standalone videos: `learning-videos-client.tsx`, `youtube-learning.service.ts`
+
+## STEM learning activity library
+
+The STEM station now opens with **500 Learning Activities**: exactly 50 curated curriculum topics multiplied by 10 genuinely different learning formats. Teachers can search by topic, subject, grade or outcome and filter by subject. To protect small phones and slow connections, the screen renders 60 cards initially and adds 60 only when **Show 60 more activities** is pressed.
+
+Selecting a card shows how to run it, the intended learning outcome, ordinary materials and grade band. These 500 records are teacher-led activity blueprints, not falsely labelled as fully coded virtual simulations. The three separately named tabs—Ohm's Law, Levers and Moments, and Pythagoras—remain the currently interactive slider/SVG labs. This distinction must remain visible when demonstrating the module.
