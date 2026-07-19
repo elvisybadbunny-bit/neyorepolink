@@ -9150,3 +9150,41 @@ model FounderOperatingTask {
   @@index([status, priority])
   @@index([category, status])
 }
+
+/// Founder-only field-sales CRM for physical school visits and follow-up.
+model SchoolOutreachVisit {
+  id                String   @id @default(cuid())
+  schoolName        String
+  county            String?
+  town              String?
+  locationNotes     String?
+  schoolType        String?
+  estimatedLearners Int?
+  contactName       String?
+  contactRole       String?
+  contactPhone      String?
+  contactEmail      String?
+  stage             String   @default("PLANNED") // PLANNED | VISITED | FOLLOW_UP | DEMO_BOOKED | PILOT_PROPOSED | WON | LOST | NOT_NOW
+  visitAt           DateTime?
+  meetingAt         DateTime?
+  followUpAt        DateTime?
+  outcome           String?
+  painPoints        String?
+  interestedModules String?
+  objections        String?
+  currentSystem     String?
+  budgetNotes       String?
+  decisionProcess   String?
+  nextAction        String?
+  remarks           String?
+  travelCostKes     Int?
+  consentToContact  Boolean  @default(false)
+  createdById       String
+  createdByName     String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([stage, followUpAt])
+  @@index([county, town])
+  @@index([schoolName])
+}

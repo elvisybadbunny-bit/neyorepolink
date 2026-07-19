@@ -1,0 +1,36 @@
+CREATE TABLE "SchoolOutreachVisit" (
+  "id" TEXT NOT NULL,
+  "schoolName" TEXT NOT NULL,
+  "county" TEXT,
+  "town" TEXT,
+  "locationNotes" TEXT,
+  "schoolType" TEXT,
+  "estimatedLearners" INTEGER,
+  "contactName" TEXT,
+  "contactRole" TEXT,
+  "contactPhone" TEXT,
+  "contactEmail" TEXT,
+  "stage" TEXT NOT NULL DEFAULT 'PLANNED',
+  "visitAt" TIMESTAMP(3),
+  "meetingAt" TIMESTAMP(3),
+  "followUpAt" TIMESTAMP(3),
+  "outcome" TEXT,
+  "painPoints" TEXT,
+  "interestedModules" TEXT,
+  "objections" TEXT,
+  "currentSystem" TEXT,
+  "budgetNotes" TEXT,
+  "decisionProcess" TEXT,
+  "nextAction" TEXT,
+  "remarks" TEXT,
+  "travelCostKes" INTEGER,
+  "consentToContact" BOOLEAN NOT NULL DEFAULT false,
+  "createdById" TEXT NOT NULL,
+  "createdByName" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "SchoolOutreachVisit_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX "SchoolOutreachVisit_stage_followUpAt_idx" ON "SchoolOutreachVisit"("stage", "followUpAt");
+CREATE INDEX "SchoolOutreachVisit_county_town_idx" ON "SchoolOutreachVisit"("county", "town");
+CREATE INDEX "SchoolOutreachVisit_schoolName_idx" ON "SchoolOutreachVisit"("schoolName");

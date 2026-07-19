@@ -138,3 +138,25 @@ Each record requires a category, title, priority, cadence, status and owner, and
 - **Quarterly:** ideal-school profile, advisors and an incident drill.
 
 The operating system deliberately recommends professional help for legal, accounting, privacy and security decisions. It does not describe the founder's age or degree as a weakness; it turns limited time and specialist knowledge into explicit controls, owners and escalation paths.
+
+## Physical school visits and field-sales CRM
+
+Open **Platform Operations → School Visits**. Press **Save school visit** after entering at least the school name; the page can be used before a visit to plan it or afterwards to record what happened. It stores a founder-only `SchoolOutreachVisit` record, not a school tenant or customer account.
+
+### Before visiting
+
+Record the school, county/town, school type, estimated learners, business contact, role, appointment/visit time, directions and expected travel cost. Do not arrive during examination, reporting or opening-day pressure without an appointment. Research the school's likely workflow, but do not enter invented facts as if the school confirmed them.
+
+### During discovery
+
+Ask how the school currently handles fees/M-Pesa, attendance, marks/results, parent communication, printing and support. Record their exact pain, current system or spreadsheet, interested workflows, objections, buying window, people involved in the decision and the next physical action. Demonstrate the smallest workflow relevant to their pain rather than every NEYO module.
+
+### After the visit
+
+Set a truthful pipeline stage: **PLANNED, VISITED, FOLLOW UP, DEMO BOOKED, PILOT PROPOSED, WON, LOST,** or **NOT NOW**. Schedule the next follow-up and meeting. The dashboard highlights overdue follow-ups, upcoming meetings, active schools and recorded travel cost. A visit is not a sale; use **WON** only after an agreed paid commitment. Record why an opportunity was lost instead of deleting it.
+
+Tick **Permission to follow up recorded** only when the business contact agreed. This is not permission to market to learners or parents. Collect only business contact details needed for the relationship; never collect student records during a sales visit. Edit and delete controls are founder-only.
+
+### Weekly founder review
+
+Review overdue follow-ups first, then meetings in the next seven days, pilot proposals without a decision date, travel cost per meaningful opportunity, common pains, common objections and which school profile converts. Move one opportunity only when real evidence supports the new stage.
