@@ -159,7 +159,7 @@ export function BillingManager({
       {/* Current plan */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Current plan</CardTitle>
+          <CardTitle>Current pricing model</CardTitle>
           <Badge tone={STATUS_TONE[sub.status] ?? "neutral"}>{sub.status}</Badge>
         </CardHeader>
         <CardContent>
@@ -168,7 +168,7 @@ export function BillingManager({
               {sub.planName}
             </span>
             <span className="text-sm text-navy-500 dark:text-navy-400">
-              {sub.price > 0 ? `${formatKES(sub.price)} / term` : "Free"}
+              {sub.price > 0 ? `${formatKES(sub.price)} / term` : "Price pending current school counts"}
             </span>
           </div>
           <p className="mt-1 text-sm text-navy-500 dark:text-navy-400">

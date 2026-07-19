@@ -1,3 +1,15 @@
+## 2026-07-18 (part 62) — Founder Manual V2 Module 27 Billing + Hidden Dual Pricing Selector Fixed
+
+Built `27-NEYO-BILLING-SUBSCRIPTION-PRICING-TRIALS-AND-RENEWAL.md`: Finance separation; current model/status/price/renewal; Capacity and Modular cards/switches; advisor; usage; trial/lifecycle; central M-Pesa; referral/influencer; Support; Founder Ops; example/errors/verification.
+
+Following gap-fix rule, found Billing page server assembled only legacy catalog/plan data and never passed `dualPricing`, so the real Capacity/Modular selector condition was always false while Current Plan could show retired Msingi/Pro and `Free`. Rewired page to real Pricing Engine config/counts/optional-module count/capacity+modular quotes/advisor, passed pricingMode/active price/dualPricing, removed catalog plans from school UI data. Current card now says Current Pricing Model, real Capacity Complete/Modular name, and `Price pending current school counts` instead of fake Free.
+
+Focused ESLint on changed billing page/manager: 0 errors/warnings. `git diff --check`; docs mirrored. Prisma/full tests remain blocked as part 61 records.
+
+**Next:** Module 28 Public School Website & Marketing surfaces.
+
+---
+
 ## 2026-07-18 (part 61) — Node Modules Restored/Tested + Founder Manual V2 Module 26
 
 Founder requested next module and installation/testing of node modules. `npm install` completed: 782 packages. Focused ESLint across all recently changed code completed with **0 errors** (30 pre-existing warnings, mainly unused variables/hooks in the 6,000-line Academics client). `npm audit --omit=dev --audit-level=high` found 16 production dependency vulnerabilities (2 critical, 9 moderate, 5 low): current Next 14.2.5 advisories and transitive AWS SDK/fast-xml-parser/uuid; fixes are available but dependency upgrades need a separate tested change rather than an unsafe blind `--force`.

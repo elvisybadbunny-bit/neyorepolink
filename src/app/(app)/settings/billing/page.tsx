@@ -1,7 +1,8 @@
 import { requirePagePermission } from "@/lib/core/page-guards";
 import { ensureSubscription } from "@/lib/services/billing.service";
 import { getAllLimitStatuses } from "@/lib/services/limits.service";
-import { getPlanFromCatalog, listPlansFromCatalog } from "@/lib/services/pricing-catalog.service";
+import { getPricingEngineConfig, getRealCurrentCounts, quotePriceForCounts, computeModularUserModulePrice, checkPricingOptimizationAdvisor } from "@/lib/services/pricing-engine.service";
+import { db } from "@/lib/db";
 import { BillingManager } from "@/components/settings/billing-manager";
 import { ReferralCard } from "@/components/settings/referral-card";
 import { InfluencerCodeCard } from "@/components/settings/influencer-code-card";
@@ -13,16 +14,23 @@ export default async function BillingSettingsPage() {
   const user = await requirePagePermission("owner.dashboard");
   const sub = await ensureSubscription(user.tenantId);
   const limits = await getAllLimitStatuses(user.tenantId);
-  const plan = await getPlanFromCatalog(sub.planKey);
-  const plans = await listPlansFromCatalog();
+  const config = await getPricingEngineConfig();
+  const counts = await getRealCurrentCounts(user.tenantId);
+  const optionalModulesCount = await db.tenantModule.count({ where: { tenantId: user.tenantId, enabled: true, moduleKey: { notIn: ["students", "attendance", "finance", "bundi"] } } });
+  const capacityQuote = quotePriceForCounts(counts.studentCount, counts.staffCount, counts.parentCount, config);
+  const modularQuote = computeModularUserModulePrice(counts.studentCount, counts.staffCount, optionalModulesCount, config);
+  const pricingModeName = sub.pricingMode === "MODULAR_USERS_V1" ? "Modular User & Module" : "Capacity Complete";
+  const activePriceKes = sub.sizeBasedPriceKes || (sub.pricingMode === "MODULAR_USERS_V1" ? modularQuote.termTotalKes : capacityQuote.monthlyPriceKes);
 
   const data = {
     subscription: {
       planKey: sub.planKey,
-      planName: plan?.name ?? sub.planKey,
+      planName: pricingModeName,
       status: sub.status,
-      price: sub.grandfatheredPrice,
+      price: activePriceKes,
       currentPeriodEnd: sub.currentPeriodEnd.toISOString(),
+      pricingMode: sub.pricingMode,
+      sizeBasedPriceKes: sub.sizeBasedPriceKes,
     },
     limits: limits.map((l) => ({
       metric: l.metric,
@@ -31,12 +39,15 @@ export default async function BillingSettingsPage() {
       blocked: l.blocked,
       overLimit: l.overLimit,
     })),
-    plans: plans.map((p) => ({
-      key: p.key,
-      name: p.name,
-      pricePerTerm: p.pricePerTerm,
-      highlights: p.highlights,
-    })),
+    plans: [],
+    dualPricing: {
+      optimizationAdvisor: await checkPricingOptimizationAdvisor(user.tenantId),
+      currentMode: sub.pricingMode,
+      activePriceKes,
+      capacityModel: { monthlyPriceKes: capacityQuote.monthlyPriceKes, rawScore: capacityQuote.rawScore },
+      modularModel: { termTotalKes: modularQuote.termTotalKes, baseCoreFeeKes: modularQuote.baseCoreFeeKes, studentFeeKes: modularQuote.studentFeeKes, staffFeeKes: modularQuote.staffFeeKes, modulesFeeKes: modularQuote.modulesFeeKes, optionalModulesCount },
+      rates: { perStudentRateKes: config.modularPerStudentRateKes, perStaffRateKes: config.modularPerStaffRateKes, baseCoreFeeKes: config.modularBaseCoreFeeKes, perModuleRateKes: config.modularPerModuleRateKes },
+    },
   };
 
   return (
