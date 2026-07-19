@@ -79,25 +79,6 @@ function chartPath(points: { x: number; y: number }[]) {
   return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
 }
 
-function MiniSparkline({ data, stroke = "#1f9d5f", label }: { data: number[]; stroke?: string; label: string }) {
-  const values = data.length ? data : [0, 0, 0];
-  const max = Math.max(1, ...values);
-  const min = Math.min(...values);
-  const spread = Math.max(1, max - min);
-  const points = values.map((v, i) => ({
-    x: values.length <= 1 ? 0 : (i / (values.length - 1)) * 96,
-    y: 30 - ((v - min) / spread) * 24,
-  }));
-  const d = chartPath(points);
-  return (
-    <svg className="mt-3 h-9 w-full overflow-visible" viewBox="0 0 96 36" role="img" aria-label={label}>
-      <path d={d} fill="none" stroke={stroke} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d={`${d} L 96 36 L 0 36 Z`} fill={stroke} opacity="0.08" />
-      {points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="1.9" fill={stroke} />)}
-    </svg>
-  );
-}
-
 function moneyShort(n: number) {
   if (n >= 1_000_000) return `KES ${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
   if (n >= 1_000) return `KES ${Math.round(n / 1000)}K`;
@@ -255,38 +236,6 @@ export default async function DashboardPage() {
     const actualDots = graphPoints.map((p, i) => ({ ...toSvgPoint(p.actual, i), label: p.label, actual: p.actual, expected: p.expected }));
     const graphLabels = [1, 0.75, 0.5, 0.25].map((r) => moneyShort(Math.round(maxGraphKes * r)));
 
-    const feeCollectionTrend = graphPoints.map((p) => p.actual);
-
-    // Use the latest seven days that actually have a submitted register.
-    // Calendar days with no rows (weekends, holidays, or not-yet-marked days)
-    // are omitted instead of being misrepresented as 0% attendance.
-    const attendanceFrom = new Date(now.getTime() - 20 * 24 * 3600_000).toISOString().slice(0, 10);
-    const attendanceRows = await tdb.attendanceRecord.findMany({
-      where: { date: { gte: attendanceFrom, lte: today } },
-      select: { date: true, status: true },
-      orderBy: { date: "asc" },
-    });
-    const attendanceByDate = new Map<string, string[]>();
-    for (const row of attendanceRows) {
-      const statuses = attendanceByDate.get(row.date) ?? [];
-      statuses.push(row.status);
-      attendanceByDate.set(row.date, statuses);
-    }
-    const attendanceTrend = Array.from(attendanceByDate.entries())
-      .map(([, statuses]) => {
-        const present = statuses.filter((status) => status === "P" || status === "L").length;
-        return Math.round((present / statuses.length) * 100);
-      })
-      .slice(-7);
-
-    const enrollmentTrend: number[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i + 1, 0, 23, 59, 59));
-      enrollmentTrend.push(await tdb.student.count({
-        where: { AND: [{ admittedOn: { lte: monthEnd }, deletedAt: null }, studentScope] },
-      }));
-    }
-
     const termWeek = term
       ? Math.max(1, Math.floor((new Date(`${today}T00:00:00.000Z`).getTime() - new Date(`${term.startDate}T00:00:00.000Z`).getTime()) / (7 * 24 * 3600_000)) + 1)
       : null;
@@ -312,9 +261,6 @@ export default async function DashboardPage() {
       actualPath,
       actualDots,
       graphLabels,
-      feeCollectionTrend,
-      attendanceTrend,
-      enrollmentTrend,
       termDisplay,
       pricingMode: tenant?.subscription?.pricingMode ?? null,
       planStatus: tenant?.subscription?.status ?? null,
@@ -403,7 +349,6 @@ export default async function DashboardPage() {
             </div>
             <p className="mt-2 text-2xl font-black text-navy-950 dark:text-white">{formatKES(stats.revenueToday)}</p>
             <p className="mt-1 text-[10px] text-green-600 font-semibold">M-Pesa sync active</p>
-            <MiniSparkline data={stats.feeCollectionTrend} stroke="#1f9d5f" label="Fee collection trend" />
           </div>
         </Link>}
 
@@ -430,7 +375,6 @@ export default async function DashboardPage() {
             <p className="mt-1 text-[10px] text-navy-500">
               {stats.markedCount > 0 ? `${stats.markedCount} marked today` : `${stats.activeStudentsCount} enrolled`}
             </p>
-            <MiniSparkline data={stats.attendanceTrend} stroke="#f59e0b" label="Attendance trend" />
           </div>
         </Link>}
       </div>
@@ -443,7 +387,6 @@ export default async function DashboardPage() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-navy-400">{studentCountLabel}</span>
               <p className="text-2xl font-black text-navy-950 dark:text-white">{stats.activeStudentsCount}</p>
               <p className="text-[9px] text-navy-400">{studentCountDescription}</p>
-              <MiniSparkline data={stats.enrollmentTrend} stroke="#2563eb" label="Enrollment trend" />
             </div>
             <div className="p-3 bg-green-500/10 text-green-600 rounded-2xl"><Users className="h-5 w-5" /></div>
           </div>

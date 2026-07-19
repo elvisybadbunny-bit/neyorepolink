@@ -583,3 +583,7 @@ checklist.
 
 Do not change a visible label without checking the calculation, destination and role behavior it
 describes.
+
+## Simplified metric cards
+
+The small decorative line graphs were removed from the Fees Collected Today, Students Present and learner-count cards. The cards retain their real headline value, description and destination. The larger term Collections versus Expected chart remains because it compares two meaningful series rather than decorating a single number. Removing the mini trends also removes the additional historical attendance and six monthly enrolment queries previously performed solely to draw those lines.

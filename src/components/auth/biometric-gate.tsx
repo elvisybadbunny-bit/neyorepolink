@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { Fingerprint, X, ShieldAlert, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { startAuthentication } from "@simplewebauthn/browser";
@@ -131,8 +132,8 @@ export function BiometricGateProvider({ children }: { children: React.ReactNode 
     <BiometricGateContext.Provider value={{ requireBiometric }}>
       {children}
 
-      {open && (
-        <div className="fixed inset-0 z-[100] flex min-h-screen items-center justify-center overflow-y-auto p-4 sm:p-6">
+      {open && typeof document !== "undefined" && createPortal((
+        <div className="fixed inset-0 z-[200] grid h-[100dvh] w-screen place-items-center overflow-y-auto p-4 sm:p-6">
           {/* Frosted backing scrim */}
           <div 
             className="fixed inset-0 bg-navy-950/60 backdrop-blur-md transition-opacity" 
@@ -219,7 +220,7 @@ export function BiometricGateProvider({ children }: { children: React.ReactNode 
 
           </div>
         </div>
-      )}
+      ), document.body)}
     </BiometricGateContext.Provider>
   );
 }

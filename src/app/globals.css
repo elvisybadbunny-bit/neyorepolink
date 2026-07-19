@@ -491,7 +491,7 @@ html.glass .bg-navy-950\/40 {
 /* ---- Apple Dynamic Island Bloom animation ------------------------------ */
 @keyframes island-bloom {
   0% {
-    transform: translate(-50%, -18px) scale(0.6);
+    transform: translateY(-18px) scale(0.6);
     opacity: 0;
     filter: blur(5px);
   }
@@ -499,7 +499,7 @@ html.glass .bg-navy-950\/40 {
     filter: blur(0);
   }
   100% {
-    transform: translate(-50%, 0) scale(1);
+    transform: translateY(0) scale(1);
     opacity: 1;
   }
 }
