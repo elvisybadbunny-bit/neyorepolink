@@ -4849,3 +4849,4 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Batches 8–11 add 200 science/practical simulations with strong technical emphasis: electrical circuits and machines, power mechanics, construction quantities, metal/wood/media technology, elasticity, buoyancy, heat, titration, gas quantities, enzymes, transpiration and ecology.
 - [x] UI truthfully states 550 completed, exceeding the original 500 target.
 - [x] Target complete: 550 interactive models/contexts available. Continue accuracy review and curriculum mapping; never inflate future counts through empty renaming.
+- [x] Added two interactive checks to every simulation: a tolerance-based numerical calculation and a live model-derived prediction question (1,100 self-checks total).

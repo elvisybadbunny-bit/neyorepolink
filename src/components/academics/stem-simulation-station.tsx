@@ -121,7 +121,7 @@ export function StemSimulationStation() {
                 <Badge tone="green">{filteredIdeas.length} interactive simulations</Badge>
                 <span>550 live Grade 7–12 CBE simulations completed in eleven verified batches, exceeding the original 500 target.</span>
               </div>
-              <p className="text-xs text-navy-500">Every item shown here has live controls and a calculated response. NEYO will add further verified subject batches toward 500 rather than duplicating one activity under empty names.</p>
+              <p className="text-xs text-navy-500">Every item has live controls, a calculated response, a self-marking numerical check and a relationship-prediction question — 1,100 interactive checks across the 550 simulations.</p>
             </CardContent>
           </Card>
 
@@ -381,10 +381,7 @@ export function StemSimulationStation() {
   );
 }
 
-function ConfigurableSimulation({ idea }: { idea: StemLearningIdea }) {
-  const [a, setA] = React.useState(idea.initialA);
-  const [b, setB] = React.useState(idea.initialB);
-  React.useEffect(() => { setA(idea.initialA); setB(idea.initialB); }, [idea.id, idea.initialA, idea.initialB]);
+function calculateSimulation(idea: StemLearningIdea, a: number, b: number) {
   let output = 0;
   switch (idea.model) {
     case "ohm": output = a / Math.max(0.01, b); break;
@@ -498,20 +495,55 @@ function ConfigurableSimulation({ idea }: { idea: StemLearningIdea }) {
     case "transpirationIndex": output = Math.max(0, Math.min(100, (a / 50) * (100 - b))); break;
     case "ecologicalEfficiency": output = Math.min(100, (b / Math.max(0.01, a)) * 100); break;
   }
+  return output;
+}
+
+function ConfigurableSimulation({ idea }: { idea: StemLearningIdea }) {
+  const [a, setA] = React.useState(idea.initialA);
+  const [b, setB] = React.useState(idea.initialB);
+  const [answer, setAnswer] = React.useState("");
+  const [answerResult, setAnswerResult] = React.useState<"correct" | "retry" | null>(null);
+  const [predictionResult, setPredictionResult] = React.useState<"correct" | "retry" | null>(null);
+  React.useEffect(() => { setA(idea.initialA); setB(idea.initialB); setAnswer(""); setAnswerResult(null); setPredictionResult(null); }, [idea.id, idea.initialA, idea.initialB]);
+  const output = calculateSimulation(idea, a, b);
   const rounded = Math.round(output * 100) / 100;
   const span = Math.max(1, Math.abs(idea.maxA * Math.max(1, idea.maxB)));
   const visual = Math.max(4, Math.min(100, Math.abs(output) / span * 100));
-  return <div className="grid gap-4 rounded-2xl border border-navy-200 bg-white p-4 dark:border-navy-700 dark:bg-navy-900 md:grid-cols-[1fr_16rem]">
-    <div className="space-y-5">
-      <SimulationSlider label={idea.variableA} unit={idea.unitA} min={idea.minA} max={idea.maxA} step={idea.stepA} value={a} onChange={setA} />
-      <SimulationSlider label={idea.variableB} unit={idea.unitB} min={idea.minB} max={idea.maxB} step={idea.stepB} value={b} onChange={setB} />
-      <Button size="sm" variant="secondary" onClick={() => { setA(idea.initialA); setB(idea.initialB); }}><RefreshCw className="h-3.5 w-3.5" />Reset simulation</Button>
+  const increasedA = Math.min(idea.maxA, a + idea.stepA);
+  const changedOutput = calculateSimulation(idea, increasedA, b);
+  const expectedPrediction = Math.abs(changedOutput - output) < 0.000001 ? "same" : changedOutput > output ? "increase" : "decrease";
+  function checkAnswer() {
+    const submitted = Number(answer);
+    const tolerance = Math.max(0.02, Math.abs(output) * 0.02);
+    setAnswerResult(Number.isFinite(submitted) && Math.abs(submitted - output) <= tolerance ? "correct" : "retry");
+  }
+  return <div className="space-y-4">
+    <div className="grid gap-4 rounded-2xl border border-navy-200 bg-white p-4 dark:border-navy-700 dark:bg-navy-900 md:grid-cols-[1fr_16rem]">
+      <div className="space-y-5">
+        <SimulationSlider label={idea.variableA} unit={idea.unitA} min={idea.minA} max={idea.maxA} step={idea.stepA} value={a} onChange={(value) => { setA(value); setAnswerResult(null); setPredictionResult(null); }} />
+        <SimulationSlider label={idea.variableB} unit={idea.unitB} min={idea.minB} max={idea.maxB} step={idea.stepB} value={b} onChange={(value) => { setB(value); setAnswerResult(null); setPredictionResult(null); }} />
+        <Button size="sm" variant="secondary" onClick={() => { setA(idea.initialA); setB(idea.initialB); setAnswer(""); setAnswerResult(null); setPredictionResult(null); }}><RefreshCw className="h-3.5 w-3.5" />Reset simulation</Button>
+      </div>
+      <div className="flex flex-col justify-center rounded-2xl bg-navy-950 p-5 text-center text-white">
+        <p className="text-xs font-bold uppercase tracking-wide text-navy-300">{idea.outputLabel}</p>
+        <p className="mt-2 break-words text-3xl font-black text-green-400">{rounded} {idea.outputUnit}</p>
+        <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-green-500 transition-all duration-300" style={{ width: `${visual}%` }} /></div>
+        <p className="mt-3 text-[11px] text-navy-400">Move either control and observe the calculated response immediately.</p>
+      </div>
     </div>
-    <div className="flex flex-col justify-center rounded-2xl bg-navy-950 p-5 text-center text-white">
-      <p className="text-xs font-bold uppercase tracking-wide text-navy-300">{idea.outputLabel}</p>
-      <p className="mt-2 break-words text-3xl font-black text-green-400">{rounded} {idea.outputUnit}</p>
-      <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-green-500 transition-all duration-300" style={{ width: `${visual}%` }} /></div>
-      <p className="mt-3 text-[11px] text-navy-400">Move either control and observe the calculated response immediately.</p>
+    <div className="grid gap-3 md:grid-cols-2">
+      <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/50 dark:bg-blue-950/20">
+        <p className="text-xs font-bold uppercase text-blue-700 dark:text-blue-300">Self-check calculation</p>
+        <p className="mt-1 text-sm">With the current controls, calculate <strong>{idea.outputLabel}</strong>. Enter a number; answers within 2% are accepted.</p>
+        <div className="mt-3 flex gap-2"><input inputMode="decimal" value={answer} onChange={(event) => { setAnswer(event.target.value); setAnswerResult(null); }} className="min-w-0 flex-1 rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm text-navy-900 dark:border-blue-800 dark:bg-navy-900 dark:text-white" placeholder={`Answer in ${idea.outputUnit || "units"}`} /><Button size="sm" onClick={checkAnswer} disabled={!answer.trim()}>Check</Button></div>
+        {answerResult && <p className={`mt-2 text-xs font-bold ${answerResult === "correct" ? "text-green-700 dark:text-green-300" : "text-red-600 dark:text-red-300"}`}>{answerResult === "correct" ? "Correct — your calculation matches the simulation." : `Try again. Compare your method with the live output after calculating.`}</p>}
+      </div>
+      <div className="rounded-2xl border border-purple-200 bg-purple-50/60 p-4 dark:border-purple-900/50 dark:bg-purple-950/20">
+        <p className="text-xs font-bold uppercase text-purple-700 dark:text-purple-300">Prediction question</p>
+        <p className="mt-1 text-sm">If <strong>{idea.variableA}</strong> increases by one step while {idea.variableB} stays fixed, what happens to {idea.outputLabel}?</p>
+        <div className="mt-3 flex flex-wrap gap-2">{(["increase", "decrease", "same"] as const).map((choice) => <Button key={choice} size="sm" variant="secondary" onClick={() => setPredictionResult(choice === expectedPrediction ? "correct" : "retry")}>{choice === "same" ? "Stays the same" : `${choice[0].toUpperCase()}${choice.slice(1)}s`}</Button>)}</div>
+        {predictionResult && <p className={`mt-2 text-xs font-bold ${predictionResult === "correct" ? "text-green-700 dark:text-green-300" : "text-red-600 dark:text-red-300"}`}>{predictionResult === "correct" ? "Correct prediction. Move the control to verify it." : "Not for these current values. Observe the output, then try again."}</p>}
+      </div>
     </div>
   </div>;
 }
