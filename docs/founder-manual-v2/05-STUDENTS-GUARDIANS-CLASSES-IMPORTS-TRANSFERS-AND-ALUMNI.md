@@ -517,3 +517,7 @@ No other new Student behavior was invented; the manual documents current service
 - Promotion/allocation/continuity: `promotion-client.tsx`
 - Student service/scoping: `student.service.ts`
 - APIs: `src/app/api/students/`, `/api/classes`, `/api/promotion*`
+
+## Mobile student list
+
+On a 360px phone, the List view keeps its full operational columns instead of squeezing them until unreadable. The card shows **Swipe left or right to view all student fields**. Swipe horizontally inside the student table to reach admission numbers, class, gender and status; normal vertical page scrolling remains available. The table has a deliberate minimum width and its own horizontal overflow area. The Kanban view remains an alternative when the user wants cards rather than columns.

@@ -532,8 +532,10 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
           action={canCreate && !(q||classId||status||gender) ? <Button onClick={()=>setDialog(true)}><Plus className="h-4 w-4" /> New student</Button> : undefined}
         />
       ) : view === "list" ? (
-        <TableContainer>
-          <Table>
+        <div className="min-w-0 space-y-2">
+          <p className="px-1 text-xs text-navy-400 sm:hidden">Swipe left or right to view all student fields.</p>
+          <TableContainer className="max-w-full overscroll-x-contain touch-auto" aria-label="Scrollable student list">
+            <Table className="min-w-[760px]">
             <THead>
               <TR>
                 <TH className="w-10">
@@ -586,8 +588,9 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
                 </TR>
               ))}
             </TBody>
-          </Table>
-        </TableContainer>
+            </Table>
+          </TableContainer>
+        </div>
       ) : (
         <KanbanBoard students={students} onMoved={load} />
       )}

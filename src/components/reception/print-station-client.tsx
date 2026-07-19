@@ -70,25 +70,25 @@ export function PrintStationClient() {
   const [printers, setPrinters] = React.useState<string[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("neyo_printers");
-      return saved ? JSON.parse(saved) : ["Default Printer", "EPSON L3150", "HP LaserJet Pro M404n"];
+      try {
+        const labels = saved ? (JSON.parse(saved) as string[]) : [];
+        const userLabels = labels.filter((label) => !["Default Printer", "EPSON L3150", "HP LaserJet Pro M404n", "System print dialog"].includes(label));
+        return ["System print dialog", ...userLabels];
+      } catch { return ["System print dialog"]; }
     }
-    return ["Default Printer", "EPSON L3150", "HP LaserJet Pro M404n"];
+    return ["System print dialog"];
   });
 
   const [selectedPrinter, setSelectedPrinter] = React.useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("neyo_selected_printer") ?? "Default Printer";
+      return localStorage.getItem("neyo_selected_printer") ?? "System print dialog";
     }
-    return "Default Printer";
+    return "System print dialog";
   });
 
-  const [limit, setLimit] = React.useState<number | null>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("neyo_print_limit");
-      return saved ? (saved === "unlimited" ? null : Number(saved)) : null;
-    }
-    return null;
-  });
+  // School-wide limit comes from the server. null means unlimited (stored as 0).
+  const [limit, setLimit] = React.useState<number | null>(null);
+  const [savingLimit, setSavingLimit] = React.useState(false);
 
   const [newPrinter, setNewPrinter] = React.useState("");
 
@@ -97,12 +97,12 @@ export function PrintStationClient() {
   }, [printers]);
 
   React.useEffect(() => {
+    if (!printers.includes(selectedPrinter)) {
+      setSelectedPrinter("System print dialog");
+      return;
+    }
     localStorage.setItem("neyo_selected_printer", selectedPrinter);
-  }, [selectedPrinter]);
-
-  React.useEffect(() => {
-    localStorage.setItem("neyo_print_limit", limit === null ? "unlimited" : String(limit));
-  }, [limit]);
+  }, [selectedPrinter, printers]);
 
   function addPrinter() {
     if (!newPrinter.trim()) return;
@@ -113,7 +113,23 @@ export function PrintStationClient() {
     setPrinters((p) => [...p, newPrinter.trim()]);
     setSelectedPrinter(newPrinter.trim());
     setNewPrinter("");
-    toast({ title: "Printer added", tone: "success" });
+    toast({ title: "Printer label added", tone: "success" });
+  }
+
+  function removePrinter(name: string) {
+    if (name === "System print dialog") return;
+    setPrinters((items) => items.filter((item) => item !== name));
+    if (selectedPrinter === name) setSelectedPrinter("System print dialog");
+  }
+
+  async function saveLimit() {
+    if (!canEditLimits) return;
+    setSavingLimit(true);
+    try {
+      const res = await fetch("/api/print-limits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "set_limit", perDay: limit ?? 0 }) });
+      const json = await res.json();
+      toast({ title: json.ok ? "School print limit saved" : json.error?.message || "Could not save limit", tone: json.ok ? "success" : "error" });
+    } finally { setSavingLimit(false); }
   }
 
   const load = React.useCallback(async () => {
@@ -136,6 +152,7 @@ export function PrintStationClient() {
     const t = setInterval(load, 10_000);
     fetch("/api/classes").then((r) => r.json()).then((j) => j.ok && setClasses(j.data.classes)).catch(() => {});
     fetch("/api/finance/structures").then((r) => r.json()).then((j) => j.ok && setStructures(j.data.structures ?? [])).catch(() => {});
+    fetch("/api/print-limits").then((r) => r.json()).then((j) => { if (j.ok) setLimit(j.data.printLimitPerDay > 0 ? j.data.printLimitPerDay : null); }).catch(() => {});
     return () => clearInterval(t);
   }, [load]);
 
@@ -166,6 +183,12 @@ export function PrintStationClient() {
         frame.src = job.url;
       });
       try { frame.contentWindow?.print(); } catch { window.print(); }
+      const confirmed = window.confirm("Did this document print successfully? Select Cancel to keep it safely in the queue.");
+      if (!confirmed) {
+        setAuto(false);
+        toast({ title: "Document kept in queue; automatic printing paused", tone: "info" });
+        return;
+      }
       await fetch("/api/print-queue", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "printed", jobId: job.id }),
@@ -296,6 +319,9 @@ export function PrintStationClient() {
             </button>
           </div>
 
+          <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-100">
+            Browsers do not allow websites to silently choose a physical printer. These are user-defined station labels for organisation; the system print dialog controls the actual printer, paper size and tray.
+          </div>
           <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-1">
               <Label htmlFor="printer-select">Select Printer</Label>
@@ -309,10 +335,11 @@ export function PrintStationClient() {
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
+              {selectedPrinter !== "System print dialog" && <button type="button" onClick={() => removePrinter(selectedPrinter)} className="block text-xs text-red-600 underline">Remove this label</button>}
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="new-printer">Add Custom Printer</Label>
+              <Label htmlFor="new-printer">Add printer/station label</Label>
               <div className="flex gap-2">
                 <Input
                   id="new-printer"
@@ -326,29 +353,13 @@ export function PrintStationClient() {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="print-limit">Daily Limit</Label>
-              <select
-                id="print-limit"
-                value={limit === null ? "unlimited" : String(limit)}
-                disabled={!canEditLimits}
-                onChange={(e) => {
-                  if (!canEditLimits) {
-                    toast({ title: "You do not have permission to change limits.", tone: "error" });
-                    return;
-                  }
-                  setLimit(e.target.value === "unlimited" ? null : Number(e.target.value));
-                }}
-                className={cn(
-                  "rounded-2xl border border-navy-200 bg-white px-3.5 py-2.5 text-sm dark:border-navy-700 dark:bg-navy-900 text-navy-900 dark:text-navy-50",
-                  !canEditLimits && "opacity-60 cursor-not-allowed"
-                )}
-              >
-                <option value="unlimited">Unlimited</option>
-                <option value="10">10 prints</option>
-                <option value="50">50 prints</option>
-                <option value="100">100 prints</option>
-                <option value="200">200 prints</option>
-              </select>
+              <Label htmlFor="print-limit">School-wide documents per day</Label>
+              <div className="flex items-center gap-2">
+                <Input id="print-limit" type="number" min={1} max={1000} value={limit ?? ""} placeholder="Unlimited" disabled={!canEditLimits} onChange={(e) => setLimit(e.target.value === "" ? null : Math.max(1, Math.min(1000, Number(e.target.value))))} className="h-10 w-32" />
+                {canEditLimits && <Button size="sm" variant="secondary" onClick={() => setLimit(null)}>Unlimited</Button>}
+                {canEditLimits && <Button size="sm" onClick={saveLimit} disabled={savingLimit}>{savingLimit ? "Saving…" : "Save"}</Button>}
+              </div>
+              <p className="text-[11px] text-navy-400">Enter any value from 1–1000, or choose Unlimited. This applies to the school, not only this device.</p>
             </div>
 
             {!canEditLimits && (

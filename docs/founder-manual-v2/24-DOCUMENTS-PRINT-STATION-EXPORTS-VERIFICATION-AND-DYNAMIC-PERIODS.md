@@ -123,3 +123,13 @@ simple and Smart generation; print exact columns; Saturday separate; cross-tenan
 
 Print Station client/services/routes; document renderers; export route/menu; verification service/page;
 Timetable config/UI/academics validation/autoFill/solver/print page.
+
+## Print Station configuration and browser limitations
+
+A real school user opens **Print Station** and may add their own printer/station labels instead of choosing from fictional preset printer models. **System print dialog** remains the safe default. A browser cannot silently select a physical printer, tray or paper size; the operating-system print dialog makes that final choice. Labels are organisational and are stored on that browser only.
+
+The daily limit is not restricted to preset dropdown values. An authorised Principal, Deputy, Dean, HOD or Owner enters any number from 1–1000, or selects **Unlimited**, then presses **Save**. This writes through the existing school-wide print-limit API; it is not merely a setting on one reception computer.
+
+When a queued document opens the browser print dialog, NEYO asks **Did this document print successfully?** Pressing OK marks the real queue record printed and increments the count. Pressing Cancel keeps it in the queue and pauses automatic processing. This avoids losing a job when the user cancels, the printer jams or paper is unavailable.
+
+Founder verification: add and remove a station label; set a non-preset limit such as 37 and reload on another authorised session; open one queued document, cancel the success confirmation and verify it remains queued; then print and confirm it disappears only after confirmation.
