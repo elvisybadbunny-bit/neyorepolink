@@ -359,7 +359,9 @@ Press **Import allocations**.
 
 Upload CSV/XLSX or paste rows. Same teacher may appear on multiple rows, one per subject/class/load.
 Preview maps real teacher/subject/class, flags conflicts/unknowns, then **Confirm import**. Back
-returns; Done closes.
+returns; Done closes. On phones the import opens as a full-height bottom sheet with its own vertical
+scroll, sticky heading, safe-area bottom padding and contained overscroll, so Upload, Preview,
+Bundi review, Confirm and result controls remain reachable.
 
 Import creates/reuses one User per genuine teacher and writes ClassSubjectNeed/qualification links as
 service specifies. Review before generation.

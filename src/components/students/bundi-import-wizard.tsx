@@ -76,6 +76,19 @@ export function BundiImportWizard() {
       .finally(() => setTemplateLoading(false));
   }, []);
 
+  async function requestCode() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/neyo-support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create_thread", subject: "Bundi handwritten import unlock code", body: "Please review our school for a Bundi handwritten student-import unlock code. We understand extracted rows must be reviewed before import.", priority: "NORMAL", source: "SCHOOL_OS" }),
+      });
+      const json = await res.json();
+      toast({ title: json.ok ? "Request sent to NEYO Support" : (json.error?.message || "Could not send request"), tone: json.ok ? "success" : "error" });
+    } finally { setBusy(false); }
+  }
+
   async function redeem() {
     if (!code.trim()) return;
     setBusy(true);
@@ -219,9 +232,13 @@ export function BundiImportWizard() {
             <Button onClick={redeem} disabled={busy || !code.trim()}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Continue
             </Button>
-            <p className="text-xs text-navy-400">
-              Don&apos;t have a code? This isn&apos;t required for normal imports — go back and use the <Link href="/students/import" className="underline">standard import</Link> instead.
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="secondary" onClick={requestCode} disabled={busy}>Request code from NEYO</Button>
+              <p className="text-xs text-navy-400">
+                This sends a real support request. NEYO Ops reviews the school, chooses tenant scope and use limit, mints the code in Founder Ops → Bundi Import, then shares it securely. Standard import remains available without a code.
+              </p>
+            </div>
+            <p className="text-xs text-navy-400">Use the <Link href="/students/import" className="underline">standard import</Link> while waiting.</p>
           </CardContent>
         </Card>
       )}

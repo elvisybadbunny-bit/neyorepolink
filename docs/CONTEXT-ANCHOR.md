@@ -1,3 +1,15 @@
+## 2026-07-18 (part 60) — Teacher Allocation Import Mobile Scroll Fix + Real Bundi Code Request/Ops Process
+
+**Founder report:** Smart Timetable → Import Existing Teacher Allocations modal could not scroll to its lower content on mobile; Premium handwritten Student Import manual needed exact code-request and NEYO Ops management steps.
+
+Fixed the allocation modal in `academics-client.tsx`: mobile now anchors as full-height bottom sheet (`100dvh`) with internal vertical scrolling, overscroll containment, sticky header, responsive desktop `90dvh`, mobile/desktop rounded behavior and safe-area bottom padding. All CSV/Excel/Paste/Bundi Upload, Preview, Confirm and result controls remain reachable without relying on body scroll.
+
+Added real **Request code from NEYO** to `/students/import/bundi`: POSTs a scoped school customer-support thread (`/api/neyo-support`) with the request, shows success/error and standard-import fallback. Updated Manual 25 with full process: school requests → Support/Ops review → Founder Ops `Bundi Import` config → Tenant ID/Max Uses/internal note → Mint Code → secure share → usage/status monitoring → Revoke; company-wide blank tenant only deliberately. Updated Module 09 mobile behavior.
+
+Static source/diff verification and `git diff --check`; updated manuals mirrored/byte-compared. Node modules unavailable, no unsupported browser/lint claim; founder should verify on 360px device after deploy.
+
+---
+
 ## 2026-07-18 (part 59) — Founder Manual V2 Module 25 Bundi Imports/OCR/Quota/Safety + Privacy Copy Correction
 
 Built `25-BUNDI-IMPORTS-OCR-REVIEW-QUOTAS-TOPUPS-AND-SAFETY.md`: paused preview; shared Student/Staff/Library/Allocation wizard steps/buttons; premium unlock-code handwritten path; encrypted upload; deterministic/local OCR; confidence/source badges; review/edit/remove/commit; quota/top-up payment; mark sheet/exam paper/paper quiz/question scan; learned corrections; privacy/provider behavior; prohibited actions, errors and verification.

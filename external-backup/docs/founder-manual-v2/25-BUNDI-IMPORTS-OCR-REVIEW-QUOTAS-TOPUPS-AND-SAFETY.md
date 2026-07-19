@@ -51,13 +51,15 @@ through domain validation. Result shows created/failed; Done closes.
 
 `/students/import/bundi` adds:
 
-1. Unlock code issued by NEYO Ops → Redeem.
-2. Describe columns → Add/remove → Save Template.
-3. Upload JPG/PNG/PDF one page.
-4. Honest unavailable/error state if provider not configured.
-5. Review rows/cells/remove.
-6. Import N Students.
-7. Result skipped/created → View Students.
+1. If no code, press **Request code from NEYO**. This creates a real school support thread.
+2. NEYO Support/Ops reviews intended use; Founder Ops → Bundi Import enters Tenant ID (blank only for an intentionally company-wide code), Max Uses and internal note, presses **Mint Code**, then shares it securely. Ops list shows Active/Used Up/Expired/Revoked and can **Revoke**.
+3. Enter received code → Redeem/Continue.
+4. Describe columns → Add/remove → Save Template.
+5. Upload JPG/PNG/PDF one page.
+6. Honest unavailable/error state if provider not configured.
+7. Review rows/cells/remove.
+8. Import N Students.
+9. Result skipped/created → View Students.
 
 Unlock code is time-bound/revocable, not authorization bypass.
 

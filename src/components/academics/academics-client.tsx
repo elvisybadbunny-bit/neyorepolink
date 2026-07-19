@@ -4110,9 +4110,9 @@ function TeacherAllocationImportModal({ onClose, onDone }: { onClose: () => void
   const hasNewTeachers = (preview ?? []).some((p) => p.teacherMatch === "NEW");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/40 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-navy-100 bg-white p-6 shadow-pop dark:border-navy-800 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/40 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[100dvh] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-100 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-pop dark:border-navy-800 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-3xl sm:p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 z-10 -mx-1 mb-4 flex items-center justify-between border-b border-navy-100 bg-white/95 px-1 pb-3 backdrop-blur dark:border-navy-800 dark:bg-navy-900/95">
           <div className="space-y-0.5">
             <h3 className="text-base font-bold text-navy-900 dark:text-navy-50">Import Existing Teacher Allocations</h3>
             <p className="text-xs text-navy-400">Upload CSV/XLSX, paste from Excel, or scan a handwritten register with Bundi.</p>
