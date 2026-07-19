@@ -77,7 +77,7 @@ async function main() {
   try {
     // --- 1) OFF = no-op ---
     await setEngine(false);
-    const offCount = await syncResultsToCompetencyEvidence(tid, term.term);
+    const offCount = await syncResultsToCompetencyEvidence(tid, term.term, term.year);
     check("Curriculum engine OFF: sync is a no-op (J-OFF safety)", offCount === 0);
 
     // --- create a mapped competency under the subject's learning area ---
@@ -94,7 +94,7 @@ async function main() {
 
     // --- 2) ON = writes evidence with correct levels ---
     await setEngine(true);
-    const written = await syncResultsToCompetencyEvidence(tid, term.term);
+    const written = await syncResultsToCompetencyEvidence(tid, term.term, term.year);
     check("Curriculum engine ON: sync writes evidence rows", written >= subjResults.length);
 
     const evidence = await db.competencyEvidence.findMany({
@@ -113,7 +113,7 @@ async function main() {
 
     // --- 3) idempotent ---
     const before = await db.competencyEvidence.count({ where: { tenantId: tid, competencyId: comp.id } });
-    await syncResultsToCompetencyEvidence(tid, term.term);
+    await syncResultsToCompetencyEvidence(tid, term.term, term.year);
     const after = await db.competencyEvidence.count({ where: { tenantId: tid, competencyId: comp.id } });
     check("Re-running the sync is idempotent (no duplicates)", before === after);
 
