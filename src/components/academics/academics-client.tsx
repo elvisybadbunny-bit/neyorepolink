@@ -3945,8 +3945,8 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-navy-900">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-black/40 p-0 sm:items-center sm:p-4">
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-2xl touch-pan-y overflow-y-auto overscroll-contain rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl [-webkit-overflow-scrolling:touch] dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-3xl sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-lg font-bold text-navy-900 dark:text-white"><Sparkles className="h-5 w-5 text-purple-600" /> Build Options Block from student choices</h3>
           <Button size="sm" variant="ghost" onClick={discard}><X className="h-4 w-4" /></Button>

@@ -516,3 +516,7 @@ Timetable section and routes specialized Exam Timetable/Duty Roster to their own
 - Electives: `elective-block.service.ts`, `elective-block-auto-build.service.ts`
 - Venues: `venue.service.ts`
 - Prints: `print-timetable-page.tsx`, elective roster print
+
+## Mobile scrolling — Build Options Block from student choices
+
+The auto-build sheet now opens as a bottom sheet on phones, uses the dynamic viewport, reserves the device safe area, enables vertical touch panning and momentum scrolling, and contains overscroll inside the sheet. The level/kind setup, detected-subject preview, teacher recommendations and final Confirm button must all be reachable by swiping downward inside the sheet. At `sm` and above it returns to a centred rounded dialog with a 90dvh maximum height.
