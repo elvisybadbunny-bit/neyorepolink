@@ -44,6 +44,7 @@ export function BundiImportWizard() {
 
   // Step 1: unlock code
   const [code, setCode] = React.useState("");
+  const [codeRequested, setCodeRequested] = React.useState(false);
   const [unlockOk, setUnlockOk] = React.useState<{ remainingUses: number | null } | null>(null);
   const [unlockError, setUnlockError] = React.useState<string | null>(null);
 
@@ -85,7 +86,8 @@ export function BundiImportWizard() {
         body: JSON.stringify({ action: "create_thread", subject: "Bundi handwritten import unlock code", body: "Please review our school for a Bundi handwritten student-import unlock code. We understand extracted rows must be reviewed before import.", priority: "NORMAL", source: "SCHOOL_OS" }),
       });
       const json = await res.json();
-      toast({ title: json.ok ? "Request sent to NEYO Support" : (json.error?.message || "Could not send request"), tone: json.ok ? "success" : "error" });
+      if (json.ok) setCodeRequested(true);
+      toast({ title: json.ok ? "Access-code request submitted" : (json.error?.message || "Could not send request"), description: json.ok ? "You can continue using standard import while your request is reviewed." : undefined, tone: json.ok ? "success" : "error" });
     } finally { setBusy(false); }
   }
 
@@ -223,7 +225,7 @@ export function BundiImportWizard() {
           <CardHeader><CardTitle className="flex items-center gap-2"><KeyRound className="h-4 w-4 text-green-600" /> Enter your Bundi unlock code</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-navy-500 dark:text-navy-400">
-              Bundi handwritten import is a premium, founder-approved path. Platform Operations issues your school a code — enter it below to continue.
+              Bundi handwritten import is available by request. Enter your school&apos;s access code below, or request one for review.
             </p>
             <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. BUNDI-7F3A9C" className="max-w-xs font-mono" />
             {unlockError && (
@@ -232,10 +234,13 @@ export function BundiImportWizard() {
             <Button onClick={redeem} disabled={busy || !code.trim()}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Continue
             </Button>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="secondary" onClick={requestCode} disabled={busy}>Request code from NEYO</Button>
-              <p className="text-xs text-navy-400">
-                This sends a real support request. Platform Operations reviews the school, chooses tenant scope and use limit, mints the code in Founder Ops → Bundi Import, then shares it securely. Standard import remains available without a code.
+            <div className="rounded-2xl border border-green-200 bg-green-50/60 p-4 dark:border-green-900/40 dark:bg-green-950/20">
+              <Button className="w-full sm:w-auto" variant="secondary" onClick={requestCode} disabled={busy || codeRequested}>
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                {codeRequested ? "Request submitted" : "Request an access code"}
+              </Button>
+              <p className="mt-2 text-xs text-green-900/70 dark:text-green-100/70">
+                This creates a real support request for review. Your school administrator will receive the code securely if approved. Standard import remains available without a code.
               </p>
             </div>
             <p className="text-xs text-navy-400">Use the <Link href="/students/import" className="underline">standard import</Link> while waiting.</p>
@@ -335,7 +340,8 @@ export function BundiImportWizard() {
               {reviewRows.length === 0 ? (
                 <p className="text-sm text-navy-400">No rows extracted.</p>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="max-w-full overflow-x-auto overscroll-x-contain touch-auto" aria-label="Scrollable Bundi import review">
+                  <p className="mb-2 text-xs text-navy-400 sm:hidden">Swipe left or right to review every imported field.</p>
                   <table className="w-full min-w-[40rem] text-sm">
                     <thead>
                       <tr className="border-b border-navy-100 dark:border-navy-800">

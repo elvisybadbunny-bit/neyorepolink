@@ -521,3 +521,9 @@ No other new Student behavior was invented; the manual documents current service
 ## Mobile student list
 
 On a 360px phone, the List view keeps its full operational columns instead of squeezing them until unreadable. The card shows **Swipe left or right to view all student fields**. Swipe horizontally inside the student table to reach admission numbers, class, gender and status; normal vertical page scrolling remains available. The table has a deliberate minimum width and its own horizontal overflow area. The Kanban view remains an alternative when the user wants cards rather than columns.
+
+## Suggesting a class teacher for a new class or stream batch
+
+When creating one class, the optional **Class teacher** dropdown places staff who are not currently homeroom teachers under **Suggested — not class teachers yet**. After bulk-creating streams, each new row's Class teacher dropdown shows the same suggested group first, while staff already responsible for another class are clearly separated. The suggestion does not assign anyone automatically: leadership reviews workload and chooses. Saving writes `SchoolClass.classTeacherId`; removing the selection clears it. Subject-teacher allocation remains separate in Academics and Timetable.
+
+Founder verification: assign two existing class teachers, create a new class, and confirm those two do not appear in the suggested group; select an unassigned teacher, save, and verify the teacher is then marked as already assigned when configuring another class.

@@ -130,3 +130,9 @@ processing architecture while retaining school-facing Bundi copy law.
 
 Bundi client/wizards/quota modal; Bundi import/intelligent/quota services; session APIs; encrypted
 files; each scan consumer; Founder Ops config/release controls.
+
+## Requesting a Bundi handwritten-import access code
+
+A school user who has no code presses **Request an access code** in the first step. This creates a real support thread; it does not pretend that a code was issued automatically. After success the button changes to **Request submitted** and cannot create repeated requests in the same session. The school can continue with standard student import while the request is reviewed. If approved, the school administrator receives the code through the secure support workflow.
+
+On a phone, the Bundi review grid keeps the full imported columns and shows a swipe instruction. The user swipes left/right inside the grid to review and correct every field before committing. The standard import **Recent imports** table follows the same mobile pattern and exposes all audit columns by horizontal swipe.

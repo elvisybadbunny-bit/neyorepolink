@@ -78,6 +78,11 @@ export function ClassesClient({ canManage }: { canManage: boolean }) {
     }
   }
 
+  const assignedClassTeacherIds = new Set((rows ?? []).map((row) => row.classTeacherId).filter((id): id is string => Boolean(id)));
+  function availableForClass(currentTeacherId: string | null) {
+    return teachers.filter((teacher) => teacher.id === currentTeacherId || !assignedClassTeacherIds.has(teacher.id));
+  }
+
   return (
     <div className="space-y-5">
       {canManage && (
@@ -115,7 +120,15 @@ export function ClassesClient({ canManage }: { canManage: boolean }) {
                           className="w-full min-w-[150px] rounded-lg border border-navy-100 bg-white px-2 py-1 text-xs dark:border-navy-800 dark:bg-navy-900"
                         >
                           <option value="">No class teacher set</option>
-                          {teachers.map((t) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+                          {availableForClass(c.classTeacherId).filter((t) => t.id !== c.classTeacherId).length > 0 && <optgroup label="Suggested — not assigned another class">
+                            {availableForClass(c.classTeacherId).filter((t) => t.id !== c.classTeacherId).map((t) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+                          </optgroup>}
+                          {c.classTeacherId && <optgroup label="Current class teacher">
+                            {teachers.filter((t) => t.id === c.classTeacherId).map((t) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+                          </optgroup>}
+                          {teachers.some((t) => assignedClassTeacherIds.has(t.id) && t.id !== c.classTeacherId) && <optgroup label="Already assigned another class">
+                            {teachers.filter((t) => assignedClassTeacherIds.has(t.id) && t.id !== c.classTeacherId).map((t) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+                          </optgroup>}
                         </select>
                         {savingTeacherFor === c.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-navy-400" />}
                       </div>
@@ -145,7 +158,7 @@ export function ClassesClient({ canManage }: { canManage: boolean }) {
           </Table>
         </TableContainer>
       )}
-      {dialog && <NewClassDialog onClose={()=>setDialog(false)} onSaved={()=>{ setDialog(false); toast({title:"Class created",tone:"success"}); load(); }} />}
+      {dialog && <NewClassDialog teachers={teachers.filter((teacher) => !assignedClassTeacherIds.has(teacher.id))} onClose={()=>setDialog(false)} onSaved={()=>{ setDialog(false); toast({title:"Class created",tone:"success"}); load(); }} />}
       {bulkDialog && <BulkStreamsDialog onClose={()=>setBulkDialog(false)} onSaved={(msg)=>{ setBulkDialog(false); toast({title: msg, tone:"success"}); load(); }} />}
       {editClass && (
         <EditClassDialog
@@ -196,7 +209,7 @@ function BulkStreamsDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
         onSaved(
           skippedCount > 0
             ? `Created ${createdCount} new stream${createdCount === 1 ? "" : "s"} (${skippedCount} already existed and were skipped).`
-            : `Created ${createdCount} new stream${createdCount === 1 ? "" : "s"} for ${level.trim()}, ready in the Timetable Engine.`
+            : `Created ${createdCount} new stream${createdCount === 1 ? "" : "s"} for ${level.trim()}. Choose class teachers from the suggested unassigned staff shown in the class list.`
         );
       } else {
         toast({ title: json.error?.message || "Could not create streams.", tone: "error" });
@@ -258,16 +271,16 @@ function BulkStreamsDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
   );
 }
 
-function NewClassDialog({ onClose, onSaved }: { onClose:()=>void; onSaved:()=>void }) {
+function NewClassDialog({ teachers, onClose, onSaved }: { teachers: TeacherOption[]; onClose:()=>void; onSaved:()=>void }) {
   const { toast } = useToast();
-  const [f, setF] = React.useState({ level:"", stream:"", curriculum:"CBC", capacity:"" });
+  const [f, setF] = React.useState({ level:"", stream:"", curriculum:"CBC", capacity:"", classTeacherId:"" });
   const [saving, setSaving] = React.useState(false);
   const set = (k:string,v:string)=>setF((p)=>({...p,[k]:v}));
   async function save() {
     if (!f.level.trim()) { toast({title:"Enter a level, e.g. Grade 4.",tone:"error"}); return; }
     setSaving(true);
     try {
-      const res = await fetch("/api/classes", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ level:f.level.trim(), stream:f.stream.trim()||undefined, curriculum:f.curriculum, capacity:f.capacity?Number(f.capacity):undefined }) });
+      const res = await fetch("/api/classes", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ level:f.level.trim(), stream:f.stream.trim()||undefined, curriculum:f.curriculum, capacity:f.capacity?Number(f.capacity):undefined, classTeacherId:f.classTeacherId || "" }) });
       const json = await res.json();
       if (json.ok) onSaved();
       else toast({ title: json.error?.message || "Could not save", tone:"error" });
@@ -292,6 +305,13 @@ function NewClassDialog({ onClose, onSaved }: { onClose:()=>void; onSaved:()=>vo
               </select>
             </div>
             <div className="space-y-1"><Label>Capacity (optional)</Label><Input type="number" value={f.capacity} onChange={(e)=>set("capacity",e.target.value)} placeholder="45" /></div>
+          </div>
+          <div className="space-y-1"><Label>Class teacher (optional)</Label>
+            <select value={f.classTeacherId} onChange={(e) => set("classTeacherId", e.target.value)} className="w-full rounded-2xl border border-navy-200 bg-white px-3.5 py-2.5 text-sm dark:border-navy-700 dark:bg-navy-900">
+              <option value="">Assign later</option>
+              {teachers.length > 0 && <optgroup label="Suggested — not class teachers yet">{teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.fullName}</option>)}</optgroup>}
+            </select>
+            <p className="text-[11px] text-navy-400">Suggestions exclude staff already assigned as another class&apos;s homeroom teacher.</p>
           </div>
         </div>
         <div className="mt-6 flex justify-end gap-2">

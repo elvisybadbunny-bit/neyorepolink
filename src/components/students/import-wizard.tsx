@@ -799,8 +799,10 @@ export function ImportWizard() {
               description="When you import a student list, a record of it appears here."
             />
           ) : (
-            <TableContainer>
-              <Table>
+            <div className="min-w-0 space-y-2">
+              <p className="text-xs text-navy-400 sm:hidden">Swipe left or right to view every recent-import field.</p>
+              <TableContainer className="max-w-full overscroll-x-contain touch-auto" aria-label="Scrollable recent imports">
+              <Table className="min-w-[760px]">
                 <THead><TR><TH>When</TH><TH>File</TH><TH>By</TH><TH align="right">Rows</TH><TH align="right">Created</TH><TH align="right">Updated</TH><TH align="right">Failed</TH></TR></THead>
                 <TBody>
                   {history.map((h) => (
@@ -816,7 +818,8 @@ export function ImportWizard() {
                   ))}
                 </TBody>
               </Table>
-            </TableContainer>
+              </TableContainer>
+            </div>
           )}
         </CardContent>
       </Card>
