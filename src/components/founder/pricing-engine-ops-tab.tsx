@@ -2,7 +2,7 @@
 
 /**
  * Part V — NEYO Capacity-Based Pricing System 2.0 (founder-confirmed pivot,
- * 2026-07-06). The real NEYO Ops "Pricing Engine" tab (V.7):
+ * 2026-07-06). The real Platform Operations "Pricing Engine" tab:
  *   1. Live-editable weights/thresholds/free-tier config form.
  *   2. A live "test this formula" calculator, reusing the exact same real
  *      pure functions the server uses (mirrored client-side for instant
@@ -11,8 +11,8 @@
  *      SIZE_BASED_V2 price + its full real TenantPricingSnapshot history.
  *   4. "Quote Requests" queue — review, send a formal quotation, mark
  *      onboarding assistance done.
- *   5. The real, rare discretionary-decrease delegate list (V.8).
- *   6. The real, one-time "migrate everyone now" trigger (V.0).
+ *   5. The real, rare discretionary-decrease delegate list.
+ *   6. The real, one-time "migrate everyone now" trigger.
  *
  * Every number here is genuinely live from the real PlatformSetting-JSON
  * config and real DB rows — never a mock or a hardcoded placeholder.

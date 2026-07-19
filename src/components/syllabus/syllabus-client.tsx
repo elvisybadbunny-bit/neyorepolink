@@ -83,7 +83,7 @@ export function SyllabusClient() {
           <div className="flex items-center gap-2">
             <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Add scope topic</Button>
             <Button variant="secondary" onClick={() => setViewMode(viewMode === "topics" ? "academics-report" : "topics")}>
-              {viewMode === "topics" ? "Academics Audit Report (`I.97`)" : "View Topics Grid"}
+              {viewMode === "topics" ? "Academics Audit Report" : "View Topics Grid"}
             </Button>
           </div>
         </CardContent>
@@ -97,7 +97,7 @@ export function SyllabusClient() {
               Academics Syllabus Verification Audit (`ensure the syllabus records are real`)
             </CardTitle>
             <p className="text-xs text-navy-500">
-              Cross-references teacher-reported coverage against REAL student assessments (`CbcAssessment` / `LessonObservation`) and taught `LessonPlan` records (`I.88`). If a teacher marks a topic covered without any real student assessments, it is flagged as `Self-Reported Only`.
+              Cross-references teacher-reported coverage against REAL student assessments (`CbcAssessment` / `LessonObservation`) and taught `LessonPlan` records. If a teacher marks a topic covered without any real student assessments, it is flagged as `Self-Reported Only`.
             </p>
           </CardHeader>
           <CardContent>
@@ -113,7 +113,7 @@ export function SyllabusClient() {
                       <th className="p-3">Class &amp; Subject</th>
                       <th className="p-3">Assigned Teacher</th>
                       <th className="p-3 text-center">Topics</th>
-                      <th className="p-3 text-center">Delivered Lessons (`I.88`)</th>
+                      <th className="p-3 text-center">Delivered Lessons</th>
                       <th className="p-3 text-center">Student Assessments</th>
                       <th className="p-3 text-center">Coverage</th>
                       <th className="p-3">Syllabus Audit Status</th>

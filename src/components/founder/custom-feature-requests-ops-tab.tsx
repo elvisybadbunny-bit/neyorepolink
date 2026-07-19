@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * T.3 — NEYO Ops "Custom Feature Requests" tab. Review every real school's
+ * T.3 — Platform Operations "Custom Feature Requests" tab. Review every real school's
  * bespoke feature ask, quote a real recurring cost, mark progress, and
  * deliver via the existing real J.23 feature-grant mechanism. Recognises
  * when a genuinely new request matches something already DELIVERED

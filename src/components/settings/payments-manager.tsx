@@ -98,7 +98,7 @@ export function PaymentsManager({ initial }: { initial: ConfigStatus }) {
           <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">
             <p className="flex items-center gap-2 font-bold"><ShieldCheck className="h-4 w-4" /> NEYO company credentials are not entered here</p>
             <p className="mt-1 text-xs leading-relaxed text-amber-800/80 dark:text-amber-100/75">
-              NEYO subscription collection uses the company billing seam and belongs in NEYO Ops / central billing, not inside a school&apos;s payment settings.
+              NEYO subscription collection uses the company billing seam and belongs in Platform Operations / central billing, not inside a school&apos;s payment settings.
             </p>
           </div>
         </div>

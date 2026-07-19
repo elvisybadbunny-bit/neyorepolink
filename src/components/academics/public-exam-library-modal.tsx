@@ -128,14 +128,14 @@ export function PublicExamLibraryModal({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <DialogTitle className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-emerald-600" /> National Public Exam Bank (`EE.6`)
+                <BookOpen className="h-5 w-5 text-emerald-600" /> National Public Exam Bank
               </DialogTitle>
               <p className="text-xs text-navy-500 dark:text-navy-400">
                 Browse vetted, high-quality examination papers shared across Kenyan NEYO schools (`Karibu High`, `Kilimo Day`, `Uwezo`).
               </p>
             </div>
             <Badge tone="green" className="gap-1.5 text-xs px-3 py-1 font-semibold">
-              <ShieldCheck className="h-4 w-4" /> NEYO Ops Vetted & Verified
+              <ShieldCheck className="h-4 w-4" /> Approved for National Sharing
             </Badge>
           </div>
         </DialogHeader>
@@ -211,7 +211,7 @@ export function PublicExamLibraryModal({
                 No national public exam papers found matching your filters.
               </p>
               <p className="mt-1 text-xs text-navy-500">
-                Be the first to share! Tidy an exam paper in (`EE.5`) and click "Request National Sharing (`EE.6`)".
+                Be the first to share! Tidy an exam paper in and click "Request National Sharing".
               </p>
             </div>
           ) : (
@@ -266,7 +266,7 @@ export function PublicExamLibraryModal({
                       ) : (
                         <Copy className="h-3.5 w-3.5" />
                       )}
-                      1-Click Clone (`EE.6`)
+                      1-Click Clone
                     </Button>
                   </div>
                 </Card>

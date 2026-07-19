@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Y.1 — NEYO Ops "Pathway Guide" tab. Two independent on/off switches (in-app
+ * Y.1 — Platform Operations "Pathway Guide" tab. Two independent on/off switches (in-app
  * vs public), an editable small unlock fee, real usage/revenue numbers and a
  * one-click KUCCPS reference-data loader. Founder's own words: "it should be
  * on but in neyo ops i can switch it off or on any moment i would like".

@@ -363,7 +363,7 @@ function WalkInDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
   );
 }
 
-// ---- Admissions Entrance Exam Paper Vault Modal (I.11) -----------------------
+// ---- Admissions Entrance Exam Paper Vault Modal -----------------------
 interface ExamPaper {
   id: string;
   classId: string | null;

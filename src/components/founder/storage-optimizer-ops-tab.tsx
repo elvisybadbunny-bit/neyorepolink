@@ -2,10 +2,10 @@
 
 /**
  * W.1 — NEYO's Storage Intelligence Engine (founder-requested 2026-07-06).
- * The real NEYO Ops UI: live-editable lifecycle-cleanup config, a real
+ * The real Platform Operations UI: live-editable lifecycle-cleanup config, a real
  * "potential savings" preview, a "Clean now" real trigger (dry-run or
  * committed), and a real history of every past run. Schools never see any
- * of this — it lives entirely inside NEYO Ops.
+ * of this — it lives entirely inside Platform Operations.
  */
 import * as React from "react";
 import { HardDrive, Sparkles, Trash2, Eye, RefreshCw } from "lucide-react";

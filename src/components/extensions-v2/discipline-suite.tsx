@@ -56,10 +56,10 @@ export function DisciplineSuite() {
     return (
       <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-200 space-y-2">
         <h3 className="font-bold flex items-center gap-2 text-base text-amber-300">
-          <Lock className="w-5 h-5 text-amber-400" /> Feature Switched OFF in NEYO Ops (EE.18: Discipline & Counseling)
+          <Lock className="w-5 h-5 text-amber-400" /> This service is currently unavailable: Discipline & Counseling
         </h3>
         <p className="text-xs text-slate-300">
-          This feature can be individually enabled or paused platform-wide in NEYO Ops (/founder).
+          This service is available by request. Ask your school administrator for access.
         </p>
       </div>
     );

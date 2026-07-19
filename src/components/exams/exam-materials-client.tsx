@@ -115,7 +115,7 @@ export function ExamMaterialsClient({ canManage }: { canManage: boolean }) {
 /**
  * K.16 — KNEC Document Aggregation & Export.
  * Define a batch (target class + required document labels), aggregate which
- * candidates are complete from their approved StudentDocuments (K.10), and
+ * candidates are complete from their approved StudentDocuments, and
  * export a structured manifest to hand to KNEC. Deterministic, no AI.
  */
 export function KnecAggregationCard({ canManage }: { canManage: boolean }) {

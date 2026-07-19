@@ -295,7 +295,7 @@ export function StudentProfileClient({ initial, canEdit, isCurriculumEngineEnabl
           </CardContent>
         </Card>
 
-        {/* Leaving Certificate Vault (H.3) */}
+        {/* Leaving Certificate Vault */}
         <LeavingCertificateCard studentId={s.id} canEdit={canEdit} />
 
         {/* J.4 Competency Framework Summary */}

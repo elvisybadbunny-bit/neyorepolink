@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
  * Part X — Developer Center 2.0 (founder-requested 2026-07-06). Public
  * developer docs — "Not because every school will use it, but because it
  * allows NEYO to become the PLATFORM that other education software
- * connects to." Real, honest publish gate: NEYO Ops controls whether this
+ * connects to." Real, honest publish gate: Platform Operations controls whether this
  * page is announced publicly via `docsPublished` (default off).
  */
 export default async function DevelopersPage() {
@@ -67,7 +67,7 @@ export default async function DevelopersPage() {
           </tr>
         </tbody>
       </table>
-      <p className="text-xs text-navy-400">More endpoints are added as real NEYO Ops needs and partner integrations grow — this list always reflects what genuinely exists today, never an aspirational roadmap.</p>
+      <p className="text-xs text-navy-400">More endpoints are added as real Platform Operations needs and partner integrations grow — this list always reflects what genuinely exists today, never an aspirational roadmap.</p>
 
       <h2 className="text-lg font-semibold text-navy-900 dark:text-navy-50">Real-time webhook events</h2>
       <p>Subscribe to any of these from Settings → Developer. Every delivery is HMAC-signed and automatically retried with backoff if your endpoint is briefly unavailable.</p>

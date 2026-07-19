@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * T.2 — NEYO Ops "Discount Campaigns" tab. Genuinely distinct from M.1's
+ * T.2 — Platform Operations "Discount Campaigns" tab. Genuinely distinct from M.1's
  * Referral Engine (a fixed 5%, tied to a referral code) and J.23's Revenue
  * Grants (a free premium feature, not a % off price): a real, time-boxed
  * platform-wide promotional rule. Founder-confirmed: only ONE real

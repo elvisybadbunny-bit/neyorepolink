@@ -500,7 +500,7 @@ export function SchoolProfileEditor() {
 
           {!isSuperAdmin && (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-              This is a NEYO Ops company control. Your school profile can still edit school branding below, but the Liquid Glass engine is controlled centrally.
+              This is a Platform Operations company control. Your school profile can still edit school branding below, but the Liquid Glass engine is controlled centrally.
             </div>
           )}
 
@@ -735,7 +735,7 @@ export function SchoolProfileEditor() {
         <CardContent className="space-y-4">
           {!isSuperAdmin && (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-              This is a NEYO Ops company control. It decides which shell every school sees.
+              This is a Platform Operations company control. It decides which shell every school sees.
             </div>
           )}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

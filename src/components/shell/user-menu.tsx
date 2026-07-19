@@ -105,7 +105,7 @@ export function UserMenu({
             </Link>
           )}
 
-          {/* Language switcher (A.15) */}
+          {/* Language switcher */}
           <div className="flex items-center gap-2.5 border-b border-navy-100 px-4 py-3 dark:border-navy-800">
             <Languages className="h-4 w-4 text-navy-400" />
             <span className="text-sm text-navy-600 dark:text-navy-300">

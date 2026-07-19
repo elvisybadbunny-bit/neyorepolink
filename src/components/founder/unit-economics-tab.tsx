@@ -271,7 +271,7 @@ function CostEntrySection() {
 }
 
 // ---------------------------------------------------------------------------
-// Cost Cockpit (U.1) — real live Vercel/Cloudflare R2/Africa's Talking data.
+// Cost Cockpit — real live Vercel/Cloudflare R2/Africa's Talking data.
 // ---------------------------------------------------------------------------
 function ProviderCard({ title, result }: { title: string; result: any }) {
   return (
@@ -328,13 +328,13 @@ function CostCockpitSection() {
         <ProviderCard title="Cloudflare R2 (storage)" result={data.cloudflareR2} />
         <ProviderCard title="Africa's Talking (SMS balance)" result={data.africasTalking} />
       </div>
-      <p className="text-xs text-navy-400">Checked at {fmtDateTime(data.checkedAt)}. Add real credentials under NEYO Ops → Developer Center → Integration Credentials to activate any of these.</p>
+      <p className="text-xs text-navy-400">Checked at {fmtDateTime(data.checkedAt)}. Add real credentials under Platform Operations → Developer Center → Integration Credentials to activate any of these.</p>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Trends (U.1) — real chart over U.2's own NeyoCostSnapshot history.
+// Trends — real chart over U.2's own NeyoCostSnapshot history.
 // ---------------------------------------------------------------------------
 function TrendsSection() {
   const [data, setData] = React.useState<any>(null);

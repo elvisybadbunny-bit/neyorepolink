@@ -251,7 +251,7 @@ export default function LoginPage() {
       if (json.data.devCode) {
         toast({
           title: `Dev code: ${json.data.devCode}`,
-          description: "Shown only in development — real SMS arrives via A.7.",
+          description: "Shown only in development — a real verification SMS is sent in production.",
           tone: "info",
         });
       } else {

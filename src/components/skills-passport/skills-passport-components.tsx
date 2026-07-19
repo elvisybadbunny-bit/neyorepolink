@@ -169,7 +169,7 @@ export function CompetencyGrowthList({ competencies }: { competencies: Competenc
         <CardTitle className="flex items-center gap-2">
           <Brain className="h-5 w-5 text-green-600" /> Core Competency Observations
         </CardTitle>
-        <p className="text-sm text-navy-500 dark:text-navy-400">Aggregated automatically from J.4 Core Competency teacher observations.</p>
+        <p className="text-sm text-navy-500 dark:text-navy-400">Aggregated automatically from Core Competency teacher observations.</p>
       </CardHeader>
       <CardContent>
         {competencies.length === 0 ? (

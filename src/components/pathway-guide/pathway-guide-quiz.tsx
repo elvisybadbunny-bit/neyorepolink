@@ -293,7 +293,7 @@ export function PathwayGuideQuiz({
             {glimpse === null ? (
               <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}</div>
             ) : glimpse.length === 0 ? (
-              <p className="text-sm text-navy-500 dark:text-navy-400">No related clusters found yet — NEYO Ops may still be loading the KUCCPS reference data.</p>
+              <p className="text-sm text-navy-500 dark:text-navy-400">No related clusters found yet — Platform Operations may still be loading the KUCCPS reference data.</p>
             ) : (
               glimpse.map((c) => (
                 <div key={c.number} className="rounded-2xl border border-navy-100 p-3 text-sm dark:border-navy-800">
@@ -323,7 +323,7 @@ export function PathwayGuideQuiz({
               {matched === null ? (
                 <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}</div>
               ) : matched.length === 0 ? (
-                <EmptyState icon={Compass} title="No matched courses yet" description="NEYO Ops may still be loading the KUCCPS reference data — please check back soon." />
+                <EmptyState icon={Compass} title="No matched courses yet" description="Platform Operations may still be loading the KUCCPS reference data — please check back soon." />
               ) : (
                 matched.map((m, idx) => (
                   <div key={`${m.clusterNumber}-${m.courseName}-${idx}`} className="rounded-2xl border border-navy-100 p-3 text-sm dark:border-navy-800">

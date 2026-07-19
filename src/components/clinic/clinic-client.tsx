@@ -83,7 +83,7 @@ export function ClinicClient({ canManage }: { canManage: boolean }) {
     { key: "visits" as const, label: "Visits", icon: Stethoscope },
     { key: "allergies" as const, label: "Allergy register", icon: ShieldAlert },
     { key: "meds" as const, label: "Medications", icon: Pill },
-    { key: "dosageLog" as const, label: "Dosage Roll-Call (`Idea 6`)", icon: Pill },
+    { key: "dosageLog" as const, label: "Dosage Roll-Call", icon: Pill },
     { key: "report" as const, label: "Health report", icon: FileBarChart },
   ];
 

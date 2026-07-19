@@ -128,7 +128,7 @@ export function TreasuryCheckSuite({ students }: { students: StudentSearchOption
       <div>
         <h2 className="text-xl font-bold tracking-tight text-navy-950 dark:text-white flex items-center gap-2">
           <Banknote className="h-5 w-5 text-green-600" />
-          Treasury Bank Clearing &amp; Check Vault (`Idea 3`)
+          Treasury Bank Clearing &amp; Check Vault
         </h2>
         <p className="text-sm text-navy-500 dark:text-navy-400">
           Record a post-dated check or bank deposit slip a parent has handed in, track it until the bank confirms

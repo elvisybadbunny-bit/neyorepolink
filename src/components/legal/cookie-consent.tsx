@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Cookie } from "lucide-react";
 
 /**
- * Cookie consent banner (A.14). NEYO uses only essential cookies (the login
+ * Cookie consent banner. NEYO uses only essential cookies (the login
  * session), so this is a clear notice with an acknowledge action. Choice is
  * stored locally so it doesn't reappear.
  *

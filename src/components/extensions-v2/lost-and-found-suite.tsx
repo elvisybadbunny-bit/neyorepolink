@@ -123,7 +123,7 @@ export function LostAndFoundSuite({ students }: { students: StudentSearchOption[
       <div>
         <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
           <PackageSearch className="h-5 w-5 text-amber-400" />
-          Campus Lost &amp; Found Register (`Idea 12`)
+          Campus Lost &amp; Found Register
         </h2>
         <p className="text-sm text-slate-400">
           Log an item found on campus, then mark it claimed once the real owner comes to collect it.

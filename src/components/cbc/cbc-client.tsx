@@ -82,7 +82,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
   // EE.3 — real KICD Junior School (Grade 7-9) curriculum library: a
   // school picks a real grade + subject, previews the exact strands/
   // sub-strands NEYO will add, then applies them in one action. Silently
-  // hidden (renders nothing) until NEYO Ops has released EE.3.
+  // hidden (renders nothing) until Platform Operations has released EE.3.
   const [juniorGrades, setJuniorGrades] = React.useState<string[]>([]);
   const [juniorSubjectCodes, setJuniorSubjectCodes] = React.useState<string[]>([]);
   const [juniorGrade, setJuniorGrade] = React.useState("");
@@ -273,7 +273,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
       const json = await res.json();
       if (json.ok) setSubstrandsByStrand((prev) => ({ ...prev, [strandId]: json.data.substrands }));
     } catch {
-      // EE.1 not yet released by NEYO Ops, or a genuine network issue --
+      // EE.1 not yet released by Platform Operations, or a genuine network issue --
       // either way, the strand-level UI above keeps working untouched.
     }
   }
@@ -335,7 +335,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
             }}
             className="rounded-full gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/60"
           >
-            <Video className="h-3.5 w-3.5 fill-current" /> YouTube Video Library (`EE.7`)
+            <Video className="h-3.5 w-3.5 fill-current" /> YouTube Video Library
           </Button>
           <Button
             variant="secondary"
@@ -347,7 +347,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
             }}
             className="rounded-full gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/60"
           >
-            <FileText className="h-3.5 w-3.5" /> Question Bank & Book Scan (`EE.8`)
+            <FileText className="h-3.5 w-3.5" /> Question Bank & Book Scan
           </Button>
           <Button
             variant="secondary"
@@ -355,7 +355,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
             onClick={() => setContestModalOpen(true)}
             className="rounded-full gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900/60"
           >
-            <Trophy className="h-3.5 w-3.5 text-amber-500" /> Inter-School Contests (`EE.10`)
+            <Trophy className="h-3.5 w-3.5 text-amber-500" /> Inter-School Contests
           </Button>
           <Button
             variant="secondary"
@@ -363,7 +363,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
             onClick={() => setUniversalPresetsOpen(true)}
             className="rounded-full gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60"
           >
-            <Sparkles className="h-3.5 w-3.5 text-blue-500" /> Universal Presets (`EE.15`)
+            <Sparkles className="h-3.5 w-3.5 text-blue-500" /> Universal Presets
           </Button>
         </div>
       )}
@@ -521,7 +521,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
                               }}
                               className="flex items-center gap-1 rounded-full bg-red-50 hover:bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-950/60 dark:hover:bg-red-900 dark:text-red-300 transition-colors"
                             >
-                              <Video className="h-3 w-3 fill-current" /> Videos (`EE.7`)
+                              <Video className="h-3 w-3 fill-current" /> Videos
                             </button>
                             <button
                               type="button"
@@ -533,7 +533,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
                               }}
                               className="flex items-center gap-1 rounded-full bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:bg-emerald-950/60 dark:hover:bg-emerald-900 dark:text-emerald-300 transition-colors"
                             >
-                              <FileText className="h-3 w-3" /> Practice (`EE.8`)
+                              <FileText className="h-3 w-3" /> Practice
                             </button>
                             <ChevronDown className={`h-4 w-4 text-navy-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                           </div>
@@ -777,7 +777,7 @@ function AssessTab({ classes, subjects }: { classes: ClassOpt[]; subjects: Subje
             onClick={() => setPaperQuizFormativeOpen(true)}
             className="rounded-full gap-1.5 border-emerald-300 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300"
           >
-            <FileText className="h-3.5 w-3.5" /> Paper Quiz to Rubrics (`EE.9`)
+            <FileText className="h-3.5 w-3.5" /> Paper Quiz to Rubrics
           </Button>
         )}
       </div>

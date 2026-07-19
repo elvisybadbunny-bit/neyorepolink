@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * NEYO logo (A.20). Pure inline SVG so it renders everywhere — including the
+ * NEYO logo. Pure inline SVG so it renders everywhere — including the
  * sandboxed preview — and adapts to light/dark automatically:
  *  - the mark tile uses the brand green;
  *  - the wordmark uses `currentColor`, so set text color on the parent

@@ -193,7 +193,7 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
     setSelected(new Set());
   }, [q, classId, stream, status, gender]);
 
-  // ⌘K "New student" deep-link (G.7): /students?new=1 opens the dialog.
+  // ⌘K "New student" deep-link: /students?new=1 opens the dialog.
   // B.12 roster deep-link: /students?classId=... pre-filters to that class.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -424,7 +424,7 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
                 <Printer className="h-4 w-4 text-green-600" /> Print Class List
               </Button>
               <Button variant="secondary" onClick={() => setDutiesModalOpen(true)}>
-                <CalendarRange className="h-4 w-4 text-amber-600" /> Student Duties (`K.2`)
+                <CalendarRange className="h-4 w-4 text-amber-600" /> Student Duties
               </Button>
             </>
           )}
@@ -597,7 +597,7 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
       {dutiesModalOpen && <StudentDutiesModal open={dutiesModalOpen} onOpenChange={setDutiesModalOpen} classes={classes} currentClassId={classId} canManage={canCreate} />}
       </div>
 
-      {/* Print-only Class List Table (H.3) */}
+      {/* Print-only Class List Table */}
       {students && (
         <div className="hidden print:block w-full text-black p-4 bg-white">
           <div className="mb-6 flex items-start justify-between border-b-2 border-black pb-3">

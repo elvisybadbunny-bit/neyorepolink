@@ -261,7 +261,7 @@ export function PublicSiteEditor() {
         <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <Badge tone="green">G.11</Badge>
+              <Badge tone="green">Public site</Badge>
               <span className="text-sm font-semibold text-navy-900 dark:text-navy-50">Public school website</span>
             </div>
             <p className="mt-1 max-w-2xl text-sm text-navy-500 dark:text-navy-400">

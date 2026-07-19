@@ -402,10 +402,10 @@ function ChildView({ id, onBack, isCurriculumEngineEnabled = false }: { id: stri
       {/* uniform shop (G.24 — order from the app, tailor delivers at school) */}
       <UniformCard studentId={data.child.id} studentName={data.child.name} />
 
-      {/* library reading history (B.15) */}
+      {/* library reading history */}
       <LibraryCard studentId={data.child.id} />
 
-      {/* class discussion forum (B.13) */}
+      {/* class discussion forum */}
       {data.child.classId && <ForumCard classId={data.child.classId} />}
 
       {/* message the school */}

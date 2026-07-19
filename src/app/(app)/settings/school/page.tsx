@@ -3,7 +3,7 @@ import { SchoolProfileEditor } from "@/components/settings/school-profile-editor
 
 export const dynamic = "force-dynamic";
 
-/** Settings → School profile (G.9). */
+/** Settings → School profile. */
 export default async function SchoolProfilePage() {
   await requirePagePermission("tenant.manage_settings");
   return (

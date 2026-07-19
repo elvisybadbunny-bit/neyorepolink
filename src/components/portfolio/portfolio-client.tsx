@@ -231,7 +231,7 @@ export function PortfolioClient({ initialStudentId = "" }: { initialStudentId?: 
     setExporting(true);
     try {
       window.open(`/api/portfolio?studentId=${encodeURIComponent(studentId)}&export=pdf&print=1`, "_blank");
-      toast({ title: "Opening CBC Digital Portfolio A4 Booklet (`EE.14` / PDF)...", tone: "success" });
+      toast({ title: "Opening CBC Digital Portfolio A4 PDF booklet...", tone: "success" });
     } finally {
       setExporting(false);
     }

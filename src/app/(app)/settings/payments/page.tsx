@@ -4,7 +4,7 @@ import { PaymentsManager } from "@/components/settings/payments-manager";
 
 export const dynamic = "force-dynamic";
 
-/** Settings → Payments (A.6). Leadership only. */
+/** Settings → Payments. Leadership only. */
 export default async function PaymentsSettingsPage() {
   const user = await requirePagePermission("tenant.manage_settings");
   const status = await getPaymentConfigStatus(user.tenantId);

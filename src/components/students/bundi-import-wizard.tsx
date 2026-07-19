@@ -223,7 +223,7 @@ export function BundiImportWizard() {
           <CardHeader><CardTitle className="flex items-center gap-2"><KeyRound className="h-4 w-4 text-green-600" /> Enter your Bundi unlock code</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-navy-500 dark:text-navy-400">
-              Bundi handwritten import is a premium, founder-approved path. NEYO Ops issues your school a code — enter it below to continue.
+              Bundi handwritten import is a premium, founder-approved path. Platform Operations issues your school a code — enter it below to continue.
             </p>
             <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. BUNDI-7F3A9C" className="max-w-xs font-mono" />
             {unlockError && (
@@ -235,7 +235,7 @@ export function BundiImportWizard() {
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="secondary" onClick={requestCode} disabled={busy}>Request code from NEYO</Button>
               <p className="text-xs text-navy-400">
-                This sends a real support request. NEYO Ops reviews the school, chooses tenant scope and use limit, mints the code in Founder Ops → Bundi Import, then shares it securely. Standard import remains available without a code.
+                This sends a real support request. Platform Operations reviews the school, chooses tenant scope and use limit, mints the code in Founder Ops → Bundi Import, then shares it securely. Standard import remains available without a code.
               </p>
             </div>
             <p className="text-xs text-navy-400">Use the <Link href="/students/import" className="underline">standard import</Link> while waiting.</p>

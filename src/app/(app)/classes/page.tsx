@@ -6,7 +6,7 @@ import { ClassesClient } from "@/components/students/classes-client";
 
 export const dynamic = "force-dynamic";
 
-/** Classes & streams management (B.1). */
+/** Classes & streams management. */
 export default async function ClassesPage() {
   const user = await requirePagePermission("student.view");
   const canManage = can(user.role, "class.manage");

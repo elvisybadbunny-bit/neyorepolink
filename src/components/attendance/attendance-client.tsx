@@ -4,7 +4,7 @@
  * B.3 Attendance — daily register (Chunks 5/6/7).
  * Overview: per-class cards with today's marking state.
  * Register: one-tap roll — everyone starts Present, tap to cycle P→A→L→E.
- * OFFLINE-FIRST (G.2): saving uses queuedPost; on slow 3G the register queues
+ * OFFLINE-FIRST: saving uses queuedPost; on slow 3G the register queues
  * in IndexedDB and syncs when back online (server upserts are idempotent).
  * All 4 UX states; mobile-first 360px.
  */

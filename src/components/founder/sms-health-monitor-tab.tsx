@@ -77,7 +77,7 @@ export function SmsHealthMonitorTab() {
       <div>
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <MessageSquareWarning className="h-5 w-5 text-amber-400" />
-          SMS Gateway Route & DND Health Monitor (`Idea 1.5`)
+          SMS Gateway Route & DND Health Monitor
         </h2>
         <p className="text-sm text-slate-400">
           Delivery ratios vs DND rejections per school this term. Auto-fallback switches a school to In-App/WhatsApp

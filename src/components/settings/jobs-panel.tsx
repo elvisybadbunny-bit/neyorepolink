@@ -159,7 +159,7 @@ function JobsTab() {
   );
 }
 
-// ---- Company Churn Health Check Sub-Tab (G.30) ----
+// ---- Company Churn Health Check Sub-Tab ----
 interface HealthCheckItem {
   id: string;
   name: string;

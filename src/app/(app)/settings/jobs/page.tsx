@@ -3,7 +3,7 @@ import { JobsPanel } from "@/components/settings/jobs-panel";
 
 export const dynamic = "force-dynamic";
 
-/** Settings → Background Jobs (A.12). NEYO admin only. */
+/** Settings → Background Jobs. NEYO admin only. */
 export default async function JobsPage() {
   await requirePageRole("SUPER_ADMIN");
   return (

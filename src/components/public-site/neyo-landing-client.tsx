@@ -181,7 +181,7 @@ export function NeyoLandingClient({ customLogoUrl, brandPrimary = "#121a2e", bra
 
         <section id="showcase" className="border-b border-navy-950/10 bg-white px-5 py-20">
           <div className="mx-auto max-w-7xl space-y-10">
-            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><p className="text-xs font-black uppercase tracking-[0.25em] text-green-700">Product proof</p><h2 className="mt-3 text-4xl font-black tracking-tight text-navy-950">Show the real product while people are deciding.</h2></div><p className="max-w-md text-sm text-navy-500">These slots are editable from NEYO Ops, so the page can show real screenshots and videos as the platform improves.</p></div>
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><p className="text-xs font-black uppercase tracking-[0.25em] text-green-700">Product proof</p><h2 className="mt-3 text-4xl font-black tracking-tight text-navy-950">Show the real product while people are deciding.</h2></div><p className="max-w-md text-sm text-navy-500">These slots are editable from Platform Operations, so the page can show real screenshots and videos as the platform improves.</p></div>
             <div className="grid gap-5 lg:grid-cols-3">
               {landingContent.mediaShowcase.map((item) => <MediaSlot key={item.label} item={item} />)}
             </div>

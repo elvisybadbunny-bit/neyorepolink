@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 
 /**
- * Reusable CSV/XLSX export button (A.10). Posts columns+rows the caller already
+ * Reusable CSV/XLSX export button. Posts columns+rows the caller already
  * has, downloads the file. "CSV export everywhere" via one component.
  */
 export function ExportMenu({

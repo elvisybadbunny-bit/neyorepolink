@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * T.6 — NEYO Ops "Influencer Codes" tab. A real INDIVIDUAL PERSON (not a
+ * T.6 — Platform Operations "Influencer Codes" tab. A real INDIVIDUAL PERSON (not a
  * school) holds a unique code; a school using it gets a real discount, and
  * the influencer earns a real one-time commission per school signed.
  * Genuinely distinct from M.1's school-to-school referral system.

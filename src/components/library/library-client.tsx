@@ -156,7 +156,7 @@ function CatalogTab({ canManage }: { canManage: boolean }) {
   );
 }
 
-// ---- Library Bulk Import Modal (N.1) --------------------------------------
+// ---- Library Bulk Import Modal --------------------------------------
 interface LibraryImportErrorItem { row: number; title: string; message: string }
 
 function ImportBooksModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
@@ -745,7 +745,7 @@ function IssueTab({ onIssued }: { onIssued: () => void }) {
       })));
     }).catch(() => {});
 
-    // Load active staff for Teacher Borrowing eligibility (H.3)
+    // Load active staff for Teacher Borrowing eligibility
     fetch("/api/conversations/recipients").then((r) => r.json()).then((j) => {
       if (j.ok) setStaff(j.data.recipients.map((r: any) => ({
         id: r.id, name: `${r.fullName} (Staff · ${r.roleLabel})`, admissionNo: "Staff",
@@ -989,7 +989,7 @@ function IssueTab({ onIssued }: { onIssued: () => void }) {
           </div>
         )}
 
-        {/* Search Only Book Catalog Selection (H.3) */}
+        {/* Search Only Book Catalog Selection */}
         <div className="relative">
           <Label>Search Book Catalog</Label>
           {bookId ? (
@@ -1028,7 +1028,7 @@ function IssueTab({ onIssued }: { onIssued: () => void }) {
           )}
         </div>
 
-        {/* Search Only Borrower (Student or Teacher) Selection (H.3) */}
+        {/* Search Only Borrower (Student or Teacher) Selection */}
         <div className="relative">
           <Label>Search Borrower (Student or Teacher)</Label>
           {studentId ? (

@@ -282,7 +282,7 @@ function NewRunDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
           </p>
         ) : (
           <>
-            <Label>Approved overtime (KES, optional — B.8.8)</Label>
+            <Label>Approved overtime (KES, optional)</Label>
             <div className="max-h-44 space-y-1.5 overflow-y-auto pr-1">
               {salaries.map((s) => (
                 <div key={s.userId} className="flex items-center gap-2">

@@ -96,7 +96,7 @@ export function MoeReturnsClientTab({ canManage }: { canManage: boolean }) {
         <div>
           <h2 className="text-xl font-black tracking-tight text-navy-950 dark:text-white flex items-center gap-2">
             <FileText className="h-5 w-5 text-blue-600" />
-            Ministry of Education (`MOE`) Statutory Returns Generator (`Idea 2`)
+            Ministry of Education (`MOE`) Statutory Returns Generator
           </h2>
           <p className="text-xs text-navy-500 dark:text-navy-400">
             Generate and file official termly Form A &amp; Form B statistical returns mandated by County Education Officers (`CDE / SCDE`). Automatically aggregates exact enrollment (`Boys vs. Girls`), teacher ratios, and textbook distribution directly from your database.

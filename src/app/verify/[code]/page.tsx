@@ -5,7 +5,7 @@ import { VerifyClient } from "./verify-client";
 export const dynamic = "force-dynamic";
 
 /**
- * Public document verification page (A.10). Reached by scanning a receipt QR.
+ * Public document verification page. Reached by scanning a receipt QR.
  * No authentication — anyone can confirm a document is genuine.
  */
 export default async function VerifyPage({

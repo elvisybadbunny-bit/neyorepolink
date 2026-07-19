@@ -4,7 +4,7 @@ import { ReceptionDesk } from "@/components/reception/reception-desk";
 
 export const dynamic = "force-dynamic";
 
-/** Front desk (A.18): receptionist operations workspace. */
+/** Front desk: receptionist operations workspace. */
 export default async function ReceptionPage() {
   const user = await requirePagePermission("reception.operate");
   const tenant = await db.tenant.findUnique({

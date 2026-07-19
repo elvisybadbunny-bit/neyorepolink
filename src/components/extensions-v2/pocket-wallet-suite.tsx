@@ -114,10 +114,10 @@ export function PocketWalletSuite({ students }: { students: StudentSearchOption[
     return (
       <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-200 space-y-2">
         <h3 className="font-bold flex items-center gap-2 text-base text-amber-300">
-          <Lock className="w-5 h-5 text-amber-400" /> Feature switched off in NEYO Ops (Digital Pocket Wallet)
+          <Lock className="w-5 h-5 text-amber-400" /> This service is currently unavailable (Digital Pocket Wallet)
         </h3>
         <p className="text-xs text-slate-300">
-          This feature can be individually enabled or paused platform-wide in NEYO Ops.
+          This service is available by request. Ask your school administrator for access.
         </p>
       </div>
     );
@@ -128,7 +128,7 @@ export function PocketWalletSuite({ students }: { students: StudentSearchOption[
       <div>
         <h2 className="text-xl font-bold tracking-tight text-navy-950 dark:text-white flex items-center gap-2">
           <Wallet className="h-5 w-5 text-green-600" />
-          Student Tuck-Shop Pocket Wallet (`Idea 4`)
+          Student Tuck-Shop Pocket Wallet
         </h2>
         <p className="text-sm text-navy-500 dark:text-navy-400">
           A real digital pocket-money account per learner. Deposit cash the parent brings in, then draw it down as the

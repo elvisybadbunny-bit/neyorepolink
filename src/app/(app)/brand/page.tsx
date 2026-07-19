@@ -5,7 +5,7 @@ import { BrandShowcase } from "@/components/brand/brand-showcase";
 export const dynamic = "force-dynamic";
 
 /**
- * Brand & design style guide (A.20). A living reference: tokens, logo, mascot,
+ * Brand & design style guide. A living reference: tokens, logo, mascot,
  * component library and the cultural-moments lookup. Available to any signed-in
  * user (it's documentation, not data).
  */

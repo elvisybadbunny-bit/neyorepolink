@@ -78,8 +78,8 @@ export function TeacherPortalClient({ canAssign }: { canAssign: boolean }) {
     { key: "notes" as const, label: "Notes", icon: FileText },
     { key: "report" as const, label: "Class report", icon: BarChart3 },
     { key: "recordOfWork" as const, label: "Record of Work", icon: ClipboardList },
-    { key: "substitution" as const, label: "Leave & Substitution (`Idea 19`)", icon: UserCog },
-    { key: "ptaBooking" as const, label: "PTA Booking (`Idea 10`)", icon: CalendarDays },
+    { key: "substitution" as const, label: "Leave & Substitution", icon: UserCog },
+    { key: "ptaBooking" as const, label: "PTA Booking", icon: CalendarDays },
     ...(allowCash ? [{ key: "cash" as const, label: "Cash payments", icon: Banknote }] : []),
   ];
 
@@ -260,7 +260,7 @@ function Overview({ home }: { home: Home }) {
       </Card>
 
       <p className="text-xs text-navy-400">
-        Lesson plans live in <a href="/academics" className="font-medium underline">Academics → Lessons</a>. AI lesson-plan assist arrives with the AI layer (B.23).
+        Lesson plans live in <a href="/academics" className="font-medium underline">Academics → Lessons</a>. AI lesson-plan assist arrives with the AI layer.
       </p>
     </div>
   );

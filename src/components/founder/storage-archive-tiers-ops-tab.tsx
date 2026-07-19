@@ -74,7 +74,7 @@ export function StorageArchiveTiersOpsTab() {
         <div>
           <h2 className="text-xl font-black tracking-tight text-navy-950 dark:text-white flex items-center gap-2">
             <Archive className="h-5 w-5 text-green-600" />
-            3-Tier Storage Lifecycle &amp; Cold-Vault Offloading Engine (Part W.2)
+            3-Tier Storage Lifecycle &amp; Cold-Vault Offloading Engine
           </h2>
           <p className="text-xs text-navy-500 dark:text-navy-400">
             Automates global storage optimization across schools by migrating files between Hot NVMe (&lt;12 mo), Warm Compressed (1-3 yr, 60% savings), and Alumni Cold Glacier Vault (&gt;3 yr, 85% savings).

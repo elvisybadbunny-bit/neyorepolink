@@ -128,8 +128,8 @@ export function YouTubeLearningLibraryModal({
       if (json.ok) {
         toast({
           title: subScope === "NATIONAL"
-            ? "Video submitted for National NEYO Ops vetting (`EE.7`)!"
-            : "Video saved directly to your school library (`EE.7`)!",
+            ? "Video submitted for national review!"
+            : "Video saved directly to your school library!",
           tone: "success",
         });
         setUrlOrId("");
@@ -201,10 +201,10 @@ export function YouTubeLearningLibraryModal({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <DialogTitle className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
-                <Video className="h-5 w-5 text-red-600" /> YouTube Learning Library (`EE.7`)
+                <Video className="h-5 w-5 text-red-600" /> YouTube Learning Library
               </DialogTitle>
               <p className="text-xs text-navy-500 dark:text-navy-400">
-                Strand-linked educational video repository with zero API quota cost and NEYO Ops vetting queue.
+                Strand-linked educational video repository with zero API quota cost and Platform Operations vetting queue.
               </p>
             </div>
             <div className="flex rounded-full bg-navy-100 p-1 dark:bg-navy-800">
@@ -248,7 +248,7 @@ export function YouTubeLearningLibraryModal({
                 className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300"
               >
                 {seeding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}
-                ⚡ Seed YouTube Library (`EE.7`)
+                ⚡ Seed YouTube Library
               </button>
             </div>
           </div>
@@ -417,7 +417,7 @@ export function YouTubeLearningLibraryModal({
                         onClick={() => setPlayingVideoId(v.youtubeId)}
                         className="h-7 rounded-full gap-1 text-xs font-semibold"
                       >
-                        <Play className="h-3 w-3 fill-current text-red-600" /> Watch (`EE.7`)
+                        <Play className="h-3 w-3 fill-current text-red-600" /> Watch
                       </Button>
                     </div>
                   </Card>
@@ -484,7 +484,7 @@ export function YouTubeLearningLibraryModal({
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-navy-800 dark:text-navy-100">Connect to KICD Strand (`EE.7`)</label>
+                  <label className="text-xs font-bold text-navy-800 dark:text-navy-100">Connect to KICD Strand</label>
                   <select
                     value={subStrandId}
                     onChange={(e) => setSubStrandId(e.target.value)}
@@ -518,7 +518,7 @@ export function YouTubeLearningLibraryModal({
                     className="rounded-full border border-navy-300 bg-white px-3 py-1 text-xs font-semibold text-navy-800 dark:border-navy-600 dark:bg-navy-900 dark:text-white"
                   >
                     <option value="SCHOOL">My School Library Only (Instant Save)</option>
-                    <option value="NATIONAL">Submit for National NEYO Ops Vetting (`EE.7`)</option>
+                    <option value="NATIONAL">Submit for National Review</option>
                   </select>
                 </div>
 
@@ -528,7 +528,7 @@ export function YouTubeLearningLibraryModal({
                   className="rounded-full bg-red-600 hover:bg-red-700 text-white gap-2 px-6 shadow-md"
                 >
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                  {subScope === "NATIONAL" ? "Submit Link for National Vetting (`EE.7`)" : "Save Video to School Library"}
+                  {subScope === "NATIONAL" ? "Submit Link for National Vetting" : "Save Video to School Library"}
                 </Button>
               </div>
             </div>
@@ -594,7 +594,7 @@ export function YouTubeLearningLibraryModal({
                         }}
                         className="h-7 rounded-full text-xs gap-1 font-semibold text-emerald-700 dark:text-emerald-300"
                       >
-                        <Plus className="h-3.5 w-3.5" /> Save & Link to Strand (`EE.7`)
+                        <Plus className="h-3.5 w-3.5" /> Save & Link to Strand
                       </Button>
                     </div>
                   </Card>

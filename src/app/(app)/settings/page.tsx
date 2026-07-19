@@ -36,7 +36,7 @@ const ITEMS: SettingItem[] = [
   { label: "Security", description: "Your password, 2FA, passkeys and sessions.", href: "/settings/security", icon: ShieldCheck },
 ];
 
-/** Settings hub (G.9) — the index page that links every settings area. */
+/** Settings hub — the index page that links every settings area. */
 export default async function SettingsHubPage() {
   const user = await requirePageUser();
 

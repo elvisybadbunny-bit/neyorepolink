@@ -637,12 +637,12 @@ export function ImportWizard() {
             <div className="rounded-2xl border border-green-200 bg-green-50/80 p-4 shadow-sm backdrop-blur-sm dark:border-green-900/50 dark:bg-green-950/30">
               <div className="flex items-center gap-2 text-sm font-bold text-green-800 dark:text-green-200">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                Subject & Pathway Allocation Enabled (`BB.4` / `DD.4`)
+                Subject & Pathway Allocation Enabled
               </div>
               <p className="mt-1 text-xs font-medium text-green-700 dark:text-green-300">
                 {(preview.rowsWithSubjectsCount ?? 0) > 0 && `Your sheet specifies subjects or pathways for ${preview.rowsWithSubjectsCount} learner(s). `}
                 {chosenCompulsorySubjects.length > 0 && `Plus ${chosenCompulsorySubjects.length} compulsory subject(s) (${chosenCompulsorySubjects.map(s => s.name).join(", ")}) will be assigned to every learner in this batch. `}
-                A `SubjectSelectionPortal` will be automatically linked (`status = FINALIZED`) so their choices appear instantly across Timetabling (`BB.2`), Groupings (`L.7`), and Exam Sittings (`AA.10`).
+                A `SubjectSelectionPortal` will be automatically linked (`status = FINALIZED`) so their choices appear instantly across Timetabling, Groupings, and Exam Sittings.
               </p>
               {(preview.unknownSubjects && preview.unknownSubjects.length > 0) && (
                 <div className="mt-2.5 rounded-xl border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">

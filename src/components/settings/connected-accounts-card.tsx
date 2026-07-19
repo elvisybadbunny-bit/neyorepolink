@@ -11,9 +11,9 @@ type Provider = "google" | "apple" | "microsoft";
 type ProviderStatus = { provider: Provider; configured: boolean; connected: boolean; email?: string | null; displayName?: string | null; linkedAt?: string | null };
 
 const LABELS: Record<Provider, { title: string; copy: string; icon: typeof Chrome; tone: string }> = {
-  google: { title: "Google Account Connection", copy: "Allow sign in with Google after OAuth credentials are saved in NEYO Ops.", icon: Chrome, tone: "text-red-600 bg-red-500/10" },
-  apple: { title: "Apple ID Connection", copy: "Allow secure login via Apple Developer credentials saved in NEYO Ops.", icon: Laptop, tone: "text-white bg-navy-950" },
-  microsoft: { title: "Microsoft Azure Connection", copy: "Allow enterprise login via Microsoft Entra/Azure credentials saved in NEYO Ops.", icon: Globe2, tone: "text-blue-600 bg-blue-500/10" },
+  google: { title: "Google Account Connection", copy: "Allow sign in with Google after OAuth credentials are saved in Platform Operations.", icon: Chrome, tone: "text-red-600 bg-red-500/10" },
+  apple: { title: "Apple ID Connection", copy: "Allow secure login via Apple Developer credentials saved in Platform Operations.", icon: Laptop, tone: "text-white bg-navy-950" },
+  microsoft: { title: "Microsoft Azure Connection", copy: "Allow enterprise login via Microsoft Entra/Azure credentials saved in Platform Operations.", icon: Globe2, tone: "text-blue-600 bg-blue-500/10" },
 };
 
 export function ConnectedAccountsCard() {
@@ -59,7 +59,7 @@ export function ConnectedAccountsCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base"><Link2 className="h-5 w-5 text-green-600" /> Connected Accounts (OAuth)</CardTitle>
-        <p className="text-xs text-navy-400">Google, Apple and Microsoft credentials are managed in NEYO Ops. This screen starts the real provider redirect only when that provider is configured.</p>
+        <p className="text-xs text-navy-400">Google, Apple and Microsoft credentials are managed in Platform Operations. This screen starts the real provider redirect only when that provider is configured.</p>
       </CardHeader>
       <CardContent className="space-y-4">
         {(["google", "apple", "microsoft"] as Provider[]).map((provider) => {
@@ -71,7 +71,7 @@ export function ConnectedAccountsCard() {
               <div className="flex items-start gap-3">
                 <div className={`rounded-2xl p-3 ${meta.tone}`}><Icon className="h-6 w-6" /></div>
                 <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2"><span className="font-bold text-navy-900 dark:text-navy-50">{meta.title}</span><Badge tone={status.connected ? "green" : status.configured ? "blue" : "amber"}>{status.connected ? "Linked" : status.configured ? "Ready" : "Needs NEYO Ops keys"}</Badge></div>
+                  <div className="flex flex-wrap items-center gap-2"><span className="font-bold text-navy-900 dark:text-navy-50">{meta.title}</span><Badge tone={status.connected ? "green" : status.configured ? "blue" : "amber"}>{status.connected ? "Linked" : status.configured ? "Ready" : "Needs Platform Operations keys"}</Badge></div>
                   <p className="text-xs text-navy-400 dark:text-navy-500">{status.connected ? `Linked: ${status.email || status.displayName || "provider account"}` : meta.copy}</p>
                 </div>
               </div>
@@ -79,7 +79,7 @@ export function ConnectedAccountsCard() {
             </div>
           );
         })}
-        <div className="flex items-center gap-2 rounded-xl border border-navy-50 bg-navy-50/20 p-3 text-[11px] text-navy-500"><KeyRound className="h-4 w-4 shrink-0 text-green-600" /><span><strong>Activation note:</strong> create OAuth apps in Google Cloud, Apple Developer and Microsoft Entra, then paste client IDs/secrets into NEYO Ops. Callback URLs use <span className="font-mono">/api/oauth/callback/google</span>, <span className="font-mono">/api/oauth/callback/apple</span>, and <span className="font-mono">/api/oauth/callback/microsoft</span>.</span></div>
+        <div className="flex items-center gap-2 rounded-xl border border-navy-50 bg-navy-50/20 p-3 text-[11px] text-navy-500"><KeyRound className="h-4 w-4 shrink-0 text-green-600" /><span><strong>Activation note:</strong> create OAuth apps in Google Cloud, Apple Developer and Microsoft Entra, then paste client IDs/secrets into Platform Operations. Callback URLs use <span className="font-mono">/api/oauth/callback/google</span>, <span className="font-mono">/api/oauth/callback/apple</span>, and <span className="font-mono">/api/oauth/callback/microsoft</span>.</span></div>
       </CardContent>
     </Card>
   );

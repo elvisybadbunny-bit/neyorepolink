@@ -3,7 +3,7 @@ import { CustomFeatureRequestsCard } from "@/components/settings/custom-feature-
 
 export const dynamic = "force-dynamic";
 
-/** Settings → Custom features (T.3). Ask NEYO for a bespoke feature. */
+/** Settings → Custom features. Ask NEYO for a bespoke feature. */
 export default async function CustomFeaturesSettingsPage() {
   await requirePagePermission("tenant.manage_settings");
 

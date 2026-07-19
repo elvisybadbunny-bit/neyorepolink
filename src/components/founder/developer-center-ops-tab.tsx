@@ -2,7 +2,7 @@
 
 /**
  * Part X — Developer Center 2.0 (founder-requested 2026-07-06). The real
- * NEYO Ops monitoring console: total requests, active integrations, failed
+ * Platform Operations monitoring console: total requests, active integrations, failed
  * calls, slow endpoints, top developers, usage by school, and security
  * alerts — every figure computed live from real `ApiUsageLog` rows. Also
  * where NEYO issues its own real NEYO_PARTNER keys for future first-party

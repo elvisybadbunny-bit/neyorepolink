@@ -5,7 +5,7 @@
  * A school describes a real bespoke feature they want, tracks its real
  * status (SUBMITTED -> REVIEWING -> QUOTED -> APPROVED -> IN_PROGRESS ->
  * DELIVERED, or DECLINED), and — once quoted — accepts or declines the
- * real recurring cost NEYO Ops names.
+ * real recurring cost Platform Operations names.
  */
 import * as React from "react";
 import { Sparkles, Plus, Loader2, Check, X, RefreshCcw, AlertCircle } from "lucide-react";

@@ -188,7 +188,7 @@ export function ExamPaperTidyingModal({
       if (json.ok) {
         setSharingStatus(json.data.sharingApprovalStatus || "PENDING");
         toast({
-          title: "Public sharing requested! NEYO Ops will vet and publish (`EE.6`)",
+          title: "Public sharing requested! our review team will review it before publishing",
           tone: "success",
         });
       } else {
@@ -239,7 +239,7 @@ export function ExamPaperTidyingModal({
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-xl font-bold text-navy-900 dark:text-white">
-                Exam Paper Scanning & Tidying (`EE.5`)
+                Exam Paper Scanning & Tidying
               </DialogTitle>
               <p className="text-xs text-navy-500 dark:text-navy-400">
                 {subjectName} ({className}) · Total Marks: {totalMarks} · Time: {timeAllowedMins} mins
@@ -453,7 +453,7 @@ export function ExamPaperTidyingModal({
                   <Plus className="h-3.5 w-3.5" /> Add Question
                 </Button>
                 <div className="flex items-center gap-1 border-l border-navy-200 pl-2 dark:border-navy-700">
-                  <span className="text-[10px] font-bold text-navy-500">Privacy (`EE.6`):</span>
+                  <span className="text-[10px] font-bold text-navy-500">Privacy:</span>
                   <select
                     value={privacyTier}
                     onChange={(e) => setPrivacyTier(e.target.value as any)}
@@ -478,7 +478,7 @@ export function ExamPaperTidyingModal({
                   <>
                     {sharingStatus === "PENDING" ? (
                       <Badge tone="amber" className="gap-1 text-xs px-2.5 py-1">
-                        <Share2 className="h-3 w-3" /> Pending Ops Vetting (`EE.6`)
+                        <Share2 className="h-3 w-3" /> Awaiting Review
                       </Badge>
                     ) : sharingStatus === "APPROVED" ? (
                       <Badge tone="green" className="gap-1 text-xs px-2.5 py-1">
@@ -493,7 +493,7 @@ export function ExamPaperTidyingModal({
                         className="rounded-full gap-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300"
                       >
                         {shareLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
-                        Request National Sharing (`EE.6`)
+                        Request National Sharing
                       </Button>
                     )}
                     <Button
@@ -547,7 +547,7 @@ export function ExamPaperTidyingModal({
                         variant="secondary"
                         className="rounded-full gap-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300"
                       >
-                        <Share2 className="h-3.5 w-3.5" /> Request National Sharing (`EE.6`)
+                        <Share2 className="h-3.5 w-3.5" /> Request National Sharing
                       </Button>
                     )}
                   </>

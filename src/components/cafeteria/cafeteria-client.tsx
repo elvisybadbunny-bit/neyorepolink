@@ -104,8 +104,8 @@ export function CafeteriaClient({ canManage }: { canManage: boolean }) {
   const tabs = [
     { key: "today" as const, label: "Kitchen today", icon: Soup },
     { key: "menu" as const, label: "Week menu", icon: CalendarDays },
-    { key: "storeRation" as const, label: "Store & Rationing (`Idea 16`)", icon: Soup },
-    { key: "pocketWallet" as const, label: "Pocket Wallet (`Idea 4`)", icon: CreditCard },
+    { key: "storeRation" as const, label: "Store & Rationing", icon: Soup },
+    { key: "pocketWallet" as const, label: "Pocket Wallet", icon: CreditCard },
     ...(mealCardsEnabled ? [{ key: "cards" as const, label: "Meal cards", icon: CreditCard }] : []),
     ...(mealCardsEnabled && canManage ? [{ key: "feePlans" as const, label: "Fee plans", icon: ClipboardList }] : []),
     ...(canManage ? [{ key: "requests" as const, label: "Requests", icon: Inbox }] : []),
@@ -116,7 +116,7 @@ export function CafeteriaClient({ canManage }: { canManage: boolean }) {
 
   return (
     <div className="space-y-4">
-      {/* If meal cards are disabled, we show a gorgeous banner enabling them back (H.3) */}
+      {/* If meal cards are disabled, we show a gorgeous banner enabling them back */}
       {!mealCardsEnabled && canManage && (
         <Card className="border border-dashed border-navy-200 bg-warm-50 p-4 dark:border-navy-800 dark:bg-navy-950 flex items-center justify-between gap-4 animate-fade-in">
           <div className="space-y-0.5">
@@ -244,7 +244,7 @@ export function CafeteriaClient({ canManage }: { canManage: boolean }) {
 
       {tab === "cards" && (
         <div className="space-y-3">
-          {/* Meal Card Configurator Card (H.3) */}
+          {/* Meal Card Configurator Card */}
           {canManage && (
             <Card className="border border-green-200/50 bg-green-500/5 animate-fade-in">
               <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -952,7 +952,7 @@ function TableAllocationsTab() {
 }
 
 
-// ---- Meal serving queue (I.19) --------------------------------------------
+// ---- Meal serving queue --------------------------------------------
 function MealQueueTab({ students, canManage }: { students: StudentOpt[]; canManage: boolean }) {
   const { toast } = useToast();
   const [session, setSession] = React.useState<"BREAKFAST" | "LUNCH" | "SUPPER">("LUNCH");

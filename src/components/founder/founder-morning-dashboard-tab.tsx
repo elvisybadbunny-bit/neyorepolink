@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * U.3 — Founder Morning Dashboard: NEYO Ops as "The Operating System for
+ * U.3 — Founder Morning Dashboard: Platform Operations as "The Operating System for
  * Running NEYO Itself." Four real pieces in one place: the morning
  * snapshot, "Ask Bundi" (internal-only, honestly gated), Product Analytics
  * (DAU/WAU + module adoption), and Compliance (export/deletion queue).

@@ -130,7 +130,7 @@ export function StudentDutiesModal({ open, onOpenChange, classes, currentClassId
             <div>
               <DialogTitle className="text-xl font-black text-navy-950 dark:text-white flex items-center gap-2">
                 <CalendarRange className="h-6 w-6 text-amber-500" />
-                Student Leadership &amp; Duty Roster Engine (`K.2`)
+                Student Leadership &amp; Duty Roster Engine
               </DialogTitle>
               <p className="text-xs font-semibold text-navy-500 dark:text-navy-400 mt-1">
                 &ldquo;Where a school can create duties for students by a click and with the rules set too.&rdquo;
@@ -152,7 +152,7 @@ export function StudentDutiesModal({ open, onOpenChange, classes, currentClassId
 
         {showAddArea && (
           <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 space-y-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-            <h4 className="text-sm font-bold text-navy-900 dark:text-navy-50">Create Student Duty Area &amp; Assignment Rules (`K.2`)</h4>
+            <h4 className="text-sm font-bold text-navy-900 dark:text-navy-50">Create Student Duty Area &amp; Assignment Rules</h4>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="md:col-span-2">
                 <Label>Duty Name</Label>
@@ -192,7 +192,7 @@ export function StudentDutiesModal({ open, onOpenChange, classes, currentClassId
                 <Users className="h-4 w-4 text-blue-500" /> Active Duty Rules (`{data.areas.length}`)
               </h4>
               {data.areas.length === 0 ? (
-                <p className="text-xs text-navy-400 italic">No duty areas set up yet. Click &ldquo;Add Duty Rule&rdquo; or apply EE.15 universal presets.</p>
+                <p className="text-xs text-navy-400 italic">No duty areas set up yet. Click &ldquo;Add Duty Rule&rdquo; or apply universal presets.</p>
               ) : (
                 <ul className="space-y-2 max-h-[55vh] overflow-y-auto pr-1">
                   {data.areas.map((a) => (

@@ -162,7 +162,7 @@ export function DisciplineClient({ canManage, canConfidential, canApproveDiscipl
                       </div>
                     )}
                     
-                    {/* View Photo Evidence / Camera upload link (H.3) */}
+                    {/* View Photo Evidence / Camera upload link */}
                     {i.proofFileUrl && (
                       <div className="pt-2">
                         <a 
@@ -372,7 +372,7 @@ function IncidentDialog({ students, onClose, onDone }: { students: StudentOpt[];
         </div>
         <div><Label>Action taken (optional)</Label><Input value={f.actionTaken} onChange={(e) => set("actionTaken", e.target.value)} placeholder="e.g. Warned; referred to deputy" /></div>
         
-        {/* Photo Proof / Camera Upload Section (H.3) */}
+        {/* Photo Proof / Camera Upload Section */}
         <div>
           <Label>Attach Photo Proof / Evidence (Optional)</Label>
           {file ? (

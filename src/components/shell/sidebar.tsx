@@ -8,7 +8,7 @@ import { usePermissions } from "@/components/auth/permissions-provider";
 import { useT } from "@/components/i18n/lang-provider";
 import { cn } from "@/lib/utils";
 
-/** Map nav labels to i18n keys (A.15). Unmapped labels show as-is. */
+/** Map nav labels to i18n keys. Unmapped labels show as-is. */
 const NAV_I18N: Record<string, string> = {
   Dashboard: "nav.dashboard",
   Messages: "nav.messages",
@@ -36,7 +36,7 @@ export function Sidebar({
   enabledModules?: string[];
   /** H.2 owner-configured visibility map: { "<href>": ["ROLE",...] } hidden roles. */
   hiddenNav?: Record<string, string[]>;
-  /** I.37 NEYO Ops platform-wide feature pause: hrefs hidden for every school/user. */
+  /** I.37 Platform Operations platform-wide feature pause: hrefs hidden for every school/user. */
   platformHiddenHrefs?: string[];
 }) {
   const pathname = usePathname();

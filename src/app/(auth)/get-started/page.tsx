@@ -3,7 +3,7 @@ import { getOperatingSystem, isOperatingSystemKey, type OperatingSystemKey } fro
 
 export const metadata = { title: "Get started — NEYO" };
 
-/** Public first-run setup wizard (G.3/I.50). ?from=demo nudges demo→real conversion; ?os=... keeps OS context explicit. */
+/** Public first-run setup wizard. ?from=demo nudges demo→real conversion; ?os=... keeps OS context explicit. */
 export default function GetStartedPage({ searchParams }: { searchParams: { from?: string; os?: string; quoteRequestId?: string } }) {
   const osKey: OperatingSystemKey = searchParams.os && isOperatingSystemKey(searchParams.os) ? searchParams.os : "school";
   const os = getOperatingSystem(osKey);

@@ -9,7 +9,7 @@ import { InfluencerCodeCard } from "@/components/settings/influencer-code-card";
 
 export const dynamic = "force-dynamic";
 
-/** Settings → Billing (A.5). I.5: only School Owner + Principal see subscription plan/usage. */
+/** Settings → Billing. I.5: only School Owner + Principal see subscription plan/usage. */
 export default async function BillingSettingsPage() {
   const user = await requirePagePermission("owner.dashboard");
   const sub = await ensureSubscription(user.tenantId);

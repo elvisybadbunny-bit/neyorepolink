@@ -3,7 +3,7 @@ import { RecycleBin } from "@/components/settings/recycle-bin";
 
 export const dynamic = "force-dynamic";
 
-/** Settings → Recycle Bin (G.6). Leadership only. */
+/** Settings → Recycle Bin. Leadership only. */
 export default async function RecycleBinPage() {
   await requirePagePermission("tenant.manage_settings");
 

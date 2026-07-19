@@ -36,7 +36,7 @@ function StatusRow({ check }: { check: Check }) {
   );
 }
 
-/** Public status page (A.13). No auth — anyone can check NEYO's health. */
+/** Public status page. No auth — anyone can check NEYO's health. */
 export default async function StatusPage() {
   const health = await runHealthChecks();
   const o = OVERALL[health.status];

@@ -202,7 +202,7 @@ export function BrandShowcase({ moments }: { moments: Moment[] }) {
       <Section title="Cultural moments lookup" id="moments">
         <p className="text-sm text-navy-500 dark:text-navy-400">
           The Kenyan public-holiday &amp; academic calendar that powers reminders and
-          the shared calendar (A.15/A.17). Upcoming this year:
+          the shared calendar. Upcoming this year:
         </p>
         <TableContainer>
           <Table>

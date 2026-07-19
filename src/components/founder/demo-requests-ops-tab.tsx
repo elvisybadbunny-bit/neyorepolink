@@ -145,7 +145,7 @@ export function DemoRequestsOpsTab() {
                   <div className="rounded-2xl bg-green-50/60 p-3 text-xs text-green-800 dark:bg-green-950/30 dark:text-green-300 flex items-center justify-between">
                     <div>
                       <strong>Sandbox Slug:</strong> <span className="font-mono font-bold">{r.spawnedTenantSlug}</span>
-                      <p className="text-[11px] text-green-600 dark:text-green-400">Approved by {r.approvedBy || "NEYO Ops"}</p>
+                      <p className="text-[11px] text-green-600 dark:text-green-400">Approved by {r.approvedBy || "Platform Operations"}</p>
                     </div>
                     <a
                       href={`https://${r.spawnedTenantSlug}.neyo.co.ke`}

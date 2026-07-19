@@ -151,7 +151,7 @@ export function TournamentTripSuite({ students }: { students: StudentSearchOptio
     return (
       <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-200 space-y-2">
         <h3 className="font-bold flex items-center gap-2 text-base text-amber-300">
-          <Lock className="w-5 h-5 text-amber-400" /> Feature switched off in NEYO Ops (Tournament Trip Organizer)
+          <Lock className="w-5 h-5 text-amber-400" /> This service is currently unavailable (Tournament Trip Organizer)
         </h3>
       </div>
     );
@@ -162,7 +162,7 @@ export function TournamentTripSuite({ students }: { students: StudentSearchOptio
       <div>
         <h2 className="text-xl font-bold tracking-tight text-navy-950 dark:text-white flex items-center gap-2">
           <Trophy className="h-5 w-5 text-amber-500" />
-          Co-Curricular Tournament Trip Organizer (`Idea 8`)
+          Co-Curricular Tournament Trip Organizer
         </h2>
         <p className="text-sm text-navy-500 dark:text-navy-400">
           Organize a sports/tournament trip roster: bus seat assignment, automatic fee-clearance checks per student,

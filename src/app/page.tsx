@@ -154,7 +154,7 @@ export default async function Home() {
 
   // If we are at the main corporate root domain (No Subdomain) — Render Neyo Global Marketing Site!
   if (!slug) {
-    // Read custom assets from NEYO Ops platform settings concurrently (Speed optimized!)
+    // Read custom assets from Platform Operations platform settings concurrently (Speed optimized!)
     const [customLogo, customPrimary, customAccent, landingContent] = await Promise.all([
       db.platformSetting.findUnique({ where: { key: "neyo_logo_url" } }).catch(() => null),
       db.platformSetting.findUnique({ where: { key: "neyo_brand_primary" } }).catch(() => null),

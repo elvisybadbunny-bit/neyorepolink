@@ -156,7 +156,7 @@ export function PtaBookingSuite({
     return (
       <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-200 space-y-2">
         <h3 className="font-bold flex items-center gap-2 text-base text-amber-300">
-          <Lock className="w-5 h-5 text-amber-400" /> Feature switched off in NEYO Ops (PTA Consultation Booking)
+          <Lock className="w-5 h-5 text-amber-400" /> This service is currently unavailable (PTA Consultation Booking)
         </h3>
       </div>
     );
@@ -170,7 +170,7 @@ export function PtaBookingSuite({
       <div>
         <h2 className="text-lg font-bold tracking-tight text-navy-950 dark:text-white flex items-center gap-2">
           <CalendarClock className="h-5 w-5 text-blue-600" />
-          {forTeacher ? "PTA Consultation Slots (`Idea 10`)" : "Book an academic consultation"}
+          {forTeacher ? "PTA Consultation Slots" : "Book an academic consultation"}
         </h2>
         <p className="text-sm text-navy-500 dark:text-navy-400">
           {forTeacher

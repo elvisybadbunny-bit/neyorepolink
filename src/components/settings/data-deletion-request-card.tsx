@@ -3,7 +3,7 @@
 /**
  * U.3 — a real, explicit "request account/data deletion" ask. Deliberately
  * NEVER a silent self-service delete — the request goes to NEYO's real
- * Compliance queue for a real human (Founder/NEYO Ops) decision, matching
+ * Compliance queue for a real human (Founder/Platform Operations) decision, matching
  * the same accountability the Kenya Data Protection Act expects.
  */
 import * as React from "react";

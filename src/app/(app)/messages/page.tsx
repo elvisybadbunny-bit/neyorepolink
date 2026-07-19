@@ -3,7 +3,7 @@ import { MessagesClient } from "@/components/messaging/messages-client";
 
 export const dynamic = "force-dynamic";
 
-/** Messages (A.8). Available to all signed-in users. */
+/** Messages. Available to all signed-in users. */
 export default async function MessagesPage() {
   await requirePageUser();
   return (

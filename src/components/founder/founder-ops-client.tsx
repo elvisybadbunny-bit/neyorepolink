@@ -596,7 +596,7 @@ export function FounderOpsClient() {
   }
 
   async function saveGoogleWorkspaceStorageConfig() {
-    await mutate("update_google_workspace_storage_config", googleWorkspaceStorage, "Google Workspace storage config saved securely in NEYO Ops");
+    await mutate("update_google_workspace_storage_config", googleWorkspaceStorage, "Google Workspace storage config saved securely in Platform Operations");
   }
 
   async function provisionGoogleWorkspaceStorageVault(tenantId: string) {
@@ -777,7 +777,7 @@ export function FounderOpsClient() {
       <Card>
         <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="flex items-center gap-2"><Badge tone="green">F.1</Badge><span className="text-sm font-semibold text-navy-900 dark:text-navy-50">NEYO runs NEYO here</span></div>
+            <div className="flex items-center gap-2"><Badge tone="green">Platform controls</Badge><span className="text-sm font-semibold text-navy-900 dark:text-navy-50">NEYO runs NEYO here</span></div>
             <p className="mt-1 max-w-2xl text-sm text-navy-500 dark:text-navy-400">Founder rhythm, build log, customer learning, metrics, and billing overrides in one place.</p>
           </div>
           <Button onClick={load} variant="secondary"><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
@@ -1069,7 +1069,7 @@ function PlatformFlagsTab({ flags, toggling, onToggle }: { flags: any[]; togglin
 
 // =============================================================================
 // NEYO Shell V2 — personal-toggle RELEASE GATE (founder-requested "NEYO 2.0"
-// phase 2, 2026-07-05). Founder's own answer when scoped: NEYO Ops
+// phase 2, 2026-07-05). Founder's own answer when scoped: Platform Operations
 // configures the release via a real master on/off switch PLUS a per-school
 // early-access list (a genuine staged rollout, not an all-or-nothing flip),
 // same JSON-in-PlatformSetting shape already used by the J.23 Revenue
@@ -1206,14 +1206,14 @@ function ShellReleaseCard() {
 function NeyoBusinessOsCockpit({ schools, waitlist, maintActive, paymentSummary }: { schools: any[]; waitlist: any[]; maintActive: boolean; paymentSummary?: any }) {
   const cards = [
     { title: "Accounts, billing, subscriptions, payments", status: `${schools.length} tenant accounts · ${paymentSummary ? formatKES(paymentSummary.paidKes || 0) : "KES 0"} paid`, detail: "School ledgers, plan overrides and NEYO subscription payment totals live in this cockpit.", icon: Users },
-    { title: "OS lifecycle planning", status: "School OS live", detail: "School, Business, Farm and Creator OS launches are staged from NEYO Ops.", icon: CalendarClock },
+    { title: "OS lifecycle planning", status: "School OS live", detail: "School, Business, Farm and Creator OS launches are staged from Platform Operations.", icon: CalendarClock },
     { title: "NEYO staff, founder page & ideas", status: "Founder rhythm active", detail: "Build logs, cadence, interviews and future idea boards keep company work in NEYO.", icon: BookOpenCheck },
     { title: "Company documents", status: "No-code legal editors", detail: "Privacy Policy and Terms live in PlatformSettings and update without code edits.", icon: FileText },
     { title: "Maintenance / shutdown", status: maintActive ? "Maintenance active" : "Live operations", detail: "Founder can take the system down safely and restore it in one action.", icon: Hammer },
     { title: "Subscriber communications", status: "Broadcast-ready", detail: "NEYO can communicate with schools and subscriber segments from this area.", icon: Mail },
     { title: "Pricing & plan controls", status: "Override controls live", detail: "Grandfathered pricing and subscription states can be managed while global pricing expands.", icon: BarChart3 },
-    { title: "YouTube / social management", status: "Planned I.51", detail: "Content distribution and posting will attach here, reusing the content calendar pattern.", icon: MessageSquareQuote },
-    { title: "Contracts & signing", status: "Planned", detail: "School contracts, approvals and signing records will live under NEYO Ops.", icon: ClipboardCheck },
+    { title: "YouTube / social management", status: "Planned", detail: "Content distribution and posting will attach here, reusing the content calendar pattern.", icon: MessageSquareQuote },
+    { title: "Contracts & signing", status: "Planned", detail: "School contracts, approvals and signing records will live under Platform Operations.", icon: ClipboardCheck },
     { title: "Grace enforcement", status: "Billing state machine", detail: "Grace, suspension and data preservation rules are enforced by billing jobs.", icon: CheckCircle },
     { title: "Customer communication hub", status: "Intercom/comms base", detail: "Customer support inbox and calls will unify around existing messaging engines.", icon: Send },
     { title: "Brand assets", status: "Live controls", detail: "Logo URL, brand colors and future mascot assets update from Business Operations.", icon: Palette },
@@ -1222,7 +1222,7 @@ function NeyoBusinessOsCockpit({ schools, waitlist, maintActive, paymentSummary 
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base"><Cpu className="h-5 w-5 text-green-600" /> NEYO Business OS Cockpit</CardTitle>
-        <p className="text-xs text-navy-500 dark:text-navy-400">One company cockpit for every NEYO operating area. Each card points to an existing or planned NEYO Ops engine; no spreadsheets outside the product.</p>
+        <p className="text-xs text-navy-500 dark:text-navy-400">One company cockpit for every NEYO operating area. Each card points to an existing or planned Platform Operations engine; no spreadsheets outside the product.</p>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map(({ title, status, detail, icon: Icon }) => (
@@ -1248,11 +1248,11 @@ function IntegrationCredentialsOpsPanel({ credentials, drafts, onDraftChange, on
     <Card className="border-blue-200 bg-blue-50/10 dark:border-blue-900/30 dark:bg-blue-950/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-5 w-5 text-blue-600" /> Integration Credential Vault</CardTitle>
-        <p className="text-xs leading-relaxed text-navy-500 dark:text-navy-400">I.60 activation center. Paste credentials in NEYO Ops only; they are encrypted with the company key and never placed in public code or landing-page content.</p>
+        <p className="text-xs leading-relaxed text-navy-500 dark:text-navy-400">Integration activation centre. Paste credentials in Platform Operations only; they are encrypted with the company key and never placed in public code or landing-page content.</p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100"><strong>Founder rule:</strong> credentials are edited here, not in source code. Public screens show features only, not provider secrets.</div>
-        {providers.length === 0 ? <EmptyState icon={ShieldCheck} title="No integration credentials loaded" description="Refresh NEYO Ops settings." /> : providers.map((provider) => (
+        {providers.length === 0 ? <EmptyState icon={ShieldCheck} title="No integration credentials loaded" description="Refresh Platform Operations settings." /> : providers.map((provider) => (
           <div key={provider} className="rounded-2xl border border-navy-100 bg-white/75 p-4 dark:border-navy-800 dark:bg-navy-950/45">
             <div className="mb-3 flex items-center justify-between"><p className="text-xs font-black uppercase tracking-widest text-navy-500">{provider.replace(/_/g, " ")}</p><Badge tone={groups[provider].every((item) => item.configured) ? "green" : "amber"}>{groups[provider].filter((item) => item.configured).length}/{groups[provider].length} configured</Badge></div>
             <div className="grid gap-3 lg:grid-cols-2">
@@ -1278,7 +1278,7 @@ function GoogleWorkspaceStorageOpsPanel({ config, onChange, onSave, onProvision,
     <Card className="border-green-200 bg-green-50/10 dark:border-green-900/30 dark:bg-green-950/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base"><HardDrive className="h-5 w-5 text-green-600" /> Google Workspace Storage Provisioning</CardTitle>
-        <p className="text-xs leading-relaxed text-navy-500 dark:text-navy-400">Store Google Workspace storage credentials inside NEYO Ops, encrypted with the company key. No plaintext Google passwords are stored. This prepares per-school vault accounts safely.</p>
+        <p className="text-xs leading-relaxed text-navy-500 dark:text-navy-400">Store Google Workspace storage credentials inside Platform Operations, encrypted with the company key. No plaintext Google passwords are stored. This prepares per-school vault accounts safely.</p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100"><strong>Activation seam:</strong> real Google Admin SDK user creation activates after NEYO owns/administers the Workspace domain and legal consent is confirmed. Until then, NEYO prepares the vault mapping and stores credentials securely.</div>
@@ -1290,7 +1290,7 @@ function GoogleWorkspaceStorageOpsPanel({ config, onChange, onSave, onProvision,
           <Field label="Default storage limit GB"><Input type="number" value={config.defaultStorageGb || 15} onChange={(e) => set("defaultStorageGb", Number(e.target.value))} /></Field>
           <div className="rounded-2xl border border-navy-100 bg-white/70 p-3 text-xs dark:border-navy-800 dark:bg-navy-950/40"><p className="font-black text-navy-900 dark:text-white">Private key status</p><p className="mt-1 text-navy-500">{config.privateKeyStored ? `Stored: ${config.privateKeyMasked || "••••"}` : "No private key stored yet"}</p></div>
         </div>
-        <Field label="Service account private key"><Textarea rows={4} value={config.privateKey || ""} onChange={(e) => set("privateKey", e.target.value)} placeholder="Paste private key only inside NEYO Ops. It will be encrypted; it is never public landing-page content." /></Field>
+        <Field label="Service account private key"><Textarea rows={4} value={config.privateKey || ""} onChange={(e) => set("privateKey", e.target.value)} placeholder="Paste private key only inside Platform Operations. It will be encrypted; it is never public landing-page content." /></Field>
         <label className="flex items-start gap-2 rounded-2xl border border-navy-100 bg-white/70 p-3 text-sm text-navy-700 dark:border-navy-800 dark:bg-navy-950/40 dark:text-navy-200"><input type="checkbox" checked={Boolean(config.legalConsent)} onChange={(e) => set("legalConsent", e.target.checked)} className="mt-1" /> I confirm NEYO has legal/admin consent to prepare managed Google Workspace storage vaults for schools.</label>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Button disabled={saving || !config.legalConsent} onClick={onSave}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}Save encrypted Google config</Button>
@@ -1319,7 +1319,7 @@ function LandingContentEditor({ content, onSave, saving }: { content: any; onSav
     <Card className="border-navy-200 bg-white/70 dark:border-navy-800 dark:bg-navy-950/45">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base"><Palette className="h-5 w-5 text-green-600" /> Landing Page Content Editor</CardTitle>
-        <p className="text-xs leading-relaxed text-navy-500 dark:text-navy-400">Batch 1 foundation: edit public landing content from NEYO Ops without exposing secrets. Keep copy feature-focused; avoid provider names, credentials, private architecture and internal logic.</p>
+        <p className="text-xs leading-relaxed text-navy-500 dark:text-navy-400">Batch 1 foundation: edit public landing content from Platform Operations without exposing secrets. Keep copy feature-focused; avoid provider names, credentials, private architecture and internal logic.</p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-2xl border border-amber-200 bg-amber-50/55 p-3 text-xs text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100"><strong>Public-safe rule:</strong> describe what NEYO does; do not expose secrets, credentials, provider details or internal logic.</div>
@@ -1434,7 +1434,7 @@ function NeyoContractsBoard({
           Contract Signing Management
         </CardTitle>
         <p className="text-xs leading-relaxed text-navy-500 dark:text-navy-400">
-          Prepare school onboarding contracts, send a secure signing link, and record typed signatures inside NEYO Ops. Every signature and status change is audit logged.
+          Prepare school onboarding contracts, send a secure signing link, and record typed signatures inside Platform Operations. Every signature and status change is audit logged.
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -1535,7 +1535,7 @@ function NeyoYoutubeManagementBoard({
           YouTube Management & Posting Hub
         </CardTitle>
         <p className="text-xs leading-relaxed text-navy-500 dark:text-navy-400">
-          Plan NEYO channel posts, school launch videos, learning clips and public updates from NEYO Ops. This does not pretend to upload without YouTube channel authorization; it keeps the official posting calendar, copy, links and status in-system.
+          Plan NEYO channel posts, school launch videos, learning clips and public updates from Platform Operations. This does not pretend to upload without YouTube channel authorization; it keeps the official posting calendar, copy, links and status in-system.
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -1746,7 +1746,7 @@ function NeyoStaffIdeasBoard({ staff, ideas, ideaForm, onIdeaFormChange, onIdeaC
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base"><Users className="h-5 w-5 text-green-600" /> NEYO Staff & Idea Board</CardTitle>
-        <p className="text-xs text-navy-500 dark:text-navy-400">Internal NEYO team visibility plus a founder idea pipeline. Ideas stay inside NEYO Ops and can later link to feature flags or roadmap items.</p>
+        <p className="text-xs text-navy-500 dark:text-navy-400">Internal NEYO team visibility plus a founder idea pipeline. Ideas stay inside Platform Operations and can later link to feature flags or roadmap items.</p>
       </CardHeader>
       <CardContent className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
         <div className="space-y-3">
@@ -1765,7 +1765,7 @@ function NeyoStaffIdeasBoard({ staff, ideas, ideaForm, onIdeaFormChange, onIdeaC
               <Input value={ideaForm.title} onChange={(e) => update("title", e.target.value)} placeholder="Idea title" />
               <select value={ideaForm.priority} onChange={(e) => update("priority", e.target.value)} className="h-10 rounded-full border border-navy-200 bg-white px-3 text-sm dark:border-navy-700 dark:bg-navy-900"><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>URGENT</option></select>
               <Input value={ideaForm.ownerName} onChange={(e) => update("ownerName", e.target.value)} placeholder="Owner (optional)" />
-              <Input value={ideaForm.linkedFeatureKey} onChange={(e) => update("linkedFeatureKey", e.target.value)} placeholder="Feature key e.g. I.48" />
+              <Input value={ideaForm.linkedFeatureKey} onChange={(e) => update("linkedFeatureKey", e.target.value)} placeholder="Internal feature key" />
             </div>
             <Textarea rows={3} value={ideaForm.description} onChange={(e) => update("description", e.target.value)} className="mt-2" placeholder="Why this idea matters…" />
             <Button className="mt-3" disabled={saving} onClick={onIdeaCreate}><Plus className="h-4 w-4" /> Add idea</Button>
@@ -2593,7 +2593,7 @@ function JFeatureTogglesTab() {
 
 // EE — Part-EE feature toggles (founder 2026-07-16: "every idea must have a
 // release button to be fully released"). Deliberately opposite default to
-// the J-feature card above: every Part-EE feature ships OFF until NEYO Ops
+// the J-feature card above: every Part-EE feature ships OFF until Platform Operations
 // explicitly releases it here.
 function EeFeatureTogglesTab() {
   const { toast } = useToast();
@@ -2680,7 +2680,7 @@ function EeFeatureTogglesTab() {
 }
 
 // =============================================================================
-// J.21 — NEYO Ops Curriculum Template Library management.
+// J.21 — Platform Operations Curriculum Template Library management.
 // Create / publish / announce / delete company-level curriculum templates.
 // =============================================================================
 function CurriculumLibraryOpsTab() {
@@ -3078,7 +3078,7 @@ function RevenueOpsTab() {
       {/* M.1 — Referral Engine */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Gift className="h-5 w-5 text-green-600" /> M.1 — NEYO Referral Engine</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Gift className="h-5 w-5 text-green-600" /> NEYO Referral Engine</CardTitle>
           <p className="mt-1 text-xs text-navy-500 dark:text-navy-400">
             A school invites another school. The reward is credited automatically and ONLY after the referred school makes a REAL PAID NEYO subscription payment — never for a free/demo/trial account.
           </p>
@@ -3192,10 +3192,10 @@ function RevenueOpsTab() {
         </CardContent>
       </Card>
 
-      {/* M.2 — SMS Margin Revenue */}
+      {/* SMS Margin Revenue */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-blue-600" /> M.2 — SMS Margin Revenue</CardTitle>
+          <CardTitle className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-blue-600" /> SMS Margin Revenue</CardTitle>
           <p className="mt-1 text-xs text-navy-500 dark:text-navy-400">
             NEYO buys SMS from Africa's Talking at cost and sells to schools at a markup. Configure both prices here — every real SMS send is tracked in this ledger.
           </p>
@@ -3274,7 +3274,7 @@ function RevenueOpsTab() {
 }
 
 // ---------------------------------------------------------------------------
-// M.5 — Bundi Handwritten Import (NEYO Ops console)
+// M.5 — Bundi Handwritten Import (Platform Operations console)
 // ---------------------------------------------------------------------------
 function StatTile({ label, value }: { label: string; value: string }) {
   return (

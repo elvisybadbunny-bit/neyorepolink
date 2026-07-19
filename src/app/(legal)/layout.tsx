@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-/** Calm, readable layout for public legal pages (A.14). */
+/** Calm, readable layout for public legal pages. */
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-warm-100 dark:bg-navy-950">

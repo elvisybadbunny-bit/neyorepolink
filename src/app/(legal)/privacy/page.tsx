@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 
 export const metadata = { title: "Privacy Policy — NEYO" };
 
-/** Privacy Policy (A.14). KE Data Protection Act 2019 aware. */
+/** Privacy Policy. KE Data Protection Act 2019 aware. */
 export default async function PrivacyPage() {
   const setting = await db.platformSetting.findUnique({ where: { key: "privacy_policy" } }).catch(() => null);
 
@@ -10,7 +10,7 @@ export default async function PrivacyPage() {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold text-navy-900 dark:text-navy-50">Privacy Policy</h1>
-        <p className="text-xs text-navy-400">Dynamically Updated via NEYO Ops Control Panel</p>
+        <p className="text-xs text-navy-400">Dynamically Updated via Platform Operations Control Panel</p>
         <div className="text-sm text-navy-700 dark:text-navy-200 whitespace-pre-wrap leading-relaxed">
           {setting.value}
         </div>

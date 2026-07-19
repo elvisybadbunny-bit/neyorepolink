@@ -153,7 +153,7 @@ export function ExeatPassSuite({ students, canApprove, canGate }: { students: St
       <div>
         <h2 className="text-xl font-bold tracking-tight text-navy-950 dark:text-white flex items-center gap-2">
           <DoorOpen className="h-5 w-5 text-blue-600" />
-          Digital Boarding Exeat &amp; Weekend Outing Passes (`Idea 5`)
+          Digital Boarding Exeat &amp; Weekend Outing Passes
         </h2>
         <p className="text-sm text-navy-500 dark:text-navy-400">
           Request a real exeat pass for a boarder, get it approved, then use the generated QR pass number at the

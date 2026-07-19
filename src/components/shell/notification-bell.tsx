@@ -152,7 +152,7 @@ export function NotificationBell() {
     setIslandQueue((q) => [...q, ...fresh]);
   }, [dismissedIslandIds]);
 
-  // Live unread count via SSE (A.7). When it changes, fetch the real targeted
+  // Live unread count via SSE. When it changes, fetch the real targeted
   // notifications for THIS user only and enqueue any new unread items one by one.
   React.useEffect(() => {
     const es = new EventSource("/api/notifications/stream");

@@ -4,7 +4,7 @@ import { PaymentsList } from "@/components/finance/payments-list";
 
 export const dynamic = "force-dynamic";
 
-/** Finance → Payments (A.6/A.10). View payments + export + download receipts. */
+/** Finance → Payments. View payments + export + download receipts. */
 export default async function PaymentsListPage() {
   const user = await requirePagePermission("finance.view");
   const rows = await listPayments(user.tenantId);

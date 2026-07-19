@@ -118,7 +118,7 @@ export function PaperQuizFormativeModal({
         setStudentScores(json.data.studentScores || []);
         setActiveTab("SCORES");
         toast({
-          title: `Created formative quiz batch across ${json.data.studentScores?.length || 0} learners (EE.9)!`,
+          title: `Created formative quiz batch across ${json.data.studentScores?.length || 0} learners!`,
           tone: "success",
         });
       } else {
@@ -160,7 +160,7 @@ export function PaperQuizFormativeModal({
           setStudentScores(json.data.studentScores || []);
           setActiveTab("SCORES");
           toast({
-            title: `Scanned paper quiz & auto-extracted ${json.data.questions?.length || 0} questions (EE.9)!`,
+            title: `Scanned paper quiz & auto-extracted ${json.data.questions?.length || 0} questions!`,
             tone: "success",
           });
         } else {
@@ -249,7 +249,7 @@ export function PaperQuizFormativeModal({
       const json = await res.json();
       if (json.ok) {
         setStudentScores(json.data.studentScores || []);
-        toast({ title: "Formative rubric scores saved inside batch (EE.9)!", tone: "success" });
+        toast({ title: "Formative rubric scores saved inside batch!", tone: "success" });
       } else {
         toast({ title: json.error?.message || "Failed to save scores", tone: "error" });
       }
@@ -273,7 +273,7 @@ export function PaperQuizFormativeModal({
       if (json.ok) {
         setStudentScores(json.data.studentScores || []);
         toast({
-          title: `Successfully posted ${json.data.newObservations} formative rubric observations to CBC engine (EE.9)!`,
+          title: `Successfully posted ${json.data.newObservations} formative rubric observations to CBC engine!`,
           tone: "success",
         });
         if (onApplied) onApplied();
@@ -301,7 +301,7 @@ export function PaperQuizFormativeModal({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <DialogTitle className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
-                <Layers className="h-5 w-5 text-emerald-600" /> Scan Paper Quiz to Formative Assessment (`EE.9`)
+                <Layers className="h-5 w-5 text-emerald-600" /> Scan Paper Quiz to Formative Assessment
               </DialogTitle>
               <p className="text-xs text-navy-500 dark:text-navy-400">
                 Bridge physical/paper quizzes directly to official KICD 4-point CBC/CBE rubric observations without manual typing.
@@ -389,7 +389,7 @@ export function PaperQuizFormativeModal({
                 </select>
               </div>
               <div>
-                <label className="text-xs font-bold text-navy-800 dark:text-navy-100">Target KICD Strand (`EE.9`)</label>
+                <label className="text-xs font-bold text-navy-800 dark:text-navy-100">Target KICD Strand</label>
                 <select
                   value={strandId}
                   onChange={(e) => setStrandId(e.target.value)}
@@ -438,7 +438,7 @@ export function PaperQuizFormativeModal({
 
               <div className="rounded-xl border border-navy-200 bg-emerald-50/40 p-4 dark:border-navy-700 dark:bg-emerald-950/20 space-y-3">
                 <h4 className="text-xs font-bold text-emerald-900 dark:text-emerald-100 flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4 text-emerald-600" /> Rubric Threshold Conversion Scale (`EE.9`)
+                  <Sparkles className="h-4 w-4 text-emerald-600" /> Rubric Threshold Conversion Scale
                 </h4>
                 <p className="text-[11px] text-emerald-800 dark:text-emerald-300">
                   Scores are automatically converted right into KICD 4-point rubric levels as you enter marks:
@@ -499,7 +499,7 @@ export function PaperQuizFormativeModal({
                 className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2 px-6 text-xs shadow-md"
               >
                 {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
-                Create Formative Batch (`EE.9`)
+                Create Formative Batch
               </Button>
             </div>
           </div>
@@ -587,7 +587,7 @@ export function PaperQuizFormativeModal({
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3 dark:bg-emerald-950/30 dark:border-emerald-800">
               <div>
                 <p className="text-xs font-bold text-emerald-900 dark:text-emerald-100">
-                  Rapid Score Entry Grid — Auto-Converts to KICD 4-Point Rubric in Real Time (`EE.9`)
+                  Rapid Score Entry Grid — Auto-Converts to KICD 4-Point Rubric in Real Time
                 </p>
                 <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
                   Type any score out of `{totalQuizMarks}`. NEYO instantly assigns Level 4 (`EE`), 3 (`ME`), 2 (`AE`), or 1 (`BE`) and drafts the observation comment!
@@ -610,7 +610,7 @@ export function PaperQuizFormativeModal({
                     <th className="p-2.5">Adm No.</th>
                     <th className="p-2.5">Student Name</th>
                     <th className="p-2.5 text-center w-32">Quiz Score (`/{totalQuizMarks}`)</th>
-                    <th className="p-2.5 text-center w-40">Auto Rubric Level (`EE.9`)</th>
+                    <th className="p-2.5 text-center w-40">Auto Rubric Level</th>
                     <th className="p-2.5">Auto-Generated Formative Comment</th>
                   </tr>
                 </thead>
@@ -676,7 +676,7 @@ export function PaperQuizFormativeModal({
                 <Send className="h-7 w-7 ml-0.5" />
               </div>
               <h3 className="text-base font-bold text-navy-900 dark:text-white">
-                Ready to Post `{scoredCount}` Formative Rubric Observations to CBC Assessment Engine (`EE.9`)
+                Ready to Post `{scoredCount}` Formative Rubric Observations to CBC Assessment Engine
               </h3>
               <p className="text-xs text-navy-600 dark:text-navy-300 max-w-xl mx-auto leading-relaxed">
                 When you click the post button below, every scored student's rubric level (`EE/ME/AE/BE`) and observation comment will be recorded directly into our live `CbcAssessment` table inside a clean database `$transaction`.
@@ -688,7 +688,7 @@ export function PaperQuizFormativeModal({
                   className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2 px-8 py-3 text-sm font-bold shadow-md"
                 >
                   {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  Confirm & Post `{scoredCount}` Formative Rubrics to CBC Engine (`EE.9`)
+                  Confirm & Post `{scoredCount}` Formative Rubrics to CBC Engine
                 </Button>
               </div>
             </div>

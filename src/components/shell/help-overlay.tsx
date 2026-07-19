@@ -41,11 +41,11 @@ const HOTKEY_MAP: Record<string, HotkeyInfo> = {
   "1": { route: "/teacher", label: "My Classes", permission: "portal.teacher", help: "teacher portal" },
   "2": { route: "/portal", label: "My children", permission: "portal.parent", help: "family portal" },
   "3": { route: "/owner", label: "My School", permission: "owner.dashboard", help: "owner metrics" },
-  "0": { route: "/founder", label: "NEYO Ops", permission: "platform.founder_ops", help: "company cockpit" },
+  "0": { route: "/founder", label: "Platform Operations", permission: "platform.founder_ops", help: "company cockpit" },
 };
 
 /**
- * Help / keyboard shortcuts overlay (G.4). Opens when the user presses "?"
+ * Help / keyboard shortcuts overlay. Opens when the user presses "?"
  * (outside an input) or via the "neyo:open-help" event.
  * Also handles global single-letter hotkey navigation (e.g. "D" -> Dashboard).
  */

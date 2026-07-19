@@ -397,7 +397,7 @@ function MarksEntry({ examId, examName, maxMarks, subjects, classes, onSaved }: 
               onClick={() => setMarkSheetOpen(true)}
               className="rounded-full gap-1.5 border-navy-300 text-xs font-semibold shadow-sm hover:border-emerald-500 hover:text-emerald-600 dark:border-navy-600"
             >
-              <Printer className="h-3.5 w-3.5" /> Paper Sheet / Scan (`EE.4`)
+              <Printer className="h-3.5 w-3.5" /> Paper Sheet / Scan
             </Button>
             <Button
               type="button"
@@ -406,7 +406,7 @@ function MarksEntry({ examId, examName, maxMarks, subjects, classes, onSaved }: 
               onClick={() => setExamPaperTidyingOpen(true)}
               className="rounded-full gap-1.5 border-navy-300 text-xs font-semibold shadow-sm hover:border-emerald-500 hover:text-emerald-600 dark:border-navy-600"
             >
-              <FileText className="h-3.5 w-3.5" /> Tidy Scanned Exam (`EE.5`)
+              <FileText className="h-3.5 w-3.5" /> Tidy Scanned Exam
             </Button>
             <Button
               type="button"
@@ -415,7 +415,7 @@ function MarksEntry({ examId, examName, maxMarks, subjects, classes, onSaved }: 
               onClick={() => setPublicLibraryOpen(true)}
               className="rounded-full gap-1.5 border-navy-300 text-xs font-semibold shadow-sm hover:border-emerald-500 hover:text-emerald-600 dark:border-navy-600"
             >
-              <BookOpen className="h-3.5 w-3.5 text-emerald-600" /> National Exam Bank (`EE.6`)
+              <BookOpen className="h-3.5 w-3.5 text-emerald-600" /> National Exam Bank
             </Button>
             <Button
               type="button"
@@ -424,7 +424,7 @@ function MarksEntry({ examId, examName, maxMarks, subjects, classes, onSaved }: 
               onClick={() => setContestModalOpen(true)}
               className="rounded-full gap-1.5 border-amber-300 text-xs font-semibold shadow-sm text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300"
             >
-              <Trophy className="h-3.5 w-3.5 text-amber-500" /> Inter-School Contests (`EE.10`)
+              <Trophy className="h-3.5 w-3.5 text-amber-500" /> Inter-School Contests
             </Button>
           </>
         )}

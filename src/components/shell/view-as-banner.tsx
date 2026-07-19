@@ -4,7 +4,7 @@ import * as React from "react";
 import { Eye, Loader2 } from "lucide-react";
 
 /**
- * Read-only "View As" banner (G.5). Blue, to distinguish from the amber
+ * Read-only "View As" banner. Blue, to distinguish from the amber
  * super-admin impersonation banner (A.2.9).
  */
 export function ViewAsBanner({ actingAs }: { actingAs: string }) {

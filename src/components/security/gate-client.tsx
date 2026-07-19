@@ -199,7 +199,7 @@ export function GateClient({ canManage, canPanic, canIssuePass, canApprovePass, 
     { key: "passes" as const, label: "Gate passes", icon: DoorClosed },
     { key: "pickup" as const, label: "Pickup authorisation", icon: UserCheck },
     { key: "panic" as const, label: "Emergency", icon: Siren },
-    ...((canCheckGatePass || canScanAttendance || canScanPayment) ? [{ key: "scan" as const, label: "QR Checkpoint (`EE.11`)", icon: ScanLine }] : []),
+    ...((canCheckGatePass || canScanAttendance || canScanPayment) ? [{ key: "scan" as const, label: "QR Checkpoint", icon: ScanLine }] : []),
   ];
 
   return (

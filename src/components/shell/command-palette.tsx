@@ -35,7 +35,7 @@ const TYPE_ICON: Record<string, typeof User> = {
 };
 
 /**
- * Global ⌘K command palette (A.11). Opened by Cmd/Ctrl+K or the topbar search.
+ * Global ⌘K command palette. Opened by Cmd/Ctrl+K or the topbar search.
  * Debounced type-ahead against /api/search, full keyboard navigation.
  */
 export function CommandPalette() {
@@ -48,7 +48,7 @@ export function CommandPalette() {
   const [active, setActive] = React.useState(0);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  // Permission-filtered command actions (G.7).
+  // Permission-filtered command actions.
   const commandHits: Hit[] = React.useMemo(() => {
     const ql = q.trim().toLowerCase();
     return APP_COMMANDS.filter((c) => !c.permission || has(c.permission))

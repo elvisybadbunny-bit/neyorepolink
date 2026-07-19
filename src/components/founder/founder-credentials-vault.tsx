@@ -92,7 +92,7 @@ export function FounderCredentialsVault() {
         <div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <ShieldCheck className="w-6 h-6 text-emerald-400" />
-            NEYO Ops Encrypted Credentials & Integration Secrets Vault
+            Platform Operations Encrypted Credentials & Integration Secrets Vault
           </h2>
           <p className="text-sm text-slate-400">
             Configure live third-party credentials (M-Pesa Daraja, SMS, AWS S3, OAuth, Google Vision, KRA Tax eTIMS, NTSA) directly in your founder space.

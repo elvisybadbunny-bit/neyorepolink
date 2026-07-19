@@ -66,7 +66,7 @@ export function SupportImpersonationOpsTab() {
             Audit-Safe Diagnostic Impersonation (`View-As Session Replay`)
           </h2>
           <p className="text-xs text-navy-500 dark:text-navy-400">
-            Generate time-limited (`15-minute`) read-only diagnostic sessions to inspect exactly what a Principal or Bursar sees when troubleshooting bugs (`A.2 statutory compliance`).
+            Generate time-limited (`15-minute`) read-only diagnostic sessions to inspect exactly what a Principal or Bursar sees when troubleshooting bugs.
           </p>
         </div>
         {activeSession ? (

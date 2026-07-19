@@ -358,7 +358,7 @@ function ReshufflePanel({ onDone }: { onDone: () => void }) {
                       {s.label}
                     </button>
                   ))}
-                  <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-navy-200 px-3 py-1.5 text-xs text-navy-400 dark:border-navy-700" title="Activates when exams (B.5) provide mean scores.">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-navy-200 px-3 py-1.5 text-xs text-navy-400 dark:border-navy-700" title="Activates when exams provide mean scores.">
                     <Sparkles className="h-3 w-3" /> By performance — coming with Exams
                   </span>
                 </div>

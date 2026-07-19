@@ -36,7 +36,7 @@ function ago(iso: string) {
 }
 
 /**
- * Reusable activity timeline (G.1). Pass an entity to scope it, or omit for
+ * Reusable activity timeline. Pass an entity to scope it, or omit for
  * tenant-wide recent activity. Reads /api/activity (AuditLog).
  */
 export function ActivityFeed({

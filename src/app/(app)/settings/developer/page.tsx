@@ -3,7 +3,7 @@ import { DeveloperPanel } from "@/components/settings/developer-panel";
 
 export const dynamic = "force-dynamic";
 
-/** Settings → Developer (A.16): API keys + webhooks. Leadership only. */
+/** Settings → Developer: API keys + webhooks. Leadership only. */
 export default async function DeveloperPage() {
   await requirePagePermission("api.manage");
   return (

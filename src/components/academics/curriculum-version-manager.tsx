@@ -42,7 +42,7 @@ export function CurriculumVersionManagerClient({ canManage }: { canManage: boole
     }
   }, [toast]);
 
-  // J.21 — surface NEYO Ops template updates the school can adopt intentionally.
+  // J.21 — surface Platform Operations template updates the school can adopt intentionally.
   const loadUpdates = React.useCallback(async () => {
     try {
       const res = await fetch("/api/curriculum/library?view=updates");
@@ -93,10 +93,10 @@ export function CurriculumVersionManagerClient({ canManage }: { canManage: boole
         )}
       </div>
 
-      {/* J.21 — update-available banner from the NEYO Ops library */}
+      {/* J.21 — update-available banner from the Platform Operations library */}
       {updates.length > 0 && (
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-900/20">
-          <p className="text-sm font-bold text-blue-800 dark:text-blue-200">Curriculum updates available from NEYO Ops</p>
+          <p className="text-sm font-bold text-blue-800 dark:text-blue-200">Curriculum updates available from Platform Operations</p>
           <ul className="mt-2 space-y-1">
             {updates.map((u) => (
               <li key={u.curriculumId} className="text-xs text-blue-700 dark:text-blue-300">
@@ -390,7 +390,7 @@ function CurriculumLibraryDialog({ onClose, onDone }: any) {
               <Loader2 className="h-6 w-6 animate-spin text-navy-400" />
             </div>
           ) : templates.length === 0 ? (
-            <p className="text-sm italic text-navy-500">No published templates available from NEYO Ops.</p>
+            <p className="text-sm italic text-navy-500">No published templates available from Platform Operations.</p>
           ) : (
             <div className="space-y-4">
               {templates.map((t) => (

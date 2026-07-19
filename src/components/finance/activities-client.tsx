@@ -97,7 +97,7 @@ export function ActivitiesClient({ canManage, canRecord }: { canManage: boolean;
       </div>
 
       <div className="inline-flex flex-wrap rounded-full border border-navy-200 p-0.5 dark:border-navy-700">
-        {([["activities", "Fee collection"], ["tournaments", "Tournament Trips (`Idea 8`)"]] as const).map(([k, label]) => (
+        {([["activities", "Fee collection"], ["tournaments", "Tournament Trips"]] as const).map(([k, label]) => (
           <button
             key={k}
             onClick={() => setTopTab(k)}

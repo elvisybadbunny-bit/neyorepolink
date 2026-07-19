@@ -118,7 +118,7 @@ export function RecordOfWorkClientTab({ canManage }: { canManage: boolean }) {
       <div>
         <h2 className="text-xl font-black tracking-tight text-navy-950 dark:text-white flex items-center gap-2">
           <ClipboardCheck className="h-5 w-5 text-blue-600" />
-          Teacher Record of Work Covered (`Idea 9`)
+          Teacher Record of Work Covered
         </h2>
         <p className="text-xs text-navy-500 dark:text-navy-400">
           Real weekly syllabus coverage tracking per subject/class -- ready for MOE QASO inspection.

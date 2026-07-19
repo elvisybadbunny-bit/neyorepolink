@@ -66,7 +66,7 @@ export default async function AppLayout({
   const platformHiddenHrefs = Array.from(platformHiddenHrefsSet);
 
   // Distinguish the two "acting as" modes:
-  //  - View-As (G.5): in-school, read-only -> blue banner.
+  //  - View-As: in-school, read-only -> blue banner.
   //  - Impersonation (A.2.9): NEYO super-admin cross-tenant -> amber banner.
   const isViewAs = ctx.isImpersonating && ctx.viewAsReadOnly;
   const isSuperImpersonation = ctx.isImpersonating && !ctx.viewAsReadOnly;

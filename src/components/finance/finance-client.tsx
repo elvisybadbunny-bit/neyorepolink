@@ -54,7 +54,7 @@ export function FinanceClient({ canStructure, canInvoice, canRecord, canDiscount
   return (
     <div className="space-y-5">
       <div className="inline-flex flex-wrap rounded-full border border-navy-200 p-0.5 dark:border-navy-700">
-        {([["overview", "Overview"], ["invoices", "Invoices"], ["structures", "Fee structures"], ["promises", "Promises Calendar"], ["suspense", "M-Pesa Suspense (`Reconciler`)"], ["treasuryChecks", "Bank Clearing (`Idea 3`)"], ["payroll", "BOM Payroll"], ["farm", "School Farm"], ...(canRecord ? [["cashReminders", "Cash & reminders"]] as const : [])] as const).map(([k, label]) => (
+        {([["overview", "Overview"], ["invoices", "Invoices"], ["structures", "Fee structures"], ["promises", "Promises Calendar"], ["suspense", "M-Pesa Suspense (`Reconciler`)"], ["treasuryChecks", "Bank Clearing"], ["payroll", "BOM Payroll"], ["farm", "School Farm"], ...(canRecord ? [["cashReminders", "Cash & reminders"]] as const : [])] as const).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k as any)} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === k ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
             {label}
           </button>
@@ -640,7 +640,7 @@ function ManualInvoiceDialog({ onClose, onDone }: { onClose: () => void; onDone:
  * Replaces the old platform-wide flat-10% `enable_sibling_discount` switch:
  * every school now sets its own number here (0 = off, default), and it
  * takes effect BOTH in the one-tap "Apply X%" button on a child's Family
- * card (G.12) AND automatically inside "Invoice the level" batch invoicing
+ * card AND automatically inside "Invoice the level" batch invoicing
  * below, including for siblings whose parent has two separate guardian
  * records that were never formally linked (matched by phone + name).
  */

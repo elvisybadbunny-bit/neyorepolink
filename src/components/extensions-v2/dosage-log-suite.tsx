@@ -113,10 +113,10 @@ export function DosageLogSuite({ students }: { students: StudentSearchOption[] }
     return (
       <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-200 space-y-2">
         <h3 className="font-bold flex items-center gap-2 text-base text-amber-300">
-          <Lock className="w-5 h-5 text-amber-400" /> Feature switched off in NEYO Ops (Dosage Roll-Call Ledger)
+          <Lock className="w-5 h-5 text-amber-400" /> This service is currently unavailable (Dosage Roll-Call Ledger)
         </h3>
         <p className="text-xs text-slate-300">
-          This feature can be individually enabled or paused platform-wide in NEYO Ops.
+          This service is available by request. Ask your school administrator for access.
         </p>
       </div>
     );
@@ -127,7 +127,7 @@ export function DosageLogSuite({ students }: { students: StudentSearchOption[] }
       <div>
         <h2 className="text-xl font-bold tracking-tight text-navy-950 dark:text-white flex items-center gap-2">
           <Syringe className="h-5 w-5 text-red-500" />
-          Infirmary Daily Medication Roll-Call (`Idea 6`)
+          Infirmary Daily Medication Roll-Call
         </h2>
         <p className="text-sm text-navy-500 dark:text-navy-400">
           A dated roll-call grid the nurse fills in for every scheduled dose today — Administered, Missed, or Refused

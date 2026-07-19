@@ -48,8 +48,8 @@ export function HostelClient({ canManage }: { canManage: boolean }) {
   const tabs = [
     { key: "dorms" as const, label: "Dorms & beds", icon: BedDouble },
     { key: "curfew" as const, label: "Curfew register", icon: MoonStar },
-    { key: "vandalism" as const, label: "Inspections & Damage Billing (`Idea 17`)", icon: BedDouble },
-    { key: "exeat" as const, label: "Exeat Passes (`Idea 5`)", icon: DoorOpen },
+    { key: "vandalism" as const, label: "Inspections & Damage Billing", icon: BedDouble },
+    { key: "exeat" as const, label: "Exeat Passes", icon: DoorOpen },
   ];
   return (
     <div className="space-y-4">

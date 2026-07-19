@@ -10,7 +10,7 @@ interface Recipient {
   roleLabel: string;
 }
 
-/** Launcher dialog to pick a staff member to preview as (G.5). */
+/** Launcher dialog to pick a staff member to preview as. */
 export function ViewAsLauncher({ onClose }: { onClose: () => void }) {
   const { toast } = useToast();
   const [people, setPeople] = React.useState<Recipient[] | null>(null);

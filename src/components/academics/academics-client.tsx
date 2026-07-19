@@ -74,12 +74,12 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
     { key: "terms" as const, label: "Terms", icon: CalendarRange },
     { key: "timetable" as const, label: "Timetable", icon: Grid3X3 },
     { key: "exam-timetable" as const, label: "Exam Timetable", icon: ClipboardList },
-    { key: "discipline" as const, label: "Discipline & Summons (`Idea 15`)", icon: Sparkles },
-    { key: "library-recovery" as const, label: "Textbook Fines (`Idea 23`)", icon: BookOpen },
+    { key: "discipline" as const, label: "Discipline & Summons", icon: Sparkles },
+    { key: "library-recovery" as const, label: "Textbook Fines", icon: BookOpen },
     { key: "exam-auto-generator" as const, label: "Exam Auto-Generator", icon: Sparkles },
-    { key: "knec-studio" as const, label: "KNEC Candidate Studio (`Idea 7`)", icon: Award },
-    { key: "moe-returns" as const, label: "MOE Statutory Returns (`Idea 2`)", icon: FileText },
-    { key: "record-of-work" as const, label: "Record of Work (`Idea 9`)", icon: ClipboardList },
+    { key: "knec-studio" as const, label: "KNEC Candidate Studio", icon: Award },
+    { key: "moe-returns" as const, label: "MOE Statutory Returns", icon: FileText },
+    { key: "record-of-work" as const, label: "Record of Work", icon: ClipboardList },
     { key: "lessons" as const, label: "Lesson plans", icon: NotebookPen },
     ...(isCurriculumEngineEnabled ? [
       { key: "computation" as const, label: "Grading Engine", icon: Calculator },
@@ -1868,7 +1868,7 @@ function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-// ---- Timetable Generator (G.18) ------------------------------------------------------
+// ---- Timetable Generator ------------------------------------------------------
 
 function TimetableGeneratorTab({ canManage }: { canManage: boolean }) {
   const { toast } = useToast();
@@ -3087,7 +3087,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
           <CardContent className="p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <Badge tone="green">L.7 Smart Timetable Engine</Badge>
+                <Badge tone="green">Smart Timetable Engine</Badge>
                 <h2 className="mt-3 text-xl font-black tracking-tight text-navy-950 dark:text-white">Master button timetable generation</h2>
                 <p className="mt-2 max-w-3xl text-sm leading-relaxed text-navy-500 dark:text-navy-400">
                   Set the real school rules first, then press one master button. NEYO builds the timetable in the background, shows live progress, respects teacher time-off, avoids clashes, and schedules single, double and combination lessons deterministically.
@@ -4793,7 +4793,7 @@ function BulkSaturdayModal({
       });
   }, []);
 
-  // Filter out classes configured to NOT attend Saturdays (H.2)
+  // Filter out classes configured to NOT attend Saturdays
   const activeClasses = classes.filter((c) => {
     const cfg = configs.find((x) => x.classId === c.id);
     return cfg ? cfg.hasSaturday !== false : true;
@@ -5254,7 +5254,7 @@ function StudentDutyRosterClient({ canManage }: { canManage: boolean }) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-bold text-navy-950 dark:text-white">Student Duty Areas (K.12)</h3>
+          <h3 className="text-lg font-bold text-navy-950 dark:text-white">Student Duty Areas</h3>
           <p className="text-xs text-navy-500">Configure areas, gender parity, and medical exclusions.</p>
         </div>
         <Button size="sm" className="rounded-full"><Plus className="h-4 w-4 mr-1"/> Add Duty Area</Button>

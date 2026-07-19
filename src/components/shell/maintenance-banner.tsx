@@ -57,7 +57,7 @@ export function PlatformMaintenanceAndDiagnosticBanner() {
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 shrink-0 animate-pulse text-amber-300" />
             <span>
-              ⚡ WELCOME TO YOUR 30-DAY FREE TRIAL ACROSS NEYO OS! All modules are unlocked with NEYO Ops trial safety limits.
+              ⚡ WELCOME TO YOUR 30-DAY FREE TRIAL ACROSS NEYO OS! All modules are unlocked with Platform Operations trial safety limits.
             </span>
           </div>
           <a
@@ -69,7 +69,7 @@ export function PlatformMaintenanceAndDiagnosticBanner() {
         </div>
       )}
 
-      {/* Diagnostic Impersonation Top Banner (`Idea 1.3`) */}
+      {/* Diagnostic Impersonation Top Banner */}
       {isDiagnostic && (
         <div className="sticky top-0 z-[110] flex items-center justify-between gap-2 bg-amber-600 px-4 py-2 text-xs font-bold text-white shadow-md animate-pulse">
           <div className="flex items-center gap-2">
@@ -88,7 +88,7 @@ export function PlatformMaintenanceAndDiagnosticBanner() {
         </div>
       )}
 
-      {/* Scheduled / Active Maintenance Banner (`Idea 1.4`) */}
+      {/* Scheduled / Active Maintenance Banner */}
       {windowData && (
         <div className={`sticky top-0 z-[105] flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-2.5 text-xs font-bold shadow-md ${windowData.isActiveNow ? "bg-red-600 text-white animate-pulse" : "bg-blue-600 text-white"}`}>
           <div className="flex items-center gap-2">

@@ -4,7 +4,7 @@ import { CalendarView } from "@/components/calendar/calendar-view";
 
 export const dynamic = "force-dynamic";
 
-/** School calendar (A.17): month/week/day, KE holidays, iCal, invites. */
+/** School calendar: month/week/day, KE holidays, iCal, invites. */
 export default async function CalendarPage() {
   const user = await requirePagePermission("calendar.view");
   const canManage = can(user.role, "calendar.manage");

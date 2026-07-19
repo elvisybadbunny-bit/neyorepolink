@@ -63,7 +63,7 @@ export function QuestionBankModal({
   const { toast } = useToast();
   const [activeTab, setActiveTab] = React.useState<"BROWSE" | "SCAN_BOOK" | "SUGGESTIONS" | "PRINT_EXAM" | "SIMULATIONS">("BROWSE");
 
-  // Printable Exam Builder (`EE.8`) state
+  // Printable Exam Builder state
   const [selectedForPrintIds, setSelectedForPrintIds] = React.useState<Set<string>>(new Set());
   const [printExamData, setPrintExamData] = React.useState<PrintableQuestionBankExamData | null>(null);
   const [printExamLoading, setPrintExamLoading] = React.useState(false);
@@ -174,7 +174,7 @@ export function QuestionBankModal({
         if (json.ok) {
           setExtractedCandidates(json.data.questions || []);
           toast({
-            title: `Extracted ${json.data.questionCount} candidate questions from book scan (EE.8)`,
+            title: `Extracted ${json.data.questionCount} candidate questions from book scan`,
             tone: "success",
           });
         } else {
@@ -212,7 +212,7 @@ export function QuestionBankModal({
       });
       const json = await res.json();
       if (json.ok) {
-        toast({ title: "Saved candidate question to National Question Bank (EE.8)!", tone: "success" });
+        toast({ title: "Saved candidate question to National Question Bank!", tone: "success" });
         setExtractedCandidates((prev) => prev.filter((q) => q.id !== candidate.id));
         loadQuestions();
       } else {
@@ -253,7 +253,7 @@ export function QuestionBankModal({
           },
         }));
         if (json.data.isCorrect) {
-          toast({ title: "Correct! Outstanding mastery on this question (`EE.8`)!", tone: "success" });
+          toast({ title: "Correct! Outstanding mastery on this question!", tone: "success" });
         } else {
           toast({ title: "Not quite! Check the step-by-step working below.", tone: "error" });
         }
@@ -328,7 +328,7 @@ export function QuestionBankModal({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <DialogTitle className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-emerald-600" /> Self-Marking Question Bank & Book Scanning (`EE.8`)
+                <BookOpen className="h-5 w-5 text-emerald-600" /> Self-Marking Question Bank & Book Scanning
               </DialogTitle>
               <p className="text-xs text-navy-500 dark:text-navy-400">
                 Self-marking practice repository with rich SVG diagrams, textbook OCR scanning, and smart weakness recommendations.
@@ -355,7 +355,7 @@ export function QuestionBankModal({
                     : "text-navy-600 hover:text-navy-900 dark:text-navy-400 dark:hover:text-white"
                 }`}
               >
-                <Sparkles className="h-3.5 w-3.5 text-amber-500" /> 2. Weakness Focus (`EE.8`)
+                <Sparkles className="h-3.5 w-3.5 text-amber-500" /> 2. Weakness Focus
               </button>
               <button
                 type="button"
@@ -388,7 +388,7 @@ export function QuestionBankModal({
                     : "text-navy-600 hover:text-navy-900 dark:text-navy-400 dark:hover:text-white"
                 }`}
               >
-                <Sparkles className="h-3.5 w-3.5 text-blue-500" /> 5. STEM Virtual Labs (`EE.13`)
+                <Sparkles className="h-3.5 w-3.5 text-blue-500" /> 5. STEM Virtual Labs
               </button>
             </div>
           </div>
@@ -690,7 +690,7 @@ export function QuestionBankModal({
           <div className="space-y-4 pt-2">
             <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-800 dark:bg-amber-950/20">
               <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-sm">
-                <Sparkles className="h-4 w-4 text-amber-600" /> Bundi Smart Weakness Focus (`EE.8`)
+                <Sparkles className="h-4 w-4 text-amber-600" /> Bundi Smart Weakness Focus
               </div>
               <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
                 Our algorithm examines existing CBC assessment records and past quiz attempts to suggest specific practice questions on your exact weak areas.
@@ -755,7 +755,7 @@ export function QuestionBankModal({
                               }}
                               className="h-7 text-xs rounded-full text-emerald-700 dark:text-emerald-300"
                             >
-                              Practice Now (`EE.8`)
+                              Practice Now
                             </Button>
                           </div>
                         </Card>
@@ -828,7 +828,7 @@ export function QuestionBankModal({
                           className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs shadow-sm"
                         >
                           {savingCandidateId === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                          Add to National Question Bank (`EE.8`)
+                          Add to National Question Bank
                         </Button>
                       </div>
                     </Card>
@@ -883,7 +883,7 @@ export function QuestionBankModal({
                     className="rounded-full gap-1 text-xs font-semibold text-blue-700 dark:text-blue-300"
                   >
                     {showAnswerKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                    {showAnswerKey ? "Hide Marking Guide" : "Show Teacher Answer Key (`EE.8`)"}
+                    {showAnswerKey ? "Hide Marking Guide" : "Show Teacher Answer Key"}
                   </Button>
                 </div>
                 <div className="flex items-center gap-2">
@@ -960,7 +960,7 @@ export function QuestionBankModal({
 
                       {showAnswerKey && (
                         <div className="mt-2 rounded bg-amber-50 border border-amber-300 p-2.5 text-xs text-amber-950">
-                          <p className="font-bold text-[11px] uppercase text-amber-800">Teacher Marking Guide (`EE.8`):</p>
+                          <p className="font-bold text-[11px] uppercase text-amber-800">Teacher Marking Guide:</p>
                           <p className="mt-0.5"><strong>Correct Answer:</strong> {q.correctAnswer}</p>
                           {q.explanation && <p className="mt-0.5"><strong>Working/Explanation:</strong> {q.explanation}</p>}
                         </div>
@@ -972,7 +972,7 @@ export function QuestionBankModal({
                 {showAnswerKey && (
                   <div className="mt-10 border-t-2 border-black pt-6 font-sans">
                     <h3 className="text-base font-bold uppercase tracking-wider text-center bg-gray-200 p-2 border border-black">
-                      Official Teacher Answer Key & Marking Guide (`EE.8`)
+                      Official Teacher Answer Key & Marking Guide
                     </h3>
                     <div className="mt-4 space-y-4 text-xs">
                       {printExamData.answerKey.map((ak) => (

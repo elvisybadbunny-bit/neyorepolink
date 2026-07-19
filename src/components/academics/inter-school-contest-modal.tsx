@@ -114,7 +114,7 @@ export function InterSchoolContestModal({
       });
       const json = await res.json();
       if (json.ok) {
-        toast({ title: "School team registered successfully (EE.10)!", tone: "success" });
+        toast({ title: "School team registered successfully!", tone: "success" });
         loadContests();
       } else {
         toast({ title: json.error?.message || "Registration failed", tone: "error" });
@@ -161,7 +161,7 @@ export function InterSchoolContestModal({
       if (json.ok) {
         setAttemptOutcome(json.data);
         toast({
-          title: `Contest self-marked: ${json.data.score}/${json.data.totalMarks} (${json.data.scorePct}%) in ${json.data.timeFormatted} (EE.10)!`,
+          title: `Contest self-marked: ${json.data.score}/${json.data.totalMarks} (${json.data.scorePct}%) in ${json.data.timeFormatted}!`,
           tone: "success",
         });
       } else {
@@ -213,7 +213,7 @@ export function InterSchoolContestModal({
       });
       const json = await res.json();
       if (json.ok) {
-        toast({ title: "Inter-school contest created across Kenya (EE.10)!", tone: "success" });
+        toast({ title: "Inter-school contest created across Kenya!", tone: "success" });
         setActiveTab("ARENA");
         loadContests();
       } else {
@@ -233,7 +233,7 @@ export function InterSchoolContestModal({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <DialogTitle className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-amber-500" /> Inter-School Contests Arena & Podium (`EE.10`)
+                <Trophy className="h-5 w-5 text-amber-500" /> Inter-School Contests Arena & Podium
               </DialogTitle>
               <p className="text-xs text-navy-500 dark:text-navy-400">
                 Nationwide competitions across schools (`Karibu High`, `Kilimo Day`, `Uhuru`) with speed tie-breaking & trophies.
@@ -273,7 +273,7 @@ export function InterSchoolContestModal({
                     : "text-navy-600 hover:text-navy-900 dark:text-navy-400 dark:hover:text-white disabled:opacity-40"
                 }`}
               >
-                <Award className="h-3.5 w-3.5 text-amber-500" /> 3. Live Podium (`EE.10`)
+                <Award className="h-3.5 w-3.5 text-amber-500" /> 3. Live Podium
               </button>
               {canManage && (
                 <button
@@ -335,7 +335,7 @@ export function InterSchoolContestModal({
                 </p>
                 {canManage && (
                   <Button size="sm" onClick={() => setActiveTab("CREATE")} className="mt-4 rounded-full gap-1.5 text-xs">
-                    <Plus className="h-3.5 w-3.5" /> Launch National Contest (`EE.10`)
+                    <Plus className="h-3.5 w-3.5" /> Launch National Contest
                   </Button>
                 )}
               </div>
@@ -382,7 +382,7 @@ export function InterSchoolContestModal({
                           onClick={() => handleRegisterSchool(c.id)}
                           className="rounded-full text-xs font-semibold gap-1.5"
                         >
-                          <Building2 className="h-3.5 w-3.5 text-blue-600" /> Register My School Team (EE.10)
+                          <Building2 className="h-3.5 w-3.5 text-blue-600" /> Register My School Team
                         </Button>
                       )}
 
@@ -417,7 +417,7 @@ export function InterSchoolContestModal({
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 border border-emerald-200 p-3 dark:bg-emerald-950/30 dark:border-emerald-800">
               <div>
                 <p className="text-xs font-bold text-emerald-900 dark:text-emerald-100">
-                  {activeContestData.title} — Official Contest Roster (EE.10)
+                  {activeContestData.title} — Official Contest Roster
                 </p>
                 <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
                   Total Marks: {activeContestData.totalMarks} · Time Limit: {activeContestData.timeLimitMins} mins · Fast completion breaks ties!
@@ -503,7 +503,7 @@ export function InterSchoolContestModal({
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-800 dark:bg-amber-950/20">
                   <div>
                     <h3 className="text-base font-bold text-navy-900 dark:text-white flex items-center gap-2">
-                      <Trophy className="h-5 w-5 text-amber-500" /> {leaderboardData.title} — National Leaderboard (`EE.10`)
+                      <Trophy className="h-5 w-5 text-amber-500" /> {leaderboardData.title} — National Leaderboard
                     </h3>
                     <p className="text-xs text-navy-500">
                       Ties in score are broken deterministically by completion speed (`timeTakenSecs ASC`).
@@ -639,7 +639,7 @@ export function InterSchoolContestModal({
                 className="rounded-full bg-amber-500 hover:bg-amber-600 text-white gap-2 px-6 text-xs shadow-md"
               >
                 {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
-                Launch National Contest across Kenya (EE.10)
+                Launch National Contest across Kenya
               </Button>
             </div>
           </div>

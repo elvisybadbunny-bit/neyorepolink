@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * PART EE.13 — Interactive STEM Canvas Simulations & Virtual Lab Station (`EE.13`).
+ * PART EE.13 — Interactive STEM Canvas Simulations & Virtual Lab Station.
  *
  * Interactive virtual science and math lab simulations with real-time sliders,
  * live physical equations, and dynamic SVG Canvas schematics:
@@ -47,7 +47,7 @@ export function StemSimulationStation() {
         <div>
           <h2 className="text-xl font-black text-navy-950 dark:text-white flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-amber-500" />
-            Interactive STEM Virtual Lab &amp; Simulations Station (`EE.13`)
+            Interactive STEM Virtual Lab &amp; Simulations Station
           </h2>
           <p className="text-xs font-medium text-navy-500 dark:text-navy-400">
             Real-time physical sliders and dynamic SVG Canvas experiments designed for Kenyan CBC/CBE Grade 7–10 science and mathematics.

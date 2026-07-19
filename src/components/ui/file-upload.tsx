@@ -97,11 +97,11 @@ export function FileUpload({
   async function handleFile(rawFile: File) {
     setUploading(true);
     try {
-      // 1. In-Browser WebWorker/Canvas Downsampling for large images (`Idea 2.1`)
+      // 1. In-Browser WebWorker/Canvas Downsampling for large images
       const file = await downsampleImageToWebP(rawFile);
       const originalSizeBytes = rawFile.size;
 
-      // 2. Pre-Upload SHA-256 CAS Deduplication Check (`Idea 2.2`)
+      // 2. Pre-Upload SHA-256 CAS Deduplication Check
       try {
         const sha256 = await calculateFileSha256(file);
         const casRes = await fetch("/api/storage/check-hash", {

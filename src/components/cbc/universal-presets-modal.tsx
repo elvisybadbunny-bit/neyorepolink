@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * PART EE.15 — Universal CBC/CBE Presets Modal (`EE.15`).
+ * PART EE.15 — Universal CBC/CBE Presets Modal.
  * "Where the schools never need to type in adding they just add the presets."
  * 1-Click universal application of 7 Universal Competencies, KICD Formative Rubrics (`EE/ME/AE/BE`),
  * and Core Values/Duties without manual typing.
@@ -42,7 +42,7 @@ export function UniversalPresetsModal({ open, onOpenChange, onApplied }: Univers
       if (json.ok) {
         toast({
           title: `✓ Universal Presets Applied (` + json.data.result.addedCount + ` created, ` + json.data.result.skippedCount + ` skipped)`,
-          description: "All official KICD frameworks added to your school catalog cleanly (`EE.15`).",
+          description: "All official KICD frameworks added to your school catalog cleanly.",
           tone: "success",
         });
         if (onApplied) onApplied();
@@ -65,7 +65,7 @@ export function UniversalPresetsModal({ open, onOpenChange, onApplied }: Univers
             <div>
               <DialogTitle className="text-xl font-black text-navy-950 dark:text-white flex items-center gap-2">
                 <Sparkles className="h-6 w-6 text-amber-500" />
-                Universal CBC / CBE Presets Engine (`EE.15`)
+                Universal CBC / CBE Presets Engine
               </DialogTitle>
               <p className="text-xs font-semibold text-navy-500 dark:text-navy-400 mt-1">
                 &ldquo;Where the schools never need to type in adding — they just add the presets.&rdquo; 1-Click universal setup.
@@ -77,7 +77,7 @@ export function UniversalPresetsModal({ open, onOpenChange, onApplied }: Univers
               className="rounded-full bg-navy-900 hover:bg-navy-800 text-white font-black shadow-lg px-6 dark:bg-navy-50 dark:text-navy-900"
             >
               {busy && applyingType === "ALL" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2 text-amber-400" />}
-              Apply ALL Universal Presets (`EE.15`)
+              Apply ALL Universal Presets
             </Button>
           </div>
         </DialogHeader>
@@ -87,7 +87,7 @@ export function UniversalPresetsModal({ open, onOpenChange, onApplied }: Univers
           <div className="rounded-2xl border border-navy-200 bg-white p-5 shadow-sm space-y-4 dark:border-navy-800 dark:bg-navy-900 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <Badge tone="blue" className="font-bold">7 Core Competencies (`J.4`)</Badge>
+                <Badge tone="blue" className="font-bold">7 Core Competencies</Badge>
                 <Award className="h-5 w-5 text-blue-500" />
               </div>
               <h3 className="text-base font-black text-navy-900 dark:text-navy-50">Official KICD Core Competencies</h3>
@@ -118,7 +118,7 @@ export function UniversalPresetsModal({ open, onOpenChange, onApplied }: Univers
           <div className="rounded-2xl border border-navy-200 bg-white p-5 shadow-sm space-y-4 dark:border-navy-800 dark:bg-navy-900 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <Badge tone="green" className="font-bold">Formative Rubrics (`J.5`)</Badge>
+                <Badge tone="green" className="font-bold">Formative Rubrics</Badge>
                 <ShieldCheck className="h-5 w-5 text-green-600" />
               </div>
               <h3 className="text-base font-black text-navy-900 dark:text-navy-50">KICD 4-Point Assessment Rubrics</h3>
@@ -160,7 +160,7 @@ export function UniversalPresetsModal({ open, onOpenChange, onApplied }: Univers
           <div className="rounded-2xl border border-navy-200 bg-white p-5 shadow-sm space-y-4 dark:border-navy-800 dark:bg-navy-900 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <Badge tone="amber" className="font-bold">Values &amp; Duties (`B.1`)</Badge>
+                <Badge tone="amber" className="font-bold">Values &amp; Duties</Badge>
                 <HeartHandshake className="h-5 w-5 text-amber-500" />
               </div>
               <h3 className="text-base font-black text-navy-900 dark:text-navy-50">Core Values &amp; Student Duties</h3>

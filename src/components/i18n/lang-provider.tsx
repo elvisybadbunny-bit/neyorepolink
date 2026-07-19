@@ -4,7 +4,7 @@ import * as React from "react";
 import { translate, type Lang } from "@/lib/i18n/dictionaries";
 
 /**
- * Language context (A.15). Seeded from the user's saved language (no flash).
+ * Language context. Seeded from the user's saved language (no flash).
  * useT() returns a t() bound to the current language; setLang persists it.
  */
 interface LangState {

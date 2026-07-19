@@ -88,7 +88,7 @@ export function TenantHealthDefconTab() {
         <div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Activity className="h-5 w-5 text-red-400" />
-            School Operational Health & Churn Defcon Radar (`Idea 1.2`)
+            School Operational Health & Churn Defcon Radar
           </h2>
           <p className="text-sm text-slate-400">
             0–100 composite health score per school (attendance cadence, fee ledger velocity, leadership logins,

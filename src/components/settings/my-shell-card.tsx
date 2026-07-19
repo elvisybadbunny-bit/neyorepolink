@@ -7,9 +7,9 @@
  * one can change in their setting and later it becomes companys default."
  *
  * This card is that "later" — but it stays fully invisible (renders
- * nothing at all) until NEYO Ops has genuinely released the capability for
+ * nothing at all) until Platform Operations has genuinely released the capability for
  * this specific school (master switch OR real per-school early access,
- * both controlled from the NEYO Ops "Platform Flags" console). Never a
+ * both controlled from the Platform Operations "Platform Flags" console). Never a
  * disabled/greyed-out picker teasing something that doesn't work yet —
  * the real API tells this component whether it's released, and it
  * honestly renders nothing until it is.

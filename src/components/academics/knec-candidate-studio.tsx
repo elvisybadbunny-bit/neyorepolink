@@ -131,7 +131,7 @@ export function KnecCandidateStudio({ canManage }: { canManage: boolean }) {
         <div>
           <h2 className="text-xl font-black tracking-tight text-navy-950 dark:text-white flex items-center gap-2">
             <Award className="h-5 w-5 text-green-600" />
-            KNEC / KJSEA Candidate Index Studio (`Idea 7`)
+            KNEC / KJSEA Candidate Index Studio
           </h2>
           <p className="text-xs text-navy-500 dark:text-navy-400">
             Enter your official KNEC School Centre Code and assign candidate index numbers either sequentially by student admission order (`/001 → /180`) OR dynamically ranked by performance merit in a selected placement exam. Includes 300x300 photo index imprinting and official KNEC CSV exports.

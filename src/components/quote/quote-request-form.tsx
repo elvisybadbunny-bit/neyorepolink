@@ -3,14 +3,14 @@
 /**
  * Part V — NEYO Capacity-Based Pricing System 2.0 (founder-confirmed pivot,
  * 2026-07-06). The real PUBLIC "demo → quote → accept → self-serve live"
- * flow (V.6). A prospective school:
+ * flow. A prospective school:
  *   1. Sees a real, instant, honest price the moment it enters (or asks
  *      NEYO to estimate) its student/staff/parent counts.
  *   2. Can request a real, human-reviewed formal quotation, optionally
  *      asking for real onboarding assistance (data import, staff
  *      training, a guide into NEYO).
  *   3. Once ready, accepts and is handed straight into the real, existing
- *      self-serve signup flow (/get-started) — no NEYO Ops manual gate
+ *      self-serve signup flow (/get-started) — no Platform Operations manual gate
  *      blocking activation, per the founder's own confirmed answer.
  */
 import * as React from "react";

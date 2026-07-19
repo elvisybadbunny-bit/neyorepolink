@@ -144,7 +144,7 @@ export function FeatureReleaseControlsTab() {
             Feature Release Controls (`Early Access Pilot vs. Mega Button`)
           </h2>
           <p className="text-xs text-navy-500 dark:text-navy-400">
-            Govern rollout access across all unreleased platform features and modules (`Bundi OCR, EE.9 Quizzes, EE.10 Contests`). Toggle between `PAUSED` (`Hidden`), `EARLY_ACCESS_PILOT` (`Whitelist pilot schools like Karibu High`), and `LIVE` (`Mega Button to all schools`).
+            Govern rollout access across all unreleased platform features and modules (such as Bundi OCR, quizzes and contests). Toggle between `PAUSED` (`Hidden`), `EARLY_ACCESS_PILOT` (`Whitelist pilot schools like Karibu High`), and `LIVE` (`Mega Button to all schools`).
           </p>
         </div>
       </div>

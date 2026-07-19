@@ -10,7 +10,7 @@
  * (including iOS Safari, desktop Firefox, and older Chrome).
  *
  * Three real 1-tap checkpoint modes:
- *  1. Gate-Pass Status Check (`EE.11`): sub-second `ALLOWED`, `NOT_ALLOWED`, `DIDNT_PASS`, `INVALID` states + 1-Tap `Stamp Exit` / `Stamp Return`.
+ *  1. Gate-Pass Status Check: sub-second `ALLOWED`, `NOT_ALLOWED`, `DIDNT_PASS`, `INVALID` states + 1-Tap `Stamp Exit` / `Stamp Return`.
  *  2. 1-Tap Attendance: marks today's register instantly (`P` or `L`).
  *  3. 1-Tap Payment Lookup: surfaces real open balance & invoices instantly (`B.7` finance engine).
  */
@@ -179,7 +179,7 @@ export function QrScanStation({
       const res = await fetch("/api/qr-scan/gate-pass/action", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passId, action, note: `Stamped via EE.11 Checkpoint Station` }),
+        body: JSON.stringify({ passId, action, note: `Stamped via QR checkpoint station` }),
       });
       const json = await res.json();
       if (json.ok) {
@@ -291,7 +291,7 @@ export function QrScanStation({
             onClick={() => { setMode("gatePass"); setGatePassResult(null); setLastMessage(null); }}
             className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors duration-200 ease-apple ${mode === "gatePass" ? "bg-navy-900 text-white shadow-sm dark:bg-navy-50 dark:text-navy-900" : "bg-white text-navy-600 border border-navy-100 hover:bg-warm-50 dark:bg-navy-900 dark:text-navy-300 dark:border-navy-800"}`}
           >
-            <ShieldCheck className="h-4 w-4 text-green-500" /> Gate-Pass Status (`EE.11`)
+            <ShieldCheck className="h-4 w-4 text-green-500" /> Gate-Pass Status
           </button>
         )}
         {canMarkAttendance && (
@@ -316,7 +316,7 @@ export function QrScanStation({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-navy-900 dark:text-navy-50">
             <ScanLine className="h-5 w-5 text-green-600" />
-            {mode === "gatePass" ? "QR Gate-Pass Checkpoint Station (EE.11)" : mode === "attendance" ? "1-Tap Attendance Scanner" : "1-Tap Payment Balance Lookup"}
+            {mode === "gatePass" ? "QR Gate-Pass Checkpoint Station" : mode === "attendance" ? "1-Tap Attendance Scanner" : "1-Tap Payment Balance Lookup"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -442,7 +442,7 @@ export function QrScanStation({
                   </div>
                 </div>
 
-                {/* 1-Tap Checkpoint Stamping Buttons (`EE.11`) */}
+                {/* 1-Tap Checkpoint Stamping Buttons */}
                 <div className="flex items-center gap-2">
                   {gatePassResult.canExit && gatePassResult.gatePass && (
                     <Button
@@ -451,7 +451,7 @@ export function QrScanStation({
                       className="rounded-full bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg px-6 py-5 text-sm"
                     >
                       {stampingBusy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowRight className="h-4 w-4 mr-2" />}
-                      Stamp Gate Exited Now (`EE.11`)
+                      Stamp Gate Exited Now
                     </Button>
                   )}
                   {gatePassResult.canReturn && gatePassResult.gatePass && (
@@ -461,7 +461,7 @@ export function QrScanStation({
                       className="rounded-full bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-lg px-6 py-5 text-sm"
                     >
                       {stampingBusy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CornerDownLeft className="h-4 w-4 mr-2" />}
-                      Stamp Gate Returned Now (`EE.11`)
+                      Stamp Gate Returned Now
                     </Button>
                   )}
                 </div>

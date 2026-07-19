@@ -4,14 +4,14 @@
  * B.17 Transport UI — 4 tabs (T.8 adds "Requests"):
  * - Routes: cards (vehicle, driver, riders/seats) -> riders board (assign w/
  *   pickup stop, release, auto-allocate) + "Invoice riders" for the term
- *   fee + real per-route Shift management (T.8)
+ *   fee + real per-route Shift management
  * - Fleet: vehicles (NTSA insurance/inspection expiry alerts, km/L) ->
  *   vehicle file (maintenance + fuel logs w/ add dialogs)
  * - Drivers: DL records w/ licence-expiry alerts
- * - Requests (T.8): staff queue of real parent-submitted route/shift change
+ * - Requests: staff queue of real parent-submitted route/shift change
  *   requests, showing the real billing-action preview from this school's
  *   own live mid-term-billing setting, approve/decline.
- * A real Settings panel (T.8) lets a school choose its own mid-term
+ * A real Settings panel lets a school choose its own mid-term
  * billing rule + whether parents may request changes from their portal.
  * GPS bus tracking = hardware-deferred (notice shown, never faked).
  */

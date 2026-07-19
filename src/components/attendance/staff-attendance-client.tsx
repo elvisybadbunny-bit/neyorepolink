@@ -25,7 +25,7 @@ function fmtTime(iso: string | null): string {
 interface SheetRow { userId: string; name: string; role: string; clockInAt: string | null; clockOutAt: string | null; present: boolean; gpsVerified: boolean; gpsDistanceM: number | null }
 interface StaffData { date: string; mine: { clockInAt: string; clockOutAt: string | null; gpsVerified?: boolean } | null; canClock: boolean; geofenceOn: boolean; gpsRadiusM: number; sheet: SheetRow[]; presentCount: number; expected: number }
 
-/** Get device GPS (G.17). Resolves null when unavailable/denied. */
+/** Get device GPS. Resolves null when unavailable/denied. */
 function getGps(): Promise<{ lat: number; lng: number } | null> {
   return new Promise((resolve) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) return resolve(null);

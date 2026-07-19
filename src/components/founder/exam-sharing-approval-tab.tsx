@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * EE.6 — NEYO Ops Approval Queue for cross-school public exam paper sharing.
+ * EE.6 — Platform Operations Approval Queue for cross-school public exam paper sharing.
  * Real backend existed (scannedExamPaper.sharingApprovalStatus, privacyTier,
  * /api/ops/exam-sharing GET/POST) with ZERO frontend UI anywhere until this
  * fix -- found while re-auditing EE.4 through EE.9 against the actual live
@@ -75,7 +75,7 @@ export function ExamSharingApprovalTab() {
       <div>
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-emerald-400" />
-          Exam Sharing Approval (`EE.6`)
+          Exam Sharing Approval
         </h2>
         <p className="text-sm text-white/60 mt-1">
           Review schools' requests to share tidied exam papers publicly across NEYO. Approving
