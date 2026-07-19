@@ -4840,8 +4840,9 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 ### Interactive CBE simulation roadmap — 2026-07-20
 - [x] Corrected scope after founder clarification: target is 500 genuinely interactive Grade 7–12 CBE simulations, not static activity cards.
 - [x] Removed the 500-blueprint claim and static catalog implementation.
-- [x] First three verified batches: 150 live simulations from 30 distinct models × 5 challenge contexts; every listed item has two live controls, calculated output, visual response and reset.
+- [x] First four verified batches: 200 live simulations from 40 distinct models × 5 challenge contexts; every listed item has two live controls, calculated output, visual response and reset.
 - [x] Batch 2 broadened into Business Studies, Geography, Agriculture, Computer Science, English, History and Citizenship, Creative Arts and Health Education.
-- [x] Batch 3 adds quadratic and wave models, inheritance probability, map scale, construction-material quantity, English comprehension, Kiswahili oral fluency, civic decisions, ethical reasoning and visual-design scale.
-- [x] UI truthfully states 150 completed toward 500.
-- [ ] Continue in reviewed batches of 50 across the selected all-CBE learning-area scope; 350 remain. Never inflate the count through empty renaming.
+- [x] Batch 3 added quadratic and wave models, inheritance probability, map scale, construction-material quantity, English comprehension, Kiswahili oral fluency, civic decisions, ethical reasoning and visual-design scale.
+- [x] Batch 4 adds percentage change, simple interest, gear ratios, ideal transformers, mechanical advantage, recipe scaling, fabric costing, media storage, Indigenous Language accuracy and fisheries sustainability.
+- [x] UI truthfully states 200 completed toward 500.
+- [ ] Continue in reviewed batches of 50 across the selected all-CBE learning-area scope; 300 remain. Never inflate the count through empty renaming.
