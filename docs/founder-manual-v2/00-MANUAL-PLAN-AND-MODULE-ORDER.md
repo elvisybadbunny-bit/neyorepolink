@@ -52,6 +52,7 @@ language:
 - [Module 27 — NEYO Billing, Subscription & Pricing](./27-NEYO-BILLING-SUBSCRIPTION-PRICING-TRIALS-AND-RENEWAL.md)
 - [Module 28 — Public School Website & Marketing](./28-PUBLIC-SCHOOL-WEBSITE-NEWS-GALLERY-SEO-AND-BRAND.md)
 - [Module 29 — Developer APIs, Webhooks, Storage & Integrations](./29-DEVELOPER-API-KEYS-WEBHOOKS-STORAGE-AND-INTEGRATIONS.md)
+- [Module 30 — Master Operating Checklists](./30-MASTER-DAILY-WEEKLY-TERM-AND-YEAR-END-CHECKLISTS.md)
 
 ## The standard chapter format
 
