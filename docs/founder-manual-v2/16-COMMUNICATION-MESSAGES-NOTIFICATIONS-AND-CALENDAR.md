@@ -352,3 +352,9 @@ credential-dependent and must not be described as live without provider evidence
 - Class Chat: `class-chat.service.ts`, ClassChatButton
 - Calendar: `calendar-view.tsx`, `calendar.service.ts`, calendar APIs
 - Jobs: message fallback/delivery report registry
+
+## Mobile message visibility and composer behaviour
+
+The conversation card now separates three fixed regions: a non-scrolling header, an independently scrolling message history, and a composer that remains visible at the bottom. Sending a message scrolls only the message-history viewport; it no longer calls a whole-page scroll that could move the card beneath the mobile shell. The panel follows the phone's visible viewport when the on-screen keyboard opens, respects the bottom safe area, and allows the optional acknowledgement/SMS controls to scroll inside the composer if vertical space is very small. Long words, links and attachment text wrap inside the bubble rather than being clipped by the card.
+
+Founder verification at 360px: open a thread with enough messages to overflow; send short text, multi-line text and one unbroken long URL; confirm the newest bubble and send box remain reachable; open the keyboard and rotate the device; then test incoming and outgoing bubbles, acknowledgement controls and an attachment.

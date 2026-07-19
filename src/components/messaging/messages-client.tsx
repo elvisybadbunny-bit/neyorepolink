@@ -84,7 +84,7 @@ export function MessagesClient() {
   const [reportOpen, setReportOpen] = React.useState(false);
   const [reportLoading, setReportLoading] = React.useState(false);
   const [deliveryReport, setDeliveryReport] = React.useState<any | null>(null);
-  const bottomRef = React.useRef<HTMLDivElement>(null);
+  const threadScrollRef = React.useRef<HTMLDivElement>(null);
 
   const loadList = React.useCallback(async () => {
     const res = await fetch("/api/conversations");
@@ -166,8 +166,12 @@ export function MessagesClient() {
   }, [active]);
 
   React.useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    // Scroll only the thread viewport. scrollIntoView() could scroll the whole
+    // page and move the composer/card under the mobile shell after sending.
+    const viewport = threadScrollRef.current;
+    if (!viewport) return;
+    requestAnimationFrame(() => viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" }));
+  }, [messages, active]);
 
   async function send() {
     if ((!draft.trim() && !attachment) || !active) return;
@@ -288,18 +292,25 @@ export function MessagesClient() {
       const top = el.getBoundingClientRect().top;
       // leave a little breathing room at the bottom so the panel never
       // touches the very edge of the screen (matches the page's own py-6/py-8).
-      const bottomGutter = window.innerWidth < 640 ? 16 : 24;
-      setPanelHeight(Math.max(320, window.innerHeight - top - bottomGutter));
+      const bottomGutter = window.innerWidth < 640 ? 8 : 24;
+      const visibleBottom = window.visualViewport
+        ? window.visualViewport.offsetTop + window.visualViewport.height
+        : window.innerHeight;
+      setPanelHeight(Math.max(180, visibleBottom - top - bottomGutter));
     }
     recalc();
     window.addEventListener("resize", recalc);
     window.addEventListener("orientationchange", recalc);
+    window.visualViewport?.addEventListener("resize", recalc);
+    window.visualViewport?.addEventListener("scroll", recalc);
     // Re-measure once more shortly after mount: dismissible banners (e.g. the
     // "Coming soon" strip) and web fonts can shift layout after first paint.
     const t = window.setTimeout(recalc, 300);
     return () => {
       window.removeEventListener("resize", recalc);
       window.removeEventListener("orientationchange", recalc);
+      window.visualViewport?.removeEventListener("resize", recalc);
+      window.visualViewport?.removeEventListener("scroll", recalc);
       window.clearTimeout(t);
     };
   }, []);
@@ -308,12 +319,12 @@ export function MessagesClient() {
     <div
       ref={panelRef}
       style={panelHeight ? { height: panelHeight } : undefined}
-      className="grid h-[calc(100vh-12rem)] grid-cols-1 overflow-hidden rounded-2xl border border-navy-100 bg-white dark:border-navy-800 dark:bg-navy-900 md:grid-cols-[20rem_1fr]"
+      className="grid h-[calc(100dvh-12rem)] min-h-0 min-w-0 grid-cols-1 overflow-hidden rounded-2xl border border-navy-100 bg-white dark:border-navy-800 dark:bg-navy-900 md:grid-cols-[20rem_minmax(0,1fr)]"
     >
       {/* List pane */}
       <div
         className={cn(
-          "flex flex-col border-r border-navy-100 dark:border-navy-800",
+          "min-h-0 min-w-0 flex flex-col overflow-hidden border-r border-navy-100 dark:border-navy-800",
           active && "hidden md:flex"
         )}
       >
@@ -326,7 +337,7 @@ export function MessagesClient() {
           </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {loadingList ? (
             <div className="space-y-3 p-4">
               {[0, 1, 2].map((i) => (
@@ -393,10 +404,10 @@ export function MessagesClient() {
       </div>
 
       {/* Thread pane */}
-      <div className={cn("flex flex-col", !active && "hidden md:flex")}>
+      <div className={cn("min-h-0 min-w-0 flex flex-col overflow-hidden", !active && "hidden md:flex")}>
         {composing ? (
-          <div className="flex flex-1 flex-col">
-            <div className="flex items-center gap-2 border-b border-navy-100 px-4 py-3 dark:border-navy-800">
+          <div className="min-h-0 min-w-0 flex flex-1 flex-col overflow-hidden">
+            <div className="flex shrink-0 items-center gap-2 border-b border-navy-100 px-4 py-3 dark:border-navy-800">
               <button onClick={() => setComposing(false)} className="md:hidden">
                 <ArrowLeft className="h-5 w-5 text-navy-500" />
               </button>
@@ -404,7 +415,7 @@ export function MessagesClient() {
                 New message
               </h3>
             </div>
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
               {recipients.map((r) => (
                 <button
                   key={r.id}
@@ -435,7 +446,7 @@ export function MessagesClient() {
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-2 border-b border-navy-100 px-4 py-3 dark:border-navy-800">
+            <div className="flex shrink-0 items-center gap-2 border-b border-navy-100 px-4 py-3 dark:border-navy-800">
               <button onClick={() => setActive(null)} className="md:hidden">
                 <ArrowLeft className="h-5 w-5 text-navy-500" />
               </button>
@@ -444,7 +455,7 @@ export function MessagesClient() {
               </p>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            <div ref={threadScrollRef} className="min-h-0 min-w-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3 sm:p-4">
               {activeType === "GROUP" && activeClassId && (
                 <ClassVoiceRoom
                   conversationId={active}
@@ -466,7 +477,7 @@ export function MessagesClient() {
                   >
                     <div
                       className={cn(
-                        "max-w-[75%] rounded-2xl px-3.5 py-2 text-sm",
+                        "min-w-0 max-w-[85%] overflow-hidden rounded-2xl px-3.5 py-2 text-sm sm:max-w-[75%]",
                         m.mine
                           ? "bg-green-500 text-white"
                           : "bg-navy-100 text-navy-900 dark:bg-navy-800 dark:text-navy-50"
@@ -477,7 +488,7 @@ export function MessagesClient() {
                           {m.senderName}
                         </p>
                       )}
-                      <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                      <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{m.body}</p>
                       {m.attachmentName === "voice_note:disappearing" ? (
                         <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
                           This old disappearing voice note has been replaced by live class voice rooms. NEYO does not keep class voice recordings.
@@ -560,11 +571,11 @@ export function MessagesClient() {
                   </div>
                 ))
               )}
-              <div ref={bottomRef} />
+              <div aria-hidden="true" />
             </div>
 
             {activeType !== "ANNOUNCEMENT" && (
-              <div className="border-t border-navy-100 p-3 dark:border-navy-800">
+              <div className="max-h-[48%] shrink-0 overflow-y-auto border-t border-navy-100 bg-white p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-navy-800 dark:bg-navy-900 sm:p-3">
                 {attachment && (
                   <div className="mb-2">
                     <AttachmentChip file={attachment} onRemove={() => setAttachment(null)} />
@@ -599,7 +610,7 @@ export function MessagesClient() {
                     }}
                     rows={1}
                     placeholder="Type a message…"
-                    className="max-h-32 min-h-[2.75rem] flex-1 resize-none rounded-2xl border border-navy-200 bg-white px-3.5 py-2.5 text-sm text-navy-900 outline-none focus:ring-2 focus:ring-green-500/30 dark:border-navy-700 dark:bg-navy-900 dark:text-navy-50"
+                    className="max-h-32 min-h-[2.75rem] min-w-0 flex-1 resize-none rounded-2xl border border-navy-200 bg-white px-3.5 py-2.5 text-sm text-navy-900 outline-none focus:ring-2 focus:ring-green-500/30 dark:border-navy-700 dark:bg-navy-900 dark:text-navy-50"
                   />
 
                   <Button onClick={send} disabled={sending || (!draft.trim() && !attachment)} className="h-11 w-11 !px-0">
