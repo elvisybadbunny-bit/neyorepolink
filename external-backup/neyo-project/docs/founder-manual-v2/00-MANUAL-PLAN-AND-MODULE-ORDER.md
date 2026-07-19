@@ -48,6 +48,7 @@ language:
 - [Module 23 — Discipline, Clinic, Security/Gate & Reception](./23-DISCIPLINE-CLINIC-SECURITY-GATE-AND-RECEPTION.md)
 - [Module 24 — Documents, Print Station, Exports, Verification & Dynamic Periods](./24-DOCUMENTS-PRINT-STATION-EXPORTS-VERIFICATION-AND-DYNAMIC-PERIODS.md)
 - [Module 25 — Bundi Imports, OCR, Review, Quotas & Safety](./25-BUNDI-IMPORTS-OCR-REVIEW-QUOTAS-TOPUPS-AND-SAFETY.md)
+- [Module 26 — NEYO Support & Founder Operations](./26-NEYO-SUPPORT-AND-FOUNDER-OPERATIONS.md)
 
 ## The standard chapter format
 

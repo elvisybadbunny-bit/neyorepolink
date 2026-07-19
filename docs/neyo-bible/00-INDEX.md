@@ -123,6 +123,7 @@ making this index unreadable:
 - **[Module 23 — Discipline, Clinic, Security/Gate & Reception](../founder-manual-v2/23-DISCIPLINE-CLINIC-SECURITY-GATE-AND-RECEPTION.md)**
 - **[Module 24 — Documents, Print Station, Exports, Verification & Dynamic Periods](../founder-manual-v2/24-DOCUMENTS-PRINT-STATION-EXPORTS-VERIFICATION-AND-DYNAMIC-PERIODS.md)**
 - **[Module 25 — Bundi Imports, OCR, Review, Quotas & Safety](../founder-manual-v2/25-BUNDI-IMPORTS-OCR-REVIEW-QUOTAS-TOPUPS-AND-SAFETY.md)**
+- **[Module 26 — NEYO Support & Founder Operations](../founder-manual-v2/26-NEYO-SUPPORT-AND-FOUNDER-OPERATIONS.md)**
 
 ## Levels planned
 

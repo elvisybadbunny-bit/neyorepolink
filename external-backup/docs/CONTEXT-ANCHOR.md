@@ -1,3 +1,15 @@
+## 2026-07-18 (part 61) — Node Modules Restored/Tested + Founder Manual V2 Module 26
+
+Founder requested next module and installation/testing of node modules. `npm install` completed: 782 packages. Focused ESLint across all recently changed code completed with **0 errors** (30 pre-existing warnings, mainly unused variables/hooks in the 6,000-line Academics client). `npm audit --omit=dev --audit-level=high` found 16 production dependency vulnerabilities (2 critical, 9 moderate, 5 low): current Next 14.2.5 advisories and transitive AWS SDK/fast-xml-parser/uuid; fixes are available but dependency upgrades need a separate tested change rather than an unsafe blind `--force`.
+
+Prisma generation was attempted and still failed because `binaries.prisma.sh` disconnected before TLS while fetching schema engine. Consequently `npm test` failed immediately with `@prisma/client did not initialize yet`; cache-free typecheck also reports widespread implicit-any/unknown database callback errors caused by the absent generated Prisma client. These are recorded as environment blockers, not product test failures or false green results.
+
+Built `26-NEYO-SUPPORT-AND-FOUNDER-OPERATIONS.md`: company-role separation, Support actions/security, all 34 Founder Ops tabs and operational purpose, daily checklist, access/error verification and gap review. All listed tabs are rendered; no orphaned tab found.
+
+Docs mirrored; `git diff --check`. **Next:** Module 27 NEYO Billing/Subscription/Pricing.
+
+---
+
 ## 2026-07-18 (part 60) — Teacher Allocation Import Mobile Scroll Fix + Real Bundi Code Request/Ops Process
 
 **Founder report:** Smart Timetable → Import Existing Teacher Allocations modal could not scroll to its lower content on mobile; Premium handwritten Student Import manual needed exact code-request and NEYO Ops management steps.
