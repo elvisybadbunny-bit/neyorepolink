@@ -783,7 +783,7 @@ export function FounderOpsClient() {
             <div className="flex items-center gap-2"><Badge tone="green">Platform controls</Badge><span className="text-sm font-semibold text-navy-900 dark:text-navy-50">NEYO runs NEYO here</span></div>
             <p className="mt-1 max-w-2xl text-sm text-navy-500 dark:text-navy-400">Founder rhythm, build log, customer learning, metrics, and billing overrides in one place.</p>
           </div>
-          <Button onClick={load} variant="secondary"><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
+          <button onClick={load} title="Refresh Founder Operations" aria-label="Refresh Founder Operations" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-navy-200 bg-white text-navy-600 transition hover:bg-navy-50 dark:border-navy-700 dark:bg-navy-900 dark:text-navy-300 dark:hover:bg-navy-800"><RefreshCw className="h-4 w-4" /></button>
         </CardContent>
       </Card>
 
@@ -838,6 +838,7 @@ export function FounderOpsClient() {
       {tab === "Bundi Import" && <BundiImportOpsTab />}
       {tab === "Curriculum Library" && <CurriculumLibraryOpsTab />}
       
+      {tab === "Ecosystem Trends" && <EcosystemTrendsTab schools={opsSchools} onOpen={(next) => setTab(next as Tab)} />}
       {tab === "Business Operations" && (
         <BusinessOperationsTab
           settings={opsSettings}
@@ -938,6 +939,20 @@ export function FounderOpsClient() {
       )}
     </div>
   );
+}
+
+function EcosystemTrendsTab({ schools, onOpen }: { schools: any[]; onOpen: (tab: string) => void }) {
+  const activeSchools = schools.filter((school) => school.subscription?.status === "ACTIVE").length;
+  const trialSchools = schools.filter((school) => ["TRIAL", "GRACE"].includes(school.subscription?.status)).length;
+  const areas = [
+    { title: "School adoption", detail: `${schools.length} school account${schools.length === 1 ? "" : "s"} · ${activeSchools} active · ${trialSchools} trial/grace`, tab: "Metrics", tone: "border-green-200 bg-green-50/70 dark:border-green-900 dark:bg-green-950/20" },
+    { title: "Customer learning", detail: "Track school visits, interviews, repeated problems and pilot evidence—not invented market claims.", tab: "School Visits", tone: "border-blue-200 bg-blue-50/70 dark:border-blue-900 dark:bg-blue-950/20" },
+    { title: "Product direction", detail: "Build logs, feature releases and custom requests show which parts of the ecosystem are moving.", tab: "Build log", tone: "border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20" },
+    { title: "Learning content", detail: "Review hidden video candidates and curriculum mapping before anything becomes a published learning resource.", tab: "Video Review", tone: "border-purple-200 bg-purple-50/70 dark:border-purple-900 dark:bg-purple-950/20" },
+    { title: "Revenue health", detail: "Use real pricing, discounts, payment health and unit economics to understand commercial movement.", tab: "Unit Economics", tone: "border-cyan-200 bg-cyan-50/70 dark:border-cyan-900 dark:bg-cyan-950/20" },
+    { title: "Platform reliability", detail: "Storage, tenant health, SMS health and maintenance controls show operational risk across NEYO.", tab: "Tenant Health Radar", tone: "border-red-200 bg-red-50/70 dark:border-red-900 dark:bg-red-950/20" },
+  ];
+  return <div className="space-y-5"><div><h2 className="text-xl font-black text-navy-950 dark:text-white">NEYO ecosystem trends</h2><p className="mt-1 max-w-3xl text-sm text-navy-600 dark:text-navy-300">A connected directory of real adoption, customer, product, content, revenue and reliability signals. Empty datasets remain honest zeros; this page never fabricates growth.</p></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{areas.map((area) => <button key={area.title} onClick={() => onOpen(area.tab)} className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-card ${area.tone}`}><p className="font-bold text-navy-950 dark:text-white">{area.title}</p><p className="mt-2 text-sm leading-6 text-navy-700 dark:text-navy-200">{area.detail}</p><span className="mt-3 inline-flex text-xs font-bold text-green-700 dark:text-green-300">Open relevant workspace →</span></button>)}</div><Card><CardContent className="p-4 text-sm text-navy-600 dark:text-navy-300"><strong>Current evidence rule:</strong> trends become meaningful only after demo requests, visits, interviews, school activity and billing records exist. Until then, use this as the map of where each signal belongs.</CardContent></Card></div>;
 }
 
 function FounderOpsSkeleton() {

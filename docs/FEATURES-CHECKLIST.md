@@ -4890,3 +4890,11 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [ ] Printed barcode and camera/USB scanner require deployed real-device verification.
 - [x] Library label printing now offers QR only, barcode only or compact combined output.
 - [x] Compact combined labels use 32 labels per A4 page (up from 18) to reduce paper cost.
+
+### Government integration truth audit and Founder Ops repair — 2026-07-20
+- [x] Removed four unused phantom global credentials: KRA eTIMS key/PIN, NTSA fleet key and KNEC SMS token.
+- [x] Added migration deleting previously stored unsupported secret rows.
+- [x] Documented KRA eTIMS as future school-specific Finance/Tax integration requiring OSCU/VSCU approval/certification.
+- [x] Kept real NTSA workflow honest: school-entered inspection expiry and alerts, no claimed live API lookup.
+- [x] Ecosystem Trends blank tab now renders six honest signal areas linked to existing workspaces.
+- [x] Founder Operations refresh is a compact accessible icon button.

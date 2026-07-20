@@ -57,11 +57,6 @@ export const INTEGRATION_CREDENTIALS = [
   { key: "aws_s3_secret_access_key", provider: "AWS_S3", label: "AWS S3 Secret Access Key", kind: "secret" },
   { key: "aws_s3_bucket_name", provider: "AWS_S3", label: "AWS S3 Storage Bucket Name", kind: "public" },
   { key: "aws_s3_region", provider: "AWS_S3", label: "AWS S3 Storage Region (e.g. af-south-1 / us-east-1)", kind: "public" },
-  // Statutory & Compliance API Keys (KRA / NTSA / KNEC)
-  { key: "kra_etims_api_key", provider: "KRA_ETIMS", label: "KRA eTIMS Tax Integration Key", kind: "secret" },
-  { key: "kra_etims_pin", provider: "KRA_ETIMS", label: "School Master KRA Tax PIN", kind: "public" },
-  { key: "ntsa_fleet_api_key", provider: "NTSA", label: "NTSA Fleet Inspection Query Key", kind: "secret" },
-  { key: "knec_sms_gateway_token", provider: "KNEC_SMS", label: "KNEC SMS Placement Query Gateway Key (22263 style)", kind: "secret" },
 ] as const;
 
 const keys = INTEGRATION_CREDENTIALS.map((item) => item.key) as [string, ...string[]];

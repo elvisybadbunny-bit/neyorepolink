@@ -72,15 +72,15 @@ Powers high-capacity encrypted file storage for exam papers, student photos, por
 
 ---
 
-### 5. Statutory, Tax & Government Integrations (`KRA_ETIMS` / `NTSA` / `KNEC_SMS`)
-Powers BOM payroll KRA tax returns, bus fleet NTSA compliance, and 22263-style KNEC student SMS placement lookups.
+### 5. Government-service readiness (not vault credentials)
 
-| Vault Parameter Key | Type | Description / Provider Guide |
-| :--- | :---: | :--- |
-| `kra_etims_api_key` | Secret | KRA eTIMS System Integration API Key for automated tax returns. |
-| `kra_etims_pin` | Public | School / Master Corporate KRA Tax PIN (e.g. `P051234567Z`). |
-| `ntsa_fleet_api_key` | Secret | NTSA Vehicle Roadworthiness & Inspection API Query Key. |
-| `knec_sms_gateway_token` | Secret | KNEC Gateway Token for instant SMS student index & placement verification. |
+NEYO previously listed KRA eTIMS, NTSA and KNEC SMS values here even though no production connector consumed them. They have been removed.
+
+- **KRA eTIMS:** taxpayer-specific OSCU/VSCU system-to-system integration requires onboarding, testing, vetting and certification. A school’s KRA PIN/communication material belongs to that school and must not be stored as one NEYO-company global value. NEYO currently keeps normal school invoices; it does not claim eTIMS submission.
+- **NTSA:** NEYO stores each school vehicle’s inspection-expiry date and displays compliance reminders. No verified public “fleet inspection API key” connector exists in NEYO, so no such secret is collected.
+- **KNEC:** official public result/query channels do not establish a school-owned generic placement gateway token. NEYO keeps manual KNEC/MOE records and does not claim an automated placement SMS connector.
+
+A future connector must have official access evidence, tenant-specific consent/configuration, encrypted storage, API service, audit logs, retry/error states and live sandbox verification before its credential field appears.
 
 ---
 
@@ -100,7 +100,7 @@ Powers Bundi Intelligent OCR scanning, Ask Bundi natural-language analytics, and
 1. Log into NEYO with your **FOUNDER** or **SUPER_ADMIN** account.
 2. Navigate to **NEYO Ops** from the top module switcher (`/founder`).
 3. Click the tab titled **`Credentials & Secrets Vault`**.
-4. Use the search bar or category filters (`CENTRAL_DARAJA`, `SMS`, `OAUTH`, `AWS_S3`, `KRA_ETIMS`, etc.) to find the parameter key you want to update.
+4. All supported credentials are displayed immediately and grouped by provider; no search is required.
 5. Click **`Edit Key`**. A pop-up dialog will open.
 6. Paste your new API key or secret token in the text box.
 7. Click **`Save Credential to Vault`**.

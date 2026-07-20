@@ -86,7 +86,7 @@ export function FounderCredentialsVault() {
             Platform Operations Encrypted Credentials & Integration Secrets Vault
           </h2>
           <p className="text-sm text-slate-400">
-            Configure live third-party credentials (M-Pesa Daraja, SMS, AWS S3, OAuth, Google Vision, KRA Tax eTIMS, NTSA) directly in your founder space.
+            Configure genuine NEYO-company integration credentials such as central M-Pesa, messaging, storage, OAuth, observability and approved content/OCR providers. School-owned or unsupported government credentials are never collected here.
           </p>
         </div>
         <div className="flex items-center gap-2">

@@ -200,6 +200,7 @@ export function TransportClient({ canManage }: { canManage: boolean }) {
 
       {tab === "fleet" && (
         <div className="space-y-3">
+          <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-3 text-xs leading-5 text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200">NTSA status is tracked from the inspection-expiry date entered by this school. NEYO has no verified NTSA fleet-query API connector and does not claim a live government lookup.</div>
           {canManage && <Button onClick={() => setDialog("vehicle")}><Plus className="h-4 w-4" /> Add vehicle</Button>}
           {data.vehicles.length === 0 ? (
             <EmptyState icon={Bus} title="No vehicles yet" description="Register the school buses — insurance and NTSA inspection dates give you expiry alerts." action={canManage ? <Button onClick={() => setDialog("vehicle")}><Plus className="h-4 w-4" /> Add vehicle</Button> : undefined} />
