@@ -17,3 +17,7 @@ Batch 1 is now operable from **Platform Operations → Video Review**. **Verify 
 ## Curriculum mapping and final publication
 
 A candidate marked **Approved for Mapping** now exposes subject, strand and sub-strand selectors sourced from the founder account's real tenant catalog. The API rejects mismatched relationships. **Save mapping** moves the candidate to `MAPPED`; **Final publish** then idempotently upserts a real tenant-scoped `LearningVideo` with national scope, approved status, live title/channel, thumbnail, grade and complete curriculum links. Only `PUBLISHED` entries become available through the existing national library query. This preserves the sequence live check → human content decision → curriculum mapping → final publication.
+
+## Mandatory human-review checklist
+
+A live-verified candidate cannot move to mapping until the founder records all five checks: watched fully, grade suitable, content safe, CBE-topic relevance, and clear language. The checklist is persisted with the reviewer. Both UI and API enforce it; modifying the browser cannot bypass the gate. A failed check should lead to rejection or a clear note, not approval.
