@@ -150,6 +150,15 @@ If the answer is no, document the idea and defer it.
 - Converted trip/activity creation, payment and pay-later dialogs into safe-area-aware mobile sheets.
 - Changed cramped trip/activity three-column fields to stack on phones and retain their desktop layout.
 
+### Settings, Parent Growth, Student Profile and Skills Passport
+
+- Made appearance and school-profile option grids responsive instead of squeezing three or four controls across a phone.
+- Increased the contrast and readable size of Settings help text without enlarging its cards.
+- Increased Parent Growth supporting text and metadata visibility while preserving the compact layout.
+- Converted Student Profile edit, certificate-vault and handover dialogs into phone-safe sheets.
+- Changed cramped Student Profile three-column fields to stack on phones.
+- Made the Skills Passport rating form fit dynamic phone heights with contained scrolling and safe-area spacing.
+
 This is an active route-by-route audit. A route is not marked complete merely because it inherits the shared CSS fixes.
 
 ## Current engineering order

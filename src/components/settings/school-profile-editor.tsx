@@ -482,7 +482,7 @@ export function SchoolProfileEditor() {
           <div className="flex items-center justify-between rounded-2xl border border-green-200/70 bg-green-50/60 p-3.5 dark:border-green-900 dark:bg-green-900/10">
             <div className="space-y-0.5">
               <span className="text-xs font-black text-navy-900 dark:text-navy-50">Company Liquid Glass Master Toggle</span>
-              <p className="text-[10px] text-navy-500 dark:text-navy-400">
+              <p className="text-[11px] text-navy-600 dark:text-navy-300">
                 {liquidEnabled ? "Liquid Glass is ON across the platform." : "Liquid Glass is OFF platform-wide; users see the plain theme surfaces."}
               </p>
             </div>
@@ -507,7 +507,7 @@ export function SchoolProfileEditor() {
           {/* Transparency / Liquidity Level Selector */}
           <div className="space-y-1.5">
             <Label>Liquid Glass Transparency Level</Label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {[
                 { val: "1", label: "Subtle Matte", desc: "12px Blur (Lighter refraction)" },
                 { val: "2", label: "Standard Frosted", desc: "22px Blur (Pre-paint balanced)" },
@@ -525,7 +525,7 @@ export function SchoolProfileEditor() {
                   }`}
                 >
                   <span className="text-xs">{item.label}</span>
-                  <span className="text-[10px] text-navy-400 font-normal mt-0.5">{item.desc}</span>
+                  <span className="text-[11px] text-navy-600 dark:text-navy-300 font-normal mt-0.5">{item.desc}</span>
                 </button>
               ))}
             </div>
@@ -536,10 +536,10 @@ export function SchoolProfileEditor() {
               surfaces without changing how much blur is applied. */}
           <div className="space-y-1.5">
             <Label>Liquid Glass Colour Intensity (company default)</Label>
-            <p className="text-[10px] font-semibold text-navy-400">
+            <p className="text-[11px] font-semibold text-navy-600 dark:text-navy-300">
               Independent of the transparency level above — boosts background contrast for visibility without changing blur depth.
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {[
                 { val: "1", label: "Standard", desc: "Platform default contrast" },
                 { val: "2", label: "Enhanced", desc: "Higher contrast for busy backgrounds" },
@@ -557,7 +557,7 @@ export function SchoolProfileEditor() {
                   }`}
                 >
                   <span className="text-xs">{item.label}</span>
-                  <span className="text-[10px] text-navy-400 font-normal mt-0.5">{item.desc}</span>
+                  <span className="text-[11px] text-navy-600 dark:text-navy-300 font-normal mt-0.5">{item.desc}</span>
                 </button>
               ))}
             </div>
@@ -568,10 +568,10 @@ export function SchoolProfileEditor() {
               above, mirroring O.2's "My Popup Style" personal-override model. */}
           <div className="space-y-2 rounded-2xl border border-navy-100 bg-white/50 p-3.5 dark:border-navy-800 dark:bg-navy-950/30">
             <Label>My Colour Intensity Override</Label>
-            <p className="text-[10px] font-semibold text-navy-400">
+            <p className="text-[11px] font-semibold text-navy-600 dark:text-navy-300">
               Personal override, saved to your account: pick your own contrast level regardless of your school&apos;s default above. Choose &quot;School default&quot; to always follow it.
             </p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {[
                 { val: "company" as const, label: "School default" },
                 { val: "1" as const, label: "Standard" },
@@ -599,7 +599,7 @@ export function SchoolProfileEditor() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <Label>My Liquid Glass Intensity</Label>
-                <p className="mt-0.5 text-[10px] font-semibold text-navy-400">Per-device slider: increases/decreases blur and shine without changing the company master setting.</p>
+                <p className="mt-0.5 text-[11px] font-semibold text-navy-600 dark:text-navy-300">Per-device slider: increases/decreases blur and shine without changing the company master setting.</p>
               </div>
               <span className="rounded-full bg-green-500/10 px-2.5 py-1 text-xs font-black text-green-700 dark:text-green-300">{liquidIntensity}%</span>
             </div>
@@ -615,7 +615,7 @@ export function SchoolProfileEditor() {
               }}
               className="w-full accent-green-600"
             />
-            <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-navy-400">
+            <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider text-navy-600 dark:text-navy-300">
               <span>Matte</span><span>Balanced</span><span>Deep Glass</span>
             </div>
           </div>
@@ -625,7 +625,7 @@ export function SchoolProfileEditor() {
               changes how POPUPS/MODALS (not cards, sidebar or topbar) render. */}
           <div className="space-y-2 rounded-2xl border border-navy-100 bg-white/50 p-3.5 dark:border-navy-800 dark:bg-navy-950/30">
             <Label>My Popup Style</Label>
-            <p className="text-[10px] font-semibold text-navy-400">
+            <p className="text-[11px] font-semibold text-navy-600 dark:text-navy-300">
               Personal preference, saved to your account: how "Sync with your phone"-style pop-up windows render for you. Everything else on the platform keeps the company&apos;s Liquid Glass setting above.
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -641,7 +641,7 @@ export function SchoolProfileEditor() {
               >
                 <Sparkle className="h-4 w-4" />
                 <span className="text-xs">Liquid Glass</span>
-                <span className="text-[10px] text-navy-400 font-normal">Frosted, matches the platform default</span>
+                <span className="text-[11px] text-navy-600 dark:text-navy-300 font-normal">Frosted, matches the platform default</span>
               </button>
               <button
                 type="button"
@@ -655,7 +655,7 @@ export function SchoolProfileEditor() {
               >
                 <Square className="h-4 w-4" />
                 <span className="text-xs">Solid</span>
-                <span className="text-[10px] text-navy-400 font-normal">Plain card, no blur or sheen</span>
+                <span className="text-[11px] text-navy-600 dark:text-navy-300 font-normal">Plain card, no blur or sheen</span>
               </button>
             </div>
           </div>
@@ -664,7 +664,7 @@ export function SchoolProfileEditor() {
           <div className="flex items-center justify-between p-3.5 rounded-2xl border border-navy-50 bg-navy-50/20 dark:border-navy-800">
             <div className="space-y-0.5">
               <span className="text-xs font-bold text-navy-900 dark:text-navy-50">Enable Custom Theme Styles</span>
-              <p className="text-[10px] text-navy-400">Toggle whether schools can override system brand colors.</p>
+              <p className="text-[11px] text-navy-600 dark:text-navy-300">Toggle whether schools can override system brand colors.</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -768,7 +768,7 @@ export function SchoolProfileEditor() {
               {shellVersion === "v2" && <Badge tone="green" className="mt-1">Platform default</Badge>}
             </button>
           </div>
-          <p className="text-[10px] text-navy-400">
+          <p className="text-[11px] text-navy-600 dark:text-navy-300">
             Switching here changes what every school sees on their next page load — nothing is deleted; you can switch back to Shell V1 at any time.
           </p>
         </CardContent>

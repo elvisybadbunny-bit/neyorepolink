@@ -43,7 +43,7 @@ export function ParentGrowthTab({ studentId }: { studentId: string }) {
     } catch { toast({ title: "Network error", tone: "error" }); }
   }
 
-  if (loading) return <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-navy-400" /></div>;
+  if (loading) return <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-navy-600 dark:text-navy-300" /></div>;
   if (error) return (
     <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-900/40 dark:bg-red-950/20">
       <p className="text-sm text-red-700 dark:text-red-300">Could not load the growth dashboard.</p>
@@ -61,7 +61,7 @@ export function ParentGrowthTab({ studentId }: { studentId: string }) {
     <div className="space-y-6 animate-in fade-in">
       {/* Growth not just grades — summary roll-up */}
       <div>
-        <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-navy-400">Growth, not just grades</h3>
+        <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-navy-600 dark:text-navy-300">Growth, not just grades</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <SummaryStat label="Attendance" value={s.attendancePct != null ? `${s.attendancePct}%` : "—"} tone={s.attendancePct == null ? "neutral" : s.attendancePct >= 90 ? "green" : s.attendancePct >= 75 ? "amber" : "red"} />
           <SummaryStat label="Active goals" value={s.goalsActive ?? 0} tone="blue" />
@@ -91,18 +91,18 @@ export function ParentGrowthTab({ studentId }: { studentId: string }) {
                   <div key={g.id} className="rounded-xl border border-navy-100 bg-white p-3 shadow-sm dark:border-navy-800 dark:bg-navy-950">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <Badge tone="neutral" className="mb-1 text-[9px] uppercase tracking-widest">{g.category}</Badge>
+                        <Badge tone="neutral" className="mb-1 text-[11px] uppercase tracking-widest">{g.category}</Badge>
                         <h4 className="text-sm font-bold text-navy-950 dark:text-white">{g.title}</h4>
                       </div>
                       <Badge tone={g.status === "ACHIEVED" ? "green" : g.status === "MISSED" ? "red" : "blue"}>{g.status}</Badge>
                     </div>
                     {g.description && <p className="mt-2 text-xs text-navy-600 dark:text-navy-300">{g.description}</p>}
                     <div className="mt-3 flex items-center justify-between border-t border-navy-50 pt-2 dark:border-navy-800">
-                      <span className="text-[10px] text-navy-400">Set by {g.teacher.fullName}{g.targetDate ? ` · by ${g.targetDate}` : ""}</span>
+                      <span className="text-[11px] text-navy-600 dark:text-navy-300">Set by {g.teacher.fullName}{g.targetDate ? ` · by ${g.targetDate}` : ""}</span>
                       {g.acknowledgedByParent ? (
-                        <span className="flex items-center text-[10px] font-bold text-green-600"><CheckCircle2 className="mr-1 h-3 w-3" /> Acknowledged</span>
+                        <span className="flex items-center text-[11px] font-bold text-green-600"><CheckCircle2 className="mr-1 h-3 w-3" /> Acknowledged</span>
                       ) : data.goalAckEnabled ? (
-                        <Button size="sm" variant="secondary" className="h-6 rounded-full text-[10px]" onClick={() => acknowledge(g.id)}>Acknowledge</Button>
+                        <Button size="sm" variant="secondary" className="h-6 rounded-full text-[11px]" onClick={() => acknowledge(g.id)}>Acknowledge</Button>
                       ) : null}
                     </div>
                   </div>
@@ -118,7 +118,7 @@ export function ParentGrowthTab({ studentId }: { studentId: string }) {
           <CardContent className="pt-2">
             {(data.attendance?.totalMarked ?? 0) === 0 ? <Empty text="No attendance marked in this window." /> : (
               <div>
-                <div className="mb-3 text-3xl font-black text-navy-950 dark:text-white">{data.attendance.presentPct}%<span className="ml-2 text-xs font-medium text-navy-400">present</span></div>
+                <div className="mb-3 text-3xl font-black text-navy-950 dark:text-white">{data.attendance.presentPct}%<span className="ml-2 text-xs font-medium text-navy-600 dark:text-navy-300">present</span></div>
                 <div className="grid grid-cols-4 gap-2 text-center text-xs">
                   <MiniStat label="Present" value={data.attendance.present} />
                   <MiniStat label="Late" value={data.attendance.late} />
@@ -137,8 +137,8 @@ export function ParentGrowthTab({ studentId }: { studentId: string }) {
             {(data.behavior?.incidents ?? 0) === 0 ? <Empty text="No behavior incidents recorded — well done!" /> : (
               <div>
                 <div className="mb-3 flex items-end gap-4">
-                  <div><div className="text-2xl font-black text-navy-950 dark:text-white">{data.behavior.incidents}</div><div className="text-[10px] uppercase text-navy-400">incidents</div></div>
-                  <div><div className="text-2xl font-black text-rose-600">{data.behavior.demeritPoints}</div><div className="text-[10px] uppercase text-navy-400">demerit pts</div></div>
+                  <div><div className="text-2xl font-black text-navy-950 dark:text-white">{data.behavior.incidents}</div><div className="text-[11px] uppercase text-navy-600 dark:text-navy-300">incidents</div></div>
+                  <div><div className="text-2xl font-black text-rose-600">{data.behavior.demeritPoints}</div><div className="text-[11px] uppercase text-navy-600 dark:text-navy-300">demerit pts</div></div>
                 </div>
                 <div className="space-y-1">
                   {data.behavior.recent.map((i: any, idx: number) => (
@@ -165,7 +165,7 @@ export function ParentGrowthTab({ studentId }: { studentId: string }) {
                     <div>
                       <h4 className="text-sm font-bold text-navy-950 dark:text-white">{t.talentArea.name}</h4>
                       {t.notes && <p className="line-clamp-2 text-xs text-navy-600 dark:text-navy-300">{t.notes}</p>}
-                      <span className="mt-1 block text-[10px] text-navy-400">Coach: {t.coach.fullName} · {t.date}</span>
+                      <span className="mt-1 block text-[11px] text-navy-600 dark:text-navy-300">Coach: {t.coach.fullName} · {t.date}</span>
                     </div>
                   </div>
                 ))}
@@ -186,7 +186,7 @@ export function ParentGrowthTab({ studentId }: { studentId: string }) {
                     {c.narrative && <p className="mt-1 text-xs text-navy-600 dark:text-navy-300">{c.narrative}</p>}
                     <div className="mt-2 flex items-center justify-between">
                       <Badge tone="blue">{c.level ? `Level ${c.level}` : (c.scorePct != null ? `${c.scorePct}%` : "Noted")}</Badge>
-                      <span className="text-[10px] text-navy-400">{new Date(c.createdAt).toLocaleDateString()}</span>
+                      <span className="text-[11px] text-navy-600 dark:text-navy-300">{new Date(c.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                 ))}
@@ -205,7 +205,7 @@ export function ParentGrowthTab({ studentId }: { studentId: string }) {
                   <div key={p.id} className="flex items-center justify-between rounded-xl border border-navy-100 p-3 dark:border-navy-800">
                     <div className="min-w-0">
                       <h4 className="truncate text-sm font-bold text-navy-950 dark:text-white">{p.title}</h4>
-                      <Badge tone="neutral" className="mt-1 text-[9px] uppercase">{p.category}</Badge>
+                      <Badge tone="neutral" className="mt-1 text-[11px] uppercase">{p.category}</Badge>
                     </div>
                     {(p.fileUrl || p.externalLink) && (
                       <a href={p.fileUrl || p.externalLink} target="_blank" rel="noreferrer" className="ml-2 shrink-0 text-xs font-semibold text-blue-600 hover:underline">View</a>
@@ -246,8 +246,8 @@ export function ParentGrowthTab({ studentId }: { studentId: string }) {
                 {data.feedbackDigest.map((f: any, idx: number) => (
                   <div key={idx} className="rounded-xl border border-navy-100 p-3 dark:border-navy-800">
                     <div className="mb-1 flex items-center justify-between">
-                      <Badge tone="neutral" className="text-[9px] uppercase">{f.source}</Badge>
-                      <span className="text-[10px] text-navy-400">{f.from} · {f.date}</span>
+                      <Badge tone="neutral" className="text-[11px] uppercase">{f.source}</Badge>
+                      <span className="text-[11px] text-navy-600 dark:text-navy-300">{f.from} · {f.date}</span>
                     </div>
                     <p className="text-xs text-navy-700 dark:text-navy-200">{f.text}</p>
                   </div>
@@ -272,7 +272,7 @@ function SummaryStat({ label, value, tone }: { label: string; value: React.React
   return (
     <div className={`rounded-xl border ${ring[tone]} p-3 text-center`}>
       <div className="text-xl font-black text-navy-950 dark:text-white">{value}</div>
-      <div className="text-[10px] uppercase tracking-wide text-navy-400">{label}</div>
+      <div className="text-[11px] uppercase tracking-wide text-navy-600 dark:text-navy-300">{label}</div>
     </div>
   );
 }
@@ -281,7 +281,7 @@ function MiniStat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-lg bg-navy-50 py-2 dark:bg-navy-900/40">
       <div className="font-bold text-navy-950 dark:text-white">{value}</div>
-      <div className="text-[9px] uppercase text-navy-400">{label}</div>
+      <div className="text-[11px] uppercase text-navy-600 dark:text-navy-300">{label}</div>
     </div>
   );
 }

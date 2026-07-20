@@ -304,9 +304,9 @@ export function SkillRatingForm({ studentId, onSubmit, onClose, saving }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden p-0 sm:items-center sm:p-6">
       <div className="fixed inset-0 bg-navy-900/40 backdrop-blur-sm dark:bg-navy-950/60" onClick={onClose} />
-      <Card className="relative z-10 w-full max-w-lg overflow-hidden border-white/40 bg-white backdrop-blur-2xl dark:border-white/10 dark:bg-navy-900 shadow-2xl">
+      <Card className="relative z-10 max-h-[calc(100dvh-0.5rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-3xl border-navy-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl">
         <form onSubmit={handleSubmit}>
           <CardHeader className="flex flex-row items-center justify-between border-b border-navy-100 px-6 py-4 dark:border-navy-800">
             <CardTitle className="text-lg font-bold">Log Skill Rating</CardTitle>
