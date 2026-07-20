@@ -4925,3 +4925,14 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Master solver prevents duplicate scheduling: active option-block subjects are skipped from ordinary combination and class-subject cards.
 - [x] Legacy Whole-School generator is blocked for Senior levels because it cannot safely place atomic parallel option blocks; schools are directed to the deterministic Master Generator.
 - [x] Added pure graph regression script (`npm run test:senior-option-blocks`); execution awaits installed project dependencies in this checkout.
+
+### Senior School Timetable Phase C — deterministic resource feasibility — 2026-07-21
+- [x] Added physical `Venue.learnerCapacity` distinct from simultaneous-group capacity.
+- [x] Venue/Lab editor captures and displays learner seats.
+- [x] Phase C preview calculates learner group size, home-class capacity and shared-venue requirement per option subject.
+- [x] Shows qualified teacher and capacity-safe tagged venue recommendations.
+- [x] Confirmation requires real TeacherSubject qualification and blocks one teacher across parallel subjects.
+- [x] Required venue must be active, subject-tagged and large enough; multi-bay simultaneous and total learner capacity are enforced.
+- [x] Selected venue persists on all five repeated slots for that option block.
+- [x] Master generation revalidates stale choices, active learner count, teacher qualification and venue capacity after confirmation.
+- [x] No AI/Bundi/provider dependency.

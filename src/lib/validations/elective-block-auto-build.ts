@@ -37,6 +37,7 @@ export type PreviewAutoBuildInput = z.infer<typeof previewAutoBuildSchema>;
 const confirmedSubjectSchema = z.object({
   subjectId: z.string().min(1),
   teacherId: z.string().min(1).nullable().optional(),
+  venueId: z.string().min(1).nullable().optional(),
   lessonsPerWeek: z.coerce.number().int().min(1).max(20).default(5),
   // Real classIds actually offering this subject inside the confirmed
   // block — a school may narrow this from the full preview if, e.g., one

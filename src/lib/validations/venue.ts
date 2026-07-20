@@ -30,6 +30,7 @@ export const createVenueSchema = z.object({
   shortCode,
   supportsSubjectIds: z.array(z.string().trim().min(1)).max(60).default([]),
   capacityPerPeriod: z.coerce.number().int().min(1).max(10).default(1),
+  learnerCapacity: z.coerce.number().int().min(1).max(5000).nullable().optional(),
 });
 export type CreateVenueInput = z.infer<typeof createVenueSchema>;
 

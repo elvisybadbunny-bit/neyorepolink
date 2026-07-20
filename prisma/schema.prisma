@@ -5332,6 +5332,7 @@ model Venue {
   // for a genuinely large real hall/workshop a school may split into
   // real bays). Defaults to the realistic single-room case.
   capacityPerPeriod Int @default(1)
+  learnerCapacity   Int? // physical learner seats; null = school has not measured it yet
 
   active    Boolean  @default(true)
   createdAt DateTime @default(now())

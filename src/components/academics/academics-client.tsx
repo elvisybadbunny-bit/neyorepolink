@@ -2364,7 +2364,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   });
   // Z.3 — real Venue/Lab pool state.
   const [venues, setVenues] = React.useState<any[]>([]);
-  const [venueForm, setVenueForm] = React.useState<any>({ id: "", name: "", shortCode: "", capacityPerPeriod: 1, supportsSubjectIds: [] as string[] });
+  const [venueForm, setVenueForm] = React.useState<any>({ id: "", name: "", shortCode: "", capacityPerPeriod: 1, learnerCapacity: "", supportsSubjectIds: [] as string[] });
   const [venueSaving, setVenueSaving] = React.useState(false);
   // AA.1 — real Elective/Options Block state.
   const emptyBlockForm = { id: "", name: "", mode: "MULTI_SLOT" as "MULTI_SLOT" | "SINGLE_CHOICE", preferAfterBreak: false, preferSplitExamSittings: false, classIds: [] as string[], slots: [{ label: "Slot A", isDouble: false, subjects: [{ subjectId: "", teacherId: "", venueId: "" }, { subjectId: "", teacherId: "", venueId: "" }] }] };
@@ -2789,12 +2789,13 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
           name: venueForm.name,
           shortCode: venueForm.shortCode || undefined,
           capacityPerPeriod: Number(venueForm.capacityPerPeriod) || 1,
+          learnerCapacity: venueForm.learnerCapacity ? Number(venueForm.learnerCapacity) : null,
           supportsSubjectIds: venueForm.supportsSubjectIds,
         }),
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error?.message || "Failed");
-      setVenueForm({ id: "", name: "", shortCode: "", capacityPerPeriod: 1, supportsSubjectIds: [] });
+      setVenueForm({ id: "", name: "", shortCode: "", capacityPerPeriod: 1, learnerCapacity: "", supportsSubjectIds: [] });
       await load();
       toast({ title: venueForm.id ? "Venue updated" : "Venue added", tone: "success" });
     } catch (e: any) {
@@ -3613,9 +3614,10 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
           <CardContent className="space-y-3">
             <div className="space-y-3 rounded-2xl border border-navy-100 p-4 dark:border-navy-800">
               <Input value={venueForm.name} onChange={(e) => setVenueForm((p: any) => ({ ...p, name: e.target.value }))} placeholder="e.g. Chemistry Lab" />
-              <div className="grid grid-cols-2 gap-2">
-                <Input value={venueForm.shortCode} onChange={(e) => setVenueForm((p: any) => ({ ...p, shortCode: e.target.value.toUpperCase() }))} placeholder="Code (auto if left blank)" maxLength={10} />
+              <div className="grid gap-2 sm:grid-cols-3">
+                <Input value={venueForm.shortCode} onChange={(e) => setVenueForm((p: any) => ({ ...p, shortCode: e.target.value.toUpperCase() }))} placeholder="Printed code" maxLength={10} />
                 <Input type="number" min={1} max={10} value={venueForm.capacityPerPeriod} onChange={(e) => setVenueForm((p: any) => ({ ...p, capacityPerPeriod: Number(e.target.value) }))} placeholder="Classes at once" />
+                <Input type="number" min={1} max={5000} value={venueForm.learnerCapacity} onChange={(e) => setVenueForm((p: any) => ({ ...p, learnerCapacity: e.target.value }))} placeholder="Learner seats" />
               </div>
               <div className="max-h-32 overflow-y-auto rounded-2xl border border-navy-100 p-3 dark:border-navy-800">
                 <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-navy-400">Subjects this venue supports (pool)</p>
@@ -3634,7 +3636,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
               <div className="flex flex-wrap gap-2">
                 <Button onClick={saveVenue} disabled={venueSaving || !canManage}>{venueSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {venueForm.id ? "Update venue" : "Add venue"}</Button>
                 {venueForm.id && (
-                  <Button variant="secondary" onClick={() => setVenueForm({ id: "", name: "", shortCode: "", capacityPerPeriod: 1, supportsSubjectIds: [] })}>Cancel edit</Button>
+                  <Button variant="secondary" onClick={() => setVenueForm({ id: "", name: "", shortCode: "", capacityPerPeriod: 1, learnerCapacity: "", supportsSubjectIds: [] })}>Cancel edit</Button>
                 )}
               </div>
             </div>
@@ -3648,11 +3650,11 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                     <div>
                       <p className="text-sm font-bold text-navy-900 dark:text-white">{v.name} <Badge tone="blue">{v.shortCode}</Badge></p>
                       <p className="mt-1 text-xs text-navy-500 dark:text-navy-400">
-                        {v.capacityPerPeriod} class{v.capacityPerPeriod === 1 ? "" : "es"} at once · {(() => { try { const ids = JSON.parse(v.supportsSubjectIds || "[]"); return ids.length; } catch { return 0; } })()} subjects tagged
+                        {v.capacityPerPeriod} class{v.capacityPerPeriod === 1 ? "" : "es"} at once · {v.learnerCapacity ? `${v.learnerCapacity} learner seats · ` : "learner capacity not set · "}{Array.isArray(v.supportsSubjectIds) ? v.supportsSubjectIds.length : (() => { try { return JSON.parse(v.supportsSubjectIds || "[]").length; } catch { return 0; } })()} subjects tagged
                       </p>
                     </div>
                     <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" disabled={!canManage} onClick={() => setVenueForm({ id: v.id, name: v.name, shortCode: v.shortCode ?? "", capacityPerPeriod: v.capacityPerPeriod, supportsSubjectIds: (() => { try { return JSON.parse(v.supportsSubjectIds || "[]"); } catch { return []; } })() })}><Tag className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" disabled={!canManage} onClick={() => setVenueForm({ id: v.id, name: v.name, shortCode: v.shortCode ?? "", capacityPerPeriod: v.capacityPerPeriod, learnerCapacity: v.learnerCapacity ?? "", supportsSubjectIds: Array.isArray(v.supportsSubjectIds) ? v.supportsSubjectIds : (() => { try { return JSON.parse(v.supportsSubjectIds || "[]"); } catch { return []; } })() })}><Tag className="h-4 w-4" /></Button>
                       <Button size="sm" variant="ghost" disabled={venueSaving || !canManage} onClick={() => deleteVenueRow(v.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
@@ -3924,7 +3926,7 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
   const [error, setError] = React.useState<string | null>(null);
   const [preview, setPreview] = React.useState<any>(null);
   const [blockName, setBlockName] = React.useState("");
-  const [rowOverrides, setRowOverrides] = React.useState<Record<string, { teacherId: string; lessonsPerWeek: number }>>({});
+  const [rowOverrides, setRowOverrides] = React.useState<Record<string, { teacherId: string; venueId: string; lessonsPerWeek: number }>>({});
 
   const levels = React.useMemo(() => Array.from(new Set(classes.map((c: any) => c.level))).sort(), [classes]);
 
@@ -3941,8 +3943,8 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
       if (!json.ok) throw new Error(json.error?.message || "Failed");
       setPreview(json.data);
       setBlockName(kind === "MATH_SPLIT" ? `${level} — Core/Essential Mathematics` : `${level} — Options`);
-      const overrides: Record<string, { teacherId: string; lessonsPerWeek: number }> = {};
-      for (const row of json.data.rows) overrides[row.subjectId] = { teacherId: row.suggestedTeacherId || "", lessonsPerWeek: row.defaultLessonsPerWeek };
+      const overrides: Record<string, { teacherId: string; venueId: string; lessonsPerWeek: number }> = {};
+      for (const row of json.data.rows) overrides[row.subjectId] = { teacherId: row.suggestedTeacherId || "", venueId: row.requiresSharedVenue ? (row.venueRecommendations.find((venue: any) => venue.learnerCapacity != null && venue.learnerCapacity >= row.studentCount)?.id || "") : "", lessonsPerWeek: row.defaultLessonsPerWeek };
       setRowOverrides(overrides);
     } catch (e: any) {
       setError(e?.message || "Could not build a real preview for that level");
@@ -3963,6 +3965,7 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
           subjects: preview.rows.map((r: any) => ({
             subjectId: r.subjectId,
             teacherId: rowOverrides[r.subjectId]?.teacherId || null,
+            venueId: rowOverrides[r.subjectId]?.venueId || null,
             lessonsPerWeek: rowOverrides[r.subjectId]?.lessonsPerWeek || r.defaultLessonsPerWeek,
             classIds: r.classIds,
           })),
@@ -4041,7 +4044,7 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
                     <p className="text-sm font-bold text-navy-900 dark:text-white">{row.subjectName} ({row.subjectCode})</p>
                     <div className="flex items-center gap-1.5">{row.optionBlock && <Badge tone="green">{row.optionBlock === "MATH" ? "Math split" : `Option ${row.optionBlock}`}</Badge>}<Badge tone="blue">{row.studentCount} learner{row.studentCount === 1 ? "" : "s"}</Badge></div>
                   </div>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
                     <select
                       value={rowOverrides[row.subjectId]?.teacherId ?? ""}
                       onChange={(e) => setRowOverrides((p) => ({ ...p, [row.subjectId]: { ...p[row.subjectId], teacherId: e.target.value } }))}
@@ -4050,16 +4053,19 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
                       <option value="">No teacher yet</option>
                       {row.teacherRecommendations.map((r: any) => <option key={r.teacherId} value={r.teacherId}>{r.teacherName} (currently {r.classCount} other classes, {r.lessonLoad} lessons/week elsewhere)</option>)}
                     </select>
-                    <div className="rounded-xl border border-navy-200 bg-navy-50 px-3 py-2 text-xs font-bold text-navy-700 dark:border-navy-700 dark:bg-navy-800 dark:text-navy-200">5 lessons/week · fixed by Senior Phase B</div>
+                    <select value={rowOverrides[row.subjectId]?.venueId ?? ""} onChange={(e) => setRowOverrides((p) => ({ ...p, [row.subjectId]: { ...p[row.subjectId], venueId: e.target.value } }))} className="rounded-xl border border-navy-200 bg-white px-2 py-1.5 text-xs dark:border-navy-700 dark:bg-navy-900">
+                      <option value="">{row.requiresSharedVenue ? "Venue required…" : "Home classroom / auto"}</option>
+                      {row.venueRecommendations.map((venue: any) => <option key={venue.id} value={venue.id}>{venue.name} · {venue.learnerCapacity ? `${venue.learnerCapacity} seats` : "capacity not set"}</option>)}
+                    </select>
+                    <div className="rounded-xl border border-navy-200 bg-navy-50 px-3 py-2 text-xs font-bold text-navy-700 dark:border-navy-700 dark:bg-navy-800 dark:text-navy-200">5 lessons/week · fixed</div>
                   </div>
-                  {row.teacherRecommendations.length === 0 && (
-                    <p className="mt-1 text-[11px] text-amber-600">No real teacher is currently linked to this subject — link one under Staff first, or leave blank for now.</p>
-                  )}
+                  <p className="mt-2 text-[11px] text-navy-500 dark:text-navy-400">{row.studentCount} learners · home-class capacity {row.homeClassCapacity ?? "not set"}{row.requiresSharedVenue ? " · shared venue required" : " · home classroom may be used"}</p>
+                  {row.resourceBlockers.map((message: string) => <p key={message} className="mt-1 rounded-lg bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700 dark:bg-red-950/20 dark:text-red-300">{message}</p>)}
                 </div>
               ))}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={confirm} disabled={busy || !blockName.trim()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Confirm and create block</Button>
+              <Button onClick={confirm} disabled={busy || !blockName.trim() || (preview.resourceReport?.blockers?.length ?? 0) > 0 || preview.rows.some((row: any) => !rowOverrides[row.subjectId]?.teacherId || (row.requiresSharedVenue && !rowOverrides[row.subjectId]?.venueId))}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Confirm and create block</Button>
               <Button variant="secondary" onClick={() => setPreview(null)} disabled={busy}>Back</Button>
             </div>
           </div>

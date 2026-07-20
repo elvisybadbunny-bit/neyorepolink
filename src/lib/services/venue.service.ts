@@ -70,6 +70,7 @@ export async function listVenues(user: SessionUser) {
     shortCode: v.shortCode,
     supportsSubjectIds: JSON.parse(v.supportsSubjectIds || "[]") as string[],
     capacityPerPeriod: v.capacityPerPeriod,
+    learnerCapacity: v.learnerCapacity,
     active: v.active,
     createdAt: v.createdAt,
   }));
@@ -97,6 +98,7 @@ export async function createVenue(user: SessionUser, input: CreateVenueInput) {
       shortCode,
       supportsSubjectIds: JSON.stringify(input.supportsSubjectIds ?? []),
       capacityPerPeriod: input.capacityPerPeriod ?? 1,
+      learnerCapacity: input.learnerCapacity ?? null,
     },
   });
   return {
@@ -105,6 +107,7 @@ export async function createVenue(user: SessionUser, input: CreateVenueInput) {
     shortCode: venue.shortCode,
     supportsSubjectIds: JSON.parse(venue.supportsSubjectIds || "[]") as string[],
     capacityPerPeriod: venue.capacityPerPeriod,
+    learnerCapacity: venue.learnerCapacity,
     active: venue.active,
   };
 }
@@ -138,6 +141,7 @@ export async function updateVenue(user: SessionUser, input: UpdateVenueInput) {
       supportsSubjectIds:
         input.supportsSubjectIds !== undefined ? JSON.stringify(input.supportsSubjectIds) : venue.supportsSubjectIds,
       capacityPerPeriod: input.capacityPerPeriod ?? venue.capacityPerPeriod,
+      learnerCapacity: input.learnerCapacity === undefined ? venue.learnerCapacity : input.learnerCapacity,
       active: input.active ?? venue.active,
     },
   });
@@ -147,6 +151,7 @@ export async function updateVenue(user: SessionUser, input: UpdateVenueInput) {
     shortCode: updated.shortCode,
     supportsSubjectIds: JSON.parse(updated.supportsSubjectIds || "[]") as string[],
     capacityPerPeriod: updated.capacityPerPeriod,
+    learnerCapacity: updated.learnerCapacity,
     active: updated.active,
   };
 }
