@@ -13,3 +13,7 @@ Run `npm run verify:youtube-batch1` in an environment with outbound YouTube acce
 ## Founder review page
 
 Batch 1 is now operable from **Platform Operations → Video Review**. **Verify all 50** checks links in groups of five and persists live title, channel, check time and availability in the global `PlatformSetting` key `youtube_grade6_10_batch1_reviews`. Individual links can be rechecked, rejected or marked **Approved for Mapping** only after a successful live check. Approved for Mapping is deliberately not school-visible approval: curriculum grade/subject/strand/sub-strand mapping remains a separate gate.
+
+## Curriculum mapping and final publication
+
+A candidate marked **Approved for Mapping** now exposes subject, strand and sub-strand selectors sourced from the founder account's real tenant catalog. The API rejects mismatched relationships. **Save mapping** moves the candidate to `MAPPED`; **Final publish** then idempotently upserts a real tenant-scoped `LearningVideo` with national scope, approved status, live title/channel, thumbnail, grade and complete curriculum links. Only `PUBLISHED` entries become available through the existing national library query. This preserves the sequence live check → human content decision → curriculum mapping → final publication.
