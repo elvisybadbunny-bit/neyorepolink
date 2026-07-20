@@ -80,6 +80,35 @@ export function QuestionBankModal({
   const [gradeFilter, setGradeFilter] = React.useState(defaultGrade);
   const [difficultyFilter, setDifficultyFilter] = React.useState("");
   const [scopeFilter, setScopeFilter] = React.useState<"ALL" | "SCHOOL" | "NATIONAL_SHARED">("ALL");
+  const [seedingLibrary, setSeedingLibrary] = React.useState(false);
+
+  const hasActiveFilters = Boolean(search || subjectFilter || strandFilter || gradeFilter || difficultyFilter || scopeFilter !== "ALL");
+
+  function clearBrowseFilters() {
+    setSearch("");
+    setSubjectFilter("");
+    setStrandFilter("");
+    setGradeFilter("");
+    setDifficultyFilter("");
+    setScopeFilter("ALL");
+  }
+
+  async function seedQuestionLibrary() {
+    setSeedingLibrary(true);
+    try {
+      const res = await fetch("/api/academics/question-bank/seed-all", { method: "POST" });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Could not seed the Question Bank");
+      toast({ title: "Question library is ready", description: "NEYO added the available all-grade practice library. You can now filter by grade and subject.", tone: "success" });
+      clearBrowseFilters();
+      const refreshed = await fetch("/api/academics/question-bank").then((response) => response.json());
+      if (refreshed.ok) setQuestions(refreshed.data.questions || []);
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "Could not seed the Question Bank", tone: "error" });
+    } finally {
+      setSeedingLibrary(false);
+    }
+  }
 
   // Student practice state (self-marking)
   const [selectedAnswers, setSelectedAnswers] = React.useState<Record<string, string>>({});
@@ -516,14 +545,29 @@ export function QuestionBankModal({
                 </p>
               </div>
             ) : questions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-navy-200 bg-warm-50/30 py-16 text-center dark:border-navy-700 dark:bg-navy-800/30">
-                <HelpCircle className="h-10 w-10 text-navy-400" />
-                <p className="mt-3 text-sm font-bold text-navy-800 dark:text-navy-100">
-                  No questions found matching your filters.
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-navy-200 bg-warm-50/30 px-5 py-12 text-center dark:border-navy-700 dark:bg-navy-800/30">
+                <HelpCircle className="h-10 w-10 text-navy-500 dark:text-navy-300" />
+                <p className="mt-3 text-base font-bold text-navy-900 dark:text-white">
+                  {hasActiveFilters ? "No questions match these filters" : "The Question Bank has not been prepared yet"}
                 </p>
-                <p className="mt-1 text-xs text-navy-500">
-                  Click "Scan Textbook Page" to extract and add questions instantly!
+                <p className="mt-1 max-w-md text-sm text-navy-600 dark:text-navy-300">
+                  {hasActiveFilters
+                    ? "Clear the filters to see the full library, then narrow it down one field at a time."
+                    : isStudent
+                      ? "Ask a teacher or school administrator to prepare the practice library."
+                      : "Prepare NEYO’s available all-grade practice library once. Missing subjects, strands and sub-strands are created safely during setup."}
                 </p>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {hasActiveFilters && (
+                    <Button variant="secondary" onClick={clearBrowseFilters}>Clear all filters</Button>
+                  )}
+                  {!hasActiveFilters && !isStudent && (
+                    <Button onClick={seedQuestionLibrary} disabled={seedingLibrary}>
+                      {seedingLibrary ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      {seedingLibrary ? "Preparing library…" : "Prepare Question Library"}
+                    </Button>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="space-y-4">

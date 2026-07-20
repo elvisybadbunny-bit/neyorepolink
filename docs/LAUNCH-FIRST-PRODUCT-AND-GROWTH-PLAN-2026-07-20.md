@@ -159,6 +159,14 @@ If the answer is no, document the idea and defer it.
 - Changed cramped Student Profile three-column fields to stack on phones.
 - Made the Skills Passport rating form fit dynamic phone heights with contained scrolling and safe-area spacing.
 
+### Question Bank and Portfolio
+
+- Separated the Question Bank’s filtered-empty state from its genuinely unprepared-library state.
+- Added a one-tap Clear All Filters action when filters return no questions.
+- Added a prominent Prepare Question Library action for authorised school users when the library is empty.
+- Kept student messaging honest by directing learners to a teacher or administrator rather than exposing setup controls.
+- Converted the Portfolio create/edit form into a dynamic-height mobile sheet with safe-area support.
+
 This is an active route-by-route audit. A route is not marked complete merely because it inherits the shared CSS fixes.
 
 ## Current engineering order
