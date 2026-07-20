@@ -4850,3 +4850,10 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] UI truthfully states 550 completed, exceeding the original 500 target.
 - [x] Target complete: 550 interactive models/contexts available. Continue accuracy review and curriculum mapping; never inflate future counts through empty renaming.
 - [x] Added two interactive checks to every simulation: a tolerance-based numerical calculation and a live model-derived prediction question (1,100 self-checks total).
+
+### Question Bank additional 500 all-grade expansion — 2026-07-20
+- [x] Exactly 500 new self-marking multiple-choice seeds across PP1, PP2 and Grade 1–12 (36 each for PP1–Grade 8; 35 each for Grade 9–12).
+- [x] Progressive patterns: early counting/comparison, arithmetic/sharing, measurement/percentage, Junior algebra/data/finance and Senior quadratic/gradient/mechanics/electricity.
+- [x] Four options, exact answer, worked explanation, strand, sub-strand and difficulty on every question.
+- [x] Integrated into the existing idempotent primary/senior Question Bank seed; prompt-based duplicate protection remains.
+- [x] Expected fully seeded total increases from 2,670 to 3,170 questions. Teacher/curriculum review remains required before formal examination use.

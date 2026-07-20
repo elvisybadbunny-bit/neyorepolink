@@ -342,3 +342,9 @@ The interface truthfully states 550 are complete, exceeding the original 500 tar
 ### Simulation self-check questions
 
 Every one of the 550 simulations now includes two additional interactive questions. **Self-check calculation** asks the learner to calculate the current output and accepts a numerical answer within 2% tolerance. **Prediction question** asks what happens when the first variable increases one step while the second stays fixed; NEYO derives the correct answer from the same live model at the current values, including non-linear and capped cases. This adds 1,100 contextual checks without storing duplicate static question text. Changing a slider resets feedback; learners can verify predictions by moving the control.
+
+## Additional 500 all-grade self-marking questions
+
+The seeded Question Bank now includes an additional exact 500 deterministic multiple-choice questions distributed across PP1, PP2 and Grades 1–12. PP1 through Grade 8 receive 36 each; Grades 9–12 receive 35 each, totalling 500. Difficulty and question patterns progress from counting/comparison, basic operations and sharing to measurement, percentages, equations, data, financial mathematics, quadratics, gradient, mechanics and electricity. Each record has four answer choices, one exact answer, a worked explanation, strand, sub-strand and difficulty. Physics-coded senior questions resolve against Physics; the remainder use Mathematics.
+
+The expansion is part of the idempotent Question Bank seed: an existing prompt is skipped rather than duplicated. These generated questions are supplemental practice and should undergo teacher/curriculum review before a school treats them as formal examinations. The prior documented seeded total of 2,670 becomes 3,170 when all earlier seeds and this expansion are present.
