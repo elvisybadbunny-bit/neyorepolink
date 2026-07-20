@@ -271,7 +271,7 @@ export function NotificationBell() {
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.55rem)" }}
         >
           <div
-            className="animate-island overflow-hidden rounded-[2rem] border border-navy-200/70 bg-white/95 text-navy-950 shadow-pop backdrop-blur-2xl dark:border-white/10 dark:bg-navy-950/95 dark:text-white"
+            className="animate-island overflow-hidden rounded-[2rem] border-2 border-navy-200 bg-white text-navy-950 shadow-2xl dark:border-navy-700 dark:bg-navy-950 dark:text-white"
             role="status"
             aria-live="polite"
           >
@@ -324,7 +324,7 @@ export function NotificationBell() {
           className="fixed left-1/2 z-[59] w-[min(92vw,34rem)] -translate-x-1/2 px-2 sm:w-[30rem]"
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.55rem)" }}
         >
-          <div className="animate-island overflow-hidden rounded-[2rem] border border-white/35 bg-white/92 text-navy-950 shadow-pop backdrop-blur-2xl dark:border-white/10 dark:bg-navy-950/94 dark:text-white">
+          <div className="animate-island overflow-hidden rounded-[2rem] border-2 border-navy-200 bg-white text-navy-950 shadow-2xl dark:border-navy-700 dark:bg-navy-950 dark:text-white">
             <div className="flex items-center justify-between border-b border-navy-100/70 px-4 py-3 dark:border-white/10">
               <div className="flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-green-500/12 text-green-700 dark:text-green-300">

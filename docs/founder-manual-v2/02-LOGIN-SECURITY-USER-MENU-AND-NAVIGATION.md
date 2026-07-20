@@ -548,3 +548,7 @@ Press **Ctrl/Command + K** to open permission-aware command search. Search for a
 ## Centred biometric/passkey gate
 
 The protected-action gate is rendered directly into the document body so transformed shell or glass containers cannot reposition it. Its overlay uses the full dynamic viewport and centres the capsule with a grid. The shared island-bloom animation now moves only vertically; its old horizontal `translate(-50%)` shifted every consumer half a width left even though those components were already positioned by their parent. Founder verification: at 360px and desktop, open Print Station, request the protected Batch Mode change, and confirm the whole capsule is centred with both edges, close button and verification button visible.
+
+## Mobile notification and utility controls
+
+The notification bell now performs one action only: open/close notifications. The undocumented double-tap gesture was removed. A small bordered down arrow sits beside the bell on mobile; pressing it reveals Background Jobs, offline state, appearance/layout control and the account menu in a solid dropdown below the top bar. The arrow rotates upward while open and has accessible expanded labels.

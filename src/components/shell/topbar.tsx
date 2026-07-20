@@ -34,20 +34,6 @@ export function Topbar({
   onMenuClick: () => void;
 }) {
   const [showExtra, setShowExtra] = React.useState(false);
-  const lastNotifierTapRef = React.useRef(0);
-
-  function handleNotifierTap(e: React.MouseEvent) {
-    if (typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches) return;
-    const now = Date.now();
-    const isSecondTap = now - lastNotifierTapRef.current < 450;
-    lastNotifierTapRef.current = now;
-    if (isSecondTap) {
-      e.preventDefault();
-      e.stopPropagation();
-      setShowExtra((s) => !s);
-      lastNotifierTapRef.current = 0;
-    }
-  }
 
   return (
     <header className="print:hidden sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-navy-100 bg-warm-50/90 px-3 backdrop-blur-md dark:border-navy-800 dark:bg-navy-950/90 sm:px-5">
@@ -94,10 +80,19 @@ export function Topbar({
       </button>
 
       <div className="ml-auto flex items-center gap-1">
-        {/* Mobile notch/island rule: show ONE right-side element only — the notifier.
-            Double-tapping this notifier reveals the hidden utility controls below. */}
-        <div className="sm:hidden" onClickCapture={handleNotifierTap} title="Double tap notifications for more controls">
+        {/* Mobile: the bell always opens notifications. A separate, explicit
+            arrow reveals account/layout utilities — no hidden double-tap gesture. */}
+        <div className="flex items-center gap-0.5 sm:hidden">
           <NotificationBell />
+          <button
+            type="button"
+            onClick={() => setShowExtra((shown) => !shown)}
+            aria-expanded={showExtra}
+            aria-label={showExtra ? "Hide account and layout controls" : "Show account and layout controls"}
+            className="flex h-8 w-7 items-center justify-center rounded-full border border-navy-200 bg-white text-navy-600 shadow-sm hover:bg-navy-100 dark:border-navy-700 dark:bg-navy-900 dark:text-navy-200"
+          >
+            <ChevronDown className={`h-4 w-4 transition-transform ${showExtra ? "rotate-180" : ""}`} />
+          </button>
         </div>
 
         {/* Desktop utilities */}
@@ -112,7 +107,7 @@ export function Topbar({
 
       {/* Mobile Dropped-Down Secondary controls */}
       {showExtra && (
-        <div className="absolute top-14 left-0 right-0 z-40 flex sm:hidden items-center justify-around gap-2 bg-white/95 dark:bg-black/90 p-3 border-b border-navy-100 dark:border-navy-800 shadow-pop animate-fade-in backdrop-blur-md">
+        <div className="absolute left-2 right-2 top-14 z-40 flex items-center justify-around gap-2 rounded-b-2xl border border-navy-200 bg-white p-3 text-navy-900 shadow-pop animate-fade-in sm:hidden dark:border-navy-700 dark:bg-navy-950 dark:text-white">
           <BackgroundJobsBadge />
           <OfflineIndicator />
           <ThemeToggle />
