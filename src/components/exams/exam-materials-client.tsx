@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { ClipboardCheck, FileText, Loader2, Plus, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -223,9 +224,9 @@ export function KnecAggregationCard({ canManage }: { canManage: boolean }) {
           </div>
         )}
       </CardContent>
-      {creating && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/40 p-4 backdrop-blur-sm" onClick={() => setCreating(false)}>
-          <div className="w-full max-w-md rounded-2xl border border-navy-100 bg-white p-6 shadow-pop dark:border-navy-800 dark:bg-navy-950" onClick={(e) => e.stopPropagation()}>
+      {creating && typeof document !== "undefined" && createPortal((
+        <div className="fixed inset-0 z-[200] flex h-[100dvh] items-end justify-center overflow-hidden bg-navy-950/40 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setCreating(false)}>
+          <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-md touch-pan-y overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-pop [-webkit-overflow-scrolling:touch] dark:border-navy-700 dark:bg-navy-950 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between"><h3 className="font-bold">New KNEC batch</h3><button onClick={() => setCreating(false)}><X className="h-5 w-5" /></button></div>
             <div className="space-y-3">
               <div><Label className="text-xs">Batch name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
@@ -241,7 +242,7 @@ export function KnecAggregationCard({ canManage }: { canManage: boolean }) {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
     </Card>
   );
 }
@@ -267,9 +268,10 @@ function CreateExamMaterialDialog({ onClose, onDone }: { onClose: () => void; on
     } finally { setSaving(false); }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/60 bg-white p-6 shadow-pop backdrop-blur-xl dark:border-white/10 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex h-[100dvh] items-end justify-center overflow-hidden bg-navy-950/40 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-lg touch-pan-y overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-pop [-webkit-overflow-scrolling:touch] dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-3xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <div><h3 className="text-base font-bold text-navy-900 dark:text-navy-50">Add exam material record</h3><p className="text-xs text-navy-400">Record applications, assembled papers and physical file locations.</p></div>
           <button onClick={onClose} className="rounded-full p-1.5 text-navy-400 hover:bg-navy-100 dark:hover:bg-white/10" aria-label="Close"><X className="h-4 w-4" /></button>
@@ -284,6 +286,7 @@ function CreateExamMaterialDialog({ onClose, onDone }: { onClose: () => void; on
           <Button onClick={save} disabled={saving || f.title.trim().length < 2 || f.hardcopyLocation.trim().length < 3} className="w-full">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Save exam material record</Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 /**
@@ -50,9 +51,10 @@ export function DialogContent({
 }: React.HTMLAttributes<HTMLDivElement>) {
   const { onOpenChange } = React.useContext(DialogContext);
 
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
-      className="fixed inset-0 z-[90] flex min-h-screen items-center justify-center overflow-y-auto p-4 sm:p-6"
+      className="fixed inset-0 z-[200] flex h-[100dvh] w-screen items-end justify-center overflow-hidden p-0 sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
     >
@@ -71,7 +73,7 @@ export function DialogContent({
           looked "flat" instead of glass (2026-07-02 audit). */}
       <div
         className={cn(
-          "relative z-10 w-full max-w-lg rounded-2xl border border-white/40 bg-white p-6 shadow-card-hover backdrop-blur-xl",
+          "relative z-10 max-h-[calc(100dvh-0.5rem)] w-full max-w-lg touch-pan-y overflow-y-auto overscroll-contain rounded-t-3xl border border-white/40 bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-card-hover backdrop-blur-xl [-webkit-overflow-scrolling:touch] sm:max-h-[90dvh] sm:rounded-2xl sm:p-6",
           "transition-all duration-200 ease-apple",
           "dark:border-navy-700/60 dark:bg-navy-900",
           className
@@ -81,7 +83,8 @@ export function DialogContent({
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

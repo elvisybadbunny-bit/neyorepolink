@@ -8,6 +8,7 @@
  * campaign may ever be ACTIVE at a time.
  */
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { Percent, Plus, X, Inbox } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -135,9 +136,10 @@ function CreateCampaignDialog({ onClose, onDone }: { onClose: () => void; onDone
     } finally { setSaving(false); }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-3xl bg-white p-5 shadow-pop dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex h-[100dvh] items-end justify-center overflow-hidden bg-black/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-md touch-pan-y overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-warm-50 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-navy-900 shadow-pop [-webkit-overflow-scrolling:touch] dark:border-navy-700 dark:bg-navy-900 dark:text-navy-100 sm:max-h-[90dvh] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-lg font-bold text-navy-900 dark:text-navy-50">New discount campaign</h3>
         <div className="mt-4 space-y-3">
           <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="August New-School Promo" /></div>
@@ -159,6 +161,7 @@ function CreateCampaignDialog({ onClose, onDone }: { onClose: () => void; onDone
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

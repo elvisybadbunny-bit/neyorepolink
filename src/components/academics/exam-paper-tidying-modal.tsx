@@ -96,10 +96,16 @@ export function ExamPaperTidyingModal({
           tone: "success",
         });
       } else {
-        toast({ title: json.error?.message || "Scan failed", tone: "error" });
+        // OCR/provider failure must not make the upload a dead end. Preserve a
+        // manual paper-vault workflow so the teacher can type the questions.
+        setQuestions([{ id: `q-manual-${Date.now()}`, questionNumber: 1, prompt: "Type or paste Question 1 here…", questionType: "STRUCTURED", options: [], marks: 2, confidencePct: 0 }]);
+        setActiveTab("TIDY");
+        toast({ title: "Automatic scanning is unavailable — manual paper entry opened", description: json.error?.message || "You can still type, save and print this exam paper.", tone: "info" });
       }
     } catch {
-      toast({ title: "Network error during paper scanning", tone: "error" });
+      setQuestions([{ id: `q-manual-${Date.now()}`, questionNumber: 1, prompt: "Type or paste Question 1 here…", questionType: "STRUCTURED", options: [], marks: 2, confidencePct: 0 }]);
+      setActiveTab("TIDY");
+      toast({ title: "Scanning connection failed — manual paper entry opened", description: "You can continue without Bundi and save the paper normally.", tone: "info" });
     } finally {
       setScanLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";

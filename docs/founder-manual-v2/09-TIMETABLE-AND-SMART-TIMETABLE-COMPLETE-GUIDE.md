@@ -520,3 +520,7 @@ Timetable section and routes specialized Exam Timetable/Duty Roster to their own
 ## Mobile scrolling — Build Options Block from student choices
 
 The auto-build sheet now opens as a bottom sheet on phones, uses the dynamic viewport, reserves the device safe area, enables vertical touch panning and momentum scrolling, and contains overscroll inside the sheet. The level/kind setup, detected-subject preview, teacher recommendations and final Confirm button must all be reachable by swiping downward inside the sheet. At `sm` and above it returns to a centred rounded dialog with a 90dvh maximum height.
+
+## Lunch display immediately after the selected period
+
+A configured “Lunch after Period N” is rendered as a separate non-lesson row/column after that period, not as a fake subject card. The timetable now falls back to the saved class configuration immediately, even before regeneration creates legacy lunch reservation rows, and filters any such legacy `LUNCH` subject from lesson cells. Period clock calculations include the normal lesson duration first and then the lunch duration, so “after Period 6” no longer replaces Period 6's displayed time.

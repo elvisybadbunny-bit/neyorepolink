@@ -603,7 +603,7 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
 
       {/* Print-only Class List Table */}
       {students && (
-        <div className="hidden print:block w-full text-black p-4 bg-white">
+        <div data-print-document className="hidden print:block w-full text-black p-4 bg-white">
           <div className="mb-6 flex items-start justify-between border-b-2 border-black pb-3">
             <div>
               <h1 className="text-xl font-bold uppercase tracking-wider">

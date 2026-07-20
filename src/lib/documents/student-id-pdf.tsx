@@ -291,12 +291,16 @@ export async function renderStudentIdCardsBatchA4Pdf(
     <Document>
       {pages.map((pageCards, pageIdx) => (
         <Page key={pageIdx} size="A4" style={{ padding: marginPt }}>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: gapPt }}>
-            {pageCards.map((c, i) => (
-              <View key={i} style={{ width: cardWidthPt, height: cardHeightPt }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            {pageCards.map((c, i) => {
+              const column = i % cols;
+              const row = Math.floor(i / cols);
+              return (
+              <View key={i} style={{ width: cardWidthPt, height: cardHeightPt, marginRight: column < cols - 1 ? gapPt : 0, marginBottom: row < rows - 1 ? gapPt : 0 }}>
                 <CardFace c={c} template={template} widthPt={cardWidthPt} heightPt={cardHeightPt} showCutMarks={true} showStamp={showStamp} />
               </View>
-            ))}
+              );
+            })}
           </View>
         </Page>
       ))}

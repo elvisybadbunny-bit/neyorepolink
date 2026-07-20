@@ -32,7 +32,7 @@ export function ExamPrintClient() {
           </Button>
         </div>
 
-        <div className="print:block hidden bg-white">
+        <div data-print-document className="print:block hidden bg-white">
           <h1 className="text-xl font-black text-center mb-4">{data.tenant.name} - Exam Performance Roster</h1>
           <table className="w-full text-xs text-left border-collapse">
             <thead>

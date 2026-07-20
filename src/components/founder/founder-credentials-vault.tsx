@@ -87,10 +87,10 @@ export function FounderCredentialsVault() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-navy-900 dark:text-navy-100">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <h2 className="flex items-center gap-2 text-xl font-bold text-navy-950 dark:text-white">
             <ShieldCheck className="w-6 h-6 text-emerald-400" />
             Platform Operations Encrypted Credentials & Integration Secrets Vault
           </h2>
@@ -142,7 +142,7 @@ export function FounderCredentialsVault() {
           {filtered.map((cred) => (
             <div
               key={cred.key}
-              className="glass p-5 rounded-2xl border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between space-y-4"
+              className="flex flex-col justify-between space-y-4 rounded-2xl border border-navy-700 bg-navy-950 p-5 text-white shadow-card transition-all hover:border-emerald-500/50"
             >
               <div>
                 <div className="flex items-center justify-between gap-2">

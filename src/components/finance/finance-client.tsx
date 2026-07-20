@@ -53,14 +53,14 @@ export function FinanceClient({ canStructure, canInvoice, canRecord, canDiscount
   }, []);
   return (
     <div className="space-y-5">
-      <div className="inline-flex flex-wrap rounded-full border border-navy-200 p-0.5 dark:border-navy-700">
+      <div className="flex max-w-full gap-1 overflow-x-auto overscroll-x-contain rounded-2xl border border-navy-200 bg-white/70 p-1 shadow-sm touch-auto dark:border-navy-700 dark:bg-navy-900/70">
         {([["overview", "Overview"], ["invoices", "Invoices"], ["structures", "Fee structures"], ["promises", "Promises Calendar"], ["suspense", "M-Pesa Suspense (`Reconciler`)"], ["treasuryChecks", "Bank Clearing"], ["payroll", "BOM Payroll"], ["farm", "School Farm"], ...(canRecord ? [["cashReminders", "Cash & reminders"]] as const : [])] as const).map(([k, label]) => (
-          <button key={k} onClick={() => setTab(k as any)} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === k ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
+          <button key={k} onClick={() => setTab(k as any)} className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-semibold ${tab === k ? k === "payroll" ? "border-blue-700 bg-blue-700 text-white" : k === "farm" ? "border-green-700 bg-green-700 text-white" : k === "promises" ? "border-amber-600 bg-amber-600 text-white" : "border-navy-900 bg-navy-900 text-white dark:border-navy-50 dark:bg-navy-50 dark:text-navy-900" : "border-transparent text-navy-700 hover:border-navy-200 hover:bg-navy-100 dark:text-navy-200 dark:hover:border-navy-700 dark:hover:bg-navy-800"}`}>
             {label}
           </button>
         ))}
-        <a href="/finance/payments" className="rounded-full px-4 py-1.5 text-sm font-medium text-navy-500">M-Pesa payments ↗</a>
-        <a href="/finance/activities" className="rounded-full px-4 py-1.5 text-sm font-medium text-navy-500">Trips &amp; activities ↗</a>
+        <a href="/finance/payments" className="shrink-0 whitespace-nowrap rounded-full border border-transparent px-4 py-1.5 text-sm font-semibold text-navy-700 hover:border-navy-200 hover:bg-navy-100 dark:text-navy-200">M-Pesa payments ↗</a>
+        <a href="/finance/activities" className="shrink-0 whitespace-nowrap rounded-full border border-transparent px-4 py-1.5 text-sm font-semibold text-navy-700 hover:border-navy-200 hover:bg-navy-100 dark:text-navy-200">Trips &amp; activities ↗</a>
       </div>
       {tab === "overview" && <OverviewTab />}
       {tab === "invoices" && <InvoicesTab canInvoice={canInvoice} canRecord={canRecord} canDiscount={!!canDiscount} />}

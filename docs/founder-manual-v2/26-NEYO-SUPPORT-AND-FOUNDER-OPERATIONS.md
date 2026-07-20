@@ -160,3 +160,7 @@ Tick **Permission to follow up recorded** only when the business contact agreed.
 ### Weekly founder review
 
 Review overdue follow-ups first, then meetings in the next seven days, pilot proposals without a decision date, travel cost per meaningful opportunity, common pains, common objections and which school profile converts. Move one opportunity only when real evidence supports the new stage.
+
+## Light-mode credentials and modal visibility
+
+The credentials vault now uses explicit navy text for its light-mode heading and solid high-contrast navy secret cards. Shared dialogs render through a document-body portal and use a dynamic-viewport mobile bottom sheet, preventing transformed/hovered parent cards from clipping forms. KNEC batch, exam-material and discount-campaign forms use the same portal/safe-area approach.

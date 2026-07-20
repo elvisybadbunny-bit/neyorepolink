@@ -124,7 +124,7 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
       <div className="print:hidden inline-flex max-w-full overflow-x-auto rounded-full border border-navy-200 p-0.5 dark:border-navy-700">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-200 ease-apple ${tab === t.key ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
+            className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors duration-200 ease-apple ${tab === t.key ? t.key === "discipline" ? "border-red-700 bg-red-700 text-white" : t.key === "library-recovery" ? "border-amber-700 bg-amber-700 text-white" : "border-navy-900 bg-navy-900 text-white dark:border-navy-50 dark:bg-navy-50 dark:text-navy-900" : "border-transparent text-navy-700 hover:border-navy-200 hover:bg-navy-100 dark:text-navy-200 dark:hover:border-navy-700 dark:hover:bg-navy-800"}`}>
             {t.label}
           </button>
         ))}
@@ -686,8 +686,9 @@ function timetablePeriodStartMinutes(p: number, config: any, dayOfWeek?: number,
   const lunchMins = config?.lunchMins ?? 60;
   let totalMinutes = 0;
   for (let i = 1; i < p; i++) {
-    const isRealLunch = realLunchPeriods ? realLunchPeriods.has(i) : i === lunchStart;
-    totalMinutes += isRealLunch ? lunchMins : duration;
+    const isLunchAfterThisPeriod = realLunchPeriods ? realLunchPeriods.has(i) : i === lunchStart;
+    totalMinutes += duration;
+    if (isLunchAfterThisPeriod) totalMinutes += lunchMins;
     if (i === shortBreakStart) totalMinutes += shortBreakMins;
     if (shortBreak2Start && i === shortBreak2Start) totalMinutes += shortBreak2Mins;
     if (i === longBreakStart) totalMinutes += longBreakMins;
@@ -697,8 +698,7 @@ function timetablePeriodStartMinutes(p: number, config: any, dayOfWeek?: number,
 
 function timetablePeriodTimeRange(p: number, config: any, dayOfWeek?: number, realLunchPeriods?: Set<number>): string {
   const startTotal = timetablePeriodStartMinutes(p, config, dayOfWeek, realLunchPeriods);
-  const isRealLunch = realLunchPeriods ? realLunchPeriods.has(p) : p === (config?.lunchStart ?? 6);
-  const endTotal = startTotal + (isRealLunch ? config?.lunchMins ?? 60 : config?.lessonDurationMins ?? 40);
+  const endTotal = startTotal + (config?.lessonDurationMins ?? 40);
   return `${formatTimetableTime(startTotal)} - ${formatTimetableTime(endTotal)}`;
 }
 
@@ -877,7 +877,7 @@ function TimetablePrintBundleView({ bundle, tenantName, tenantLogoUrl }: { bundl
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const modeTitle = bundle.mode === "classes" ? "All Classes" : bundle.mode === "teachers" ? "All Teachers" : "By Venue";
   return (
-    <div className="hidden print:block">
+    <div data-print-document className="hidden print:block">
       <div className="mb-4 border-b border-navy-200 pb-3">
         <div className="flex items-center gap-2">{tenantLogoUrl && <img src={tenantLogoUrl} alt="School logo" className="h-6 w-6 object-contain" />}<h1 className="text-lg font-black text-navy-950">{tenantName || "School"} · Timetable Print Pack</h1></div>
         <p className="text-xs font-semibold text-navy-500">{modeTitle} · Generated {new Date().toLocaleDateString("en-KE")}</p>
@@ -1008,7 +1008,11 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
   React.useEffect(() => { load(); }, [load]);
 
   const grid = new Map<string, Slot>();
-  for (const s of slots ?? []) grid.set(`${s.dayOfWeek}|${s.period}`, s);
+  for (const s of slots ?? []) {
+    // Lunch is rendered as its own non-lesson row/column after the configured
+    // period, never as a fake subject card inside that teaching period.
+    if ((s.subjectCode || "").toUpperCase() !== "LUNCH") grid.set(`${s.dayOfWeek}|${s.period}`, s);
+  }
 
   // DD.13 — real double-period merging: which real (day, period) cells are
   // the SECOND half of a genuine double lesson, so the render loop below
@@ -1028,6 +1032,11 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
   const realLunchPeriods = new Set<number>();
   for (const s of slots ?? []) {
     if ((s.subjectCode || "").toUpperCase() === "LUNCH") realLunchPeriods.add(s.period);
+  }
+  // Show a newly saved lunch immediately, even before timetable regeneration
+  // has written legacy LUNCH reservation rows.
+  if (realLunchPeriods.size === 0 && config) {
+    realLunchPeriods.add(config.lunchAfterPeriod ?? config.lunchStart ?? 6);
   }
 
   // Z.3 print redesign — every real print action now opens the dedicated,
