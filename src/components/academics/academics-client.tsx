@@ -121,7 +121,29 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
           </p>
         </div>
       )}
-      <div className="print:hidden inline-flex max-w-full overflow-x-auto rounded-full border border-navy-200 p-0.5 dark:border-navy-700">
+      {/* Mobile gets one compact section control instead of a very long row
+          of module tabs. The current workspace remains visible, while every
+          other destination is available under “More sections”. Desktop keeps
+          the fast one-click tab strip. */}
+      <div className="print:hidden sm:hidden">
+        <label htmlFor="academics-mobile-section" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-navy-500 dark:text-navy-300">
+          Current section
+        </label>
+        <div className="relative">
+          <select
+            id="academics-mobile-section"
+            value={tab}
+            onChange={(event) => setTab(event.target.value as AcademicsTab)}
+            className="h-11 w-full appearance-none rounded-xl border border-navy-300 bg-white px-3 pr-10 text-sm font-bold text-navy-950 shadow-sm dark:border-navy-600 dark:bg-navy-900 dark:text-white"
+            aria-label="More Academics sections"
+          >
+            {tabs.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-navy-500" />
+        </div>
+        <p className="mt-1 text-xs text-navy-500 dark:text-navy-400">Tap to open more Academics sections.</p>
+      </div>
+      <div className="print:hidden hidden max-w-full overflow-x-auto rounded-full border border-navy-200 p-0.5 dark:border-navy-700 sm:inline-flex">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors duration-200 ease-apple ${tab === t.key ? t.key === "discipline" ? "border-red-700 bg-red-700 text-white" : t.key === "library-recovery" ? "border-amber-700 bg-amber-700 text-white" : "border-navy-900 bg-navy-900 text-white dark:border-navy-50 dark:bg-navy-50 dark:text-navy-900" : "border-transparent text-navy-700 hover:border-navy-200 hover:bg-navy-100 dark:text-navy-200 dark:hover:border-navy-700 dark:hover:bg-navy-800"}`}>
