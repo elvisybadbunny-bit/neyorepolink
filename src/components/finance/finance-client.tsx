@@ -1093,8 +1093,8 @@ function StructureDialog({ onClose, onDone }: { onClose: () => void; onDone: () 
             <span className="block text-[11px] text-navy-500 dark:text-navy-400">One flat fee for every class, instead of creating one structure per level. Turn this off if different classes pay different amounts.</span>
           </span>
         </label>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="col-span-1">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div>
             <Label>Level</Label>
             <Input value={applyToAllLevels ? "All levels" : level} disabled={applyToAllLevels} onChange={(e) => setLevel(e.target.value)} placeholder="Form 2" />
           </div>

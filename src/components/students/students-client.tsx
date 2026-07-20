@@ -368,7 +368,7 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
     <>
       <div className="space-y-6 print:hidden">
         {/* stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {stats === null ? (
           [0,1,2].map((i)=><Skeleton key={i} className="h-24 rounded-2xl" />)
         ) : (
@@ -654,8 +654,8 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
 
       {/* 💳 Student ID Printing Customization Modal */}
       {idPrintOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/40 backdrop-blur-sm px-4 animate-fade-in" onClick={() => setIdPrintOpen(false)}>
-          <div className="w-full max-w-md rounded-2xl border border-navy-100 bg-white p-6 shadow-pop dark:border-navy-700 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setIdPrintOpen(false)}>
+          <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-pop dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between border-b border-navy-50 pb-3 dark:border-navy-800">
               <h3 className="text-base font-bold text-navy-900 dark:text-navy-50 flex items-center gap-2">
                 <Printer className="h-5 w-5 text-green-600" />
@@ -759,8 +759,8 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
 
       {/* 📄 Eco Paper-Saver Newsletter Customization Modal */}
       {newsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/40 backdrop-blur-sm px-4 animate-fade-in" onClick={() => setNewsOpen(false)}>
-          <div className="w-full max-w-xl rounded-2xl border border-navy-100 bg-white p-6 shadow-pop dark:border-navy-700 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setNewsOpen(false)}>
+          <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-xl overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-pop dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between border-b border-navy-50 pb-3 dark:border-navy-800">
               <h3 className="text-base font-bold text-navy-900 dark:text-navy-50 flex items-center gap-2">
                 <Printer className="h-5 w-5 text-green-600" />
@@ -904,7 +904,7 @@ function NewStudentDialog({ classes, onClose, onSaved }: { classes: ClassOpt[]; 
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/40 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
-      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-6 shadow-card dark:bg-navy-900 sm:rounded-2xl" onClick={(e)=>e.stopPropagation()}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-3xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e)=>e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-navy-900 dark:text-navy-50">Register new student</h3>
           <button onClick={onClose} className="rounded-full p-1.5 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800"><X className="h-5 w-5" /></button>
@@ -985,8 +985,8 @@ function ApprovalsDialog({ onClose }: any) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/40 backdrop-blur-sm p-4 animate-fade-in" onClick={onClose}>
-      <div className="w-full max-w-2xl rounded-2xl border border-navy-100 bg-white p-6 shadow-pop text-left dark:bg-navy-950 dark:border-navy-800" onClick={(e)=>e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-pop text-left dark:border-navy-700 dark:bg-navy-950 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e)=>e.stopPropagation()}>
         <div className="mb-4 flex justify-between items-center border-b border-navy-50 pb-2 dark:border-navy-800">
           <h3 className="font-bold">Pending Student Approvals</h3>
           <button onClick={onClose}><X className="h-5 w-5" /></button>

@@ -100,6 +100,33 @@ Before starting any visual change, ask:
 
 If the answer is no, document the idea and defer it.
 
+## Phase 1 and Phase 3 implementation log
+
+### Shared foundation
+
+- Strengthened shared table headings and cell contrast in light and dark mode.
+- Strengthened labels, field text and placeholders globally.
+- Prevented disruptive iPhone form zoom by using 16px controls on small screens.
+- Allowed long operational values to wrap inside the mobile viewport.
+
+### Academics and Timetable
+
+- Replaced the excessive mobile tab strip with one current-section selector.
+- Converted the local Academics modal system to scroll-safe mobile bottom sheets with dynamic viewport and safe-area support.
+
+### Students
+
+- Tightened the three summary cards on narrow phones without increasing their height.
+- Made ID-card printing, newsletter printing, student registration and approvals dialogs fit and scroll within 360px mobile screens.
+- Added mobile safe-area spacing while retaining centred desktop dialogs.
+
+### Finance and Exams
+
+- Changed three-column setup fields to stack on phones and return to three columns on larger screens.
+- Made the New Exam dialog a scroll-safe mobile bottom sheet.
+
+This is an active route-by-route audit. A route is not marked complete merely because it inherits the shared CSS fixes.
+
 ## Current engineering order
 
 1. Visibility and contrast audit of high-use launch routes.
