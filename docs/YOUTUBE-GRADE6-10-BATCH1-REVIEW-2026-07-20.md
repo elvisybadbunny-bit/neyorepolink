@@ -5,3 +5,7 @@ Batch 1 has started with exactly 50 researched candidates: Grade 6 (10), Grade 7
 All rows deliberately remain `CANDIDATE`. They are not imported into `LearningVideo` and are not visible to schools until a human completes availability, title/channel, age suitability, curriculum mapping and content-quality checks. Search-result discovery is evidence for candidacy, not enough for national approval. The planned 500 distribution remains Grade 6: 60, Grade 7: 80, Grade 8: 100, Grade 9: 120, Grade 10: 140.
 
 Run `npm run test:youtube-batch1` after dependencies are installed to verify exact count, unique IDs, ID format, no overlap with existing static seeds and no premature approvals.
+
+## Live availability verification step
+
+Run `npm run verify:youtube-batch1` in an environment with outbound YouTube access. The verifier checks only five links concurrently, applies a 12-second timeout, reads YouTube's oEmbed response, captures the current live title/channel, and writes `/tmp/neyo-youtube-batch1-live-report.json`. It exits with code 2 if any candidate is unavailable so an incomplete batch cannot be mistaken for approved. A live oEmbed response proves availability/metadata only; it does not complete CBE content and safeguarding review.
