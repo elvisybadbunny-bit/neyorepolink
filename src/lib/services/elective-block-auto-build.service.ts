@@ -22,8 +22,9 @@
  *  - ELECTIVES: detects genuinely elective subjects among a level's real
  *    student choices (excluding whatever is compulsory for that student's
  *    own real pathway, or a school's own configured 8-4-4 compulsory list),
- *    groups students by exact real subject, and previews one real slot
- *    listing every detected subject.
+ *    groups students by exact real subject, builds the pairwise conflict
+ *    graph, deterministically colours subjects into Option A/B/C, and proves
+ *    every learner has exactly one selected subject in each block.
  *  - MATH_SPLIT: detects the real Core-vs-Essential Mathematics split for
  *    a level with a genuine mix of STEM/non-STEM pathway-allocated
  *    students — a level where some students would take Core Mathematics
@@ -42,6 +43,7 @@ import { saveElectiveBlock } from "@/lib/services/elective-block.service";
 import { upsertCombinationGroup } from "@/lib/services/timetable-engine.service";
 import { CORE_ESSENTIAL_MATHEMATICS } from "@/lib/validations/pathways";
 import type { ConfirmAutoBuildInput } from "@/lib/validations/elective-block-auto-build";
+import { buildThreeOptionBlocks, type OptionBlockKey } from "@/lib/services/senior-option-block.service";
 
 export class ElectiveBlockAutoBuildError extends Error {
   constructor(public code: "NOT_FOUND" | "INVALID" | "CONFLICT", message: string) {
@@ -65,6 +67,7 @@ interface PreviewSubjectRow {
   suggestedTeacherName: string | null;
   teacherRecommendations: { teacherId: string; teacherName: string; classCount: number; lessonLoad: number }[];
   defaultLessonsPerWeek: number;
+  optionBlock?: OptionBlockKey | "MATH";
 }
 
 /**
@@ -135,20 +138,35 @@ async function buildElectivesPreview(tenantId: string, level: string, defaultLes
   );
 
   const bySubject = new Map<string, { studentId: string }[]>();
+  const electiveByStudent = new Map<string, string[]>();
   for (const [studentId, ids] of selectionMap.entries()) {
+    const electiveIds: string[] = [];
     for (const subjectId of ids) {
       if (hasRealPathwayData) {
         if (isCompulsoryForStudent(subjectId, studentId)) continue;
       } else if (universallyPicked.has(subjectId)) {
-        continue; // honest 8-4-4 fallback: a subject every student picked isn't a real "choice"
+        continue; // a subject every learner picked is not a choice between alternatives
       }
+      electiveIds.push(subjectId);
       const arr = bySubject.get(subjectId) ?? [];
       arr.push({ studentId });
       bySubject.set(subjectId, arr);
     }
+    electiveByStudent.set(studentId, [...new Set(electiveIds)]);
   }
   if (bySubject.size === 0) {
     throw new ElectiveBlockAutoBuildError("NOT_FOUND", "Every subject selected at this level is already compulsory — no genuine elective choices detected.");
+  }
+
+  const blockResult = buildThreeOptionBlocks(students.map((student) => ({
+    studentId: student.id,
+    studentName: `${student.firstName} ${student.lastName} (${student.admissionNo})`,
+    subjectIds: electiveByStudent.get(student.id) ?? [],
+  })));
+  if (!blockResult.possible) {
+    const names = (blockResult.affectedLearners ?? []).slice(0, 8).join(", ");
+    const unresolvedSubjects = (blockResult.unresolvedSubjectIds ?? []).map((id) => subjectById.get(id)?.name ?? id).join(", ");
+    throw new ElectiveBlockAutoBuildError("CONFLICT", `${blockResult.reason}${unresolvedSubjects ? ` Conflicting subjects: ${unresolvedSubjects}.` : ""}${names ? ` Affected: ${names}${(blockResult.affectedLearners?.length ?? 0) > 8 ? "…" : ""}` : ""}`);
   }
 
   const rows: PreviewSubjectRow[] = [];
@@ -169,10 +187,11 @@ async function buildElectivesPreview(tenantId: string, level: string, defaultLes
       suggestedTeacherName: recs[0]?.teacherName ?? null,
       teacherRecommendations: recs.slice(0, 5),
       defaultLessonsPerWeek,
+      optionBlock: blockResult.assignment[subjectId],
     });
   }
-  rows.sort((a, b) => b.studentCount - a.studentCount);
-  return { classIds, rows };
+  rows.sort((a, b) => (a.optionBlock ?? "").localeCompare(b.optionBlock ?? "") || b.studentCount - a.studentCount || a.subjectCode.localeCompare(b.subjectCode));
+  return { classIds, rows, blockPlan: { blocks: blockResult.blocks, learnerProof: blockResult.learnerProof, conflicts: blockResult.conflicts } };
 }
 
 /**
@@ -242,6 +261,7 @@ async function buildMathSplitPreview(tenantId: string, level: string, defaultLes
       suggestedTeacherName: recs[0]?.teacherName ?? null,
       teacherRecommendations: recs.slice(0, 5),
       defaultLessonsPerWeek,
+      optionBlock: "MATH",
     };
   }
 
@@ -249,7 +269,7 @@ async function buildMathSplitPreview(tenantId: string, level: string, defaultLes
     await buildRow(coreMath, stemStudents),
     await buildRow(essentialMath, nonStemStudents),
   ];
-  return { classIds, rows };
+  return { classIds, rows, blockPlan: null };
 }
 
 export async function previewElectiveBlockAutoBuild(
@@ -258,7 +278,7 @@ export async function previewElectiveBlockAutoBuild(
 ) {
   return withTenant(user.tenantId, async () => {
     const tdb = tenantDb();
-    const { classIds, rows } = input.kind === "MATH_SPLIT"
+    const { classIds, rows, blockPlan } = input.kind === "MATH_SPLIT"
       ? await buildMathSplitPreview(user.tenantId, input.level, input.defaultLessonsPerWeek)
       : await buildElectivesPreview(user.tenantId, input.level, input.defaultLessonsPerWeek);
 
@@ -276,14 +296,14 @@ export async function previewElectiveBlockAutoBuild(
       data: {
         level: input.level,
         kind: input.kind,
-        previewJson: JSON.stringify({ classIds, rows, capacityNote }),
+        previewJson: JSON.stringify({ classIds, rows, blockPlan, capacityNote }),
         status: "PREVIEWED",
         createdById: user.id,
         createdByName: user.fullName,
       } as never,
     });
 
-    return { runId: run.id, level: input.level, kind: input.kind, classIds, rows, capacityNote };
+    return { runId: run.id, level: input.level, kind: input.kind, classIds, rows, blockPlan, capacityNote };
   });
 }
 
@@ -294,7 +314,7 @@ export async function confirmElectiveBlockAutoBuild(user: SessionUser, input: Co
     if (!run) throw new ElectiveBlockAutoBuildError("NOT_FOUND", "Preview run not found.");
     if (run.status !== "PREVIEWED") throw new ElectiveBlockAutoBuildError("CONFLICT", "This preview has already been confirmed or discarded.");
 
-    const preview = safeParse<{ classIds: string[]; rows: PreviewSubjectRow[] }>(run.previewJson, { classIds: [], rows: [] });
+    const preview = safeParse<{ classIds: string[]; rows: PreviewSubjectRow[]; blockPlan?: { learnerProof: { studentId: string; studentName: string; A: string | null; B: string | null; C: string | null; valid: boolean }[] } | null }>(run.previewJson, { classIds: [], rows: [], blockPlan: null });
     const allClassIds = [...new Set(input.subjects.flatMap((s) => s.classIds))];
     if (allClassIds.length === 0) throw new ElectiveBlockAutoBuildError("INVALID", "At least one real class must be included.");
 
@@ -307,6 +327,37 @@ export async function confirmElectiveBlockAutoBuild(user: SessionUser, input: Co
         throw new ElectiveBlockAutoBuildError("INVALID", "One or more confirmed subjects were not part of the original real preview.");
       }
     }
+    if (input.subjects.length !== previewSubjectIds.size || input.subjects.some((s) => s.lessonsPerWeek !== 5)) {
+      throw new ElectiveBlockAutoBuildError("INVALID", run.kind === "ELECTIVES"
+        ? "Phase B must keep every previewed elective and exactly 5 lessons per option block. Return to Subject Selection to change confirmed choices."
+        : "Both Mathematics variants must remain in the split for exactly 5 lessons per week.");
+    }
+    if (run.kind === "ELECTIVES" && (!preview.blockPlan || preview.blockPlan.learnerProof.some((proof) => !proof.valid))) {
+      throw new ElectiveBlockAutoBuildError("CONFLICT", "The preview has no valid per-learner A/B/C proof. Run Phase B preview again.");
+    }
+
+    const slotGroups: { key: string; subjects: typeof input.subjects }[] = run.kind === "MATH_SPLIT"
+      ? [{ key: "Mathematics", subjects: input.subjects }]
+      : (["A", "B", "C"] as const).map((key) => ({
+          key: `Option ${key}`,
+          subjects: input.subjects.filter((subject) => preview.rows.find((row) => row.subjectId === subject.subjectId)?.optionBlock === key),
+        }));
+    if (slotGroups.some((group) => group.subjects.length === 0)) {
+      throw new ElectiveBlockAutoBuildError("CONFLICT", "Each of Option A, B and C must contain at least one real subject.");
+    }
+    const slots = slotGroups.flatMap((group, groupIndex) =>
+      Array.from({ length: 5 }, (_, repetition) => ({
+        label: `${group.key} · ${repetition + 1}/5`,
+        isDouble: false,
+        sortOrder: groupIndex * 5 + repetition,
+        subjects: group.subjects.map((s) => ({
+          subjectId: s.subjectId,
+          teacherId: s.teacherId || undefined,
+          venueId: undefined,
+          classIds: s.classIds,
+        })),
+      }))
+    );
 
     const saved = await saveElectiveBlock(user, {
       action: "save_block",
@@ -314,17 +365,7 @@ export async function confirmElectiveBlockAutoBuild(user: SessionUser, input: Co
       mode: "MULTI_SLOT",
       preferAfterBreak: input.preferAfterBreak,
       classIds: allClassIds,
-      slots: [{
-        label: run.kind === "MATH_SPLIT" ? "Mathematics" : "Options",
-        isDouble: false,
-        sortOrder: 0,
-        subjects: input.subjects.map((s) => ({
-          subjectId: s.subjectId,
-          teacherId: s.teacherId || undefined,
-          venueId: undefined, // BB.1's own auto-pick handles any real overflow automatically
-          classIds: s.classIds,
-        })),
-      }],
+      slots,
     });
 
     await tdb.electiveBlockAutoBuildRun.update({
@@ -404,12 +445,13 @@ export async function confirmElectiveBlockAutoBuild(user: SessionUser, input: Co
         action: "elective_block_auto_build.confirmed", entityType: "electiveBlockAutoBuildRun", entityId: run.id,
         metadata: JSON.stringify({
           level: run.level, kind: run.kind, blockId: saved.id, subjectCount: input.subjects.length,
+          optionSlotCount: slots.length, learnerProofCount: preview.blockPlan?.learnerProof.length ?? 0,
           combinationGroupIds, classAllocationAttempted: classAllocation.attempted, classAllocationCount: classAllocation.allocated,
         }),
       },
     });
 
-    return { blockId: saved.id, combinationGroupIds, classAllocation };
+    return { blockId: saved.id, combinationGroupIds, classAllocation, optionSlotCount: slots.length, learnerProofCount: preview.blockPlan?.learnerProof.length ?? 0 };
   });
 }
 

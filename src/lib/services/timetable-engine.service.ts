@@ -41,6 +41,7 @@ import {
 } from "@/lib/validations/pathways";
 import { getElectiveBlocksForSolver } from "@/lib/services/elective-block.service";
 import { seniorTimetableReadiness } from "@/lib/services/senior-timetable-readiness.service";
+import { seniorOptionBlocksReady } from "@/lib/services/senior-option-block-readiness.service";
 
 export class TimetableEngineError extends Error {
   constructor(public code: "NOT_FOUND" | "INVALID" | "BUSY", message: string) {
@@ -530,6 +531,8 @@ export async function startGeneration(user: SessionUser) {
       const titles = readiness.blockers.slice(0, 4).map((finding) => finding.title).join("; ");
       throw new TimetableEngineError("INVALID", `${level} is not ready for generation: ${titles}. Open Senior School Phase A for details.`);
     }
+    const phaseB = await seniorOptionBlocksReady(user, level);
+    if (!phaseB.ready) throw new TimetableEngineError("INVALID", phaseB.reason!);
   }
   const job = await withTenant(user.tenantId, async () => {
     const tdb = tenantDb();
@@ -1261,8 +1264,14 @@ async function buildAndSolve(tenantId: string, jobId: string) {
   let cardSeq = 0;
 
   // 1) Combination group cards (scheduled once for all member classes).
+  // Subjects already owned by an active Options Block are represented by
+  // that block's atomic parallel slots above. Their SUBJECT_CHOICE
+  // CombinationGroup remains useful for rosters, but must never create a
+  // second set of ordinary lessons (which would double the official five).
+  const electiveSubjectIds = new Set(electiveBlocks.flatMap((block) => block.slots.flatMap((slot) => slot.subjects.map((subject) => subject.subjectId))));
   const comboClassSubjectKeys = new Set<string>(); // classId::subjectId handled by a combo
   for (const g of data.groups) {
+    if (electiveSubjectIds.has(g.subjectId)) continue;
     let memberClassIds = g.members.map((m) => m.classId);
     // SUBJECT_CHOICE source: derive members from student selections of this subject.
     if (g.source === "SUBJECT_CHOICE") {
@@ -1305,6 +1314,7 @@ async function buildAndSolve(tenantId: string, jobId: string) {
   for (const c of data.classes) {
     const cNeeds = data.needs.filter((n) => n.classId === c.id);
     for (const n of cNeeds) {
+      if (electiveSubjectIds.has(n.subjectId)) continue; // Options Block owns all five parallel periods
       if (comboClassSubjectKeys.has(`${c.id}::${n.subjectId}`)) continue; // combo handles it
       const sub = subjectById.get(n.subjectId);
       if (!sub) continue;

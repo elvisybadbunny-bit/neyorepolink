@@ -20,6 +20,7 @@ import { withTenant } from "@/lib/core/tenant-context";
 import { tenantDb } from "@/lib/core/tenant-db";
 import { createInApp } from "@/lib/services/notification.service";
 import { seniorTimetableReadiness } from "@/lib/services/senior-timetable-readiness.service";
+import { seniorOptionBlocksReady } from "@/lib/services/senior-option-block-readiness.service";
 import type { SessionUser } from "@/lib/core/session";
 
 export class TimetableSolverError extends Error {
@@ -605,6 +606,11 @@ export async function generateWholeSchoolTimetable(user: SessionUser) {
         const titles = readiness.blockers.slice(0, 4).map((finding) => finding.title).join("; ");
         throw new TimetableSolverError("CONFLICT", `${level} is not ready for timetable generation: ${titles}. Open Senior School Phase A for the affected learners and details.`);
       }
+      const phaseB = await seniorOptionBlocksReady(user, level);
+      if (!phaseB.ready) throw new TimetableSolverError("CONFLICT", phaseB.reason!);
+    }
+    if (seniorLevels.length > 0) {
+      throw new TimetableSolverError("CONFLICT", "Senior School Option A/B/C blocks must be generated with Smart Timetable → Master Generator. The older Whole-School generator does not place atomic parallel learner groups and is deliberately blocked from producing an incorrect Senior timetable.");
     }
 
     // 2) Prepare the scheduler structures.

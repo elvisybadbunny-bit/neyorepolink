@@ -3991,7 +3991,7 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
     <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-black/40 p-0 sm:items-center sm:p-4">
       <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-2xl touch-pan-y overflow-y-auto overscroll-contain rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl [-webkit-overflow-scrolling:touch] dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-3xl sm:p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="flex items-center gap-2 text-lg font-bold text-navy-900 dark:text-white"><Sparkles className="h-5 w-5 text-purple-600" /> Build Options Block from student choices</h3>
+          <h3 className="flex items-center gap-2 text-lg font-bold text-navy-900 dark:text-white"><Shuffle className="h-5 w-5 text-indigo-600" /> Build deterministic Option A/B/C from learner choices</h3>
           <Button size="sm" variant="ghost" onClick={discard}><X className="h-4 w-4" /></Button>
         </div>
 
@@ -4014,23 +4014,20 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
                 <button onClick={() => setKind("MATH_SPLIT")} className={`flex-1 rounded-xl border px-3 py-2 text-xs font-medium ${kind === "MATH_SPLIT" ? "border-purple-400 bg-purple-50 text-purple-700 dark:bg-purple-950/30" : "border-navy-200 text-navy-600 dark:border-navy-700"}`}>Core/Essential Mathematics split</button>
               </div>
             </div>
-            {kind === "ELECTIVES" && (
-              <div>
-                <Label>Default lessons/week per detected subject</Label>
-                <Input type="number" min={1} max={20} value={defaultLessonsPerWeek} onChange={(e) => setDefaultLessonsPerWeek(Number(e.target.value) || 5)} className="mt-1 w-32" />
-              </div>
-            )}
+            {kind === "ELECTIVES" && <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-900 dark:border-indigo-900 dark:bg-indigo-950/20 dark:text-indigo-200">Senior School Phase B uses three option blocks with exactly 5 periods per block each week. The value is fixed to protect the 40-lesson learner week.</div>}
             {error && (
               <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
                 <AlertCircle className="h-4 w-4" /> {error}
               </div>
             )}
-            <Button onClick={runPreview} disabled={busy || !level}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Analyse real student choices</Button>
+            <Button onClick={runPreview} disabled={busy || !level}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shuffle className="h-4 w-4" />} Build A/B/C conflict proof</Button>
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-xs text-navy-400">{preview.capacityNote}</p>
-            <p className="text-xs text-navy-400">
+            <p className="text-xs text-navy-500 dark:text-navy-300">{preview.capacityNote}</p>
+            {preview.blockPlan && <div className="grid grid-cols-3 gap-2">{(["A", "B", "C"] as const).map((key) => <div key={key} className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-center dark:border-indigo-900 dark:bg-indigo-950/20"><p className="text-xs font-black text-indigo-800 dark:text-indigo-200">Option {key}</p><p className="mt-1 text-lg font-black text-navy-950 dark:text-white">{preview.rows.filter((row: any) => row.optionBlock === key).length}</p><p className="text-[10px] text-navy-500">subjects · 5 periods</p></div>)}</div>}
+            {preview.blockPlan && <p className="rounded-xl bg-green-50 p-3 text-xs font-semibold text-green-800 dark:bg-green-950/20 dark:text-green-300">Conflict proof passed for {preview.blockPlan.learnerProof.length} learner(s): exactly one selected subject in A, B and C. NEYO used deterministic graph colouring, not AI.</p>}
+            <p className="text-xs text-navy-500 dark:text-navy-300">
               Each subject below gets exactly ONE real teacher for the whole combined lesson — when 2 or more streams share a subject, that ONE teacher covers everyone together at the same time, never one teacher per stream.
             </p>
             <div>
@@ -4042,7 +4039,7 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
                 <div key={row.subjectId} className="rounded-2xl border border-navy-100 p-3 dark:border-navy-800">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-bold text-navy-900 dark:text-white">{row.subjectName} ({row.subjectCode})</p>
-                    <Badge tone="blue">{row.studentCount} student{row.studentCount === 1 ? "" : "s"} combined into one real lesson</Badge>
+                    <div className="flex items-center gap-1.5">{row.optionBlock && <Badge tone="green">{row.optionBlock === "MATH" ? "Math split" : `Option ${row.optionBlock}`}</Badge>}<Badge tone="blue">{row.studentCount} learner{row.studentCount === 1 ? "" : "s"}</Badge></div>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <select
@@ -4053,12 +4050,7 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
                       <option value="">No teacher yet</option>
                       {row.teacherRecommendations.map((r: any) => <option key={r.teacherId} value={r.teacherId}>{r.teacherName} (currently {r.classCount} other classes, {r.lessonLoad} lessons/week elsewhere)</option>)}
                     </select>
-                    <Input
-                      type="number" min={1} max={20}
-                      value={rowOverrides[row.subjectId]?.lessonsPerWeek ?? row.defaultLessonsPerWeek}
-                      onChange={(e) => setRowOverrides((p) => ({ ...p, [row.subjectId]: { ...p[row.subjectId], lessonsPerWeek: Number(e.target.value) || 5 } }))}
-                      className="h-8 text-xs"
-                    />
+                    <div className="rounded-xl border border-navy-200 bg-navy-50 px-3 py-2 text-xs font-bold text-navy-700 dark:border-navy-700 dark:bg-navy-800 dark:text-navy-200">5 lessons/week · fixed by Senior Phase B</div>
                   </div>
                   {row.teacherRecommendations.length === 0 && (
                     <p className="mt-1 text-[11px] text-amber-600">No real teacher is currently linked to this subject — link one under Staff first, or leave blank for now.</p>

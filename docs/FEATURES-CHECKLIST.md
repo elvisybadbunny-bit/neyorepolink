@@ -4910,3 +4910,18 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Shows affected learner names in authorised expandable findings.
 - [x] No AI/Bundi/provider call; same stored inputs produce the same readiness result.
 - [ ] Phase B three-block conflict graph remains next; Phase A readiness is not timetable approval.
+
+### Senior School Timetable Phase B — deterministic A/B/C option blocks — 2026-07-20
+- [x] Builds pairwise subject conflict graph from confirmed learner choices.
+- [x] Deterministically three-colours subjects into Option A/B/C; no AI, Bundi, random value or provider.
+- [x] Hard per-learner proof requires exactly one chosen subject in every block.
+- [x] Impossible three-block graph stops with conflicting subjects and affected learners; choices are never changed automatically.
+- [x] Preview displays A/B/C assignment, subject counts, five-period allocation and learner-proof count.
+- [x] Confirmation requires the exact preview subject set and exactly five lessons per option block.
+- [x] Persists 15 weekly option slots: A × 5, B × 5, C × 5.
+- [x] Allows a valid singleton option column and keeps it visible to the solver.
+- [x] Existing same-teacher parallel-subject hard validation remains active.
+- [ ] Phase C resource feasibility (teacher/room/lab/capacity across all parallel blocks) remains next.
+- [x] Master solver prevents duplicate scheduling: active option-block subjects are skipped from ordinary combination and class-subject cards.
+- [x] Legacy Whole-School generator is blocked for Senior levels because it cannot safely place atomic parallel option blocks; schools are directed to the deterministic Master Generator.
+- [x] Added pure graph regression script (`npm run test:senior-option-blocks`); execution awaits installed project dependencies in this checkout.

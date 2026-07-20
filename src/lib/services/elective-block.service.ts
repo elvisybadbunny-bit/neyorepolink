@@ -169,7 +169,7 @@ export async function getElectiveBlocksForSolver(tenantId: string) {
       },
     });
     return blocks
-      .filter((b) => b.classes.length > 0 && b.slots.length > 0 && b.slots.every((s) => s.subjects.length >= 2))
+      .filter((b) => b.classes.length > 0 && b.slots.length > 0 && b.slots.every((s) => s.subjects.length >= 1))
       .map((b) => ({
         id: b.id,
         name: b.name,

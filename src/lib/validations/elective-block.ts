@@ -4,9 +4,10 @@ import { z } from "zod";
 // Real design constraint from docs/TEACHER-ALLOCATION-AND-ELECTIVES-ENGINE-DESIGN.md
 // Part 7: a block has >=2 real slots is NOT required (a single-slot block is
 // a genuinely valid, simpler real shape — e.g. one shared "Options" period),
-// but every slot must list at least 2 real subjects (a "choice between
-// alternatives" with only 1 option isn't a real choice, and would just be
-// an ordinary ClassSubjectNeed instead).
+// and a slot may contain one subject. A singleton is necessary when the
+// deterministic Senior School A/B/C colouring leaves one option column with
+// only one offered subject; it still reserves the correct five block periods
+// and preserves every learner's one-subject-per-column proof.
 
 export const electiveBlockModeSchema = z.enum(["MULTI_SLOT", "SINGLE_CHOICE"]);
 
@@ -33,7 +34,7 @@ const slotSchema = z.object({
   label: z.string().trim().min(1, "Give this slot a real label.").max(80),
   isDouble: z.boolean().optional().default(false),
   sortOrder: z.number().int().min(0).optional().default(0),
-  subjects: z.array(slotSubjectSchema).min(2, "A real Options Block slot needs at least 2 subjects for students to genuinely choose between."),
+  subjects: z.array(slotSubjectSchema).min(1, "An Options Block slot needs at least one real subject."),
 }).refine(
   (slot) => new Set(slot.subjects.map((s) => s.subjectId)).size === slot.subjects.length,
   { message: "The same subject cannot appear twice in one real slot.", path: ["subjects"] },
