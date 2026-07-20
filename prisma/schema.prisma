@@ -5748,6 +5748,7 @@ model TimetableGenerationJob {
   reservationSummaryJson String @default("[]") // Phase D option/math family weekday + day-half proof
   learnerProofValid   Int @default(0)
   learnerProofInvalid Int @default(0)
+  qualityReportJson   String @default("{}") // Phase F deterministic balance/spacing report
   learnerProofs SeniorLearnerTimetableProof[]
   error         String?
   startedById   String

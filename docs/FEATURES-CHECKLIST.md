@@ -4960,3 +4960,13 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Proof API requires `academics.view` and remains tenant scoped.
 - [x] No AI/Bundi/provider/random dependency.
 - [ ] Phase F deterministic quality reports remain next.
+
+### Senior School Timetable Phase F — deterministic quality and cost controls — 2026-07-21
+- [x] Persists quality PASS/REVIEW status, score and findings on each Master generation.
+- [x] Checks morning/afternoon concentration, weekday spread, three-in-one-day and same-department adjacency.
+- [x] Same-subject doubles are left to existing double-rule validation, avoiding false adjacency warnings.
+- [x] Smart Timetable displays quality score and expandable examples.
+- [x] Learner proof list is lightweight; full timetable loads only for the selected learner.
+- [x] Detailed proof rows retained for latest three generation jobs; older jobs keep summary/audit evidence.
+- [x] No automatic PDF/download/object-storage creation and no AI/provider fee.
+- [ ] Phase G formal committee and Head approval workflow remains next.

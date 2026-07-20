@@ -46,7 +46,7 @@ export async function generateSeniorLearnerTimetableProofs(tenantId: string, gen
         occupied.add(timeKey);
         if (slot.slotType === "ACADEMIC" && slot.subjectId) {
           const subject = subjectById.get(slot.subjectId);
-          rows.push({ dayOfWeek: slot.dayOfWeek, period: slot.period, kind: "CORE_OR_SUPPORT", subjectId: slot.subjectId, subjectName: subject?.name ?? "Subject", subjectCode: subject?.code ?? "", teacherId: slot.teacherId, venue: slot.venue });
+          rows.push({ dayOfWeek: slot.dayOfWeek, period: slot.period, kind: subject?.code === "LUNCH" ? "NON_TEACHING" : "CORE_OR_SUPPORT", subjectId: slot.subjectId, subjectName: subject?.name ?? "Subject", subjectCode: subject?.code ?? "", teacherId: slot.teacherId, venue: slot.venue });
           continue;
         }
         if (slot.slotType !== "ELECTIVE_BLOCK" || !slot.electiveBlockSlotId) continue;
@@ -55,36 +55,25 @@ export async function generateSeniorLearnerTimetableProofs(tenantId: string, gen
         const family = familyOf(definition.label);
         let candidates = definition.subjects.filter((row) => selected.has(row.subjectId));
         if (family === "Mathematics") candidates = definition.subjects.filter((row) => subjectById.get(row.subjectId)?.mathVariant === expectedMathVariant);
-        if (candidates.length !== 1) {
-          issues.push(`${family} at day ${slot.dayOfWeek}, period ${slot.period} resolves to ${candidates.length} subjects instead of one.`);
-          continue;
-        }
-        const picked = candidates[0];
-        const subject = subjectById.get(picked.subjectId);
+        if (candidates.length !== 1) { issues.push(`${family} at day ${slot.dayOfWeek}, period ${slot.period} resolves to ${candidates.length} subjects instead of one.`); continue; }
+        const picked = candidates[0]; const subject = subjectById.get(picked.subjectId);
         (familySubjects[family] ??= []).push(picked.subjectId);
         rows.push({ dayOfWeek: slot.dayOfWeek, period: slot.period, kind: family === "Mathematics" ? "MATHEMATICS_SPLIT" : "OPTION_BLOCK", family, subjectId: picked.subjectId, subjectName: subject?.name ?? "Subject", subjectCode: subject?.code ?? "", teacherId: picked.teacherId, venueId: picked.venueId ?? picked.resolvedVenueId });
       }
-      for (const family of ["Option A", "Option B", "Option C"] as const) {
-        const ids = familySubjects[family];
-        if (ids.length !== 5) issues.push(`${family} has ${ids.length}/5 personal periods.`);
-        if (new Set(ids).size > 1) issues.push(`${family} changes subject across the week.`);
-      }
-      if (expectedMathVariant && mathSplitClassIds.has(student.classId!)) {
-        const ids = familySubjects.Mathematics;
-        if (ids.length !== 5) issues.push(`Mathematics split has ${ids.length}/5 personal periods.`);
-        if (new Set(ids).size > 1) issues.push("Mathematics variant changes across the week.");
-      } else if (expectedMathVariant) {
-        const ordinaryMath = rows.filter((row) => row.kind === "CORE_OR_SUPPORT" && subjectById.get(row.subjectId)?.mathVariant === expectedMathVariant);
-        if (ordinaryMath.length !== 5) issues.push(`${expectedMathVariant === "CORE" ? "Core" : "Essential"} Mathematics has ${ordinaryMath.length}/5 personal periods.`);
-      }
-      const optionAId = familySubjects["Option A"][0] ?? null;
-      const optionBId = familySubjects["Option B"][0] ?? null;
-      const optionCId = familySubjects["Option C"][0] ?? null;
+      for (const family of ["Option A", "Option B", "Option C"] as const) { const ids = familySubjects[family]; if (ids.length !== 5) issues.push(`${family} has ${ids.length}/5 personal periods.`); if (new Set(ids).size > 1) issues.push(`${family} changes subject across the week.`); }
+      if (expectedMathVariant && mathSplitClassIds.has(student.classId!)) { const ids = familySubjects.Mathematics; if (ids.length !== 5) issues.push(`Mathematics split has ${ids.length}/5 personal periods.`); if (new Set(ids).size > 1) issues.push("Mathematics variant changes across the week."); }
+      else if (expectedMathVariant) { const ordinaryMath = rows.filter((row) => row.kind === "CORE_OR_SUPPORT" && subjectById.get(row.subjectId)?.mathVariant === expectedMathVariant); if (ordinaryMath.length !== 5) issues.push(`${expectedMathVariant === "CORE" ? "Core" : "Essential"} Mathematics has ${ordinaryMath.length}/5 personal periods.`); }
+      const optionAId = familySubjects["Option A"][0] ?? null, optionBId = familySubjects["Option B"][0] ?? null, optionCId = familySubjects["Option C"][0] ?? null;
       for (const id of [optionAId, optionBId, optionCId]) if (id && !selected.has(id)) issues.push("Personal option subject is not in the learner's confirmed choices.");
       const valid = issues.length === 0;
       const proof = await db.seniorLearnerTimetableProof.create({ data: { generationJobId, studentId: student.id, classId: student.classId!, level: klass.level, valid, timetableJson: JSON.stringify(rows), issuesJson: JSON.stringify(issues), optionAId, optionBId, optionCId, mathVariant: expectedMathVariant } });
       output.push({ id: proof.id, studentId: student.id, studentName: `${student.firstName} ${student.lastName}`, admissionNo: student.admissionNo, className: [klass.level, klass.stream].filter(Boolean).join(" "), valid, issues, timetable: rows });
     }
+    // Detailed rows are the largest timetable data. Keep latest three jobs;
+    // older jobs retain counters, quality score and audit metadata.
+    const recentJobs = await db.timetableGenerationJob.findMany({ orderBy: { startedAt: "desc" }, select: { id: true }, take: 100 });
+    const oldJobIds = recentJobs.slice(3).map((job) => job.id);
+    if (oldJobIds.length) await db.seniorLearnerTimetableProof.deleteMany({ where: { generationJobId: { in: oldJobIds } } });
     return { valid: output.filter((proof) => proof.valid).length, invalid: output.filter((proof) => !proof.valid).length, proofs: output };
   });
 }
@@ -94,7 +83,12 @@ export async function latestSeniorLearnerProofs(user: SessionUser, studentId?: s
     const db = tenantDb();
     const latestJob = await db.timetableGenerationJob.findFirst({ where: { status: "DONE" }, orderBy: { startedAt: "desc" } });
     if (!latestJob) return { job: null, proofs: [] };
-    const proofs = await db.seniorLearnerTimetableProof.findMany({ where: { generationJobId: latestJob.id, ...(studentId ? { studentId } : {}) }, include: { student: { select: { firstName: true, lastName: true, admissionNo: true } } }, orderBy: { createdAt: "asc" } });
-    return { job: { id: latestJob.id, startedAt: latestJob.startedAt, valid: latestJob.learnerProofValid, invalid: latestJob.learnerProofInvalid }, proofs: proofs.map((proof) => ({ ...proof, studentName: `${proof.student.firstName} ${proof.student.lastName}`, admissionNo: proof.student.admissionNo, timetable: parse(proof.timetableJson, []), issues: parse(proof.issuesJson, []) })) };
+    const commonJob = { id: latestJob.id, startedAt: latestJob.startedAt, valid: latestJob.learnerProofValid, invalid: latestJob.learnerProofInvalid };
+    if (studentId) {
+      const proofs = await db.seniorLearnerTimetableProof.findMany({ where: { generationJobId: latestJob.id, studentId }, include: { student: { select: { firstName: true, lastName: true, admissionNo: true } } } });
+      return { job: commonJob, proofs: proofs.map((proof) => ({ ...proof, studentName: `${proof.student.firstName} ${proof.student.lastName}`, admissionNo: proof.student.admissionNo, timetable: parse(proof.timetableJson, []), issues: parse(proof.issuesJson, []) })) };
+    }
+    const proofs = await db.seniorLearnerTimetableProof.findMany({ where: { generationJobId: latestJob.id }, include: { student: { select: { firstName: true, lastName: true, admissionNo: true } } }, orderBy: { createdAt: "asc" } });
+    return { job: commonJob, proofs: proofs.map((proof) => ({ id: proof.id, studentId: proof.studentId, studentName: `${proof.student.firstName} ${proof.student.lastName}`, admissionNo: proof.student.admissionNo, valid: proof.valid, issueCount: parse<any[]>(proof.issuesJson, []).length })) };
   });
 }

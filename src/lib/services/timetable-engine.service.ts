@@ -43,6 +43,7 @@ import { getElectiveBlocksForSolver } from "@/lib/services/elective-block.servic
 import { seniorTimetableReadiness } from "@/lib/services/senior-timetable-readiness.service";
 import { seniorMathSplitReady, seniorOptionBlocksReady } from "@/lib/services/senior-option-block-readiness.service";
 import { generateSeniorLearnerTimetableProofs } from "@/lib/services/senior-personal-timetable.service";
+import { buildSeniorTimetableQualityReport } from "@/lib/services/senior-timetable-quality.service";
 
 export class TimetableEngineError extends Error {
   constructor(public code: "NOT_FOUND" | "INVALID" | "BUSY", message: string) {
@@ -564,7 +565,7 @@ export async function getGenerationJob(user: SessionUser, jobId?: string) {
       ? await tdb.timetableGenerationJob.findUnique({ where: { id: jobId } })
       : await tdb.timetableGenerationJob.findFirst({ orderBy: { startedAt: "desc" } });
     if (!job) return null;
-    return { ...job, unplaced: safeParse<any[]>(job.unplacedJson, []), warnings: safeParse<any[]>(job.warningsJson, []), optionReservationSummary: safeParse<any[]>(job.reservationSummaryJson, []) };
+    return { ...job, unplaced: safeParse<any[]>(job.unplacedJson, []), warnings: safeParse<any[]>(job.warningsJson, []), optionReservationSummary: safeParse<any[]>(job.reservationSummaryJson, []), qualityReport: safeParse<any>(job.qualityReportJson, {}) };
   });
 }
 
@@ -628,6 +629,7 @@ export async function runGeneration(tenantId: string, jobId: string, user: Sessi
     result.fullySolved = false;
     result.warnings.push({ classLabel: "SENIOR LEARNER PROOF", subjectCode: "PERSONAL_TIMETABLE", message: `${learnerProof.invalid} Senior learner personal timetable proof(s) failed. Open Learner Proofs before publication.` });
   }
+  const qualityReport = await buildSeniorTimetableQualityReport(tenantId, jobId);
 
   await withTenant(tenantId, async () => {
     const tdb = tenantDb();
@@ -663,7 +665,7 @@ export async function runGeneration(tenantId: string, jobId: string, user: Sessi
       data: {
         tenantId, actorId: user.id, actorName: user.fullName,
         action: "timetable.generated_advanced", entityType: "tenant", entityId: tenantId,
-        metadata: JSON.stringify({ slotsPlaced: result.slotsPlaced, unplaced: result.unplaced.length, warnings: result.warnings.length, fullySolved: result.fullySolved, optionReservationSummary: result.optionReservationSummary, learnerProofValid: learnerProof.valid, learnerProofInvalid: learnerProof.invalid }),
+        metadata: JSON.stringify({ slotsPlaced: result.slotsPlaced, unplaced: result.unplaced.length, warnings: result.warnings.length, fullySolved: result.fullySolved, optionReservationSummary: result.optionReservationSummary, learnerProofValid: learnerProof.valid, learnerProofInvalid: learnerProof.invalid, qualityStatus: qualityReport.status, qualityScore: qualityReport.score, qualityFindings: qualityReport.findings.length }),
       },
     });
   } catch { /* notify is non-fatal */ }
