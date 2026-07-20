@@ -38,7 +38,10 @@ export function PromotionClient() {
   // student import completes: /students/promotion?tab=allocate-class&level=Grade%2010
   // so the founder's own "both entry points, one engine" choice works
   // without any separate second wizard/page.
-  const initialTab = (searchParams?.get("tab") as "allocate-class" | null) === "allocate-class" ? "allocate-class" : "promote";
+  const requestedTab = searchParams?.get("tab");
+  const initialTab = (["allocate-class", "review-wizard", "continuity", "transfer-impact", "reshuffle", "auto-grouping"] as const).includes(requestedTab as any)
+    ? requestedTab as "allocate-class" | "review-wizard" | "continuity" | "transfer-impact" | "reshuffle" | "auto-grouping"
+    : "promote";
   const initialLevel = searchParams?.get("level") ?? "";
   const [tab, setTab] = React.useState<"promote" | "reshuffle" | "auto-grouping" | "allocate-class" | "continuity" | "transfer-impact" | "review-wizard">(initialTab);
   const [plan, setPlan] = React.useState<PlanStep[] | null>(null);
@@ -100,26 +103,26 @@ export function PromotionClient() {
   return (
     <div className="space-y-6">
       {/* tabs */}
-      <div className="inline-flex rounded-full border border-navy-200 p-0.5 dark:border-navy-700">
-        <button onClick={() => setTab("promote")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "promote" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
+      <div className="flex max-w-full gap-1 overflow-x-auto overscroll-x-contain rounded-2xl border border-navy-200 p-1 touch-auto dark:border-navy-700" aria-label="Promotion and allocation tools">
+        <button onClick={() => setTab("promote")} className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ${tab === "promote" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
           New academic year
         </button>
-        <button onClick={() => setTab("reshuffle")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "reshuffle" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
+        <button onClick={() => setTab("reshuffle")} className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ${tab === "reshuffle" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
           Reshuffle streams
         </button>
-        <button onClick={() => setTab("auto-grouping")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "auto-grouping" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
+        <button onClick={() => setTab("auto-grouping")} className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ${tab === "auto-grouping" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
           Auto-grouping
         </button>
-        <button onClick={() => setTab("allocate-class")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "allocate-class" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
+        <button onClick={() => setTab("allocate-class")} className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ${tab === "allocate-class" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
           Allocate class
         </button>
-        <button onClick={() => setTab("continuity")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "continuity" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
+        <button onClick={() => setTab("continuity")} className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ${tab === "continuity" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
           Continuity engine
         </button>
-        <button onClick={() => setTab("review-wizard")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "review-wizard" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
+        <button onClick={() => setTab("review-wizard")} className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ${tab === "review-wizard" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
           New year teacher review
         </button>
-        <button onClick={() => setTab("transfer-impact")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === "transfer-impact" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
+        <button onClick={() => setTab("transfer-impact")} className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ${tab === "transfer-impact" ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>
           Teacher transfer impact
         </button>
       </div>

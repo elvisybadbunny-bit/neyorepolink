@@ -410,6 +410,7 @@ export function StudentsClient({ canCreate }: { canCreate: boolean }) {
           </div>
           {canCreate && <>
             <Button variant="secondary" onClick={() => setApprovalsOpen(true)}><ClipboardCheck className="h-4 w-4" /> Student approvals</Button>
+            <Link href="/students/promotion?tab=review-wizard"><Button variant="secondary"><UserCheck className="h-4 w-4 text-green-600" /> Teacher allocation</Button></Link>
             <Button onClick={()=>setDialog(true)}><Plus className="h-4 w-4" /> New student</Button>
           </>}
           {students && students.length > 0 && (
