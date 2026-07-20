@@ -167,7 +167,20 @@ If the answer is no, document the idea and defer it.
 - Kept student messaging honest by directing learners to a teacher or administrator rather than exposing setup controls.
 - Converted the Portfolio create/edit form into a dynamic-height mobile sheet with safe-area support.
 
-This is an active route-by-route audit. A route is not marked complete merely because it inherits the shared CSS fixes.
+### Final route sweep
+
+- Applied the mobile sheet baseline to Admissions, Clinic, Discipline, Transport, Payroll, LMS, Alumni, Classes, Syllabus, Learning Videos, CBE setup and Parent Portal operational dialogs.
+- Applied the same dynamic-height treatment to computation reports, assessment setup, competency setup, curriculum setup and rubric forms.
+- Repaired the remaining direct Academics overlays that did not use the already-fixed shared dialog.
+- Kept shell overlays, biometric gates, print previews and intentional full-screen system surfaces separate because they are not ordinary data-entry dialogs.
+
+## Phase status
+
+**Phase 1 visibility foundation: complete in code.** Shared labels, fields, placeholders and tables have stronger contrast, and route-specific faint text found during this sweep was corrected. A real-device visual pass is still required before claiming every browser and display has been visually verified.
+
+**Phase 3 mobile adaptability foundation: complete in code.** High-use operational dialogs now use dynamic viewport height, internal scrolling and safe-area support; cramped unconditional field grids were made responsive; tables preserve horizontal access; excessive Academics mobile tabs were replaced by a compact section selector. A real 360px browser pass is still required before claiming every workflow has been physically tested.
+
+Future work should now return to launch blockers and community building rather than continuing broad redesign.
 
 ## Current engineering order
 

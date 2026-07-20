@@ -1412,8 +1412,8 @@ function SlotDialog({ classId, day, period, existing, subjects, activities, staf
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/40 backdrop-blur-sm px-4 animate-fade-in" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-2xl border border-navy-100 bg-white p-6 shadow-pop text-left dark:border-navy-800 dark:bg-navy-900" onClick={(e)=>e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-pop dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e)=>e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between border-b border-navy-50 pb-2 dark:border-navy-800">
           <h4 className="font-bold text-navy-950 dark:text-white">Set Lesson Slot</h4>
           <button onClick={onClose} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800"><X className="h-5 w-5" /></button>
@@ -2077,8 +2077,8 @@ function TimetableGeneratorTab({ canManage }: { canManage: boolean }) {
 
       {/* PRE-GENERATION CONSTRAINTS VALIDATION MODAL */}
       {validationOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/40 backdrop-blur-sm px-4 animate-fade-in" onClick={() => setValidationOpen(false)}>
-          <div className="w-full max-w-md rounded-2xl border border-navy-100 bg-white p-6 shadow-pop text-center dark:border-navy-800 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setValidationOpen(false)}>
+          <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-pop dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 mb-4">
               <HelpCircle className="h-8 w-8 animate-bounce" />
             </div>
@@ -3216,7 +3216,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
             runMasterButton() above) — never interrupts a school whose
             setup already fully accounts for every real possible slot. */}
         {preGenOpen && preGenSummary && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setPreGenOpen(false)}>
+          <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 sm:items-center sm:p-4" onClick={() => setPreGenOpen(false)}>
             <div className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-navy-950" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-start gap-3">
                 <AlertCircle className="mt-0.5 h-6 w-6 shrink-0 text-amber-500" />

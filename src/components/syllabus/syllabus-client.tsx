@@ -201,7 +201,7 @@ function TopicDialog({ board, onClose, onDone }: { board: Board; onClose: () => 
     } finally { setSaving(false); }
   }
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
         <h3 className="mb-4 text-base font-semibold text-navy-950 dark:text-white">Add syllabus scope topic</h3>
         <div className="space-y-3">

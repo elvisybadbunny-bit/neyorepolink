@@ -149,7 +149,7 @@ function CreateRequestDialog({ onClose, onDone }: { onClose: () => void; onDone:
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 sm:items-center sm:p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-3xl bg-white p-5 shadow-pop dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-lg font-bold text-navy-900 dark:text-navy-50">Request a custom feature</h3>
         <div className="mt-4 space-y-3">

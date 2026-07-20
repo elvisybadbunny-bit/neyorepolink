@@ -117,7 +117,7 @@ function SalaryDialog({ row, onClose, onDone }: { row: SalaryRow; onClose: () =>
     <Modal title={`Salary — ${row.name}`} onClose={onClose}>
       <div className="space-y-3">
         <div><Label>Basic salary (KES/month)</Label><Input type="number" min={0} value={f.basicKes} onChange={set("basicKes")} /></div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <div><Label>House</Label><Input type="number" min={0} value={f.houseAllowanceKes} onChange={set("houseAllowanceKes")} /></div>
           <div><Label>Transport</Label><Input type="number" min={0} value={f.transportAllowanceKes} onChange={set("transportAllowanceKes")} /></div>
           <div><Label>Other</Label><Input type="number" min={0} value={f.otherAllowanceKes} onChange={set("otherAllowanceKes")} /></div>
@@ -305,7 +305,7 @@ function NewRunDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
 // ---- shared ------------------------------------------------------------------------
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <h3 className="text-base font-semibold text-navy-900 dark:text-navy-50">{title}</h3>

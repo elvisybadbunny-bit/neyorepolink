@@ -250,8 +250,8 @@ function MasterReportModal({ portal, onClose }: { portal: any; onClose: () => vo
   }, [classId, portal.termId, toast]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/40 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-4xl rounded-2xl border border-navy-100 bg-white p-6 shadow-pop dark:border-navy-800 dark:bg-navy-950" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-4xl overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-pop dark:border-navy-700 dark:bg-navy-950 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-black text-lg">Master report — {portal.name}</h3>
           <button onClick={onClose}><X className="h-5 w-5" /></button>

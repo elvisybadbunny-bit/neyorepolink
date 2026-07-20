@@ -283,8 +283,8 @@ function modalIcon(modal: NonNullable<ModalState>): LucideIcon {
 }
 function AssessmentModal({ title, icon: Icon, children, onClose }: { title: string; icon: LucideIcon; children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-navy-950/35 p-3 backdrop-blur-md">
-      <Card className="max-h-[min(92dvh,44rem)] w-full max-w-4xl overflow-hidden border-white/50 bg-white shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-navy-900">
+    <div className="fixed inset-0 z-[70] flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-md sm:items-center sm:p-4">
+      <Card className="max-h-[calc(100dvh-0.5rem)] w-full max-w-4xl overflow-hidden rounded-t-3xl border-navy-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl">
         <CardHeader className="sticky top-0 z-10 border-b border-navy-100 bg-white backdrop-blur-xl dark:border-navy-800 dark:bg-navy-900">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
