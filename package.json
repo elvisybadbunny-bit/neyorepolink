@@ -21,7 +21,8 @@
     "test:grade10-scale": "node scripts/grade10-600-scale-simulation.mjs",
     "vercel-build": "prisma generate && npm run migrate:deploy && if [ \"$SEED_DEMO_DATA\" = \"true\" ]; then npm run db:seed; fi && next build",
     "test:youtube-batch1": "tsx scripts/youtube-batch1-candidate-test.ts",
-    "verify:youtube-batch1": "tsx scripts/verify-youtube-batch1-live.ts"
+    "verify:youtube-batch1": "tsx scripts/verify-youtube-batch1-live.ts",
+    "test:youtube-candidates": "tsx scripts/youtube-batches-candidate-test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.620.0",
