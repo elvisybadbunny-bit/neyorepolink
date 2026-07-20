@@ -4,6 +4,30 @@ import type { SessionUser } from "@/lib/core/session";
 const parse = <T>(value: string, fallback: T): T => { try { return JSON.parse(value) as T; } catch { return fallback; } };
 
 /** Server-side Phase B/C generation gate. Rechecks live resources and stale choices. */
+export async function seniorMathSplitReady(user: SessionUser, level: string) {
+  return withTenant(user.tenantId, async () => {
+    const db = tenantDb();
+    const classes = await db.schoolClass.findMany({ where: { level, archived: false }, select: { id: true } });
+    const prefs = await db.studentPathwayPreference.findMany({ where: { isAllocated: true, student: { classId: { in: classes.map((c) => c.id) } } }, include: { pathway: true } });
+    const groups = new Set(prefs.map((pref) => pref.pathway.pathwayGroup).filter(Boolean));
+    const mixed = groups.has("STEM") && [...groups].some((group) => group !== "STEM");
+    if (!mixed) return { ready: true, required: false };
+    const run = await db.electiveBlockAutoBuildRun.findFirst({ where: { level, kind: "MATH_SPLIT", status: "CONFIRMED" }, orderBy: { confirmedAt: "desc" } });
+    if (!run?.createdElectiveBlockId || !run.confirmedAt) return { ready: false, required: true, reason: `${level} contains STEM and non-STEM learners but has no confirmed five-period Core/Essential Mathematics split.` };
+    if (prefs.some((pref) => pref.updatedAt > run.confirmedAt!)) return { ready: false, required: true, reason: `${level} pathway allocation changed after the Mathematics split. Rebuild it before generation.` };
+    const block = await db.electiveBlock.findFirst({ where: { id: run.createdElectiveBlockId, active: true }, include: { slots: { include: { subjects: true } } } });
+    if (!block || block.slots.length !== 5 || block.slots.some((slot) => !/^Mathematics\b/.test(slot.label) || slot.subjects.length !== 2)) return { ready: false, required: true, reason: `${level} Mathematics split must contain exactly five parallel slots with Core and Essential Mathematics.` };
+    const subjectRows = block.slots[0].subjects;
+    const subjects = await db.subject.findMany({ where: { id: { in: subjectRows.map((row) => row.subjectId) } }, select: { id: true, mathVariant: true } });
+    if (!subjects.some((subject) => subject.mathVariant === "CORE") || !subjects.some((subject) => subject.mathVariant === "ESSENTIAL")) return { ready: false, required: true, reason: `${level} Mathematics split does not contain both real Mathematics variants.` };
+    if (subjectRows.some((row) => !row.teacherId)) return { ready: false, required: true, reason: `${level} Mathematics split has an unassigned teacher.` };
+    if (new Set(subjectRows.map((row) => row.teacherId)).size !== 2) return { ready: false, required: true, reason: `${level} Core and Essential Mathematics run together and require two different teachers.` };
+    const teacherLinks = await db.teacherSubject.findMany({ where: { subjectId: { in: subjectRows.map((row) => row.subjectId) }, teacherId: { in: subjectRows.map((row) => row.teacherId!).filter(Boolean) } } });
+    if (subjectRows.some((row) => !teacherLinks.some((link) => link.subjectId === row.subjectId && link.teacherId === row.teacherId))) return { ready: false, required: true, reason: `${level} Mathematics teacher qualification changed after confirmation. Rebuild Phase C.` };
+    return { ready: true, required: true, blockId: block.id, slotCount: 5 };
+  });
+}
+
 export async function seniorOptionBlocksReady(user: SessionUser, level: string) {
   return withTenant(user.tenantId, async () => {
     const db = tenantDb();

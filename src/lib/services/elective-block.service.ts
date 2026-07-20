@@ -158,6 +158,7 @@ export async function getElectiveBlocksForSolver(tenantId: string) {
     const tdb = tenantDb();
     const blocks = await tdb.electiveBlock.findMany({
       where: { active: true },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       include: {
         classes: true,
         // BB.1 — real, deterministic subject order (createdAt asc) is

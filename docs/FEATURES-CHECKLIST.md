@@ -4936,3 +4936,14 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Selected venue persists on all five repeated slots for that option block.
 - [x] Master generation revalidates stale choices, active learner count, teacher qualification and venue capacity after confirmation.
 - [x] No AI/Bundi/provider dependency.
+
+### Senior School Timetable Phase D — deterministic Master reservation — 2026-07-21
+- [x] Master generation requires current Phase A, B and C gates.
+- [x] Mixed STEM/non-STEM levels require confirmed Core/Essential Mathematics split with five slots and distinct teachers.
+- [x] Option A/B/C and Mathematics slots reserve classes, teachers and venues atomically before ordinary lessons.
+- [x] Official five-period families are spread exactly once per Monday–Friday; no Saturday spillover.
+- [x] Deterministic soft scoring balances each family between morning and afternoon.
+- [x] Unplaced required option slot makes the run not fully solved and remains a visible warning.
+- [x] Generation returns family/day/morning/afternoon reservation evidence.
+- [x] No AI/Bundi/provider/random dependency.
+- [ ] Phase E durable per-learner personal timetable proof remains next.

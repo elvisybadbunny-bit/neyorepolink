@@ -41,7 +41,7 @@ import {
 } from "@/lib/validations/pathways";
 import { getElectiveBlocksForSolver } from "@/lib/services/elective-block.service";
 import { seniorTimetableReadiness } from "@/lib/services/senior-timetable-readiness.service";
-import { seniorOptionBlocksReady } from "@/lib/services/senior-option-block-readiness.service";
+import { seniorMathSplitReady, seniorOptionBlocksReady } from "@/lib/services/senior-option-block-readiness.service";
 
 export class TimetableEngineError extends Error {
   constructor(public code: "NOT_FOUND" | "INVALID" | "BUSY", message: string) {
@@ -533,6 +533,8 @@ export async function startGeneration(user: SessionUser) {
     }
     const phaseB = await seniorOptionBlocksReady(user, level);
     if (!phaseB.ready) throw new TimetableEngineError("INVALID", phaseB.reason!);
+    const mathSplit = await seniorMathSplitReady(user, level);
+    if (!mathSplit.ready) throw new TimetableEngineError("INVALID", mathSplit.reason!);
   }
   const job = await withTenant(user.tenantId, async () => {
     const tdb = tenantDb();
@@ -561,7 +563,7 @@ export async function getGenerationJob(user: SessionUser, jobId?: string) {
       ? await tdb.timetableGenerationJob.findUnique({ where: { id: jobId } })
       : await tdb.timetableGenerationJob.findFirst({ orderBy: { startedAt: "desc" } });
     if (!job) return null;
-    return { ...job, unplaced: safeParse<any[]>(job.unplacedJson, []), warnings: safeParse<any[]>(job.warningsJson, []) };
+    return { ...job, unplaced: safeParse<any[]>(job.unplacedJson, []), warnings: safeParse<any[]>(job.warningsJson, []), optionReservationSummary: safeParse<any[]>(job.reservationSummaryJson, []) };
   });
 }
 
@@ -632,6 +634,7 @@ export async function runGeneration(tenantId: string, jobId: string, user: Sessi
         slotsPlaced: result.slotsPlaced,
         unplacedJson: JSON.stringify(result.unplaced),
         warningsJson: JSON.stringify(result.warnings),
+        reservationSummaryJson: JSON.stringify(result.optionReservationSummary),
         finishedAt: new Date(),
       },
     });
@@ -652,7 +655,7 @@ export async function runGeneration(tenantId: string, jobId: string, user: Sessi
       data: {
         tenantId, actorId: user.id, actorName: user.fullName,
         action: "timetable.generated_advanced", entityType: "tenant", entityId: tenantId,
-        metadata: JSON.stringify({ slotsPlaced: result.slotsPlaced, unplaced: result.unplaced.length, warnings: result.warnings.length }),
+        metadata: JSON.stringify({ slotsPlaced: result.slotsPlaced, unplaced: result.unplaced.length, warnings: result.warnings.length, fullySolved: result.fullySolved, optionReservationSummary: result.optionReservationSummary }),
       },
     });
   } catch { /* notify is non-fatal */ }
@@ -1083,8 +1086,19 @@ async function buildAndSolve(tenantId: string, jobId: string) {
   // renderer can show it exactly like a school's own explicit pin,
   // honestly cleared to null when no longer needed/available.
   const resolvedVenueUpdates = new Map<string, string | null>();
+  // Phase D: each five-period Senior option family (Option A/B/C or the
+  // Mathematics split) must occupy five different weekdays, not get packed
+  // into one early day by the generic earliest-slot score. Morning/afternoon
+  // counts are tracked for a deterministic soft balance.
+  const optionFamilyDays = new Map<string, Set<number>>();
+  const optionFamilyHalves = new Map<string, { morning: number; afternoon: number }>();
   for (const block of electiveBlocks) {
     for (const slot of block.slots) {
+      const familyLabel = slot.label.split("·")[0].trim();
+      const familyKey = `${block.id}:${familyLabel}`;
+      const usedDays = optionFamilyDays.get(familyKey) ?? new Set<number>();
+      const halfCounts = optionFamilyHalves.get(familyKey) ?? { morning: 0, afternoon: 0 };
+      const familyRepeats = block.slots.filter((candidate) => candidate.label.split("·")[0].trim() === familyLabel).length;
       // Real candidate day/period search: the SAME real day+period must be
       // free for every member class of the block, AND for every teacher/
       // venue this slot's subjects need, AND (for a double slot) both
@@ -1119,6 +1133,11 @@ async function buildAndSolve(tenantId: string, jobId: string) {
       }
       const candidates: { day: number; periods: number[]; score: number }[] = [];
       for (const day of daysForCard(block.classIds)) {
+        if (familyRepeats === 5 && /^(Option [ABC]|Mathematics)$/.test(familyLabel) && day > 5) continue;
+        // Official five-period Senior families spread once across Mon–Fri.
+        // For any custom family with >5 repetitions, weekday reuse remains
+        // possible after all five days have been used.
+        if (familyRepeats <= 5 && usedDays.has(day)) continue;
         const maxP = maxPeriodsForCard(block.classIds, day);
         const periodWindows: number[][] = size === 1
           ? Array.from({ length: maxP }, (_, i) => [i + 1])
@@ -1161,6 +1180,9 @@ async function buildAndSolve(tenantId: string, jobId: string) {
           if (!venuesFree) continue;
 
           let score = day * 2 + periods[0];
+          const isMorning = periods[0] <= Math.ceil(maxP / 2);
+          if (isMorning && halfCounts.morning > halfCounts.afternoon) score += 20;
+          if (!isMorning && halfCounts.afternoon > halfCounts.morning) score += 20;
           if (block.preferAfterBreak) {
             const cfg = configByClass.get(block.classIds[0]);
             const breakEnds = [cfg?.shortBreakStart, cfg?.shortBreak2Start, cfg?.longBreakStart].filter(Boolean) as number[];
@@ -1180,6 +1202,12 @@ async function buildAndSolve(tenantId: string, jobId: string) {
         });
         continue;
       }
+      usedDays.add(chosen.day);
+      optionFamilyDays.set(familyKey, usedDays);
+      const chosenMaxP = maxPeriodsForCard(block.classIds, chosen.day);
+      if (chosen.periods[0] <= Math.ceil(chosenMaxP / 2)) halfCounts.morning += 1;
+      else halfCounts.afternoon += 1;
+      optionFamilyHalves.set(familyKey, halfCounts);
       // Reserve: every member class's classGrid entry marks this real
       // period as genuinely occupied (a synthetic marker, since no SINGLE
       // subject owns the whole class's period here) so ordinary cards
@@ -1991,7 +2019,12 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     }
   });
 
-  return { slotsPlaced: slotRows.length + electiveBlockSlotRows.length, unplaced, warnings, fullySolved };
+  const optionReservationSummary = [...optionFamilyDays.entries()].map(([familyKey, days]) => {
+    const [, family] = familyKey.split(":");
+    const halves = optionFamilyHalves.get(familyKey) ?? { morning: 0, afternoon: 0 };
+    return { family, days: [...days].sort((a, b) => a - b), morning: halves.morning, afternoon: halves.afternoon };
+  });
+  return { slotsPlaced: slotRows.length + electiveBlockSlotRows.length, unplaced, warnings, fullySolved: fullySolved && electiveBlockWarnings.length === 0, optionReservationSummary };
 }
 
 // ---------------------------------------------------------------------------

@@ -3200,6 +3200,11 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                   <div><strong>Slots placed:</strong> {job.slotsPlaced ?? 0}</div>
                   <div><strong>Warnings:</strong> {(job.warnings ?? []).length}</div>
                 </div>
+                {(job.optionReservationSummary ?? []).length > 0 && (
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {job.optionReservationSummary.map((item: any, index: number) => <div key={`${item.family}-${index}`} className="rounded-xl border border-indigo-200 bg-white/80 p-2.5 text-xs text-indigo-900 dark:border-indigo-900 dark:bg-navy-950/60 dark:text-indigo-200"><strong>{item.family}</strong><span className="ml-1">· days {(item.days ?? []).join(", ")} · {item.morning} morning / {item.afternoon} afternoon</span></div>)}
+                  </div>
+                )}
                 {(job.unplaced ?? []).length > 0 && (
                   <div className="mt-3 rounded-2xl border border-amber-100 bg-white/80 p-3 text-xs text-amber-700 dark:border-amber-900/40 dark:bg-navy-950/60 dark:text-amber-300">
                     <strong>Unplaced lessons:</strong> {(job.unplaced ?? []).slice(0, 5).map((u: any) => u.subjectCode || u.classLabel || "item").join(", ")}

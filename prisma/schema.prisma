@@ -5743,6 +5743,7 @@ model TimetableGenerationJob {
   slotsPlaced   Int       @default(0)
   unplacedJson  String    @default("[]") // JSON list of loads that could not be placed
   warningsJson  String    @default("[]") // JSON list of soft-constraint warnings
+  reservationSummaryJson String @default("[]") // Phase D option/math family weekday + day-half proof
   error         String?
   startedById   String
   startedByName String
