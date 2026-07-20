@@ -1,0 +1,16 @@
+import type { VideoReviewCandidate } from "./youtube-grade6-10-batch1-candidates";
+const make=(grade:string,subject:string,items:[string,string][]):VideoReviewCandidate[]=>items.map(([youtubeId,title])=>({youtubeId,grade,subject,title,reviewStatus:"CANDIDATE",sourceCheckedOn:"2026-07-20"}));
+export const YOUTUBE_GRADE6_10_BATCH3_CANDIDATES:VideoReviewCandidate[]=[
+...make("Grade 9","Geography",[["ursAKZ46x1g","Global warming and its impacts"],["rvRALGR1UcE","Map coordinates on a 1:50,000 map"],["IE6LxNu2cZ8","Weather, climate and climate controls"]]),
+...make("Grade 9","Computer Science",[["M7E41O44d90","Computer systems: input, processing, output and storage"],["sa1drt_gMF0","Computer Studies examination revision"],["StRrFKhbpfo","Primary and secondary storage"],["U42V1M3kr7I","Computer-based learning"],["25rNrIWE2Oc","Computer Science study and practical skills"]]),
+...make("Grade 10","Physics",[["8bLoqli6b3A","Mechanical energy and conservation"]]),
+...make("Grade 8","Social Studies",[["ZPyiI-cfGtg","Geography, time zones and settlement"],["APsBzjh8wsQ","Internal forces and resultant landforms"],["BMJxHHF5sjc","Folding, faulting, earthquakes and volcanoes"],["OXIL0KQIx7g","Geographical exploration and historical change"]]),
+...make("Grade 8","Mathematics",[["UE-RXnn0hNw","Scatter plots and lines of fit"],["-7H2MW--zLI","Distance in the coordinate plane"],["IQ6iZ3B8hak","Pyramids and surface area"],["K2gvNqQ1uIs","Volume and packing problems"],["_QtIbvYuFwg","Straight-line geometry"]]),
+...make("Grade 6","Mathematics",[["HiCNLWt5SWQ","Addition and subtraction of fractions"],["88hRPlOxNfU","Equivalent, improper and mixed fractions"],["qB7YJWxY8DU","Division of fractions"],["UYbhKn6dc9s","Fractions with different denominators"],["Ft5x5cWAn-Y","Adding and subtracting unlike fractions"]]),
+...make("Grade 7","Integrated Science",[["zyb24oaKKKE","Force and energy"],["WfkVt_8A-js","Sources of energy"]]),
+...make("Grade 6","Science",[["dlvNxLQwDms","Renewable energy"],["vH2XDkhaUzw","Energy in everyday life"],["vAakLPVbUNs","Forms of energy"],["cCVk1KMayKo","Matter and energy"]]),
+...make("Grade 8","Science",[["5ydeiDY8DQc","Newton's first law and inertia"],["B6CmOrg2spE","Newton's second law and acceleration"],["eqvwmh9tyEI","Newton's third law and interaction"],["nRxFn5dq7h0","Potential energy"],["JGBQM0DHgTI","Kinetic energy"]]),
+...make("Grade 9","Mathematics",[["8A3crqKb13I","Complete GCSE Mathematics revision"],["o9VuZhCqR2U","Higher Mathematics revision"],["qT-M7C1cNTg","Higher Mathematics topic review"],["LPKH04Nw8Zk","Algebra revision"],["zbMoDKVjzUM","Graph transformations"],["EdQYcAsu7wA","Inverse functions"],["3C-9P0AlXwo","Composite functions"],["HwJLVERnuag","Iterations"],["JsIRYmteGf8","Algebraic proof"],["kmeL4a3lG5w","Solving quadratic equations"],["q64qaxLAR9U","Quadratic formula"],["AEThlXbZT1s","Quadratic simultaneous equations"]]),
+...make("Grade 10","Chemistry",[["ahlKj-4wrCs","Acids, bases and salts"],["AZTIptQUf4M","Properties of acids practical"],["PByoFa96rNM","Introduction to chemical and physical change"],["bP46IMf6XUo","Chemical reactions and equations"]]),
+];
+if(YOUTUBE_GRADE6_10_BATCH3_CANDIDATES.length!==50)throw new Error(`Expected 50 Batch 3 candidates, found ${YOUTUBE_GRADE6_10_BATCH3_CANDIDATES.length}`);

@@ -5,7 +5,8 @@ import { db } from "@/lib/db";
 import { ok, handleError } from "@/lib/api/respond";
 import { YOUTUBE_GRADE6_10_BATCH1_CANDIDATES } from "@/lib/data/youtube-grade6-10-batch1-candidates";
 import { YOUTUBE_GRADE6_10_BATCH2_CANDIDATES } from "@/lib/data/youtube-grade6-10-batch2-candidates";
-const candidates=[...YOUTUBE_GRADE6_10_BATCH1_CANDIDATES,...YOUTUBE_GRADE6_10_BATCH2_CANDIDATES];
+import { YOUTUBE_GRADE6_10_BATCH3_CANDIDATES } from "@/lib/data/youtube-grade6-10-batch3-candidates";
+const candidates=[...YOUTUBE_GRADE6_10_BATCH1_CANDIDATES,...YOUTUBE_GRADE6_10_BATCH2_CANDIDATES,...YOUTUBE_GRADE6_10_BATCH3_CANDIDATES];
 export const dynamic="force-dynamic"; export const maxDuration=300; const KEY="youtube_grade6_10_batch1_reviews";
 type Review={status:"CANDIDATE"|"LIVE_VERIFIED"|"APPROVED_FOR_MAPPING"|"MAPPED"|"PUBLISHED"|"REJECTED"|"UNAVAILABLE";liveTitle?:string;channelTitle?:string;note?:string;checkedAt?:string;reviewedBy?:string;subjectId?:string;strandId?:string;substrandId?:string;publishedVideoId?:string;watchedFully?:boolean;gradeSuitable?:boolean;contentSafe?:boolean;curriculumRelevant?:boolean;languageClear?:boolean};
 async function readReviews():Promise<Record<string,Review>>{const row=await db.platformSetting.findUnique({where:{key:KEY}});try{return row?JSON.parse(row.value):{};}catch{return {};}}
