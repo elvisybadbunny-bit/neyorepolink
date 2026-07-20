@@ -230,11 +230,20 @@ export async function runStorageOptimizer(
 
 /** Real history of runs for the NEYO Ops dashboard. */
 export async function listStorageOptimizerRuns(limit = 30) {
-  return db.storageOptimizerRun.findMany({
+  const rows = await db.storageOptimizerRun.findMany({
     orderBy: { createdAt: "desc" },
     take: limit,
     include: { tenant: { select: { name: true } } },
   });
+  // NextResponse.json cannot serialize native BigInt values. Convert only the
+  // byte counters at this API boundary so one historical run never crashes
+  // the entire Storage Intelligence tab with a generic error.
+  return rows.map((row) => ({
+    ...row,
+    duplicateBytesFound: row.duplicateBytesFound.toString(),
+    temporaryBytesFreed: row.temporaryBytesFreed.toString(),
+    totalBytesFreed: row.totalBytesFreed.toString(),
+  }));
 }
 
 /**

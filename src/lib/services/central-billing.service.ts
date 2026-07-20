@@ -121,7 +121,7 @@ export async function initiateCentralSubscriptionStk(input: { tenantId: string; 
 
   // M.1 — apply any earned, still-PENDING referral credit to reduce the REAL
   // amount actually charged via M-Pesa STK (not a cosmetic number).
-  const { discountKes, creditIds } = await pendingReferralDiscountKes(tenant.id, fullAmount);
+  const referralDiscount = await pendingReferralDiscountKes(tenant.id, fullAmount);
 
   // T.2/T.6 — a real, ONE-TIME first-term discount, mutually exclusive
   // with each other (a school used EITHER a campaign OR an influencer code
@@ -129,6 +129,11 @@ export async function initiateCentralSubscriptionStk(input: { tenantId: string; 
   // apply-time guard, so at most one of these two ever returns non-zero).
   const campaignDiscount = await newSignupDiscountKes(tenant.id, fullAmount);
   const influencerDiscount = await influencerSignupDiscountKes(tenant.id, fullAmount);
+  // Never stack benefits on one payment. Signup campaign wins only when no
+  // influencer code exists (enforced in its service); referral credit is
+  // deferred to a later payment whenever either signup benefit applies.
+  const discountKes = campaignDiscount.discountKes > 0 || influencerDiscount.discountKes > 0 ? 0 : referralDiscount.discountKes;
+  const creditIds = discountKes > 0 ? referralDiscount.creditIds : [];
 
   const chargeAmount = Math.max(fullAmount - discountKes - campaignDiscount.discountKes - influencerDiscount.discountKes, 0);
 
@@ -154,6 +159,17 @@ export async function initiateCentralSubscriptionStk(input: { tenantId: string; 
       periodEnd,
     },
   });
+
+  // A genuine one-month-free campaign produces a zero charge. Never send a
+  // fake KES 0 STK request: activate the single discounted period locally,
+  // mark the campaign claim once, and preserve a PAID audit record.
+  if (chargeAmount === 0 && campaignDiscount.campaignId) {
+    const updated = await db.subscriptionPayment.update({ where: { id: payment.id }, data: { status: "PAID", paidAt: new Date(), method: "campaign_free_period", resultCode: "0", resultDesc: "Fully covered by one-time campaign", periodStart, periodEnd } });
+    await db.subscription.update({ where: { id: sub.id }, data: { status: "ACTIVE", currentPeriodStart: periodStart, currentPeriodEnd: periodEnd, graceEndsAt: null } });
+    await markFirstTermDiscountClaimed(tenant.id, campaignDiscount.campaignId, campaignDiscount.discountKes);
+    await db.auditLog.create({ data: { tenantId: tenant.id, actorName: "NEYO Billing", action: "billing.campaign_free_period_activated", entityType: "SubscriptionPayment", entityId: updated.id, metadata: JSON.stringify({ fullAmount, campaignId: campaignDiscount.campaignId, accountRef }) } });
+    return { payment: updated, checkoutRequestId: null, amount: 0, fullAmount, referralDiscountKes: discountKes, campaignDiscountKes: campaignDiscount.discountKes, influencerDiscountKes: influencerDiscount.discountKes, accountRef, fullyCovered: true };
+  }
 
   const gateway = await centralGateway();
   const result = await gateway.provider.stkPush(gateway.creds, {

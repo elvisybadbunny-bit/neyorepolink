@@ -4867,3 +4867,14 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Four new tenant-owned models registered for automatic tenant isolation and migration added.
 - [x] Full integration manual added as Module 31.
 - [ ] Live database migration, deployed browser and real 360px workflow verification remain required; Prisma CLI was unavailable in the current checkout.
+
+### Founder Operations and Dynamic Island repair — 2026-07-20
+- [x] Credentials Vault shows every defined field immediately, grouped by provider; search is no longer required.
+- [x] Duplicate credential editor removed from Business Operations; dedicated Vault is the editing surface.
+- [x] Exam Sharing Approval text adapts correctly to light and dark mode.
+- [x] Discount campaigns support optional unique code, maximum-school capacity, redemption count and one free first billing month.
+- [x] Campaign capacity claim is incremented transactionally on confirmed paid subscription; campaign/influencer signup benefits remain mutually exclusive.
+- [x] Storage Intelligence historical BigInt counters serialize safely instead of crashing the API response.
+- [x] Existing response island now uses adaptive black Dynamic-Island geometry, retains sound/Siri glow, respects mobile safe area and stays until dismissed.
+- [x] Running background tasks use the same black Siri-glow visual language.
+- [ ] Live migration/deployed browser verification remains required.

@@ -73,11 +73,11 @@ export function ExamSharingApprovalTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+        <h2 className="text-xl font-bold text-navy-950 dark:text-white flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-emerald-400" />
           Exam Sharing Approval
         </h2>
-        <p className="text-sm text-white/60 mt-1">
+        <p className="text-sm text-navy-600 dark:text-navy-300 mt-1">
           Review schools' requests to share tidied exam papers publicly across NEYO. Approving
           moves a paper from `SCHOOL_ONLY` to `PUBLIC_SHARED`.
         </p>
@@ -90,7 +90,7 @@ export function ExamSharingApprovalTab() {
         </div>
       ) : rows.length === 0 ? (
         <Card>
-          <CardContent className="py-10 text-center text-white/60">
+          <CardContent className="py-10 text-center text-navy-600 dark:text-navy-300">
             No pending exam sharing requests right now.
           </CardContent>
         </Card>
@@ -103,12 +103,12 @@ export function ExamSharingApprovalTab() {
                   {r.title}
                   <Badge tone="blue">{r.subject?.name}</Badge>
                 </CardTitle>
-                <span className="text-xs text-white/50">
+                <span className="text-xs text-navy-500 dark:text-navy-400">
                   {new Date(r.sharingRequestedAt).toLocaleString()}
                 </span>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="text-sm text-white/70">
+                <div className="text-sm text-navy-700 dark:text-navy-200">
                   {r.schoolName} — {r.className} — {Array.isArray(r.questions) ? r.questions.length : 0} questions
                 </div>
                 <Input

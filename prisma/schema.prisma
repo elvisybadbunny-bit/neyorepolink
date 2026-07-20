@@ -7494,7 +7494,11 @@ model DiscountCampaign {
   name String // "August New-School Promo", "December 10% Off Everyone"
 
   appliesTo  String // "NEW_SIGNUPS" | "ALL_ACTIVE_SCHOOLS"
-  percentOff Float // e.g. 0.20 = 20%
+  percentOff Float // e.g. 0.20 = 20%; 1.0 = one fully-free billing cycle
+  code       String? @unique // optional public promo code, one school may claim it once
+  maxRedemptions Int? // null = unlimited; e.g. first 100 new schools
+  redemptionCount Int @default(0)
+  freeMonths Int @default(0) // currently 0 or 1; represented as 100% off first payment
 
   startDate DateTime
   endDate   DateTime

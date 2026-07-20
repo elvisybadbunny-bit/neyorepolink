@@ -49,7 +49,7 @@ export function BackgroundJobsBadge() {
         className={cn(
           "flex h-9 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors",
           activeCount > 0
-            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+            ? "animate-siri border border-white/15 bg-black text-white shadow-2xl"
             : "text-navy-500 hover:bg-navy-100 dark:text-navy-300 dark:hover:bg-navy-800"
         )}
       >

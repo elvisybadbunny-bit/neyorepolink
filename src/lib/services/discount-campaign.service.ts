@@ -50,7 +50,7 @@ export async function currentActiveCampaign(appliesTo?: "NEW_SIGNUPS" | "ALL_ACT
     where: { active: true, startDate: { lte: now }, endDate: { gte: now }, ...(appliesTo ? { appliesTo } : {}) },
     orderBy: { createdAt: "desc" },
   });
-  return campaigns[0] ?? null;
+  return campaigns.find((campaign) => campaign.maxRedemptions == null || campaign.redemptionCount < campaign.maxRedemptions) ?? null;
 }
 
 /**
@@ -62,7 +62,7 @@ export async function currentActiveCampaign(appliesTo?: "NEW_SIGNUPS" | "ALL_ACT
  */
 export async function createDiscountCampaign(
   actor: { id: string; fullName: string; tenantId: string },
-  input: { name: string; appliesTo: "NEW_SIGNUPS" | "ALL_ACTIVE_SCHOOLS"; percentOff: number; startDate: string; endDate: string }
+  input: { name: string; appliesTo: "NEW_SIGNUPS" | "ALL_ACTIVE_SCHOOLS"; percentOff: number; code?: string; maxRedemptions?: number | null; freeMonths?: number; startDate: string; endDate: string }
 ) {
   const start = new Date(input.startDate);
   const end = new Date(input.endDate);
@@ -84,7 +84,11 @@ export async function createDiscountCampaign(
 
   const campaign = await db.discountCampaign.create({
     data: {
-      name: input.name, appliesTo: input.appliesTo, percentOff: input.percentOff,
+      name: input.name, appliesTo: input.appliesTo,
+      percentOff: input.freeMonths === 1 ? 1 : input.percentOff,
+      code: input.code?.trim().toUpperCase() || null,
+      maxRedemptions: input.maxRedemptions ?? null,
+      freeMonths: input.freeMonths ?? 0,
       startDate: start, endDate: end,
       createdById: actor.id, createdByName: actor.fullName,
     },
@@ -144,8 +148,19 @@ export async function allSchoolsDiscountKes(fullAmountKes: number): Promise<{ di
  * `hasClaimedReferral`'s exact real idempotency pattern.
  */
 export async function markFirstTermDiscountClaimed(tenantId: string, campaignId: string, discountKes: number) {
-  await db.tenant.update({
-    where: { id: tenantId },
-    data: { hasClaimedFirstTermDiscount: true, appliedCampaignId: campaignId, firstTermDiscountKes: discountKes },
+  await db.$transaction(async (tx) => {
+    const tenant = await tx.tenant.findUnique({ where: { id: tenantId }, select: { hasClaimedFirstTermDiscount: true, appliedInfluencerCodeId: true } });
+    if (!tenant || tenant.hasClaimedFirstTermDiscount || tenant.appliedInfluencerCodeId) return;
+    const campaign = await tx.discountCampaign.findUnique({ where: { id: campaignId } });
+    if (!campaign || !campaign.active) return;
+    const claimed = await tx.discountCampaign.updateMany({
+      where: { id: campaignId, ...(campaign.maxRedemptions == null ? {} : { redemptionCount: { lt: campaign.maxRedemptions } }) },
+      data: { redemptionCount: { increment: 1 } },
+    });
+    if (claimed.count !== 1) throw new DiscountCampaignError("INVALID", "This promotion has reached its school limit.");
+    await tx.tenant.update({
+      where: { id: tenantId },
+      data: { hasClaimedFirstTermDiscount: true, appliedCampaignId: campaignId, firstTermDiscountKes: discountKes },
+    });
   });
 }

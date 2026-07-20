@@ -833,7 +833,7 @@ export function FounderOpsClient() {
       {tab === "Influencer Codes" && <InfluencerCodesOpsTab />}
       {tab === "Revenue Ops" && <RevenueOpsTab />}
       {tab === "Pricing Engine" && <PricingEngineOpsTab />}
-      {tab === "Storage Intelligence" && <StorageOptimizerOpsTab />}
+      {tab === "Storage Intelligence" && <div className="space-y-6"><StorageOptimizerOpsTab /><GoogleWorkspaceStorageOpsPanel config={googleWorkspaceStorage} onChange={setGoogleWorkspaceStorage} onSave={saveGoogleWorkspaceStorageConfig} onProvision={provisionGoogleWorkspaceStorageVault} schools={opsSchools} saving={saving} /></div>}
       {tab === "Developer Center" && <DeveloperCenterOpsTab />}
       {tab === "Bundi Import" && <BundiImportOpsTab />}
       {tab === "Curriculum Library" && <CurriculumLibraryOpsTab />}
@@ -1973,8 +1973,6 @@ function BusinessOperationsTab({
       <OsLifecycleBoard rows={osLifecycle} onChange={onOsLifecycleChange} saving={saving} />
       <PricingCatalogEditor catalog={pricingCatalog} onSave={onPricingCatalogChange} saving={saving} />
       <LandingContentEditor content={landingContent} onSave={onLandingContentChange} saving={saving} />
-      <IntegrationCredentialsOpsPanel credentials={integrationCredentials} drafts={integrationDrafts} onDraftChange={onIntegrationDraftChange} onSave={onIntegrationCredentialSave} saving={saving} />
-      <GoogleWorkspaceStorageOpsPanel config={googleWorkspaceStorage} onChange={onGoogleWorkspaceStorageChange} onSave={onGoogleWorkspaceStorageSave} onProvision={onGoogleWorkspaceStorageProvision} schools={schools} saving={saving} />
       <NeyoYoutubeManagementBoard posts={youtubePosts} form={youtubeForm} onFormChange={onYoutubeFormChange} onSave={onYoutubeSave} onStatusChange={onYoutubeStatusChange} onDelete={onYoutubeDelete} schools={schools} saving={saving} />
       <NeyoCustomerHub threads={customerThreads} onReply={onCustomerReply} onStatusChange={onCustomerStatusChange} saving={saving} />
       <NeyoContractsBoard contracts={contracts} form={contractForm} onFormChange={onContractFormChange} onSave={onContractSave} onStatusChange={onContractStatusChange} onDelete={onContractDelete} schools={schools} saving={saving} />

@@ -99,10 +99,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
     // Enforce one notification at a time: clear older queue immediately
     setToasts([{ id, tone: "info", ...t }]);
-    
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((x) => x.id !== id));
-    }, 4500);
+    // Operational responses remain until the user dismisses them or opens
+    // their destination. A success/error must not vanish while someone is
+    // still reading it on a small phone.
   }, []);
 
   React.useEffect(() => {
@@ -119,7 +118,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       
       {/* Centered at the top of the viewport, shifted down to be 100% notch-safe on modern MacBooks (clears the physical notch perfectly) */}
-      <div className="pointer-events-none fixed top-[42px] md:top-[48px] left-1/2 -translate-x-1/2 z-50 flex w-full max-w-sm md:max-w-xl flex-col items-center gap-2 px-4">
+      <div className="pointer-events-none fixed left-1/2 top-[max(0.75rem,env(safe-area-inset-top))] z-[80] flex w-full -translate-x-1/2 flex-col items-center gap-2 px-3 sm:top-4">
         {toasts.map((t) => {
           const Icon = icons[t.tone];
           
@@ -133,25 +132,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 }
               }}
               className={cn(
-                "pointer-events-auto flex animate-island animate-siri items-center gap-3.5 rounded-3xl",
-                "bg-white/95 text-navy-950 dark:bg-black/90 dark:text-white px-6 py-4.5 min-h-[62px] md:min-h-[72px]",
-                "border border-navy-100 dark:border-white/10 transition-all duration-300 ease-apple max-w-full shadow-pop backdrop-blur-xl",
+                "pointer-events-auto flex w-fit max-w-[calc(100vw-1.5rem)] animate-island animate-siri items-center gap-3 rounded-[1.75rem]",
+                "min-h-12 bg-black px-4 py-2.5 text-white sm:min-h-14 sm:px-5 sm:py-3",
+                "border border-white/15 transition-[width,height,transform] duration-300 ease-apple shadow-2xl backdrop-blur-xl",
                 t.href ? "cursor-pointer hover:scale-[1.01] active:scale-95" : ""
               )}
             >
               {/* Dynamic Island Status Icon */}
-              <Icon className={cn("h-4.5 w-4.5 shrink-0", toneClasses[t.tone])} />
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10"><Icon className={cn("h-4 w-4", toneClasses[t.tone])} /></span>
               
               {/* Notification details */}
-              <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center gap-1.5">
-                <span className="text-xs md:text-sm font-black tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-navy-950 via-green-600 to-navy-950 dark:from-white dark:via-green-400 dark:to-white animate-pulse">
-                  {t.title}
-                </span>
-                {t.description && (
-                  <span className="text-[10px] md:text-xs text-navy-600 dark:text-navy-300 border-l border-navy-200 dark:border-white/20 pl-2 truncate max-w-[140px] md:max-w-[300px]">
-                    {t.description}
-                  </span>
-                )}
+              <div className="min-w-0 max-w-[min(70vw,34rem)] flex-1">
+                <span className="block truncate text-xs font-black tracking-wide text-white sm:text-sm">{t.title}</span>
+                {t.description && <span className="mt-0.5 block max-h-10 overflow-hidden text-[11px] leading-4 text-white/70 sm:text-xs">{t.description}</span>}
               </div>
               
               {/* Deep-link action indicator */}

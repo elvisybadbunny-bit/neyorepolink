@@ -21,7 +21,7 @@ import { useToast } from "@/components/ui/toast";
 
 interface Campaign {
   id: string; name: string; appliesTo: string; percentOff: number;
-  startDate: string; endDate: string; active: boolean;
+  startDate: string; endDate: string; active: boolean; code: string | null; maxRedemptions: number | null; redemptionCount: number; freeMonths: number;
   createdByName: string; createdAt: string;
 }
 
@@ -67,7 +67,7 @@ export function DiscountCampaignsOpsTab() {
         </CardTitle>
         <p className="mt-1 text-xs text-navy-500 dark:text-navy-400">
           A real, time-boxed platform-wide promotion — either a one-time discount for new signups, or a temporary discount for every currently-subscribed school.
-          Only ONE campaign may be active at a time. Distinct from Revenue Grants (a free feature) and the Referral Engine (a fixed 5% referral reward).
+          Only ONE campaign may be active at a time. Add an optional promo code and a maximum school count (for example, the first 100 new schools). A school can claim one signup benefit only; campaign and influencer codes never stack on the same payment.
         </p>
       </CardHeader>
       <CardContent>
@@ -87,9 +87,10 @@ export function DiscountCampaignsOpsTab() {
                   <div>
                     <p className="font-semibold text-navy-900 dark:text-navy-50">{c.name}</p>
                     <p className="mt-0.5 text-sm text-navy-500 dark:text-navy-400">
-                      {Math.round(c.percentOff * 100)}% off · {c.appliesTo === "NEW_SIGNUPS" ? "new signups (first term only)" : "every active school's next renewal"}
+                      {c.freeMonths === 1 ? "1 month free" : `${Math.round(c.percentOff * 100)}% off`} · {c.appliesTo === "NEW_SIGNUPS" ? "new signups (first term only)" : "every active school's next renewal"}
                     </p>
-                    <p className="mt-1 text-[11px] text-navy-400">
+                    <p className="mt-1 text-xs font-semibold text-navy-600 dark:text-navy-300">{c.code ? `Code ${c.code} · ` : ""}{c.redemptionCount}{c.maxRedemptions == null ? " claims" : ` / ${c.maxRedemptions} schools claimed`}</p>
+                    <p className="mt-1 text-[11px] text-navy-500 dark:text-navy-400">
                       {new Date(c.startDate).toLocaleDateString("en-KE")} – {new Date(c.endDate).toLocaleDateString("en-KE")} · by {c.createdByName}
                     </p>
                   </div>
@@ -119,6 +120,9 @@ function CreateCampaignDialog({ onClose, onDone }: { onClose: () => void; onDone
   const [name, setName] = React.useState("");
   const [appliesTo, setAppliesTo] = React.useState<"NEW_SIGNUPS" | "ALL_ACTIVE_SCHOOLS">("NEW_SIGNUPS");
   const [percentOff, setPercentOff] = React.useState("20");
+  const [code, setCode] = React.useState("");
+  const [maxRedemptions, setMaxRedemptions] = React.useState("");
+  const [freeMonths, setFreeMonths] = React.useState(false);
   const [startDate, setStartDate] = React.useState("");
   const [endDate, setEndDate] = React.useState("");
   const [saving, setSaving] = React.useState(false);
@@ -128,7 +132,7 @@ function CreateCampaignDialog({ onClose, onDone }: { onClose: () => void; onDone
     try {
       const res = await fetch("/api/ops/discount-campaigns", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, appliesTo, percentOff: Number(percentOff) / 100, startDate, endDate }),
+        body: JSON.stringify({ name, appliesTo, percentOff: freeMonths ? 1 : Number(percentOff) / 100, code: code.trim().toUpperCase(), maxRedemptions: maxRedemptions ? Number(maxRedemptions) : null, freeMonths: freeMonths ? 1 : 0, startDate, endDate }),
       });
       const json = await res.json();
       if (json.ok) onDone();
@@ -150,7 +154,9 @@ function CreateCampaignDialog({ onClose, onDone }: { onClose: () => void; onDone
               <option value="ALL_ACTIVE_SCHOOLS">Every active school (next renewal)</option>
             </select>
           </div>
-          <div><Label>Percent off</Label><Input type="number" min={1} max={90} value={percentOff} onChange={(e) => setPercentOff(e.target.value)} /></div>
+          <label className="flex items-center gap-2 rounded-xl border border-navy-200 p-3 text-sm dark:border-navy-700"><input type="checkbox" checked={freeMonths} onChange={(e) => setFreeMonths(e.target.checked)} /> Give the first subscription month free</label>
+          {!freeMonths && <div><Label>Percent off</Label><Input type="number" min={1} max={100} value={percentOff} onChange={(e) => setPercentOff(e.target.value)} /></div>}
+          <div className="grid gap-2 sm:grid-cols-2"><div><Label>Promo code (optional)</Label><Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="MAY100" /></div><div><Label>Maximum schools (optional)</Label><Input type="number" min={1} value={maxRedemptions} onChange={(e) => setMaxRedemptions(e.target.value)} placeholder="100" /></div></div>
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Start date</Label><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div>
             <div><Label>End date</Label><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div>

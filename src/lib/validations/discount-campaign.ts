@@ -11,7 +11,10 @@ import { z } from "zod";
 export const createDiscountCampaignSchema = z.object({
   name: z.string().trim().min(3, "Give the campaign a real name.").max(120),
   appliesTo: z.enum(["NEW_SIGNUPS", "ALL_ACTIVE_SCHOOLS"]),
-  percentOff: z.coerce.number().min(0.01, "Enter a real percentage above 0.").max(0.9, "Cannot discount more than 90%."),
+  percentOff: z.coerce.number().min(0.01, "Enter a real percentage above 0.").max(1, "Cannot discount more than 100%."),
+  code: z.string().trim().min(3).max(40).regex(/^[A-Z0-9_-]+$/).optional().or(z.literal("")),
+  maxRedemptions: z.coerce.number().int().min(1).max(1000000).nullable().optional(),
+  freeMonths: z.coerce.number().int().min(0).max(1).default(0),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
 }).refine((d) => new Date(d.endDate) > new Date(d.startDate), {

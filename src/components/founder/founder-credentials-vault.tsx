@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Key, ShieldCheck, Lock, Edit3, Check, Search, Save, Loader2, AlertCircle } from "lucide-react";
+import { Key, ShieldCheck, Lock, Edit3, Check, Save, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 
 interface CredentialStatus {
@@ -22,8 +22,6 @@ export function FounderCredentialsVault() {
   const [editingKey, setEditingKey] = React.useState<CredentialStatus | null>(null);
   const [newValue, setNewValue] = React.useState("");
   const [saving, setSaving] = React.useState(false);
-  const [search, setSearch] = React.useState("");
-  const [selectedProvider, setSelectedProvider] = React.useState("ALL");
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -75,16 +73,9 @@ export function FounderCredentialsVault() {
     }
   }
 
-  const providers = ["ALL", ...Array.from(new Set(credentials.map((c) => c.provider)))];
+  const providers = Array.from(new Set(credentials.map((c) => c.provider)));
 
-  const filtered = credentials.filter((c) => {
-    const matchesSearch =
-      c.label.toLowerCase().includes(search.toLowerCase()) ||
-      c.key.toLowerCase().includes(search.toLowerCase()) ||
-      c.provider.toLowerCase().includes(search.toLowerCase());
-    const matchesProvider = selectedProvider === "ALL" || c.provider === selectedProvider;
-    return matchesSearch && matchesProvider;
-  });
+  const grouped = providers.map((provider) => ({ provider, rows: credentials.filter((c) => c.provider === provider) }));
 
   return (
     <div className="space-y-6 text-navy-900 dark:text-navy-100">
@@ -105,41 +96,19 @@ export function FounderCredentialsVault() {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-          <input
-            type="text"
-            placeholder="Search credentials by key name or provider..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-navy-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-white text-sm focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-        <div className="flex items-center gap-1 overflow-x-auto pb-1">
-          {providers.map((p) => (
-            <button
-              key={p}
-              onClick={() => setSelectedProvider(p)}
-              className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-colors ${
-                selectedProvider === p
-                  ? "bg-emerald-600 text-white"
-                  : "bg-navy-900 border border-slate-800 text-slate-400 hover:text-white"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {loading ? (
         <div className="h-64 flex items-center justify-center text-slate-400 text-sm">
           <Loader2 className="w-5 h-5 animate-spin mr-2 text-emerald-400" /> Loading vault secrets...
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filtered.map((cred) => (
+        <div className="space-y-6">
+          {grouped.map((group) => (
+            <section key={group.provider}>
+              <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-black text-navy-950 dark:text-white">{group.provider}</h3><span className="text-xs text-navy-500">{group.rows.length} required field{group.rows.length === 1 ? "" : "s"}</span></div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {group.rows.map((cred) => (
             <div
               key={cred.key}
               className="flex flex-col justify-between space-y-4 rounded-2xl border border-navy-700 bg-navy-950 p-5 text-white shadow-card transition-all hover:border-emerald-500/50"
@@ -177,6 +146,9 @@ export function FounderCredentialsVault() {
                 </button>
               </div>
             </div>
+              ))}
+              </div>
+            </section>
           ))}
         </div>
       )}
