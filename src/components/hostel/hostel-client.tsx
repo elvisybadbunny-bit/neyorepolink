@@ -170,8 +170,8 @@ function AddHostelDialog({ onClose, onDone }: { onClose: () => void; onDone: () 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <h3 className="text-base font-semibold text-navy-900 dark:text-navy-50">Register a hostel</h3>
           <button onClick={onClose} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-4 w-4" /></button>
@@ -315,7 +315,7 @@ function RoomBoard({ hostel, canManage, onBack }: { hostel: HostelRow; canManage
 function BoarderVisitorsDialog({ student, onClose }: { student: { id: string; name: string }; onClose: () => void }) {
   const [rows, setRows] = React.useState<any[] | null>(null);
   React.useEffect(() => { fetch(`/api/hostel?visitors=${student.id}`).then((r) => r.json()).then((j) => setRows(j.ok ? j.data : [])).catch(() => setRows([])); }, [student.id]);
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/40 p-4 backdrop-blur-sm" onClick={onClose}><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}><div className="mb-4 flex justify-between"><div><h3 className="font-semibold">Visitors — {student.name}</h3><p className="text-xs text-navy-400">Reception-linked visitor history</p></div><button onClick={onClose}><X className="h-4 w-4" /></button></div>{rows === null ? <Skeleton className="h-28 rounded-2xl" /> : rows.length === 0 ? <p className="rounded-2xl border border-dashed border-navy-200 p-6 text-center text-sm text-navy-400">No linked visitors recorded.</p> : <ul className="space-y-2">{rows.map((v) => <li key={v.id} className="rounded-xl bg-warm-50 p-3 text-sm dark:bg-navy-800"><p className="font-medium">{v.name} · {v.badgeNo}</p><p className="text-xs text-navy-400">{v.phone} · {v.purpose} · {new Date(v.signedInAt).toLocaleString("en-KE")}{v.signedOutAt ? " · signed out" : " · on site"}</p></li>)}</ul>}</div></div>;
+  return <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}><div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}><div className="mb-4 flex justify-between"><div><h3 className="font-semibold">Visitors — {student.name}</h3><p className="text-xs text-navy-400">Reception-linked visitor history</p></div><button onClick={onClose}><X className="h-4 w-4" /></button></div>{rows === null ? <Skeleton className="h-28 rounded-2xl" /> : rows.length === 0 ? <p className="rounded-2xl border border-dashed border-navy-200 p-6 text-center text-sm text-navy-400">No linked visitors recorded.</p> : <ul className="space-y-2">{rows.map((v) => <li key={v.id} className="rounded-xl bg-warm-50 p-3 text-sm dark:bg-navy-800"><p className="font-medium">{v.name} · {v.badgeNo}</p><p className="text-xs text-navy-400">{v.phone} · {v.purpose} · {new Date(v.signedInAt).toLocaleString("en-KE")}{v.signedOutAt ? " · signed out" : " · on site"}</p></li>)}</ul>}</div></div>;
 }
 
 function AllocateDialog({ target, students, hostelGender, onClose, onDone }: {
@@ -343,8 +343,8 @@ function AllocateDialog({ target, students, hostelGender, onClose, onDone }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <h3 className="text-base font-semibold text-navy-900 dark:text-navy-50">{target.roomName} — Bed {target.bedNo}</h3>
           <button onClick={onClose} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-4 w-4" /></button>
@@ -389,8 +389,8 @@ function AddRoomDialog({ hostelId, onClose, onDone }: { hostelId: string; onClos
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <h3 className="text-base font-semibold text-navy-900 dark:text-navy-50">Add a room</h3>
           <button onClick={onClose} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-4 w-4" /></button>
@@ -441,8 +441,8 @@ function AutoAllocateDormDialog({ hostelId, onClose, onDone }: { hostelId: strin
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-pop dark:bg-navy-900 border border-navy-100 dark:border-navy-800" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-pop dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <div className="space-y-0.5">
             <h3 className="text-base font-bold text-navy-900 dark:text-navy-50">Auto-Allocate Beds</h3>

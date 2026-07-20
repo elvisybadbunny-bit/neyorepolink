@@ -133,6 +133,15 @@ If the answer is no, document the idea and defer it.
 - Converted Inventory item forms, stock editing, supplier, contract and procurement dialogs into scroll-safe mobile sheets.
 - Improved the Inventory detail drawer's mobile padding, safe area, border and scroll containment.
 
+### Staff, Hostel and Cafeteria
+
+- Improved full-height Staff detail drawers with phone-safe padding, visible borders and contained scrolling.
+- Converted Staff forms and bulk-import workflows into dynamic-height, scroll-safe mobile sheets.
+- Changed cramped three-column Staff fields to stack on phones.
+- Converted Hostel allocation, visitor history, movement and boarding dialogs into mobile sheets with safe-area support.
+- Converted Cafeteria meal, stock and related operational dialogs into mobile-safe sheets.
+- Changed cramped three-column Cafeteria fields to stack on phones while preserving desktop density.
+
 This is an active route-by-route audit. A route is not marked complete merely because it inherits the shared CSS fixes.
 
 ## Current engineering order
