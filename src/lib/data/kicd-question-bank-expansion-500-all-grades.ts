@@ -6,7 +6,7 @@ function optionsFor(answer: number, step = 1) {
   const values = [answer, answer + step, answer - step, answer + 2 * step];
   return Array.from(new Set(values)).slice(0, 4).map(String);
 }
-function question(grade: string, index: number, gradeIndex: number): UniversalQuestionSeed {
+function question(grade: (typeof GRADES)[number], index: number, gradeIndex: number): UniversalQuestionSeed {
   const mode = index % 5;
   let prompt = "", answer = 0, explanation = "", subjectCode = "MAT", strandName = "Numbers", substrandName = "Number Operations", step = 1;
   if (gradeIndex <= 1) {

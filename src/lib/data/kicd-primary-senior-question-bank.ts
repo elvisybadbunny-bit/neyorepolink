@@ -12,13 +12,17 @@
 import type { JuniorSchoolQuestionSeed } from "./kicd-junior-school-question-bank";
 
 export type PrimaryOrSeniorGrade =
+  | "PP1"
+  | "PP2"
   | "Grade 1"
   | "Grade 2"
   | "Grade 3"
   | "Grade 4"
   | "Grade 5"
   | "Grade 6"
-  | "Grade 10";
+  | "Grade 10"
+  | "Grade 11"
+  | "Grade 12";
 
 export interface PrimarySeniorQuestionSeed extends Omit<JuniorSchoolQuestionSeed, "grade"> {
   grade: PrimaryOrSeniorGrade;

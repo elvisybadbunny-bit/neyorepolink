@@ -120,3 +120,7 @@ An empty database has no founder or school login. For an explicitly disposable P
 Immediately after one successful bootstrap, change `SEED_DEMO_DATA` to `false` and redeploy. Do not leave automatic demo seeding enabled, and do not use this process on a real live-school production database. Every demo account initially receives the private seed password, so change/disable demo access before public launch. If an existing database contains encrypted credentials, preserve its original `NEYO_MASTER_KEK`.
 
 The green trial/pricing banner has a dismiss button. Dismissal is stored on that browser. The new founder operating pages explicitly set readable navy text and tinted card backgrounds in light mode, with corresponding dark-mode colours.
+
+## Build repair — all-grade Question Bank type
+
+The 500-question expansion originally passed `grade` through a broad `string`, while the seed contract accepts a strict grade union. The generator now preserves the literal union from its `GRADES` tuple. The shared `PrimaryOrSeniorGrade` contract was also expanded to include PP1, PP2, Grade 11 and Grade 12; without that, an honest all-grade dataset could not type-check even though those are real requested levels. This fixes the Vercel error at `kicd-question-bank-expansion-500-all-grades.ts` without disabling TypeScript or ESLint rules.
