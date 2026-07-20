@@ -131,6 +131,7 @@ export const NAVIGATION: NavSection[] = [
       { label: "Exams", href: "/exams", icon: ClipboardList, moduleKey: "academics", permission: "exam.view" },
       { label: "Exam Timetable", href: "/exam-timetable", icon: CalendarDays, moduleKey: "academics", permission: "exam.view" },
       { label: "CBE", href: "/cbc", icon: Layers, moduleKey: "academics", permission: "academics.view" },
+      { label: "CBE Delivery", href: "/cbe-delivery", icon: HeartHandshake, moduleKey: "academics", permission: "academics.view" },
       { label: "Assessments", href: "/assessments", icon: ClipboardList, moduleKey: "academics", permission: "academics.view" },
       { label: "Competencies", href: "/competencies", icon: Brain, moduleKey: "academics", permission: "academics.view" },
       { label: "Portfolio", href: "/portfolio", icon: FolderOpen, permission: "academics.view" },

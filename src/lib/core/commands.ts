@@ -156,6 +156,13 @@ export const APP_COMMANDS: AppCommand[] = [
     keywords: ["cbc strands", "cbe", "rubrics", "competency", "formative"],
   },
   {
+    id: "go-cbe-delivery",
+    label: "Open CBE Delivery Hub",
+    href: "/cbe-delivery",
+    permission: "academics.view",
+    keywords: ["teach substrand", "learning experience", "evidence", "intervention", "learner support"],
+  },
+  {
     id: "go-staff",
     label: "Go to Staff & HR Directory",
     href: "/staff",

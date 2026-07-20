@@ -197,6 +197,10 @@ export const TENANT_OWNED_MODELS = [
   // cross-tenant-leak findings in this project's history.
   "cbcSubstrand",
   "cbcCommentBankEntry",
+  "cbeCurriculumDesign",
+  "cbeDeliverySession",
+  "cbeDeliveryEvidence",
+  "cbeIntervention",
   "feeStructure",
   "invoice",
   "staffSalary",

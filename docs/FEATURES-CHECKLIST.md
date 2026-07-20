@@ -4857,3 +4857,13 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Four options, exact answer, worked explanation, strand, sub-strand and difficulty on every question.
 - [x] Integrated into the existing idempotent primary/senior Question Bank seed; prompt-based duplicate protection remains.
 - [x] Expected fully seeded total increases from 2,670 to 3,170 questions. Teacher/curriculum review remains required before formal examination use.
+
+### CBE Delivery Hub — connected curriculum-to-support workflow — 2026-07-20
+- [x] Rich reviewed curriculum design per existing CBE sub-strand: experiences, inquiry questions, competency references, values, PCIs, cross-learning links, community service, resources, criteria, source/version and lesson allocation.
+- [x] Actual class delivery sessions with teacher/date/status and optional existing Timetable, Lesson Plan, Syllabus and Assessment references.
+- [x] Class-validated learner evidence with optional EE/ME/AE/BE level and explicit links to existing authoritative CBE/assessment/competency/portfolio records.
+- [x] Intervention and reassessment loop with evidence-based reason, action, target, review date, outcome and parent-safe summary.
+- [x] New `/cbe-delivery` workspace, navigation and command-search destination.
+- [x] Four new tenant-owned models registered for automatic tenant isolation and migration added.
+- [x] Full integration manual added as Module 31.
+- [ ] Live database migration, deployed browser and real 360px workflow verification remain required; Prisma CLI was unavailable in the current checkout.

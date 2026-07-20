@@ -102,6 +102,13 @@ model Tenant {
   // Z.1 — real offline-safe replay ledger.
   idempotentRequests IdempotentRequest[]
 
+  // CBE Delivery Hub — joins rich curriculum design to actual classroom
+  // delivery, learner evidence and reviewed interventions.
+  cbeCurriculumDesigns CbeCurriculumDesign[]
+  cbeDeliverySessions  CbeDeliverySession[]
+  cbeDeliveryEvidence  CbeDeliveryEvidence[]
+  cbeInterventions     CbeIntervention[]
+
   // Z.3 — real Venue/Lab pool.
   venues Venue[]
 
@@ -921,6 +928,7 @@ model CbcSubstrand {
   learningVideos  LearningVideo[]
   questionBankEntries QuestionBankEntry[]
   paperQuizFormativeBatches PaperQuizFormativeBatch[]
+  curriculumDesign CbeCurriculumDesign?
 
   @@unique([tenantId, strandId, name])
   @@index([tenantId, strandId])
@@ -928,6 +936,127 @@ model CbcSubstrand {
 
 // B.6 formative assessment: one observation of one learner on one strand.
 // level: 4=EE 3=ME 2=AE 1=BE (KICD 4-point rubric).
+// CBE Delivery Hub: a reviewed, school-owned enrichment of one curriculum
+// sub-strand. JSON arrays preserve flexible KICD/CBE structures without
+// inventing a fixed national list; every value is manually reviewable and
+// version/source labelled. NEYO never silently scrapes curriculum content.
+model CbeCurriculumDesign {
+  id                           String   @id @default(cuid())
+  tenantId                     String
+  tenant                       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  substrandId                  String   @unique
+  substrand                    CbcSubstrand @relation(fields: [substrandId], references: [id], onDelete: Cascade)
+  suggestedLearningExperiences String?  // JSON string[]
+  keyInquiryQuestions          String?  // JSON string[]
+  competencyCodes              String?  // JSON string[] mapped to configured competencies
+  values                       String?  // JSON string[]
+  pertinentIssues              String?  // JSON string[]
+  crossLearningAreaLinks       String?  // JSON { learningArea, connection }[]
+  communityServiceIdeas        String?  // JSON string[]
+  suggestedResources           String?  // JSON string[]
+  assessmentCriteria           String?  // JSON string[]
+  lessonAllocation             Int?
+  sourceLabel                  String?
+  sourceVersion                String?
+  sourceReference              String?
+  reviewStatus                 String   @default("DRAFT") // DRAFT | REVIEWED | PUBLISHED
+  reviewedById                 String?
+  reviewedByName               String?
+  reviewedAt                   DateTime?
+  createdById                  String
+  createdByName                String
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  sessions                     CbeDeliverySession[]
+
+  @@index([tenantId, reviewStatus])
+}
+
+// One real delivery event: this teacher delivered this curriculum design to
+// this class on this date. Existing lesson/assessment/syllabus records remain
+// their own authoritative objects and are linked by ID rather than duplicated.
+model CbeDeliverySession {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  curriculumDesignId String
+  curriculumDesign   CbeCurriculumDesign @relation(fields: [curriculumDesignId], references: [id], onDelete: Cascade)
+  classId            String
+  teacherId          String
+  teacherName        String
+  deliveredOn        String
+  timetableSlotId    String?
+  lessonPlanId       String?
+  syllabusTopicId    String?
+  assessmentPlanId   String?
+  status             String   @default("PLANNED") // PLANNED | DELIVERED | REVIEWED
+  deliveryNotes      String?
+  resourceLinks      String?  // JSON string[]
+  nextSteps          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  evidence           CbeDeliveryEvidence[]
+  interventions      CbeIntervention[]
+
+  @@index([tenantId, classId, deliveredOn])
+  @@index([tenantId, teacherId])
+  @@index([tenantId, curriculumDesignId])
+}
+
+// A small, source-explicit learner observation made during a delivery event.
+// It can reference existing CBE/assessment/competency/portfolio records after
+// those workflows create them, but never claims they exist automatically.
+model CbeDeliveryEvidence {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliverySessionId    String
+  deliverySession      CbeDeliverySession @relation(fields: [deliverySessionId], references: [id], onDelete: Cascade)
+  studentId            String
+  level                Int?
+  observation          String
+  evidenceUrl          String?
+  cbcAssessmentId      String?
+  assessmentRecordId   String?
+  competencyEvidenceId String?
+  portfolioItemId      String?
+  recordedById         String
+  recordedByName       String
+  recordedAt           DateTime @default(now())
+
+  @@index([tenantId, studentId])
+  @@index([tenantId, deliverySessionId])
+}
+
+// Reviewed support loop: identify a specific curriculum need, assign a
+// supported response, review it on a real date and record the outcome.
+model CbeIntervention {
+  id                String   @id @default(cuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliverySessionId String?
+  deliverySession   CbeDeliverySession? @relation(fields: [deliverySessionId], references: [id], onDelete: SetNull)
+  studentId         String
+  substrandId       String
+  reason            String
+  actionType        String // QUESTION_SET | SIMULATION | RESOURCE | RETEACH | GOAL | OTHER
+  actionDetails     String
+  targetLevel       Int?
+  reviewDate        String
+  status            String @default("PLANNED") // PLANNED | IN_PROGRESS | REVIEWED | CLOSED
+  outcome           String?
+  reviewedLevel     Int?
+  parentSummary     String?
+  assignedById      String
+  assignedByName    String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tenantId, studentId, status])
+  @@index([tenantId, reviewDate])
+  @@index([tenantId, substrandId])
+}
+
 model CbcAssessment {
   id          String        @id @default(cuid())
   tenantId    String
