@@ -9,3 +9,7 @@ Run `npm run test:youtube-batch1` after dependencies are installed to verify exa
 ## Live availability verification step
 
 Run `npm run verify:youtube-batch1` in an environment with outbound YouTube access. The verifier checks only five links concurrently, applies a 12-second timeout, reads YouTube's oEmbed response, captures the current live title/channel, and writes `/tmp/neyo-youtube-batch1-live-report.json`. It exits with code 2 if any candidate is unavailable so an incomplete batch cannot be mistaken for approved. A live oEmbed response proves availability/metadata only; it does not complete CBE content and safeguarding review.
+
+## Founder review page
+
+Batch 1 is now operable from **Platform Operations → Video Review**. **Verify all 50** checks links in groups of five and persists live title, channel, check time and availability in the global `PlatformSetting` key `youtube_grade6_10_batch1_reviews`. Individual links can be rechecked, rejected or marked **Approved for Mapping** only after a successful live check. Approved for Mapping is deliberately not school-visible approval: curriculum grade/subject/strand/sub-strand mapping remains a separate gate.

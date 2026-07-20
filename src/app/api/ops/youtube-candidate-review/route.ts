@@ -1,0 +1,16 @@
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { requirePermission } from "@/lib/core/session";
+import { db } from "@/lib/db";
+import { ok, handleError } from "@/lib/api/respond";
+import { YOUTUBE_GRADE6_10_BATCH1_CANDIDATES as candidates } from "@/lib/data/youtube-grade6-10-batch1-candidates";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
+const KEY="youtube_grade6_10_batch1_reviews";
+type Review={status:"CANDIDATE"|"LIVE_VERIFIED"|"APPROVED_FOR_MAPPING"|"REJECTED"|"UNAVAILABLE";liveTitle?:string;channelTitle?:string;note?:string;checkedAt?:string;reviewedBy?:string};
+async function readReviews():Promise<Record<string,Review>>{const row=await db.platformSetting.findUnique({where:{key:KEY}});try{return row?JSON.parse(row.value):{};}catch{return {};}}
+async function saveReviews(reviews:Record<string,Review>,user:{id:string;fullName:string}){await db.platformSetting.upsert({where:{key:KEY},create:{key:KEY,value:JSON.stringify(reviews),updatedBy:user.fullName},update:{value:JSON.stringify(reviews),updatedBy:user.fullName}});}
+async function liveCheck(youtubeId:string){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),12000);try{const url=`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${youtubeId}`)}`;const res=await fetch(url,{signal:controller.signal,headers:{"User-Agent":"NEYO-Link-Review/1.0"}});if(!res.ok)return {live:false,error:`HTTP ${res.status}`};const data=await res.json() as {title?:string;author_name?:string};return {live:true,title:data.title,channel:data.author_name};}catch(error){return {live:false,error:error instanceof Error?error.message:"Verification failed"};}finally{clearTimeout(timer);}}
+export async function GET(){try{await requirePermission("platform.founder_ops");const reviews=await readReviews();return ok({candidates:candidates.map(candidate=>({...candidate,review:reviews[candidate.youtubeId]??{status:"CANDIDATE"}}))});}catch(error){return handleError(error);}}
+export async function POST(req:NextRequest){try{const user=await requirePermission("platform.founder_ops");const body=await req.json();const action=z.enum(["verify","verify_all","decide"]).parse(body.action);const reviews=await readReviews();if(action==="verify"||action==="verify_all"){const ids=action==="verify_all"?candidates.map(c=>c.youtubeId):[z.string().parse(body.youtubeId)];for(let i=0;i<ids.length;i+=5){await Promise.all(ids.slice(i,i+5).map(async id=>{const result=await liveCheck(id);reviews[id]=result.live?{...reviews[id],status:"LIVE_VERIFIED",liveTitle:result.title,channelTitle:result.channel,checkedAt:new Date().toISOString()}:{...reviews[id],status:"UNAVAILABLE",note:result.error,checkedAt:new Date().toISOString()};}));}await saveReviews(reviews,user);return ok({checked:ids.length});}const youtubeId=z.string().parse(body.youtubeId);const status=z.enum(["APPROVED_FOR_MAPPING","REJECTED","CANDIDATE"]).parse(body.status);reviews[youtubeId]={...reviews[youtubeId],status,note:z.string().max(500).optional().parse(body.note),reviewedBy:user.fullName,checkedAt:reviews[youtubeId]?.checkedAt};await saveReviews(reviews,user);return ok({review:reviews[youtubeId]});}catch(error){return handleError(error);}}
