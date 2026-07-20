@@ -23,6 +23,7 @@ export interface LibraryLabel {
   copyNo: number;
   code: string;
   qrDataUrl: string;
+  barcodeDataUrl: string;
 }
 
 // Plain grid, 3 columns x 6 rows = 18 labels per A4 page (page is scaled to
@@ -54,11 +55,8 @@ const s = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  qr: {
-    width: 54,
-    height: 54,
-    objectFit: "contain", // guarantees aspect ratio 1:1 square is never deformed or stretched
-  },
+  qr: { width: 44, height: 44, objectFit: "contain" },
+  barcode: { width: 105, height: 28, objectFit: "contain", marginBottom: 3 },
   title: { fontSize: 7, textAlign: "center", color: "#1c2740", fontFamily: "Helvetica-Bold", maxHeight: 20, overflow: "hidden" },
   meta: { fontSize: 6.5, textAlign: "center", color: "#677fab", marginTop: 2 },
 });
@@ -78,9 +76,8 @@ export async function renderLibraryLabelsPdf(labels: LibraryLabel[]): Promise<Bu
           <View style={s.grid}>
             {pageLabels.map((l, i) => (
               <View key={i} style={s.label}>
-                <View style={s.qrWrapper}>
-                  <Image style={s.qr} src={l.qrDataUrl} />
-                </View>
+                <View style={s.qrWrapper}><Image style={s.qr} src={l.qrDataUrl} /></View>
+                <Image style={s.barcode} src={l.barcodeDataUrl} />
                 <Text style={s.title}>{l.bookTitle.length > 28 ? `${l.bookTitle.slice(0, 26)}…` : l.bookTitle}</Text>
                 <Text style={s.meta}>Copy {l.copyNo} · {l.code}</Text>
               </View>

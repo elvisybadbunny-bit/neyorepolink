@@ -560,12 +560,14 @@ export async function buildLibraryLabelsPdf(
 ) {
   const { renderLibraryLabelsPdf } = await import("@/lib/documents/library-labels-pdf");
   const { qrDataUrl, verifyUrl } = await import("@/lib/documents/qr");
+  const { code39DataUrl } = await import("@/lib/documents/code39");
   void tenantId;
 
   const labels = await Promise.all(
     copies.map(async (c) => ({
       bookTitle, copyNo: c.copyNo, code: c.code,
       qrDataUrl: await qrDataUrl(verifyUrl(c.code)),
+      barcodeDataUrl: code39DataUrl(c.code),
     }))
   );
   const pdf = await renderLibraryLabelsPdf(labels);

@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const action = z.object({ action: z.enum(["addBook", "issue", "return", "finePaid", "billFine", "finePolicy", "generateCopies", "setCopyStatus"]) }).parse(body).action;
     if (action === "addBook") return ok(await addBook(user, bookSchema.parse(body)), 201);
     if (action === "finePolicy") {
-      const input = z.object({ finesEnabled: z.boolean(), finePerDayKes: z.coerce.number().int().min(0).max(500) }).parse(body);
+      const input = z.object({ finesEnabled: z.boolean(), finePerDayKes: z.coerce.number().int().min(0).max(500), loanPeriodDays: z.coerce.number().int().min(1).max(365) }).parse(body);
       return ok(await setLibraryPolicy(user, input));
     }
     if (action === "issue") return ok(await issueBook(user, issueSchema.parse(body)), 201);

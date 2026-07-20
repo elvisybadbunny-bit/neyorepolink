@@ -1,0 +1,1 @@
+ALTER TABLE "Tenant" ADD COLUMN "libraryLoanPeriodDays" INTEGER NOT NULL DEFAULT 14;

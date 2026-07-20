@@ -20,6 +20,7 @@ import { tenantDb } from "@/lib/core/tenant-db";
 import { scopeWhere } from "@/lib/services/student.service";
 import { nextTenantId } from "@/lib/services/identity.service";
 import { issueVerification } from "@/lib/services/document.service";
+import { extractVerifyCode } from "@/lib/services/qr-scan.service";
 import type { SessionUser } from "@/lib/core/session";
 
 export class LibraryError extends Error {
@@ -73,22 +74,23 @@ export async function libraryPolicy(user: SessionUser) {
   return withTenant(user.tenantId, async () => {
     const tenant = await db.tenant.findUniqueOrThrow({
       where: { id: user.tenantId },
-      select: { libraryFinesEnabled: true, libraryFinePerDayKes: true },
+      select: { libraryFinesEnabled: true, libraryFinePerDayKes: true, libraryLoanPeriodDays: true },
     });
-    return { finesEnabled: tenant.libraryFinesEnabled, finePerDayKes: tenant.libraryFinePerDayKes };
+    return { finesEnabled: tenant.libraryFinesEnabled, finePerDayKes: tenant.libraryFinePerDayKes, loanPeriodDays: tenant.libraryLoanPeriodDays };
   });
 }
 
-export async function setLibraryPolicy(user: SessionUser, input: { finesEnabled: boolean; finePerDayKes: number }) {
+export async function setLibraryPolicy(user: SessionUser, input: { finesEnabled: boolean; finePerDayKes: number; loanPeriodDays: number }) {
   return withTenant(user.tenantId, async () => {
     const amount = Math.max(0, Math.min(500, Math.trunc(input.finePerDayKes)));
+    const loanPeriodDays = Math.max(1, Math.min(365, Math.trunc(input.loanPeriodDays)));
     const row = await db.tenant.update({
       where: { id: user.tenantId },
-      data: { libraryFinesEnabled: input.finesEnabled, libraryFinePerDayKes: amount },
-      select: { libraryFinesEnabled: true, libraryFinePerDayKes: true },
+      data: { libraryFinesEnabled: input.finesEnabled, libraryFinePerDayKes: amount, libraryLoanPeriodDays: loanPeriodDays },
+      select: { libraryFinesEnabled: true, libraryFinePerDayKes: true, libraryLoanPeriodDays: true },
     });
-    await audit(user, "library.fine_policy_updated", "tenant", user.tenantId, { finesEnabled: row.libraryFinesEnabled, finePerDayKes: row.libraryFinePerDayKes });
-    return { finesEnabled: row.libraryFinesEnabled, finePerDayKes: row.libraryFinePerDayKes };
+    await audit(user, "library.policy_updated", "tenant", user.tenantId, { finesEnabled: row.libraryFinesEnabled, finePerDayKes: row.libraryFinePerDayKes, loanPeriodDays: row.libraryLoanPeriodDays });
+    return { finesEnabled: row.libraryFinesEnabled, finePerDayKes: row.libraryFinePerDayKes, loanPeriodDays: row.libraryLoanPeriodDays };
   });
 }
 
@@ -163,10 +165,13 @@ export async function addBook(
 /** Barcode lookup: scan/type an ISBN → the book + availability + open issues. */
 export async function findByBarcode(user: SessionUser, isbn: string) {
   return withTenant(user.tenantId, async () => {
-    const book = await tenantDb().libraryBook.findFirst({
-      where: { isbn: isbn.trim(), archived: false },
-      include: { issues: { where: { returnedAt: null } }, copies: true },
-    });
+    const [book, tenant] = await Promise.all([
+      tenantDb().libraryBook.findFirst({
+        where: { isbn: isbn.trim(), archived: false },
+        include: { issues: { where: { returnedAt: null } }, copies: true },
+      }),
+      db.tenant.findUnique({ where: { id: user.tenantId }, select: { libraryLoanPeriodDays: true } }),
+    ]);
     if (!book) throw new LibraryError("NOT_FOUND", "No book with that barcode/ISBN in the catalog.");
     const hasCopyTracking = book.copies.length > 0;
     const copiesTotal = hasCopyTracking ? book.copies.filter((c) => c.status !== "RETIRED").length : book.copiesTotal;
@@ -176,7 +181,7 @@ export async function findByBarcode(user: SessionUser, isbn: string) {
     return {
       id: book.id, title: book.title, author: book.author, shelf: book.shelf,
       copiesTotal, copiesOut: hasCopyTracking ? book.copies.filter((c) => c.status === "OUT").length : book.issues.length,
-      copiesAvailable, hasCopyTracking,
+      copiesAvailable, hasCopyTracking, loanPeriodDays: tenant?.libraryLoanPeriodDays ?? 14,
       openIssues: book.issues.map((i) => ({
         id: i.id, studentName: i.studentName, admissionNo: i.admissionNo,
         dueDate: i.dueDate, fineSoFarKes: computeFine(i.dueDate),
@@ -194,10 +199,13 @@ export async function findByBarcode(user: SessionUser, isbn: string) {
  */
 export async function findByCopyCode(user: SessionUser, code: string) {
   return withTenant(user.tenantId, async () => {
-    const copy = await tenantDb().libraryBookCopy.findFirst({
-      where: { code: code.trim().toUpperCase() },
-      include: { book: true },
-    });
+    const [copy, tenant] = await Promise.all([
+      tenantDb().libraryBookCopy.findFirst({
+        where: { code: extractVerifyCode(code) },
+        include: { book: true },
+      }),
+      db.tenant.findUnique({ where: { id: user.tenantId }, select: { libraryLoanPeriodDays: true } }),
+    ]);
     if (!copy) throw new LibraryError("NOT_FOUND", "No library copy with that code.");
     const openIssue = copy.status === "OUT"
       ? await tenantDb().bookIssue.findFirst({ where: { copyId: copy.id, returnedAt: null } })
@@ -205,6 +213,7 @@ export async function findByCopyCode(user: SessionUser, code: string) {
     return {
       copyId: copy.id, copyNo: copy.copyNo, status: copy.status,
       bookId: copy.book.id, title: copy.book.title, author: copy.book.author, shelf: copy.book.shelf,
+      loanPeriodDays: tenant?.libraryLoanPeriodDays ?? 14,
       currentHolder: openIssue ? { issueId: openIssue.id, studentName: openIssue.studentName, admissionNo: openIssue.admissionNo, dueDate: openIssue.dueDate, fineSoFarKes: computeFine(openIssue.dueDate) } : null,
     };
   });

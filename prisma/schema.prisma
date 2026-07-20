@@ -140,6 +140,7 @@ model Tenant {
   showReligiousHolidays Boolean @default(true)
   libraryFinesEnabled   Boolean @default(true) // customizable switch for late book returns fines (H.3)
   libraryFinePerDayKes  Int     @default(10) // customizable late-return fine amount per chargeable day
+  libraryLoanPeriodDays Int     @default(14) // school default; exact due date remains editable per issue
 
   // School Profile & Branding (G.9). Used across receipts/reports/ID cards and
   // (later) the public subdomain landing site (G.11).

@@ -444,7 +444,7 @@ function CopiesDialog({ book, onClose, onChanged }: { book: Book; onClose: () =>
         <div className="mb-4 flex items-center justify-between">
           <div className="space-y-0.5">
             <h3 className="text-base font-bold text-navy-900 dark:text-navy-50 flex items-center gap-2"><Tag className="h-4 w-4 text-green-600" /> {book.title} — per-copy tracking</h3>
-            <p className="text-xs text-navy-400">Each physical copy gets its own scannable QR code, so you can tell copy #1 apart from copy #7 of the same title.</p>
+            <p className="text-xs text-navy-400">Each physical copy gets its own scannable QR and Code 39 barcode, so you can tell copy #1 apart from copy #7 of the same title.</p>
           </div>
           <button onClick={onClose} className="rounded-full p-1.5 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close">
             <X className="h-5 w-5" />
@@ -456,11 +456,11 @@ function CopiesDialog({ book, onClose, onChanged }: { book: Book; onClose: () =>
         ) : copies.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-navy-200 bg-warm-50/60 p-6 text-center dark:border-navy-700 dark:bg-navy-800/40">
             <QrCode className="mx-auto h-8 w-8 text-navy-300" />
-            <p className="mt-2 text-sm text-navy-600 dark:text-navy-300">No per-copy codes yet — this book tracks copies by plain count only.</p>
+            <p className="mt-2 text-sm text-navy-600 dark:text-navy-300">No per-copy QR/barcodes yet — this book tracks copies by plain count only.</p>
             <div className="mt-4 flex items-center justify-center gap-2">
               <Input value={genCount} onChange={(e) => setGenCount(e.target.value)} type="number" min={1} className="w-20" />
               <Button onClick={generate} disabled={busy}>
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />} Generate copy codes
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />} Generate QR + barcodes
               </Button>
             </div>
           </div>
@@ -471,11 +471,11 @@ function CopiesDialog({ book, onClose, onChanged }: { book: Book; onClose: () =>
               <div className="flex items-center gap-2">
                 {copies.length < book.copiesTotal && (
                   <Button size="sm" variant="secondary" onClick={generate} disabled={busy}>
-                    <QrCode className="h-3.5 w-3.5" /> Add missing codes
+                    <QrCode className="h-3.5 w-3.5" /> Add missing QR/barcodes
                   </Button>
                 )}
                 <a href={`/api/library/labels/${book.id}`} target="_blank" rel="noreferrer">
-                  <Button size="sm" variant="secondary"><Printer className="h-3.5 w-3.5" /> Print A4 label sheet</Button>
+                  <Button size="sm" variant="secondary"><Printer className="h-3.5 w-3.5" /> Print QR + barcode labels</Button>
                 </a>
               </div>
             </div>
@@ -652,7 +652,7 @@ function OutTab({ canManage }: { canManage: boolean }) {
 
 function FinePolicyCard({ canManage, onSaved }: { canManage: boolean; onSaved: () => void }) {
   const { toast } = useToast();
-  const [policy, setPolicy] = React.useState<{ finesEnabled: boolean; finePerDayKes: number } | null>(null);
+  const [policy, setPolicy] = React.useState<{ finesEnabled: boolean; finePerDayKes: number; loanPeriodDays: number } | null>(null);
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
@@ -666,7 +666,7 @@ function FinePolicyCard({ canManage, onSaved }: { canManage: boolean; onSaved: (
       const res = await fetch("/api/library", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "finePolicy", finesEnabled: policy.finesEnabled, finePerDayKes: policy.finePerDayKes }),
+        body: JSON.stringify({ action: "finePolicy", finesEnabled: policy.finesEnabled, finePerDayKes: policy.finePerDayKes, loanPeriodDays: policy.loanPeriodDays }),
       });
       const json = await res.json();
       if (json.ok) {
@@ -682,7 +682,7 @@ function FinePolicyCard({ canManage, onSaved }: { canManage: boolean; onSaved: (
     <Card>
       <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-bold text-navy-900 dark:text-navy-50">Late-return fine policy</p>
+          <p className="text-sm font-bold text-navy-900 dark:text-navy-50">Loan due date and late-return policy</p>
           <p className="text-xs text-navy-500 dark:text-navy-400">
             {policy.finesEnabled ? `Enabled · ${kes(policy.finePerDayKes)} per overdue school day` : "Disabled · overdue returns do not create fines"}
           </p>
@@ -693,7 +693,8 @@ function FinePolicyCard({ canManage, onSaved }: { canManage: boolean; onSaved: (
               <input type="checkbox" checked={policy.finesEnabled} onChange={(e) => setPolicy({ ...policy, finesEnabled: e.target.checked })} className="h-4 w-4 rounded border-navy-300 text-green-600" />
               Fines on
             </label>
-            <Input type="number" min={0} max={500} value={policy.finePerDayKes} onChange={(e) => setPolicy({ ...policy, finePerDayKes: Number(e.target.value) })} className="w-28" />
+            <label className="text-xs text-navy-600 dark:text-navy-300">Default loan days <Input type="number" min={1} max={365} value={policy.loanPeriodDays} onChange={(e) => setPolicy({ ...policy, loanPeriodDays: Number(e.target.value) })} className="mt-1 w-24" /></label>
+            <label className="text-xs text-navy-600 dark:text-navy-300">Fine/day <Input type="number" min={0} max={500} value={policy.finePerDayKes} onChange={(e) => setPolicy({ ...policy, finePerDayKes: Number(e.target.value) })} className="mt-1 w-24" /></label>
             <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Save</Button>
           </div>
         )}
@@ -706,7 +707,25 @@ function FinePolicyCard({ canManage, onSaved }: { canManage: boolean; onSaved: (
 // Issue a book (barcode-first flow)
 // ---------------------------------------------------------------------------
 
-interface BarcodeHit { id: string; title: string; author: string | null; shelf: string | null; copiesAvailable: number; copiesTotal: number; openIssues: { studentName: string; dueDate: string }[] }
+function playLibraryScanTone(success: boolean) {
+  if (typeof window === "undefined") return;
+  const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+  if (!AudioContextCtor) return;
+  try {
+    const ctx = new AudioContextCtor();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(success ? 880 : 220, ctx.currentTime);
+    if (success) oscillator.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+    oscillator.connect(gain); gain.connect(ctx.destination);
+    oscillator.start(); oscillator.stop(ctx.currentTime + 0.22);
+  } catch { /* browser may require a prior tap; scanning still works silently */ }
+}
+
+interface BarcodeHit { id: string; title: string; author: string | null; shelf: string | null; copiesAvailable: number; copiesTotal: number; loanPeriodDays?: number; openIssues: { studentName: string; dueDate: string }[] }
 
 function IssueTab({ onIssued }: { onIssued: () => void }) {
   const { toast } = useToast();
@@ -858,24 +877,15 @@ function IssueTab({ onIssued }: { onIssued: () => void }) {
     const raw = codeToCheck.trim();
     if (overrideCode !== undefined) setBarcode(raw);
     setCopyId(""); setCopyLabel("");
-    const res = await fetch(`/api/library?barcode=${encodeURIComponent(raw)}`);
-    const json = await res.json();
-    if (json.ok) {
-      const d = json.data;
-      setHit(d);
-      setBookId(d.id);
-      setBookQuery(d.title);
-      const loanDays = d.loanPeriodDays || 14;
-      const calcDue = new Date(Date.now() + 3 * 3600_000 + loanDays * 86400_000).toISOString().slice(0, 10);
-      setDueDate(calcDue);
-      toast({ title: `✓ Found: ${d.title} — Due date set to ${calcDue}`, description: "Book details auto-filled. Pick learner and press Issue.", tone: "success" });
-      return;
-    }
+    // Try the exact physical-copy code first. A printed QR contains a full
+    // /verify/CODE URL, while Code 39/USB scanners type the bare code; the
+    // server normalizes both forms.
     const copyRes = await fetch(`/api/library?copyCode=${encodeURIComponent(raw)}`);
     const copyJson = await copyRes.json();
     if (copyJson.ok) {
       const d = copyJson.data;
       if (d.status !== "AVAILABLE") {
+        playLibraryScanTone(false);
         toast({ title: `Copy ${d.copyNo} of "${d.title}" is not available (${d.status.toLowerCase()}).`, tone: "error" });
         setHit(null);
         return;
@@ -888,11 +898,23 @@ function IssueTab({ onIssued }: { onIssued: () => void }) {
       const loanDays = d.loanPeriodDays || 14;
       const calcDue = new Date(Date.now() + 3 * 3600_000 + loanDays * 86400_000).toISOString().slice(0, 10);
       setDueDate(calcDue);
-      toast({ title: `✓ Scanned Copy #${d.copyNo} of "${d.title}"`, description: `Due date set to ${calcDue}. Just select learner and tap Issue!`, tone: "success" });
+      playLibraryScanTone(true);
+      toast({ title: `✓ Scanned Copy #${d.copyNo} of "${d.title}"`, description: `Catalog search and due date were filled instantly. Select the borrower and tap Issue.`, tone: "success" });
       return;
     }
-    setHit(null);
-    toast({ title: json.error?.message || "Not found", tone: "error" });
+    // If it was not a copy label, treat it as the title-level ISBN/barcode.
+    const bookRes = await fetch(`/api/library?barcode=${encodeURIComponent(raw)}`);
+    const bookJson = await bookRes.json();
+    if (bookJson.ok) {
+      const d = bookJson.data;
+      setHit(d); setBookId(d.id); setBookQuery(d.title); setShowBookHits(false);
+      const calcDue = new Date(Date.now() + 3 * 3600_000 + (d.loanPeriodDays || 14) * 86400_000).toISOString().slice(0, 10);
+      setDueDate(calcDue); playLibraryScanTone(true);
+      toast({ title: `✓ Found: ${d.title}`, description: `Catalog search and due date ${calcDue} were filled instantly.`, tone: "success" });
+      return;
+    }
+    setHit(null); playLibraryScanTone(false);
+    toast({ title: bookJson.error?.message || copyJson.error?.message || "No matching book or copy code was found.", tone: "error" });
   }
 
   async function issue() {

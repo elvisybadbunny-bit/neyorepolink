@@ -4878,3 +4878,13 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Existing response island now uses adaptive black Dynamic-Island geometry, retains sound/Siri glow, respects mobile safe area and stays until dismissed.
 - [x] Running background tasks use the same black Siri-glow visual language.
 - [ ] Live migration/deployed browser verification remains required.
+
+### Library dual-code scanning and due-date policy — 2026-07-20
+- [x] Physical-copy A4 labels include both QR and locally generated Code 39 barcode.
+- [x] Copy scanning accepts bare codes and full verification URLs.
+- [x] Exact copy lookup runs before ISBN lookup, fixing valid copy scans being reported as absent from catalog.
+- [x] Successful scan fills selected catalog book and due date immediately.
+- [x] Local success/failure scan tone added with no paid service or hosted audio.
+- [x] School-set default loan period added; exact per-issue due date remains editable.
+- [x] Campaign-free-period checkout reference made non-null, fixing `i49-central-money-reconnect-test.ts` deployment compilation.
+- [ ] Printed barcode and camera/USB scanner require deployed real-device verification.
