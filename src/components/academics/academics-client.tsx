@@ -36,6 +36,7 @@ import { MoeReturnsClientTab } from "@/components/academics/moe-returns-client-t
 import { RecordOfWorkClientTab } from "@/components/academics/record-of-work-client-tab";
 import { SeniorReadinessCard } from "@/components/academics/senior-readiness-card";
 import { SeniorLearnerProofCard } from "@/components/academics/senior-learner-proof-card";
+import { TimetableGovernanceCard } from "@/components/academics/timetable-governance-card";
 import { DisciplineSuite } from "@/components/extensions-v2/discipline-suite";
 import { TextbookFineSuite } from "@/components/extensions-v2/textbook-fine-suite";
 import { V2HeroCard } from "@/components/ui/v2/v2-hero-card";
@@ -2317,7 +2318,6 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const [starting, setStarting] = React.useState(false);
   // AA.9 — real "start of term" teacher-rotation action state.
   const [rotatingTeachers, setRotatingTeachers] = React.useState(false);
-  const [timetableStatus, setTimetableStatus] = React.useState<"PUBLISHED" | "DRAFT">("PUBLISHED");
   const [payload, setPayload] = React.useState<any>(null);
   const [job, setJob] = React.useState<any>(null);
   const [classes, setClasses] = React.useState<any[]>([]);
@@ -2997,92 +2997,6 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
     await actuallyStartGeneration();
   }
 
-  async function handleUpdateTimetableStatus(newStatus: "PUBLISHED" | "DRAFT") {
-    setSaving(true);
-    try {
-      const res = await fetch("/api/academics/timetable/engine", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: newStatus === "PUBLISHED" ? "publish_timetable" : "draft_timetable" }),
-      });
-      const json = await res.json();
-      if (json.ok) {
-        setTimetableStatus(newStatus);
-        if (newStatus === "PUBLISHED") {
-          toast({ title: "🚀 Official Timetable Published!", description: `Notified ${json.data.notifiedTeachersCount} active teacher(s). Schedule locked for staff & learners.`, tone: "success" });
-        } else {
-          toast({ title: "📝 Timetable set to Draft", description: "Schedule is now in draft mode for academic planners.", tone: "success" });
-        }
-      } else {
-        toast({ title: json.error?.message || "Could not update status.", tone: "error" });
-      }
-    } catch {
-      toast({ title: "Network error", tone: "error" });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  // AA.9 — real "start of term" action: deliberately re-rolls the
-  // teacher assignment for every real class-subject pairing a school has
-  // flagged "Rotate this subject's teacher every term" — a Principal/
-  // office role triggers this explicitly, typically once per real new
-  // term, never automatically.
-  async function runTeacherRotation() {
-    setRotatingTeachers(true);
-    try {
-      const res = await fetch("/api/academics/timetable/generator", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "rotate_flagged_teachers" }),
-      });
-      const json = await res.json();
-      if (json.ok) {
-        const { rotatedCount, reassignedCount } = json.data;
-        toast({
-          title: rotatedCount === 0
-            ? "No subjects are flagged to rotate each term yet."
-            : `Rotated ${rotatedCount} flagged subject${rotatedCount === 1 ? "" : "s"} — ${reassignedCount} real reassignment${reassignedCount === 1 ? "" : "s"} made.`,
-          tone: "success",
-        });
-        await load();
-      } else {
-        toast({ title: json.error?.message || "Could not rotate teachers.", tone: "error" });
-      }
-    } catch {
-      toast({ title: "Network error", tone: "error" });
-    } finally {
-      setRotatingTeachers(false);
-    }
-  }
-
-  if (loading || !payload) return <Skeletons />;
-
-  // DD.8-DD.10 — real lesson-requirement fields compared across every
-  // real stream of a grade to decide whether they honestly agree.
-  // Deliberately excludes `teacherId`: a school may legitimately want a
-  // different teacher per stream for the same subject (confirmed as the
-  // founder's own real exception) while everything else stays shared.
-  const NEED_COMPARABLE_FIELDS = ["lessonsPerWeek", "doubleCount", "allowSplitDouble", "venueId", "requiresMovement", "noLabAccess", "labPriority", "rotateTeacherEachTerm"];
-
-  function needAgreementForLevelSubject(levelClasses: any[], subjectId: string) {
-    const perClass: Record<string, any> = {};
-    for (const cls of levelClasses) {
-      perClass[cls.id] = (classNeeds[cls.id] ?? []).find((n: any) => n.subjectId === subjectId) ?? {};
-    }
-    const values = Object.values(perClass);
-    let agrees = true;
-    const shared: any = values[0] ?? {};
-    for (const field of NEED_COMPARABLE_FIELDS) {
-      const firstVal = shared[field] ?? (field === "lessonsPerWeek" || field === "doubleCount" ? 0 : field === "labPriority" ? "NORMAL" : field === "venueId" ? null : false);
-      for (const v of values) {
-        const thisVal = (v as any)[field] ?? (field === "lessonsPerWeek" || field === "doubleCount" ? 0 : field === "labPriority" ? "NORMAL" : field === "venueId" ? null : false);
-        if (thisVal !== firstVal) { agrees = false; break; }
-      }
-      if (!agrees) break;
-    }
-    return { agrees, shared, perClass };
-  }
-
   function toggleOpenLevel(level: string) {
     setOpenLevels((prev) => {
       const next = new Set(prev);
@@ -3143,25 +3057,6 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                 </p>
               </div>
               <div className="flex flex-col items-stretch gap-2 md:items-end">
-                <div className="flex flex-wrap items-center gap-1.5 justify-end mb-1">
-                  <Button
-                    size="sm"
-                    onClick={() => handleUpdateTimetableStatus("PUBLISHED")}
-                    disabled={!canManage || saving || timetableStatus === "PUBLISHED"}
-                    className="rounded-full bg-green-600 hover:bg-green-700 text-white font-black text-xs shadow-md"
-                  >
-                    🚀 Publish to All ({timetableStatus === "PUBLISHED" ? "Active" : "1-Click"})
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleUpdateTimetableStatus("DRAFT")}
-                    disabled={!canManage || saving || timetableStatus === "DRAFT"}
-                    className="rounded-full font-bold text-xs border-amber-300 text-amber-800 dark:border-amber-800 dark:text-amber-300"
-                  >
-                    📝 Save as Draft ({timetableStatus === "DRAFT" ? "Active" : "1-Click"})
-                  </Button>
-                </div>
                 <Button onClick={runMasterButton} disabled={!canManage || starting || preGenLoading || ["QUEUED", "RUNNING"].includes(job?.status)} className="h-12 min-w-[220px]">
                   {starting || preGenLoading || ["QUEUED", "RUNNING"].includes(job?.status)
                     ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -3293,6 +3188,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       {schoolLevelActivation?.isSeniorSchool && (
         <SeniorReadinessCard classes={classes} />
         <SeniorLearnerProofCard />
+        <TimetableGovernanceCard />
         <KicdSeniorTemplateCard canManage={canManage} classes={classes} subjects={subjects} onApplied={load} />
       )}
 

@@ -4970,3 +4970,17 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Detailed proof rows retained for latest three generation jobs; older jobs keep summary/audit evidence.
 - [x] No automatic PDF/download/object-storage creation and no AI/provider fee.
 - [ ] Phase G formal committee and Head approval workflow remains next.
+
+### Senior School Timetable Phase G — formal governance — 2026-07-21
+- [x] Generated draft slots no longer replace currently published timetable rows.
+- [x] Added Generated Draft → Committee Reviewed/Returned → Head Approved → Published → Superseded states.
+- [x] Committee can preview draft slots before decision.
+- [x] Return for correction requires a written note and cannot be approved without a new generation.
+- [x] Principal/Owner-only Head approval and publication role checks.
+- [x] Publication transactionally replaces only governed slots and preserves remedial/prep/activity rows.
+- [x] Previous published generation becomes Superseded.
+- [x] Append-only governance decision ledger records actor, role, note and time.
+- [x] Direct legacy one-click publish action is blocked.
+- [x] Academic staff notified only after approved publication, not draft generation.
+- [x] Draft snapshot retention limits bulky non-published history while retaining summaries and decisions.
+- [x] No AI/Bundi/provider dependency.

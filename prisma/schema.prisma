@@ -109,6 +109,7 @@ model Tenant {
   cbeDeliveryEvidence  CbeDeliveryEvidence[]
   cbeInterventions     CbeIntervention[]
   seniorLearnerTimetableProofs SeniorLearnerTimetableProof[]
+  timetableGovernanceDecisions TimetableGovernanceDecision[]
 
   // Z.3 — real Venue/Lab pool.
   venues Venue[]
@@ -5749,7 +5750,17 @@ model TimetableGenerationJob {
   learnerProofValid   Int @default(0)
   learnerProofInvalid Int @default(0)
   qualityReportJson   String @default("{}") // Phase F deterministic balance/spacing report
+  draftSlotsJson      String @default("[]") // Phase G generated owned slots, applied only after approval/publish
+  governanceStatus   String @default("GENERATED_DRAFT") // GENERATED_DRAFT | COMMITTEE_REVIEWED | RETURNED | HEAD_APPROVED | PUBLISHED | SUPERSEDED
+  headApprovedById   String?
+  headApprovedByName String?
+  headApprovedAt     DateTime?
+  publishedById      String?
+  publishedByName    String?
+  publishedAt        DateTime?
+  supersededAt       DateTime?
   learnerProofs SeniorLearnerTimetableProof[]
+  governanceDecisions TimetableGovernanceDecision[]
   error         String?
   startedById   String
   startedByName String
@@ -5762,6 +5773,22 @@ model TimetableGenerationJob {
 // Senior Phase E: immutable per-generation proof of what one learner can
 // actually attend. It resolves ordinary class lessons, the learner's own
 // Core/Essential Mathematics variant and exact A/B/C elective subjects.
+model TimetableGovernanceDecision {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  generationJobId String
+  generationJob   TimetableGenerationJob @relation(fields: [generationJobId], references: [id], onDelete: Cascade)
+  decision        String // COMMITTEE_REVIEWED | RETURNED | HEAD_APPROVED | PUBLISHED
+  note            String?
+  actorId         String
+  actorName       String
+  actorRole       String
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId, generationJobId, createdAt])
+}
+
 model SeniorLearnerTimetableProof {
   id              String   @id @default(cuid())
   tenantId        String

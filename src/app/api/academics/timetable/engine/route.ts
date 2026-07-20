@@ -9,7 +9,6 @@
 import { NextRequest } from "next/server";
 import { requirePermission } from "@/lib/core/session";
 import { ok, fail, handleError } from "@/lib/api/respond";
-import { db } from "@/lib/db";
 import {
   listConstraints, upsertConstraint, deleteConstraint, saveTeacherTimeOff,
   listCombinationGroups, upsertCombinationGroup, deleteCombinationGroup,
@@ -70,52 +69,10 @@ export async function POST(req: NextRequest) {
         return ok(await upsertBlockedTimetableSlot(user, body));
       case "delete_blocked_slot":
         return ok(await deleteBlockedTimetableSlot(user, body.id));
-      case "publish_timetable": {
-        const seniorClasses = await db.schoolClass.findMany({ where: { tenantId: user.tenantId, archived: false }, select: { id: true, level: true } });
-        const seniorClassIds = seniorClasses.filter((klass) => /(?:Grade|Form)\s*(?:10|11|12)/i.test(klass.level)).map((klass) => klass.id);
-        if (seniorClassIds.length > 0) {
-          const [latestJob, activeSeniorCount] = await Promise.all([
-            db.timetableGenerationJob.findFirst({ where: { tenantId: user.tenantId, status: "DONE" }, orderBy: { startedAt: "desc" } }),
-            db.student.count({ where: { tenantId: user.tenantId, classId: { in: seniorClassIds }, status: "ACTIVE", deletedAt: null } }),
-          ]);
-          if (!latestJob || latestJob.learnerProofInvalid > 0 || latestJob.learnerProofValid !== activeSeniorCount) {
-            return fail("SENIOR_PROOF_REQUIRED", `Cannot publish: latest Senior learner proof covers ${latestJob?.learnerProofValid ?? 0}/${activeSeniorCount} learners with ${latestJob?.learnerProofInvalid ?? 0} invalid. Open Phase E and regenerate after corrections.`, 409);
-          }
-        }
-        const teacherSlots = await db.timetableSlot.findMany({
-          where: { tenantId: user.tenantId },
-          select: { teacherId: true },
-        });
-        const teacherIds = [...new Set(teacherSlots.map((s) => s.teacherId).filter(Boolean) as string[])];
-        for (const tId of teacherIds) {
-          await db.notification.create({
-            data: {
-              tenantId: user.tenantId,
-              recipientId: tId,
-              title: "🚀 Official Timetable Published (`Smart Timetable`)",
-              body: "The school timetable has been officially published. Check your schedule under Timetable / My Classes.",
-              href: "/academics?tab=timetable",
-            },
-          }).catch(() => {});
-        }
-        await db.auditLog.create({
-          data: {
-            tenantId: user.tenantId, actorId: user.id, actorName: user.fullName,
-            action: "academics.timetable_published", entityType: "timetable", entityId: user.tenantId,
-            metadata: JSON.stringify({ teacherCountNotified: teacherIds.length }),
-          },
-        });
-        return ok({ status: "PUBLISHED", notifiedTeachersCount: teacherIds.length });
-      }
-      case "draft_timetable": {
-        await db.auditLog.create({
-          data: {
-            tenantId: user.tenantId, actorId: user.id, actorName: user.fullName,
-            action: "academics.timetable_drafted", entityType: "timetable", entityId: user.tenantId,
-          },
-        });
-        return ok({ status: "DRAFT" });
-      }
+      case "publish_timetable":
+        return fail("GOVERNANCE_REQUIRED", "Use Smart Timetable → Phase G. Committee review and Head approval are required before publication.", 409);
+      case "draft_timetable":
+        return fail("GOVERNANCE_REQUIRED", "Master generation already creates a protected draft. Use Phase G to review, return, approve or publish it.", 409);
       default:
         return fail("INVALID", "Unknown action.", 400);
     }

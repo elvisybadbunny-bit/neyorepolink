@@ -622,14 +622,44 @@ interface Card {
   labPriority: string;
 }
 
+const GOVERNED_SLOT_TYPES = ["ACADEMIC", "ELECTIVE_BLOCK", "BLOCKED"];
+async function governedSlotSnapshot(tenantId: string) {
+  return withTenant(tenantId, async () => tenantDb().timetableSlot.findMany({ where: { slotType: { in: GOVERNED_SLOT_TYPES } }, select: { classId: true, subjectId: true, activityCategoryId: true, teacherId: true, dayOfWeek: true, period: true, slotType: true, weekRotation: true, venue: true, electiveBlockSlotId: true } }));
+}
+async function publishedStateSnapshot(tenantId: string) {
+  return withTenant(tenantId, async () => tenantDb().timetableSlot.findMany({ where: { slotType: { in: GOVERNED_SLOT_TYPES } }, select: { id: true, classId: true, subjectId: true, activityCategoryId: true, teacherId: true, dayOfWeek: true, period: true, slotType: true, weekRotation: true, venue: true, electiveBlockSlotId: true, substituteAssignments: { select: { id: true, leaveRequestId: true, originalTeacherId: true, originalTeacherName: true, substituteTeacherId: true, substituteTeacherName: true, coverageDates: true, status: true, confirmedById: true, confirmedByName: true, confirmedAt: true, declineReason: true, revertedById: true, revertedByName: true, revertedAt: true, createdAt: true, updatedAt: true } } } }));
+}
+async function restorePublishedState(tenantId: string, rows: any[]) {
+  return db.$transaction(async (tx) => {
+    await tx.timetableSlot.deleteMany({ where: { tenantId, slotType: { in: GOVERNED_SLOT_TYPES } } });
+    for (const source of rows) {
+      const { substituteAssignments, ...slot } = source;
+      const created = await tx.timetableSlot.create({ data: { ...slot, tenantId } });
+      if (substituteAssignments?.length) await tx.substituteAssignment.createMany({ data: substituteAssignments.map((assignment: any) => ({ ...assignment, tenantId, timetableSlotId: created.id })) });
+    }
+  });
+}
+
 export async function runGeneration(tenantId: string, jobId: string, user: SessionUser) {
-  const result = await buildAndSolve(tenantId, jobId);
-  const learnerProof = await generateSeniorLearnerTimetableProofs(tenantId, jobId);
-  if (learnerProof.invalid > 0) {
-    result.fullySolved = false;
-    result.warnings.push({ classLabel: "SENIOR LEARNER PROOF", subjectCode: "PERSONAL_TIMETABLE", message: `${learnerProof.invalid} Senior learner personal timetable proof(s) failed. Open Learner Proofs before publication.` });
+  // Generation may use TimetableSlot internally, but a draft must never
+  // replace the currently published school timetable before governance.
+  const previouslyPublishedSlots = await publishedStateSnapshot(tenantId);
+  let result!: Awaited<ReturnType<typeof buildAndSolve>>;
+  let learnerProof!: Awaited<ReturnType<typeof generateSeniorLearnerTimetableProofs>>;
+  let qualityReport!: Awaited<ReturnType<typeof buildSeniorTimetableQualityReport>>;
+  let draftSlots: any[] = [];
+  try {
+    result = await buildAndSolve(tenantId, jobId);
+    learnerProof = await generateSeniorLearnerTimetableProofs(tenantId, jobId);
+    if (learnerProof.invalid > 0) {
+      result.fullySolved = false;
+      result.warnings.push({ classLabel: "SENIOR LEARNER PROOF", subjectCode: "PERSONAL_TIMETABLE", message: `${learnerProof.invalid} Senior learner personal timetable proof(s) failed. Open Learner Proofs before publication.` });
+    }
+    qualityReport = await buildSeniorTimetableQualityReport(tenantId, jobId);
+    draftSlots = await governedSlotSnapshot(tenantId);
+  } finally {
+    await restorePublishedState(tenantId, previouslyPublishedSlots);
   }
-  const qualityReport = await buildSeniorTimetableQualityReport(tenantId, jobId);
 
   await withTenant(tenantId, async () => {
     const tdb = tenantDb();
@@ -645,9 +675,17 @@ export async function runGeneration(tenantId: string, jobId: string, user: Sessi
         reservationSummaryJson: JSON.stringify(result.optionReservationSummary),
         learnerProofValid: learnerProof.valid,
         learnerProofInvalid: learnerProof.invalid,
+        draftSlotsJson: JSON.stringify(draftSlots),
+        governanceStatus: "GENERATED_DRAFT",
         finishedAt: new Date(),
       },
     });
+    // Phase G cost control: keep full draft slot snapshots for the latest
+    // three jobs and every currently published job. Older returned/
+    // superseded drafts retain summaries/decisions but release bulky rows.
+    const oldDrafts = await tdb.timetableGenerationJob.findMany({ where: { governanceStatus: { not: "PUBLISHED" } }, orderBy: { startedAt: "desc" }, select: { id: true }, take: 100 });
+    const pruneIds = oldDrafts.slice(3).map((row) => row.id);
+    if (pruneIds.length) await tdb.timetableGenerationJob.updateMany({ where: { id: { in: pruneIds } }, data: { draftSlotsJson: "[]" } });
   });
 
   // Notify teachers + audit (best-effort, non-fatal).
@@ -658,7 +696,7 @@ export async function runGeneration(tenantId: string, jobId: string, user: Sessi
         select: { id: true },
       });
       for (const t of teachers) {
-        await createInApp({ tenantId, recipientId: t.id, title: "New Timetable Published", body: "A new conflict-free whole-school timetable has been generated.", category: "system" });
+        await createInApp({ tenantId, recipientId: t.id, title: "Timetable Draft Generated", body: "A new timetable draft is ready for committee review. The currently published timetable remains unchanged.", category: "system" });
       }
     });
     await db.auditLog.create({

@@ -46,6 +46,7 @@ import { CompetencyError } from "@/lib/services/competency.service";
 import { ExamError } from "@/lib/services/exam.service";
 import { CbcError } from "@/lib/services/cbc.service";
 import { CbeDeliveryError } from "@/lib/services/cbe-delivery.service";
+import { TimetableGovernanceError } from "@/lib/services/timetable-governance.service";
 import { FinanceError } from "@/lib/services/finance.service";
 import { PayrollError } from "@/lib/services/payroll.service";
 import { HrError } from "@/lib/services/hr.service";
@@ -432,6 +433,10 @@ export function handleError(err: unknown) {
   }
   if (err instanceof CbeDeliveryError) {
     return fail("CBE_DELIVERY_ERROR", err.message, 422);
+  }
+  if (err instanceof TimetableGovernanceError) {
+    const status = err.code === "NOT_FOUND" ? 404 : err.code === "FORBIDDEN" ? 403 : err.code === "CONFLICT" ? 409 : 422;
+    return fail(err.code, err.message, status);
   }
 
   // Finance (B.7).

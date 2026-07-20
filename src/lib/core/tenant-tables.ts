@@ -247,6 +247,7 @@ export const TENANT_OWNED_MODELS = [
   "blockedTimetableSlot",
   "timetableGenerationJob",
   "seniorLearnerTimetableProof",
+  "timetableGovernanceDecision",
   // AA.8 — lab reshuffle/rotation-memory history. Same lesson as AA.1/
   // AA.2's own cross-tenant-leak finding: never skip registering a new
   // tenant-owned model here, or its rows silently become visible/queryable
