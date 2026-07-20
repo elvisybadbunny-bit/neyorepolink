@@ -402,6 +402,7 @@ function CopiesDialog({ book, onClose, onChanged }: { book: Book; onClose: () =>
   const [copies, setCopies] = React.useState<CopyRow[] | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [genCount, setGenCount] = React.useState(String(book.copiesTotal || 1));
+  const [printFormat, setPrintFormat] = React.useState<"qr" | "barcode" | "both">("both");
 
   const load = React.useCallback(async () => {
     const res = await fetch(`/api/library?copiesOf=${book.id}`);
@@ -474,11 +475,17 @@ function CopiesDialog({ book, onClose, onChanged }: { book: Book; onClose: () =>
                     <QrCode className="h-3.5 w-3.5" /> Add missing QR/barcodes
                   </Button>
                 )}
-                <a href={`/api/library/labels/${book.id}`} target="_blank" rel="noreferrer">
-                  <Button size="sm" variant="secondary"><Printer className="h-3.5 w-3.5" /> Print QR + barcode labels</Button>
+                <select value={printFormat} onChange={(e) => setPrintFormat(e.target.value as typeof printFormat)} className="h-9 rounded-xl border border-navy-200 bg-white px-2 text-xs font-semibold dark:border-navy-700 dark:bg-navy-900">
+                  <option value="qr">QR only</option>
+                  <option value="barcode">Barcode only</option>
+                  <option value="both">QR + barcode · compact</option>
+                </select>
+                <a href={`/api/library/labels/${book.id}?format=${printFormat}`} target="_blank" rel="noreferrer">
+                  <Button size="sm" variant="secondary"><Printer className="h-3.5 w-3.5" /> Print selected labels</Button>
                 </a>
               </div>
             </div>
+            <p className="text-[11px] text-navy-500 dark:text-navy-400">QR only, barcode only, or both. Combined mode uses a dense 32-label A4 grid to reduce paper while preserving cut lines and readable codes.</p>
             <div className="max-h-80 space-y-1.5 overflow-y-auto">
               {copies.map((c) => (
                 <div key={c.id} className="flex items-center justify-between gap-2 rounded-xl border border-navy-100 px-3 py-2 text-sm dark:border-navy-800">

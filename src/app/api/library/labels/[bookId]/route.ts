@@ -13,9 +13,11 @@ import { buildLibraryLabelsPdf } from "@/lib/services/document.service";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest, { params }: { params: { bookId: string } }) {
+export async function GET(req: NextRequest, { params }: { params: { bookId: string } }) {
   try {
     const user = await requirePermission("library.manage");
+    const requested = req.nextUrl.searchParams.get("format");
+    const format = requested === "qr" || requested === "barcode" ? requested : "both";
     const { book, copies } = await withTenant(user.tenantId, async () => {
       const b = await tenantDb().libraryBook.findUnique({ where: { id: params.bookId } });
       const c = await tenantDb().libraryBookCopy.findMany({ where: { bookId: params.bookId }, orderBy: { copyNo: "asc" } });
@@ -27,7 +29,8 @@ export async function GET(_req: NextRequest, { params }: { params: { bookId: str
     const { pdf, fileName } = await buildLibraryLabelsPdf(
       user.tenantId,
       copies.map((c) => ({ copyNo: c.copyNo, code: c.code })),
-      book.title
+      book.title,
+      format
     );
     return new Response(new Uint8Array(pdf), {
       headers: {

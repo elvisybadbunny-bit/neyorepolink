@@ -2,7 +2,9 @@
 
 ## Delivered
 
-- Every physical-copy label now prints both QR and Code 39 barcode forms of the same existing copy code.
+- Printing offers QR only, Code 39 barcode only, or QR + barcode compact.
+- Every physical-copy label can print either or both forms of the same existing copy code.
+- Combined mode uses a dense 4 × 8 grid (32 labels per A4 page instead of the old 18) with cut lines to reduce paper use.
 - Code 39 is generated locally by NEYO; no barcode API, font subscription or paid service is used.
 - Copy lookup accepts bare scanner text and full `/verify/CODE` QR URLs.
 - Issue workflow checks exact copy codes first, then title ISBN/barcode.

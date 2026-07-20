@@ -556,7 +556,8 @@ export async function buildMwalimuPackPdf(user: SessionUser) {
 export async function buildLibraryLabelsPdf(
   tenantId: string,
   copies: { copyNo: number; code: string }[],
-  bookTitle: string
+  bookTitle: string,
+  format: "qr" | "barcode" | "both" = "both"
 ) {
   const { renderLibraryLabelsPdf } = await import("@/lib/documents/library-labels-pdf");
   const { qrDataUrl, verifyUrl } = await import("@/lib/documents/qr");
@@ -570,8 +571,8 @@ export async function buildLibraryLabelsPdf(
       barcodeDataUrl: code39DataUrl(c.code),
     }))
   );
-  const pdf = await renderLibraryLabelsPdf(labels);
-  return { pdf, fileName: `Library-Labels-${bookTitle.replace(/\s+/g, "-").slice(0, 40)}.pdf` };
+  const pdf = await renderLibraryLabelsPdf(labels, format);
+  return { pdf, fileName: `Library-Labels-${format}-${bookTitle.replace(/\s+/g, "-").slice(0, 40)}.pdf` };
 }
 
 /** Public verify lookup (no auth) — returns a safe summary or null. */

@@ -28,35 +28,35 @@ export interface LibraryLabel {
 
 // Plain grid, 3 columns x 6 rows = 18 labels per A4 page (page is scaled to
 // fit any label size the school prints/cuts at, no fixed sticker dimensions).
-const COLUMNS = 3;
-const ROWS = 6;
+const COLUMNS = 4;
+const ROWS = 8;
 const PER_PAGE = COLUMNS * ROWS;
 
-// A4 = 595.28 x 841.89 pt. With 20pt padding, height = 801.89pt.
-// Fixed row height = Math.floor(801.89 / 6) = 133pt per label cell.
+// Dense low-paper layout: 32 labels/A4 instead of the previous 18. Both-code
+// labels keep QR and Code 39 readable while removing decorative whitespace.
 const s = StyleSheet.create({
-  page: { padding: 20, fontFamily: "Helvetica", flexDirection: "column" },
-  grid: { flexDirection: "row", flexWrap: "wrap", width: "100%", height: 133 * ROWS },
+  page: { padding: 14, fontFamily: "Helvetica", flexDirection: "column" },
+  grid: { flexDirection: "row", flexWrap: "wrap", width: "100%", height: 101 * ROWS },
   label: {
-    width: "33.33%",
-    height: 133,
+    width: "25%",
+    height: 101,
     borderWidth: 0.75,
     borderColor: "#cbd5e1",
     borderStyle: "dashed",
     alignItems: "center",
     justifyContent: "center",
-    padding: 8,
+    padding: 4,
     boxSizing: "border-box",
   },
   qrWrapper: {
-    width: 54,
-    height: 54,
+    width: 34,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
   },
-  qr: { width: 44, height: 44, objectFit: "contain" },
-  barcode: { width: 105, height: 28, objectFit: "contain", marginBottom: 3 },
+  qr: { width: 34, height: 34, objectFit: "contain" },
+  barcode: { width: 88, height: 22, objectFit: "contain", marginBottom: 2 },
   title: { fontSize: 7, textAlign: "center", color: "#1c2740", fontFamily: "Helvetica-Bold", maxHeight: 20, overflow: "hidden" },
   meta: { fontSize: 6.5, textAlign: "center", color: "#677fab", marginTop: 2 },
 });
@@ -67,7 +67,7 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
-export async function renderLibraryLabelsPdf(labels: LibraryLabel[]): Promise<Buffer> {
+export async function renderLibraryLabelsPdf(labels: LibraryLabel[], format: "qr" | "barcode" | "both" = "both"): Promise<Buffer> {
   const pages = chunk(labels, PER_PAGE);
   const doc = (
     <Document>
@@ -76,8 +76,8 @@ export async function renderLibraryLabelsPdf(labels: LibraryLabel[]): Promise<Bu
           <View style={s.grid}>
             {pageLabels.map((l, i) => (
               <View key={i} style={s.label}>
-                <View style={s.qrWrapper}><Image style={s.qr} src={l.qrDataUrl} /></View>
-                <Image style={s.barcode} src={l.barcodeDataUrl} />
+                {(format === "qr" || format === "both") && <View style={s.qrWrapper}><Image style={s.qr} src={l.qrDataUrl} /></View>}
+                {(format === "barcode" || format === "both") && <Image style={s.barcode} src={l.barcodeDataUrl} />}
                 <Text style={s.title}>{l.bookTitle.length > 28 ? `${l.bookTitle.slice(0, 26)}…` : l.bookTitle}</Text>
                 <Text style={s.meta}>Copy {l.copyNo} · {l.code}</Text>
               </View>

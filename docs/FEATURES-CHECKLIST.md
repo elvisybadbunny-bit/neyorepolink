@@ -4888,3 +4888,5 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] School-set default loan period added; exact per-issue due date remains editable.
 - [x] Campaign-free-period checkout reference made non-null, fixing `i49-central-money-reconnect-test.ts` deployment compilation.
 - [ ] Printed barcode and camera/USB scanner require deployed real-device verification.
+- [x] Library label printing now offers QR only, barcode only or compact combined output.
+- [x] Compact combined labels use 32 labels per A4 page (up from 18) to reduce paper cost.
