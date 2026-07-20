@@ -98,7 +98,7 @@ export function TH({
   return (
     <th
       className={cn(
-        "whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-navy-400",
+        "whitespace-nowrap px-3 py-3 text-xs font-bold uppercase tracking-wide text-navy-600 dark:text-navy-300 sm:px-4",
         alignClass[align],
         className
       )}
@@ -115,7 +115,7 @@ export function TD({
   return (
     <td
       className={cn(
-        "px-4 py-3 text-navy-700 dark:text-navy-200",
+        "px-3 py-3 text-navy-800 dark:text-navy-100 sm:px-4",
         alignClass[align],
         className
       )}

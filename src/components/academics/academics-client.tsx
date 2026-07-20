@@ -5089,11 +5089,11 @@ function BulkSaturdayModal({
 // ---- shared bits ---------------------------------------------------------------------
 function Modal({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className={`w-full ${wide ? "max-w-lg" : "max-w-md"} rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900`} onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-start justify-between">
-          <h3 className="text-base font-semibold text-navy-900 dark:text-navy-50">{title}</h3>
-          <button onClick={onClose} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-4 w-4" /></button>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className={`max-h-[calc(100dvh-0.5rem)] w-full ${wide ? "max-w-lg" : "max-w-md"} overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card [-webkit-overflow-scrolling:touch] dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6`} onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 z-10 -mx-1 mb-4 flex items-start justify-between border-b border-navy-100 bg-white/95 px-1 pb-3 backdrop-blur dark:border-navy-800 dark:bg-navy-900/95">
+          <h3 className="pr-3 text-base font-bold text-navy-950 dark:text-white">{title}</h3>
+          <button onClick={onClose} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-navy-600 hover:bg-navy-100 dark:text-navy-300 dark:hover:bg-navy-800" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
         {children}
       </div>
