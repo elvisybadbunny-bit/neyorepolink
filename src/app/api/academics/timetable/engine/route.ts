@@ -71,6 +71,17 @@ export async function POST(req: NextRequest) {
       case "delete_blocked_slot":
         return ok(await deleteBlockedTimetableSlot(user, body.id));
       case "publish_timetable": {
+        const seniorClasses = await db.schoolClass.findMany({ where: { tenantId: user.tenantId, archived: false }, select: { id: true, level: true } });
+        const seniorClassIds = seniorClasses.filter((klass) => /(?:Grade|Form)\s*(?:10|11|12)/i.test(klass.level)).map((klass) => klass.id);
+        if (seniorClassIds.length > 0) {
+          const [latestJob, activeSeniorCount] = await Promise.all([
+            db.timetableGenerationJob.findFirst({ where: { tenantId: user.tenantId, status: "DONE" }, orderBy: { startedAt: "desc" } }),
+            db.student.count({ where: { tenantId: user.tenantId, classId: { in: seniorClassIds }, status: "ACTIVE", deletedAt: null } }),
+          ]);
+          if (!latestJob || latestJob.learnerProofInvalid > 0 || latestJob.learnerProofValid !== activeSeniorCount) {
+            return fail("SENIOR_PROOF_REQUIRED", `Cannot publish: latest Senior learner proof covers ${latestJob?.learnerProofValid ?? 0}/${activeSeniorCount} learners with ${latestJob?.learnerProofInvalid ?? 0} invalid. Open Phase E and regenerate after corrections.`, 409);
+          }
+        }
         const teacherSlots = await db.timetableSlot.findMany({
           where: { tenantId: user.tenantId },
           select: { teacherId: true },

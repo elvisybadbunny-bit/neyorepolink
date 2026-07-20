@@ -42,6 +42,7 @@ import {
 import { getElectiveBlocksForSolver } from "@/lib/services/elective-block.service";
 import { seniorTimetableReadiness } from "@/lib/services/senior-timetable-readiness.service";
 import { seniorMathSplitReady, seniorOptionBlocksReady } from "@/lib/services/senior-option-block-readiness.service";
+import { generateSeniorLearnerTimetableProofs } from "@/lib/services/senior-personal-timetable.service";
 
 export class TimetableEngineError extends Error {
   constructor(public code: "NOT_FOUND" | "INVALID" | "BUSY", message: string) {
@@ -622,6 +623,11 @@ interface Card {
 
 export async function runGeneration(tenantId: string, jobId: string, user: SessionUser) {
   const result = await buildAndSolve(tenantId, jobId);
+  const learnerProof = await generateSeniorLearnerTimetableProofs(tenantId, jobId);
+  if (learnerProof.invalid > 0) {
+    result.fullySolved = false;
+    result.warnings.push({ classLabel: "SENIOR LEARNER PROOF", subjectCode: "PERSONAL_TIMETABLE", message: `${learnerProof.invalid} Senior learner personal timetable proof(s) failed. Open Learner Proofs before publication.` });
+  }
 
   await withTenant(tenantId, async () => {
     const tdb = tenantDb();
@@ -635,6 +641,8 @@ export async function runGeneration(tenantId: string, jobId: string, user: Sessi
         unplacedJson: JSON.stringify(result.unplaced),
         warningsJson: JSON.stringify(result.warnings),
         reservationSummaryJson: JSON.stringify(result.optionReservationSummary),
+        learnerProofValid: learnerProof.valid,
+        learnerProofInvalid: learnerProof.invalid,
         finishedAt: new Date(),
       },
     });
@@ -655,7 +663,7 @@ export async function runGeneration(tenantId: string, jobId: string, user: Sessi
       data: {
         tenantId, actorId: user.id, actorName: user.fullName,
         action: "timetable.generated_advanced", entityType: "tenant", entityId: tenantId,
-        metadata: JSON.stringify({ slotsPlaced: result.slotsPlaced, unplaced: result.unplaced.length, warnings: result.warnings.length, fullySolved: result.fullySolved, optionReservationSummary: result.optionReservationSummary }),
+        metadata: JSON.stringify({ slotsPlaced: result.slotsPlaced, unplaced: result.unplaced.length, warnings: result.warnings.length, fullySolved: result.fullySolved, optionReservationSummary: result.optionReservationSummary, learnerProofValid: learnerProof.valid, learnerProofInvalid: learnerProof.invalid }),
       },
     });
   } catch { /* notify is non-fatal */ }

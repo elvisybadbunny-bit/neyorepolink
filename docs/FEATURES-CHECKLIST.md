@@ -4947,3 +4947,16 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Generation returns family/day/morning/afternoon reservation evidence.
 - [x] No AI/Bundi/provider/random dependency.
 - [ ] Phase E durable per-learner personal timetable proof remains next.
+
+### Senior School Timetable Phase E — durable personal learner proof — 2026-07-21
+- [x] Generates one tenant-owned personal timetable proof per active Senior learner after every Master run.
+- [x] Resolves ordinary subjects, exact Option A/B/C choices and learner-specific Core/Essential Mathematics.
+- [x] Requires five consistent personal periods for A, B, C and Mathematics.
+- [x] Detects zero/multiple block matches, changed subjects and duplicate day/period rows.
+- [x] Persists timetable JSON, issue list, selected option IDs, Mathematics variant and validity by generation.
+- [x] Master job stores valid/invalid proof counts; invalid proof marks run not fully solved.
+- [x] Smart Timetable shows learner selector, issues and complete personal day/period schedule.
+- [x] Publication is blocked unless latest proof is 100% valid for the current active Senior cohort.
+- [x] Proof API requires `academics.view` and remains tenant scoped.
+- [x] No AI/Bundi/provider/random dependency.
+- [ ] Phase F deterministic quality reports remain next.
