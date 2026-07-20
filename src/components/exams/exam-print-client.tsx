@@ -16,11 +16,11 @@ export function ExamPrintClient() {
   React.useEffect(() => {
     fetch("/api/academics/exams/print-roster").then(r => r.json()).then(j => {
       if (j.ok) setData(j.data);
-    }).finally(() => setLoading(false));
+    }).catch(() => setData(null)).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="p-4"><Loader2 className="h-4 w-4 animate-spin"/></div>;
-  if (!data) return <p className="text-sm italic text-navy-500">No active exams found.</p>;
+  if (!data?.tenant || !Array.isArray(data.results)) return <p className="text-sm italic text-navy-500">No printable exam results are available yet.</p>;
 
   return (
     <Card>

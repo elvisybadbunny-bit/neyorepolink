@@ -389,3 +389,7 @@ This is the order a real school should use. Do not compute first and attempt to 
 ## School grading scale
 
 In **Academics → Grading Engine**, academic leadership can edit each grade and its minimum percentage, then press **Save Grading Scale**. This writes one tenant-scoped `GradingScale` record; it does not alter historical raw marks. The next computation reads this scale. Grade labels and minimum marks must be unique, between 0 and 100. If the school has never saved a scale, NEYO uses the displayed Kenyan default. To change it later, edit the boundary, save, reopen/close the correction workflow if needed, and recompute before release. Founder test: change one boundary in a test school, compute a learner near that boundary, and verify the master report uses the test school's scale without changing another tenant.
+
+## Exams page fault isolation
+
+The main exam workspace now renders before optional analytics and printing widgets. Each section has its own client error boundary. If performance analytics, advanced analytics or bulk printing receives malformed/unavailable data, that section shows a local retry notice while exam creation, marks entry and results remain usable. Analytics and print clients also validate response shape and catch network/JSON failures rather than throwing into the global application error screen.

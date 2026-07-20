@@ -5,6 +5,7 @@ import { ExamAnalyticsClient } from "@/components/exams/exam-analytics-client";
 import { ExamPrintClient } from "@/components/exams/exam-print-client";
 import { AdvancedAnalyticsClient } from "@/components/exams/advanced-analytics-client";
 import { getSchoolLevelActivationSummary } from "@/lib/services/school-profile.service";
+import { ExamWidgetBoundary } from "@/components/exams/exam-widget-boundary";
 
 export const dynamic = "force-dynamic";
 
@@ -51,16 +52,18 @@ export default async function ExamsPage() {
           </p>
         </div>
       )}
-      <ExamAnalyticsClient />
-      <AdvancedAnalyticsClient />
-      <ExamPrintClient />
-      <ExamsClient
-        canManage={has("exam.manage")}
-        canEnterMarks={has("exam.enter_marks")}
-        canPublish={has("exam.publish")}
-        canRequestRelease={canRequestRelease}
-        canApproveRelease={canApproveRelease}
-      />
+      <ExamWidgetBoundary name="Exam workspace">
+        <ExamsClient
+          canManage={has("exam.manage")}
+          canEnterMarks={has("exam.enter_marks")}
+          canPublish={has("exam.publish")}
+          canRequestRelease={canRequestRelease}
+          canApproveRelease={canApproveRelease}
+        />
+      </ExamWidgetBoundary>
+      <ExamWidgetBoundary name="Performance analytics"><ExamAnalyticsClient /></ExamWidgetBoundary>
+      <ExamWidgetBoundary name="Advanced analytics"><AdvancedAnalyticsClient /></ExamWidgetBoundary>
+      <ExamWidgetBoundary name="Bulk result printing"><ExamPrintClient /></ExamWidgetBoundary>
     </div>
   );
 }

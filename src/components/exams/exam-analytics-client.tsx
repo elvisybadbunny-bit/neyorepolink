@@ -18,11 +18,11 @@ export function ExamAnalyticsClient() {
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    fetch("/api/exams/analytics").then((r) => r.json()).then((j) => { if (j.ok) setData(j.data); }).finally(() => setLoading(false));
+    fetch("/api/exams/analytics").then((r) => r.json()).then((j) => { if (j.ok) setData(j.data); }).catch(() => setData(null)).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <Card><CardContent className="flex items-center gap-2 p-5 text-sm text-navy-500"><Loader2 className="h-4 w-4 animate-spin" /> Loading exam analytics…</CardContent></Card>;
-  if (!data || data.summary.results === 0) return <Card><CardContent className="p-6"><EmptyState icon={BarChart3} title="No analytics yet" description="Enter marks across exams and terms to see subject, teacher and learner progress analytics." /></CardContent></Card>;
+  if (!data?.summary || !Array.isArray(data.termTrend) || !Array.isArray(data.subjectPerformance) || !Array.isArray(data.teacherPerformance) || !Array.isArray(data.studentProgress) || data.summary.results === 0) return <Card><CardContent className="p-6"><EmptyState icon={BarChart3} title="No analytics yet" description="Enter marks across exams and terms to see subject, teacher and learner progress analytics." /></CardContent></Card>;
 
   return (
     <Card>
