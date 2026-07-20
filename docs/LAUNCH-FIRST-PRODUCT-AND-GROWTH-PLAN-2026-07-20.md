@@ -125,6 +125,14 @@ If the answer is no, document the idea and defer it.
 - Changed three-column setup fields to stack on phones and return to three columns on larger screens.
 - Made the New Exam dialog a scroll-safe mobile bottom sheet.
 
+### Library, Reception and Inventory
+
+- Converted Library bulk import, add-book and physical-copy tracking dialogs into scroll-safe mobile sheets.
+- Made Reception Report-Card Day and shared reception forms fit dynamic phone heights and safe areas.
+- Changed the Report-Card Day columns so their divider follows the stacked mobile layout instead of cutting through it.
+- Converted Inventory item forms, stock editing, supplier, contract and procurement dialogs into scroll-safe mobile sheets.
+- Improved the Inventory detail drawer's mobile padding, safe area, border and scroll containment.
+
 This is an active route-by-route audit. A route is not marked complete merely because it inherits the shared CSS fixes.
 
 ## Current engineering order

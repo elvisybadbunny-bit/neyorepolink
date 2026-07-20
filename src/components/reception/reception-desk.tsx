@@ -464,8 +464,8 @@ function ReportCardDayModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-4xl overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between border-b border-navy-100 pb-3 dark:border-navy-800">
           <div>
             <h3 className="text-lg font-semibold text-navy-900 dark:text-navy-50 flex items-center gap-2">
@@ -481,7 +481,7 @@ function ReportCardDayModal({ onClose }: { onClose: () => void }) {
 
         <div className="grid gap-6 md:grid-cols-3">
           {/* Left Panel: Check-In Form */}
-          <div className="space-y-4 border-r border-navy-100 pr-6 dark:border-navy-800">
+          <div className="space-y-4 border-b border-navy-100 pb-5 dark:border-navy-800 md:border-b-0 md:border-r md:pb-0 md:pr-6">
             <p className="text-xs font-bold text-navy-800 dark:text-navy-100">Parent Check-In</p>
             
             <div className="space-y-1 relative">
@@ -633,8 +633,8 @@ function PersonSearch() {
 // ---- dialog shell ----------------------------------------------------------
 function Dialog({ title, onClose, children, footer }: { title: string; onClose: () => void; children: React.ReactNode; footer: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/40 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-card dark:bg-navy-900 sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-navy-900 dark:text-navy-50">{title}</h3>
           <button onClick={onClose} className="rounded-full p-1.5 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800"><X className="h-5 w-5" /></button>

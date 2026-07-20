@@ -278,8 +278,8 @@ const selectCls = "w-full rounded-2xl border border-navy-200 bg-white px-3.5 py-
 
 function Dialog({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <h3 className="text-base font-semibold text-navy-900 dark:text-navy-50">{title}</h3>
           <button onClick={onClose} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-4 w-4" /></button>
@@ -620,8 +620,8 @@ function SizesTab({ canManage }: { canManage: boolean }) {
       ))}
 
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={() => setEditing(null)}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setEditing(null)}>
+          <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-start justify-between">
               <h3 className="text-base font-semibold text-navy-900 dark:text-navy-50">Stock for size {editing.size}</h3>
               <button onClick={() => setEditing(null)} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-4 w-4" /></button>
@@ -672,7 +672,7 @@ function AssetDrawer({ asset, canManage, onClose, onChanged }: {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-navy-950/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="h-full w-full max-w-md overflow-y-auto bg-white p-6 shadow-pop dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+      <div className="h-full w-full max-w-md overflow-y-auto overscroll-contain border-l border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-pop dark:border-navy-700 dark:bg-navy-900 sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-start justify-between">
           <div>
             <h3 className="text-base font-semibold text-navy-900 dark:text-navy-50">{asset.name}</h3>
@@ -893,8 +893,8 @@ function SupplierDialog({ cats, saving, onSave, onClose }: {
   const [kraPin, setKraPin] = React.useState("");
   const [notes, setNotes] = React.useState("");
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <h3 className="text-base font-semibold text-navy-900 dark:text-navy-50">Add supplier</h3>
           <button onClick={onClose} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-4 w-4" /></button>
@@ -932,8 +932,8 @@ function ContractDialog({ supplier, saving, onSave, onClose }: {
   const [valueKes, setValueKes] = React.useState("");
   const [note, setNote] = React.useState("");
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <h3 className="text-base font-semibold text-navy-900 dark:text-navy-50">Contract — {supplier.name}</h3>
           <button onClick={onClose} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-4 w-4" /></button>
@@ -1122,8 +1122,8 @@ function ProcurementTab({ canManage, canApprove }: { canManage: boolean; canAppr
 
 function ProcDialogShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-card dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <h3 className="text-base font-semibold text-navy-900 dark:text-navy-50">{title}</h3>
           <button onClick={onClose} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-4 w-4" /></button>
