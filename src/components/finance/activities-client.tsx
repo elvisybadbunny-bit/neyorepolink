@@ -202,8 +202,8 @@ function CreateActivityDialog({ onClose, onDone }: { onClose: () => void; onDone
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-950/40 p-3 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="flex flex-col max-h-[88vh] w-full max-w-lg overflow-hidden rounded-3xl border border-navy-100 bg-white shadow-card dark:border-navy-800 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="flex max-h-[calc(100dvh-0.5rem)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-navy-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex shrink-0 items-center justify-between border-b border-navy-100 p-5 dark:border-navy-800">
           <h3 className="flex items-center gap-2 text-lg font-bold text-navy-900 dark:text-navy-50"><Plane className="h-5 w-5 text-green-600" /> New trip / activity</h3>
           <button onClick={onClose} className="rounded-full p-1.5 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-5 w-5" /></button>
@@ -211,7 +211,7 @@ function CreateActivityDialog({ onClose, onDone }: { onClose: () => void; onDone
         <div className="flex-1 overflow-y-auto p-5 space-y-3.5">
           <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Form 4 Mombasa Trip" className="rounded-xl" /></div>
           <div><Label>Description (optional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Includes bus, meals, entry fees" className="rounded-xl" /></div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div><Label>Amount (KES)</Label><Input type="number" min={1} value={amountKes} onChange={(e) => setAmountKes(e.target.value)} placeholder="3500" className="rounded-xl" /></div>
             <div><Label>Year</Label><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} className="rounded-xl" /></div>
             <div><Label>Term</Label><Input type="number" min={1} max={3} value={term} onChange={(e) => setTerm(e.target.value)} className="rounded-xl" /></div>
@@ -413,8 +413,8 @@ function PayActivityDialog({ row, activity, requiresBiometric, onClose, onDone }
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-2xl border border-navy-100 bg-white p-6 shadow-card dark:border-navy-800 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-navy-900 dark:text-navy-50">Record payment</h3>
           <button onClick={onClose} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-4 w-4" /></button>
@@ -471,8 +471,8 @@ function WaiveActivityDialog({ row, activityId, onClose, onDone }: { row: Roster
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-950/40 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-2xl border border-navy-100 bg-white p-6 shadow-card dark:border-navy-800 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-lg font-semibold text-navy-900 dark:text-navy-50"><AlertTriangle className="h-5 w-5 text-amber-600" /> Going, pay later</h3>
           <button onClick={onClose} className="rounded-full p-1 text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800" aria-label="Close"><X className="h-4 w-4" /></button>

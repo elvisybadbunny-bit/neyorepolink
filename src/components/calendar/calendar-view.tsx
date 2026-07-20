@@ -320,8 +320,8 @@ function SyncToPhoneButton() {
       </Button>
 
       {open && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-900/40 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-lg overflow-y-auto rounded-3xl border border-white/60 bg-white p-0 shadow-pop backdrop-blur-xl dark:border-white/10 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[60] flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setOpen(false)}>
+          <div className="max-h-[calc(100dvh-0.5rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-0 pb-[env(safe-area-inset-bottom)] shadow-pop dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-navy-100 p-5 dark:border-navy-800">
               <h3 className="flex items-center gap-2 text-lg font-semibold text-navy-900 dark:text-navy-50">
                 <Smartphone className="h-5 w-5 text-green-600" /> Sync with your phone
@@ -702,7 +702,7 @@ function EventDialog({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-card dark:bg-navy-900 sm:rounded-2xl"
+        className="max-h-[calc(100dvh-0.5rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-3xl border border-navy-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-card dark:border-navy-700 dark:bg-navy-900 sm:max-h-[90dvh] sm:rounded-2xl sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">

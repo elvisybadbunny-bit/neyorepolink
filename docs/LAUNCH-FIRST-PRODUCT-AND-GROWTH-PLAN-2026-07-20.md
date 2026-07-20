@@ -142,6 +142,14 @@ If the answer is no, document the idea and defer it.
 - Converted Cafeteria meal, stock and related operational dialogs into mobile-safe sheets.
 - Changed cramped three-column Cafeteria fields to stack on phones while preserving desktop density.
 
+### Messages, Calendar, Teacher Portal and Activities
+
+- Converted the message confirmation/composer overlay into a dynamic-height mobile sheet.
+- Made Calendar event details and New Event forms scroll safely within phone screens.
+- Converted Teacher Portal homework, class-note and cash-recording dialogs into mobile-safe sheets.
+- Converted trip/activity creation, payment and pay-later dialogs into safe-area-aware mobile sheets.
+- Changed cramped trip/activity three-column fields to stack on phones and retain their desktop layout.
+
 This is an active route-by-route audit. A route is not marked complete merely because it inherits the shared CSS fixes.
 
 ## Current engineering order
