@@ -40,6 +40,7 @@ import {
   COMMUNITY_SERVICE_LEARNING_SUBJECT,
 } from "@/lib/validations/pathways";
 import { getElectiveBlocksForSolver } from "@/lib/services/elective-block.service";
+import { seniorTimetableReadiness } from "@/lib/services/senior-timetable-readiness.service";
 
 export class TimetableEngineError extends Error {
   constructor(public code: "NOT_FOUND" | "INVALID" | "BUSY", message: string) {
@@ -519,6 +520,17 @@ function safeParse<T>(s: string, fallback: T): T {
 // ---------------------------------------------------------------------------
 
 export async function startGeneration(user: SessionUser) {
+  const seniorLevels = await withTenant(user.tenantId, async () => {
+    const classes = await tenantDb().schoolClass.findMany({ where: { archived: false }, select: { level: true } });
+    return [...new Set(classes.map((c) => c.level).filter((level) => /(?:Grade|Form)\s*(?:10|11|12)/i.test(level)))];
+  });
+  for (const level of seniorLevels) {
+    const readiness = await seniorTimetableReadiness(user, level);
+    if (!readiness.ready) {
+      const titles = readiness.blockers.slice(0, 4).map((finding) => finding.title).join("; ");
+      throw new TimetableEngineError("INVALID", `${level} is not ready for generation: ${titles}. Open Senior School Phase A for details.`);
+    }
+  }
   const job = await withTenant(user.tenantId, async () => {
     const tdb = tenantDb();
     const running = await tdb.timetableGenerationJob.findFirst({ where: { status: { in: ["QUEUED", "RUNNING"] } } });

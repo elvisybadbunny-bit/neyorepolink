@@ -4898,3 +4898,15 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Kept real NTSA workflow honest: school-entered inspection expiry and alerts, no claimed live API lookup.
 - [x] Ecosystem Trends blank tab now renders six honest signal areas linked to existing workspaces.
 - [x] Founder Operations refresh is a compact accessible icon button.
+
+### Senior School Timetable Phase A — deterministic readiness gate — 2026-07-20
+- [x] Added per-level readiness API and Smart Timetable card.
+- [x] Blocks generation inputs when active learners lack confirmed choices or exactly three distinct electives.
+- [x] Checks active subject records and qualified TeacherSubject links.
+- [x] Checks pathway allocation and flags cross-pathway combinations for human review rather than changing choices.
+- [x] Checks Core/Essential Mathematics availability for allocated pathway groups.
+- [x] Calculates 40 effective learner periods correctly: parallel elective offerings count as 3 × 5, not every subject offered.
+- [x] Checks core/support single-lesson rule, 8 × 40 routine, reviewed bell/break/lunch routine and Saturday local-rule warning.
+- [x] Shows affected learner names in authorised expandable findings.
+- [x] No AI/Bundi/provider call; same stored inputs produce the same readiness result.
+- [ ] Phase B three-block conflict graph remains next; Phase A readiness is not timetable approval.

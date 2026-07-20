@@ -19,6 +19,7 @@ import { db } from "@/lib/db";
 import { withTenant } from "@/lib/core/tenant-context";
 import { tenantDb } from "@/lib/core/tenant-db";
 import { createInApp } from "@/lib/services/notification.service";
+import { seniorTimetableReadiness } from "@/lib/services/senior-timetable-readiness.service";
 import type { SessionUser } from "@/lib/core/session";
 
 export class TimetableSolverError extends Error {
@@ -592,6 +593,19 @@ export async function generateWholeSchoolTimetable(user: SessionUser) {
     const inputs = await getTimetableInputs(user);
     const classes = inputs.classes;
     if (classes.length === 0) throw new TimetableSolverError("NOT_FOUND", "No active classes found.");
+
+    // Senior School Phase A is a real server-side gate, not merely a UI
+    // checklist. Deterministically refuse generation while confirmed choices,
+    // teachers, Mathematics variants, weekly totals or schedule rules are
+    // incomplete. No AI/provider call is involved.
+    const seniorLevels = [...new Set(classes.map((c) => c.level).filter((level) => /(?:Grade|Form)\s*(?:10|11|12)/i.test(level)))];
+    for (const level of seniorLevels) {
+      const readiness = await seniorTimetableReadiness(user, level);
+      if (!readiness.ready) {
+        const titles = readiness.blockers.slice(0, 4).map((finding) => finding.title).join("; ");
+        throw new TimetableSolverError("CONFLICT", `${level} is not ready for timetable generation: ${titles}. Open Senior School Phase A for the affected learners and details.`);
+      }
+    }
 
     // 2) Prepare the scheduler structures.
     // P.5 — Saturday is folded in per-class (not hardcoded to Mon-Fri only),

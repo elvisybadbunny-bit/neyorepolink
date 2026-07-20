@@ -34,6 +34,7 @@ import { BundiIntelligentWizard } from "@/components/bundi/bundi-intelligent-wiz
 import { KnecCandidateStudio } from "@/components/academics/knec-candidate-studio";
 import { MoeReturnsClientTab } from "@/components/academics/moe-returns-client-tab";
 import { RecordOfWorkClientTab } from "@/components/academics/record-of-work-client-tab";
+import { SeniorReadinessCard } from "@/components/academics/senior-readiness-card";
 import { DisciplineSuite } from "@/components/extensions-v2/discipline-suite";
 import { TextbookFineSuite } from "@/components/extensions-v2/textbook-fine-suite";
 import { V2HeroCard } from "@/components/ui/v2/v2-hero-card";
@@ -3281,6 +3282,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       </div>
 
       {schoolLevelActivation?.isSeniorSchool && (
+        <SeniorReadinessCard classes={classes} />
         <KicdSeniorTemplateCard canManage={canManage} classes={classes} subjects={subjects} onApplied={load} />
       )}
 
