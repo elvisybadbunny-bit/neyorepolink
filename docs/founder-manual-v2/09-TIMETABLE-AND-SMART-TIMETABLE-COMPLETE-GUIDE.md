@@ -524,3 +524,11 @@ The auto-build sheet now opens as a bottom sheet on phones, uses the dynamic vie
 ## Lunch display immediately after the selected period
 
 A configured “Lunch after Period N” is rendered as a separate non-lesson row/column after that period, not as a fake subject card. The timetable now falls back to the saved class configuration immediately, even before regeneration creates legacy lunch reservation rows, and filters any such legacy `LUNCH` subject from lesson cells. Period clock calculations include the normal lesson duration first and then the lunch duration, so “after Period 6” no longer replaces Period 6's displayed time.
+
+## Assembly, a second short break and class-specific Saturday times
+
+Schedule Rules now supports an optional **Before-lesson activity** and duration (for example Assembly, Form Time or Morning Briefing). The school-day start is the activity start; Period 1 begins after its duration. A separate blue assembly row appears before Period 1 in screen and print timetable views. Set duration to 0 to disable it.
+
+A real optional **Second Short Break After Period** and duration is now visible alongside the existing first short break, long break and lunch. Clearing its period disables it.
+
+Saturday has a separate, clearly labelled start/end section. Those values affect Saturday independently of Monday–Friday. If different classes use different Saturday hours, first choose **Edit only [stream]** at the top of Schedule Rules, then save that class's Saturday start/end. Grade, group and whole-school scopes remain available only when the school deliberately wants shared rules.

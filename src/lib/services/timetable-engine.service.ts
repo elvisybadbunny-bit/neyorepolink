@@ -133,10 +133,10 @@ function resolveLunchPeriod(cfg: { lunchAfterPeriod?: number | null; lunchShift?
 // the other in a client component; keeping the exact same real formula in
 // both places is the actual contract, verified by the shared migration-
 // safe fallback defaults, and by direct comparison in code review.
-function realPeriodStartMinutes(p: number, cfg: { schoolDayStartTime?: string | null; lessonDurationMins?: number | null; shortBreakStart?: number | null; shortBreakMins?: number | null; shortBreak2Start?: number | null; shortBreak2Mins?: number | null; longBreakStart?: number | null; longBreakMins?: number | null; lunchAfterPeriod?: number | null; lunchShift?: number | null; lunchMins?: number | null } | undefined | null): number {
+function realPeriodStartMinutes(p: number, cfg: { schoolDayStartTime?: string | null; assemblyBeforeLessonsMins?: number | null; lessonDurationMins?: number | null; shortBreakStart?: number | null; shortBreakMins?: number | null; shortBreak2Start?: number | null; shortBreak2Mins?: number | null; longBreakStart?: number | null; longBreakMins?: number | null; lunchAfterPeriod?: number | null; lunchShift?: number | null; lunchMins?: number | null } | undefined | null): number {
   const raw = cfg?.schoolDayStartTime;
   const [h, m] = /^\d{2}:\d{2}$/.test(raw ?? "") ? raw!.split(":").map(Number) : [8, 0];
-  const startTotal = h * 60 + m;
+  const startTotal = h * 60 + m + Math.max(0, cfg?.assemblyBeforeLessonsMins ?? 0);
   const duration = cfg?.lessonDurationMins ?? DEFAULT_LESSON_DURATION_MINS;
   const shortBreakStart = cfg?.shortBreakStart ?? 0;
   const shortBreakMins = cfg?.shortBreakMins ?? 0;

@@ -134,6 +134,8 @@ export async function saveTimetableConfig(
     coCurricularCount: number;
     coCurricularName: string;
     schoolDayStartTime?: string;
+    assemblyBeforeLessonsLabel?: string | null;
+    assemblyBeforeLessonsMins?: number;
     saturdayStartTime?: string;
     saturdayEndTime?: string;
     lessonDurationMins?: number;
@@ -169,6 +171,8 @@ export async function saveTimetableConfig(
         coCurricularCount: input.coCurricularCount,
         coCurricularName: input.coCurricularName,
         schoolDayStartTime: input.schoolDayStartTime ?? "08:00",
+        assemblyBeforeLessonsLabel: input.assemblyBeforeLessonsLabel?.trim() || null,
+        assemblyBeforeLessonsMins: Math.max(0, Math.min(180, input.assemblyBeforeLessonsMins ?? 0)),
         saturdayStartTime: input.saturdayStartTime ?? "08:00",
         saturdayEndTime: input.saturdayEndTime ?? "12:40",
         lessonDurationMins: input.lessonDurationMins ?? 40,
@@ -192,6 +196,8 @@ export async function saveTimetableConfig(
         coCurricularCount: input.coCurricularCount,
         coCurricularName: input.coCurricularName,
         schoolDayStartTime: input.schoolDayStartTime ?? "08:00",
+        assemblyBeforeLessonsLabel: input.assemblyBeforeLessonsLabel?.trim() || null,
+        assemblyBeforeLessonsMins: Math.max(0, Math.min(180, input.assemblyBeforeLessonsMins ?? 0)),
         saturdayStartTime: input.saturdayStartTime ?? "08:00",
         saturdayEndTime: input.saturdayEndTime ?? "12:40",
         lessonDurationMins: input.lessonDurationMins ?? 40,
@@ -238,7 +244,7 @@ export async function saveTimetableConfig(
  */
 const TIMETABLE_CONFIG_COMPARABLE_FIELDS = [
   "periodsPerDay", "freePeriodsPerWeek", "coCurricularCount", "coCurricularName",
-  "schoolDayStartTime", "saturdayStartTime", "saturdayEndTime", "lessonDurationMins",
+  "schoolDayStartTime", "assemblyBeforeLessonsLabel", "assemblyBeforeLessonsMins", "saturdayStartTime", "saturdayEndTime", "lessonDurationMins",
   "shortBreakStart", "shortBreakMins", "shortBreak2Start", "shortBreak2Mins",
   "longBreakStart", "longBreakMins", "lunchStart", "lunchMins",
   "hasRemedials", "hasPreps", "lunchShift", "hasSaturday", "lunchAfterPeriod",

@@ -674,7 +674,8 @@ function parseTimeToMinutes(value?: string | null, fallback = "08:00") {
 }
 
 function timetablePeriodStartMinutes(p: number, config: any, dayOfWeek?: number, realLunchPeriods?: Set<number>): number {
-  const startTotal = parseTimeToMinutes(dayOfWeek === 6 ? config?.saturdayStartTime : config?.schoolDayStartTime, "08:00");
+  const dayStart = parseTimeToMinutes(dayOfWeek === 6 ? config?.saturdayStartTime : config?.schoolDayStartTime, "08:00");
+  const startTotal = dayStart + Math.max(0, config?.assemblyBeforeLessonsMins ?? 0);
   const duration = config?.lessonDurationMins ?? 40;
   const shortBreakStart = config?.shortBreakStart ?? 2;
   const shortBreakMins = config?.shortBreakMins ?? 15;
@@ -707,6 +708,13 @@ function timetableNonLessonTimeRange(afterPeriod: number, minutes: number, confi
   const startTotal = timetablePeriodStartMinutes(afterPeriod, config, undefined, realLunchPeriods) + (isRealLunch ? config?.lunchMins ?? 60 : config?.lessonDurationMins ?? 40);
   const endTotal = startTotal + minutes;
   return `${formatTimetableTime(startTotal)} - ${formatTimetableTime(endTotal)}`;
+}
+
+function preLessonAssembly(config: any) {
+  const minutes = Math.max(0, Number(config?.assemblyBeforeLessonsMins ?? 0));
+  if (!minutes) return null;
+  const start = parseTimeToMinutes(config?.schoolDayStartTime, "08:00");
+  return { label: config?.assemblyBeforeLessonsLabel?.trim() || "Assembly / Form Time", minutes, timeRange: `${formatTimetableTime(start)} - ${formatTimetableTime(start + minutes)}` };
 }
 
 function nonLessonRowsForPeriod(p: number, config: any, realLunchPeriods?: Set<number>) {
@@ -903,6 +911,7 @@ function TimetablePrintBundleView({ bundle, tenantName, tenantLogoUrl }: { bundl
                 </tr>
               </thead>
               <tbody>
+                {preLessonAssembly(group.config) && <tr className="bg-blue-50"><td className="border border-navy-200 p-1 text-center font-black uppercase">Start</td><td colSpan={days.length} className="border border-navy-200 p-1 text-center font-black uppercase tracking-widest">{preLessonAssembly(group.config)!.label} · {preLessonAssembly(group.config)!.timeRange} · {preLessonAssembly(group.config)!.minutes} mins</td></tr>}
                 {Array.from({ length: group.config.periodsPerDay || 8 }, (_, i) => i + 1).flatMap((p) => {
                   const lessonRow = (
                     <tr key={`${group.id}-${p}`}>
@@ -1179,6 +1188,7 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
                   </tr>
                 </thead>
                 <tbody>
+                  {preLessonAssembly(config) && <tr className="bg-blue-50/80 dark:bg-blue-950/20"><td className="border-b border-navy-100 p-2 text-center font-black text-blue-800 dark:border-navy-800 dark:text-blue-200">Start</td><td colSpan={daysList.length} className="border-b border-navy-100 p-2 text-center font-black uppercase tracking-widest text-blue-800 dark:border-navy-800 dark:text-blue-200">{preLessonAssembly(config)!.label} · {preLessonAssembly(config)!.timeRange} · {preLessonAssembly(config)!.minutes} mins</td></tr>}
                   {Array.from({ length: config?.periodsPerDay || 8 }, (_, i) => i + 1).flatMap((p) => {
                     const lessonRow = (
                       <tr key={`period-${p}`}>
@@ -4432,11 +4442,15 @@ function buildConfigFormState(cfg: any | null) {
     coCurricularCount: cfg?.coCurricularCount ?? 2,
     coCurricularName: cfg?.coCurricularName ?? "Games",
     schoolDayStartTime: cfg?.schoolDayStartTime ?? "08:00",
+    assemblyBeforeLessonsLabel: cfg?.assemblyBeforeLessonsLabel ?? "",
+    assemblyBeforeLessonsMins: cfg?.assemblyBeforeLessonsMins ?? 0,
     saturdayStartTime: cfg?.saturdayStartTime ?? "08:00",
     saturdayEndTime: cfg?.saturdayEndTime ?? "12:40",
     lessonDurationMins: cfg?.lessonDurationMins ?? 40,
     shortBreakStart: cfg?.shortBreakStart ?? 2,
     shortBreakMins: cfg?.shortBreakMins ?? 15,
+    shortBreak2Start: cfg?.shortBreak2Start ?? null,
+    shortBreak2Mins: cfg?.shortBreak2Mins ?? null,
     longBreakStart: cfg?.longBreakStart ?? 4,
     longBreakMins: cfg?.longBreakMins ?? 30,
     lunchStart: cfg?.lunchStart ?? 6,
@@ -4647,19 +4661,23 @@ function ClassConfigModal({ classId, classes, currentConfig, onClose, onSaved }:
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 rounded-2xl border border-green-100 bg-green-50/40 p-3 dark:border-green-900/40 dark:bg-green-950/10">
-          <div>
-            <Label htmlFor="cfg-start">Normal day starts</Label>
-            <Input id="cfg-start" type="time" value={f.schoolDayStartTime} onChange={(e) => set("schoolDayStartTime", e.target.value)} />
+        <div className="space-y-3 rounded-2xl border border-green-100 bg-green-50/40 p-3 dark:border-green-900/40 dark:bg-green-950/10">
+          <p className="text-xs font-bold text-green-900 dark:text-green-200">Normal weekday opening</p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div><Label htmlFor="cfg-start">School day / assembly starts</Label><Input id="cfg-start" type="time" value={f.schoolDayStartTime} onChange={(e) => set("schoolDayStartTime", e.target.value)} /></div>
+            <div><Label>Before-lesson activity</Label><Input value={f.assemblyBeforeLessonsLabel} onChange={(e) => set("assemblyBeforeLessonsLabel", e.target.value)} placeholder="Assembly / Form time" /></div>
+            <div><Label>Before-lesson minutes</Label><Input type="number" min={0} max={180} value={f.assemblyBeforeLessonsMins} onChange={(e) => set("assemblyBeforeLessonsMins", Number(e.target.value))} /></div>
           </div>
-          <div>
-            <Label htmlFor="cfg-sat-start">Saturday starts</Label>
-            <Input id="cfg-sat-start" type="time" value={f.saturdayStartTime} onChange={(e) => set("saturdayStartTime", e.target.value)} />
+          <p className="text-[10px] text-green-800 dark:text-green-300">Set 0 minutes to disable. Period 1 begins after this activity; no teacher lesson is assigned inside it.</p>
+        </div>
+
+        <div className="space-y-3 rounded-2xl border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900/40 dark:bg-blue-950/10">
+          <p className="text-xs font-bold text-blue-900 dark:text-blue-200">Saturday schedule for this selected scope</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div><Label htmlFor="cfg-sat-start">Saturday starts</Label><Input id="cfg-sat-start" type="time" value={f.saturdayStartTime} onChange={(e) => set("saturdayStartTime", e.target.value)} /></div>
+            <div><Label htmlFor="cfg-sat-end">Saturday ends</Label><Input id="cfg-sat-end" type="time" value={f.saturdayEndTime} onChange={(e) => set("saturdayEndTime", e.target.value)} /></div>
           </div>
-          <div>
-            <Label htmlFor="cfg-sat-end">Saturday ends</Label>
-            <Input id="cfg-sat-end" type="time" value={f.saturdayEndTime} onChange={(e) => set("saturdayEndTime", e.target.value)} />
-          </div>
+          <p className="text-[10px] text-blue-800 dark:text-blue-300">Choose “Edit only this stream” above when Saturday times differ by class. These times do not change Monday–Friday.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -4705,6 +4723,10 @@ function ClassConfigModal({ classId, classes, currentConfig, onClose, onSaved }:
               <Label className="text-[10px]">Short Break (mins)</Label>
               <Input type="number" value={f.shortBreakMins} onChange={(e) => set("shortBreakMins", Number(e.target.value))} />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-navy-100 p-2 dark:border-navy-800">
+            <div><Label className="text-[10px]">Second Short Break After Period (optional)</Label><Input type="number" min={1} max={20} value={f.shortBreak2Start ?? ""} onChange={(e) => set("shortBreak2Start", e.target.value ? Number(e.target.value) : null)} placeholder="e.g. 7" /></div>
+            <div><Label className="text-[10px]">Second Short Break (mins)</Label><Input type="number" min={1} max={60} value={f.shortBreak2Mins ?? ""} onChange={(e) => set("shortBreak2Mins", e.target.value ? Number(e.target.value) : null)} placeholder="10" /></div>
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div>

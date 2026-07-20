@@ -5838,7 +5838,9 @@ model TimetableConfig {
   freePeriodsPerWeek Int     @default(4)
   coCurricularCount  Int     @default(2)
   coCurricularName   String  @default("Games")
-  schoolDayStartTime String  @default("08:00") // HH:MM — school chooses when normal lessons start
+  schoolDayStartTime String  @default("08:00") // HH:MM — school day/assembly start
+  assemblyBeforeLessonsLabel String? // Optional assembly/advisory before Period 1
+  assemblyBeforeLessonsMins  Int     @default(0)
   saturdayStartTime  String  @default("08:00") // HH:MM — Saturday/remedial/prep start
   saturdayEndTime    String  @default("12:40") // HH:MM — Saturday short-day end
   lessonDurationMins Int     @default(40)
