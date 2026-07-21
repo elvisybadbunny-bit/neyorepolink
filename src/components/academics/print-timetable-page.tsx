@@ -25,7 +25,7 @@ interface RealSlot {
   slotType?: string;
 }
 
-interface RealConfig {
+export interface RealConfig {
   periodsPerDay?: number;
   saturdayPeriodsCount?: number;
   hasSaturday?: boolean;
@@ -39,7 +39,7 @@ interface RealConfig {
   longBreakStart?: number;
   longBreakMins?: number;
   lunchStart?: number;
-  lunchAfterPeriod?: number;
+  lunchAfterPeriod?: number | null;
   lunchMins?: number;
 }
 
@@ -55,7 +55,11 @@ const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
  * Detects which periods are school-wide non-lesson gaps or activities (`BREAK`, `LUNCH`, `ASSEMBLY`, `PREP`, `GAMES`).
  * These columns get merged vertically across all days (`rowSpan={daysCount}`). Ordinary academic lessons (`PHY`) never merge vertically.
  */
-function getMergedNonLessonPeriods(slots: RealSlot[], daysCount: number, config: RealConfig | null | undefined): Map<number, MergedNonLessonCol> {
+function getMergedNonLessonPeriods(
+  slots: RealSlot[],
+  daysCount: number,
+  config: RealConfig | null | undefined,
+): Map<number, MergedNonLessonCol> {
   const map = new Map<number, MergedNonLessonCol>();
   const slotsByPeriod = new Map<number, RealSlot[]>();
 
@@ -69,23 +73,43 @@ function getMergedNonLessonPeriods(slots: RealSlot[], daysCount: number, config:
   // consumes/replaces a numbered teaching period in vertical-days print.
   for (const [p, pSlots] of slotsByPeriod.entries()) {
     if (pSlots.length === 0) continue;
-    const nonLessonKeywords = ["LUNCH", "BREAK", "SHORT BREAK", "LONG BREAK", "TEA", "TEA BREAK", "SNACK", "ASSEMBLY", "PREP", "GAMES", "RECESS"];
-    
+    const nonLessonKeywords = [
+      "LUNCH",
+      "BREAK",
+      "SHORT BREAK",
+      "LONG BREAK",
+      "TEA",
+      "TEA BREAK",
+      "SNACK",
+      "ASSEMBLY",
+      "PREP",
+      "GAMES",
+      "RECESS",
+    ];
+
     // Check if slots at period p across days are non-lesson
     const nonLessonCount = pSlots.filter((s) => {
       const code = (s.subjectCode || "").trim().toUpperCase();
       const name = (s.subjectName || "").trim().toUpperCase();
       const st = (s.slotType || "").trim().toUpperCase();
-      return nonLessonKeywords.some((k) => code === k || name.includes(k) || st === k);
+      return nonLessonKeywords.some(
+        (k) => code === k || name.includes(k) || st === k,
+      );
     }).length;
 
     // If all or majority of active slots at period p are non-lesson -> merge vertically
-    if (nonLessonCount > 0 && nonLessonCount >= Math.min(pSlots.length, Math.max(1, daysCount - 1))) {
-      const first = pSlots.find((s) => {
-        const c = (s.subjectCode || s.subjectName || "").trim().toUpperCase();
-        return nonLessonKeywords.some((k) => c.includes(k));
-      }) || pSlots[0];
-      const code = (first.subjectCode || first.subjectName || "BREAK").trim().toUpperCase();
+    if (
+      nonLessonCount > 0 &&
+      nonLessonCount >= Math.min(pSlots.length, Math.max(1, daysCount - 1))
+    ) {
+      const first =
+        pSlots.find((s) => {
+          const c = (s.subjectCode || s.subjectName || "").trim().toUpperCase();
+          return nonLessonKeywords.some((k) => c.includes(k));
+        }) || pSlots[0];
+      const code = (first.subjectCode || first.subjectName || "BREAK")
+        .trim()
+        .toUpperCase();
       const isLunch = code.includes("LUNCH");
       if (!isLunch) map.set(p, { period: p, label: code, tone: "break" });
     }
@@ -102,7 +126,7 @@ function computeDoubleSpanSecondHalvesForPrint(
   grid: Map<string, RealSlot>,
   periodsPerDay: number,
   mode: "classes" | "teachers" | undefined,
-  mergedNonLessonMap: Map<number, MergedNonLessonCol>
+  mergedNonLessonMap: Map<number, MergedNonLessonCol>,
 ): Set<string> {
   const secondHalves = new Set<string>();
   for (let d = 1; d <= 6; d++) {
@@ -111,10 +135,15 @@ function computeDoubleSpanSecondHalvesForPrint(
       const a = grid.get(`${d}|${p}`);
       const b = grid.get(`${d}|${p + 1}`);
       if (!a || !b) continue;
-      if (a.slotType === "ELECTIVE_BLOCK" || b.slotType === "ELECTIVE_BLOCK") continue;
-      
-      const aSubject = (a.subjectCode || a.subjectName || "").trim().toUpperCase();
-      const bSubject = (b.subjectCode || b.subjectName || "").trim().toUpperCase();
+      if (a.slotType === "ELECTIVE_BLOCK" || b.slotType === "ELECTIVE_BLOCK")
+        continue;
+
+      const aSubject = (a.subjectCode || a.subjectName || "")
+        .trim()
+        .toUpperCase();
+      const bSubject = (b.subjectCode || b.subjectName || "")
+        .trim()
+        .toUpperCase();
       if (!aSubject || aSubject !== bSubject) continue;
 
       if (mode === "teachers") {
@@ -122,16 +151,28 @@ function computeDoubleSpanSecondHalvesForPrint(
         const bClass = (b.className || "").trim().toUpperCase();
         if (!aClass || aClass !== bClass) continue;
       } else if (mode === "classes") {
-        const aTeacher = (a.teacherShortCode || a.teacherName || "").trim().toUpperCase();
-        const bTeacher = (b.teacherShortCode || b.teacherName || "").trim().toUpperCase();
+        const aTeacher = (a.teacherShortCode || a.teacherName || "")
+          .trim()
+          .toUpperCase();
+        const bTeacher = (b.teacherShortCode || b.teacherName || "")
+          .trim()
+          .toUpperCase();
         if (!aTeacher || aTeacher !== bTeacher) continue;
       } else {
         // Both check
         const aClass = (a.className || "").trim().toUpperCase();
         const bClass = (b.className || "").trim().toUpperCase();
-        const aTeacher = (a.teacherShortCode || a.teacherName || "").trim().toUpperCase();
-        const bTeacher = (b.teacherShortCode || b.teacherName || "").trim().toUpperCase();
-        if ((aClass && bClass && aClass !== bClass) || (aTeacher && bTeacher && aTeacher !== bTeacher)) continue;
+        const aTeacher = (a.teacherShortCode || a.teacherName || "")
+          .trim()
+          .toUpperCase();
+        const bTeacher = (b.teacherShortCode || b.teacherName || "")
+          .trim()
+          .toUpperCase();
+        if (
+          (aClass && bClass && aClass !== bClass) ||
+          (aTeacher && bTeacher && aTeacher !== bTeacher)
+        )
+          continue;
       }
 
       secondHalves.add(`${d}|${p + 1}`);
@@ -155,22 +196,34 @@ function formatTimetableTime(totalMinutes: number): string {
   return `${h12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-function periodStartMinutes(p: number, config: RealConfig | null | undefined, mergedNonLessonMap: Map<number, MergedNonLessonCol>): number | null {
+function periodStartMinutes(
+  p: number,
+  config: RealConfig | null | undefined,
+  mergedNonLessonMap: Map<number, MergedNonLessonCol>,
+): number | null {
   const dayStart = parseTimeToMinutes(config?.schoolDayStartTime) ?? 480;
   const lessonMins = config?.lessonDurationMins ?? 40;
   const lunchMins = config?.lunchMins ?? 45;
   let elapsed = dayStart;
   for (let i = 1; i < p; i++) {
     elapsed += lessonMins;
-    if (i === (config?.lunchAfterPeriod ?? config?.lunchStart) && lunchMins > 0) elapsed += lunchMins;
-    if (config?.shortBreakStart === i && (config?.shortBreakMins ?? 0) > 0) elapsed += config!.shortBreakMins!;
-    if (config?.shortBreak2Start === i && (config?.shortBreak2Mins ?? 0) > 0) elapsed += config!.shortBreak2Mins!;
-    if (config?.longBreakStart === i && (config?.longBreakMins ?? 0) > 0) elapsed += config!.longBreakMins!;
+    if (i === (config?.lunchAfterPeriod ?? config?.lunchStart) && lunchMins > 0)
+      elapsed += lunchMins;
+    if (config?.shortBreakStart === i && (config?.shortBreakMins ?? 0) > 0)
+      elapsed += config!.shortBreakMins!;
+    if (config?.shortBreak2Start === i && (config?.shortBreak2Mins ?? 0) > 0)
+      elapsed += config!.shortBreak2Mins!;
+    if (config?.longBreakStart === i && (config?.longBreakMins ?? 0) > 0)
+      elapsed += config!.longBreakMins!;
   }
   return elapsed;
 }
 
-function periodTimeRange(p: number, config: RealConfig | null | undefined, mergedNonLessonMap: Map<number, MergedNonLessonCol>): string | null {
+function periodTimeRange(
+  p: number,
+  config: RealConfig | null | undefined,
+  mergedNonLessonMap: Map<number, MergedNonLessonCol>,
+): string | null {
   const start = periodStartMinutes(p, config, mergedNonLessonMap);
   if (start == null) return null;
   const duration = config?.lessonDurationMins ?? 40;
@@ -184,19 +237,45 @@ interface NonLessonBreakRow {
   tone: "break" | "lunch";
 }
 
-function nonLessonBreakRowsForPeriod(p: number, config: RealConfig | null | undefined): NonLessonBreakRow[] {
+function nonLessonBreakRowsForPeriod(
+  p: number,
+  config: RealConfig | null | undefined,
+): NonLessonBreakRow[] {
   const rows: NonLessonBreakRow[] = [];
   if (config?.shortBreakStart === p && (config?.shortBreakMins ?? 0) > 0) {
-    rows.push({ key: `short-${p}`, label: "SHORT BREAK", minutes: config!.shortBreakMins!, tone: "break" });
+    rows.push({
+      key: `short-${p}`,
+      label: "SHORT BREAK",
+      minutes: config!.shortBreakMins!,
+      tone: "break",
+    });
   }
   if (config?.shortBreak2Start === p && (config?.shortBreak2Mins ?? 0) > 0) {
-    rows.push({ key: `short2-${p}`, label: "SHORT BREAK", minutes: config!.shortBreak2Mins!, tone: "break" });
+    rows.push({
+      key: `short2-${p}`,
+      label: "SHORT BREAK",
+      minutes: config!.shortBreak2Mins!,
+      tone: "break",
+    });
   }
   if (config?.longBreakStart === p && (config?.longBreakMins ?? 0) > 0) {
-    rows.push({ key: `long-${p}`, label: "LONG BREAK", minutes: config!.longBreakMins!, tone: "break" });
+    rows.push({
+      key: `long-${p}`,
+      label: "LONG BREAK",
+      minutes: config!.longBreakMins!,
+      tone: "break",
+    });
   }
-  if (p === (config?.lunchAfterPeriod ?? config?.lunchStart) && (config?.lunchMins ?? 0) > 0) {
-    rows.push({ key: `lunch-${p}`, label: "LUNCH", minutes: config!.lunchMins!, tone: "lunch" });
+  if (
+    p === (config?.lunchAfterPeriod ?? config?.lunchStart) &&
+    (config?.lunchMins ?? 0) > 0
+  ) {
+    rows.push({
+      key: `lunch-${p}`,
+      label: "LUNCH",
+      minutes: config!.lunchMins!,
+      tone: "lunch",
+    });
   }
   return rows;
 }
@@ -230,7 +309,11 @@ function hashStringToIndex(value: string, mod: number): number {
   return hash % mod;
 }
 
-function subjectColorFor(code: string | null | undefined, name: string | null | undefined, bandW: boolean): { bg: string; text: string } | null {
+function subjectColorFor(
+  code: string | null | undefined,
+  name: string | null | undefined,
+  bandW: boolean,
+): { bg: string; text: string } | null {
   if (bandW) return null;
   const key = (code || name || "").trim().toUpperCase();
   if (!key) return null;
@@ -257,26 +340,51 @@ function Cell({
   const subjText = subjectAbbrev(slot.subjectName, slot.subjectCode);
   const classText = slot.className ?? "";
   const venueCode = slot.venue ?? "";
-  const teacherCode = mode === "teachers" ? "" : slot.teacherShortCode ?? slot.teacherName ?? "";
-  const color = (slot as any).colorHex || (slot as any).color || subjectColorFor(slot.subjectCode, slot.subjectName, bandW);
+  const teacherCode =
+    mode === "teachers"
+      ? ""
+      : (slot.teacherShortCode ?? slot.teacherName ?? "");
+  const color =
+    (slot as any).colorHex ||
+    (slot as any).color ||
+    subjectColorFor(slot.subjectCode, slot.subjectName, bandW);
 
   return (
     <div
       className={`ptt-cell${bandW ? " ptt-cell-bw" : ""}`}
-      style={color && typeof color === "object" ? { background: color.bg, color: color.text } : typeof color === "string" ? { background: color, color: "#0f172a" } : undefined}
+      style={
+        color && typeof color === "object"
+          ? { background: color.bg, color: color.text }
+          : typeof color === "string"
+            ? { background: color, color: "#0f172a" }
+            : undefined
+      }
     >
-      <div className="ptt-cell-main" style={{ fontSize: `${Math.round(fontSize * 1.35)}px` }}>
+      <div
+        className="ptt-cell-main"
+        style={{ fontSize: `${Math.round(fontSize * 1.35)}px` }}
+      >
         {mode === "teachers" ? (
           <>
-            {subjText && <span className="block font-black leading-tight">{subjText}</span>}
-            {classText && <span className="block font-bold text-[72%] mt-0.5 leading-tight opacity-90">{classText}</span>}
+            {subjText && (
+              <span className="block font-black leading-tight">{subjText}</span>
+            )}
+            {classText && (
+              <span className="block font-bold text-[72%] mt-0.5 leading-tight opacity-90">
+                {classText}
+              </span>
+            )}
           </>
         ) : (
           <>
-            {subjText && <span className="block font-black leading-tight">{subjText}</span>}
+            {subjText && (
+              <span className="block font-black leading-tight">{subjText}</span>
+            )}
           </>
         )}
-        {isDoubleMerged && <span className="ptt-cell-double-badge">DOUBLE</span>}
+        {isDoubleMerged && (
+          <span className="ptt-cell-double-badge">DOUBLE</span>
+        )}
       </div>
       <div className="ptt-cell-footer">
         <span className="ptt-cell-venue">{venueCode}</span>
@@ -319,13 +427,27 @@ export function PrintTimetablePage({
     grid.set(`${s.dayOfWeek}|${s.period}`, s);
   }
 
-  const hasSaturday = config?.hasSaturday !== false && slots.some((s) => s.dayOfWeek === 6);
+  const hasSaturday =
+    config?.hasSaturday !== false && slots.some((s) => s.dayOfWeek === 6);
   const days = hasSaturday ? DAY_NAMES : DAY_NAMES.slice(0, 5);
-  const periodsPerDay = config?.periodsPerDay || Math.max(1, ...slots.map((s) => s.period));
+  const periodsPerDay =
+    config?.periodsPerDay || Math.max(1, ...slots.map((s) => s.period));
   const periods = Array.from({ length: periodsPerDay }, (_, i) => i + 1);
 
-  const mergedNonLessonMap = React.useMemo(() => getMergedNonLessonPeriods(slots, days.length, config), [slots, days.length, config]);
-  const doubleSecondHalves = React.useMemo(() => computeDoubleSpanSecondHalvesForPrint(grid, periodsPerDay, mode, mergedNonLessonMap), [grid, periodsPerDay, mode, mergedNonLessonMap]);
+  const mergedNonLessonMap = React.useMemo(
+    () => getMergedNonLessonPeriods(slots, days.length, config),
+    [slots, days.length, config],
+  );
+  const doubleSecondHalves = React.useMemo(
+    () =>
+      computeDoubleSpanSecondHalvesForPrint(
+        grid,
+        periodsPerDay,
+        mode,
+        mergedNonLessonMap,
+      ),
+    [grid, periodsPerDay, mode, mergedNonLessonMap],
+  );
 
   // Strip out "Teacher timetable" per founder rule: only display code e.g. "AR"
   const cleanSubtitle = (subtitle || "")
@@ -335,18 +457,17 @@ export function PrintTimetablePage({
     .trim();
 
   return (
-    <div className={`ptt-page ${daysVertical ? "ptt-landscape" : "ptt-portrait"}${bandW ? " ptt-bw" : ""}`}>
+    <div
+      className={`ptt-page ${daysVertical ? "ptt-landscape" : "ptt-portrait"}${bandW ? " ptt-bw" : ""}`}
+    >
       <div className="ptt-header">
         <div className="ptt-header-top-school">
-          RATIBA YA {(tenantName || "NEYO SECONDARY SCHOOL").toUpperCase()} MWAKA {new Date().getFullYear()}
+          RATIBA YA {(tenantName || "NEYO SECONDARY SCHOOL").toUpperCase()}{" "}
+          MWAKA {new Date().getFullYear()}
         </div>
-        <div className="ptt-header-title">
-          {title.toUpperCase()}
-        </div>
+        <div className="ptt-header-title">{title.toUpperCase()}</div>
         {cleanSubtitle && (
-          <div className="ptt-table-badge">
-            {cleanSubtitle}
-          </div>
+          <div className="ptt-table-badge">{cleanSubtitle}</div>
         )}
       </div>
 
@@ -365,10 +486,15 @@ export function PrintTimetablePage({
               const mergedCol = mergedNonLessonMap.get(p);
               if (mergedCol) {
                 return [
-                  <tr key={`nonlesson-${p}`} className={`ptt-nonlesson-row ptt-nonlesson-${mergedCol.tone}`}>
+                  <tr
+                    key={`nonlesson-${p}`}
+                    className={`ptt-nonlesson-row ptt-nonlesson-${mergedCol.tone}`}
+                  >
                     <td className="ptt-period-num">
                       {p}
-                      <div className="ptt-period-time">{periodTimeRange(p, config, mergedNonLessonMap)}</div>
+                      <div className="ptt-period-time">
+                        {periodTimeRange(p, config, mergedNonLessonMap)}
+                      </div>
                     </td>
                     <td colSpan={days.length}>{mergedCol.label}</td>
                   </tr>,
@@ -378,24 +504,38 @@ export function PrintTimetablePage({
                 <tr key={`p-${p}`}>
                   <td className="ptt-period-num">
                     {p}
-                    <div className="ptt-period-time">{periodTimeRange(p, config, mergedNonLessonMap)}</div>
+                    <div className="ptt-period-time">
+                      {periodTimeRange(p, config, mergedNonLessonMap)}
+                    </div>
                   </td>
                   {days.map((_, dIdx) => {
                     const d = dIdx + 1;
                     return (
                       <td key={d} className="ptt-td-cell">
-                        <Cell slot={grid.get(`${d}|${p}`)} fontSize={cellFontSize} mode={mode} bandW={bandW} />
+                        <Cell
+                          slot={grid.get(`${d}|${p}`)}
+                          fontSize={cellFontSize}
+                          mode={mode}
+                          bandW={bandW}
+                        />
                       </td>
                     );
                   })}
                 </tr>
               );
-              const configBreaks = nonLessonBreakRowsForPeriod(p, config).map((row) => (
-                <tr key={row.key} className={`ptt-nonlesson-row ptt-nonlesson-${row.tone}`}>
-                  <td className="ptt-period-num" />
-                  <td colSpan={days.length}>{row.label} · {row.minutes} MINS</td>
-                </tr>
-              ));
+              const configBreaks = nonLessonBreakRowsForPeriod(p, config).map(
+                (row) => (
+                  <tr
+                    key={row.key}
+                    className={`ptt-nonlesson-row ptt-nonlesson-${row.tone}`}
+                  >
+                    <td className="ptt-period-num" />
+                    <td colSpan={days.length}>
+                      {row.label} · {row.minutes} MINS
+                    </td>
+                  </tr>
+                ),
+              );
               return [lessonRow, ...configBreaks];
             })}
           </tbody>
@@ -410,23 +550,31 @@ export function PrintTimetablePage({
                 const mergedCol = mergedNonLessonMap.get(p);
                 if (mergedCol) {
                   headCells.push(
-                    <th key={`ph-${p}`} className={`ptt-nonlesson-head ptt-nonlesson-${mergedCol.tone}`}>
+                    <th
+                      key={`ph-${p}`}
+                      className={`ptt-nonlesson-head ptt-nonlesson-${mergedCol.tone}`}
+                    >
                       {mergedCol.label}
-                    </th>
+                    </th>,
                   );
                 } else {
                   headCells.push(
                     <th key={`ph-${p}`}>
                       <div className="ptt-period-num">{p}</div>
-                      <div className="ptt-period-time">{periodTimeRange(p, config, mergedNonLessonMap)}</div>
-                    </th>
+                      <div className="ptt-period-time">
+                        {periodTimeRange(p, config, mergedNonLessonMap)}
+                      </div>
+                    </th>,
                   );
                 }
                 nonLessonBreakRowsForPeriod(p, config).forEach((row) => {
                   headCells.push(
-                    <th key={row.key} className={`ptt-nonlesson-head ptt-nonlesson-${row.tone}`}>
+                    <th
+                      key={row.key}
+                      className={`ptt-nonlesson-head ptt-nonlesson-${row.tone}`}
+                    >
                       {row.label}
-                    </th>
+                    </th>,
                   );
                 });
                 return headCells;
@@ -445,27 +593,47 @@ export function PrintTimetablePage({
                     // Merged vertical column (BREAK/LUNCH): drawn ONCE on Monday spanning all days
                     if (dIdx === 0) {
                       cells.push(
-                        <td key={`c-${p}`} rowSpan={days.length} className={`ptt-nonlesson-vert ptt-nonlesson-${mergedCol.tone}`}>
+                        <td
+                          key={`c-${p}`}
+                          rowSpan={days.length}
+                          className={`ptt-nonlesson-vert ptt-nonlesson-${mergedCol.tone}`}
+                        >
                           {mergedCol.label}
-                        </td>
+                        </td>,
                       );
                     }
                   } else if (doubleSecondHalves.has(`${d}|${p}`)) {
                     // Second half of horizontal double lesson: skipped because first half has colSpan={2}
                   } else {
-                    const isFirstHalfOfDouble = doubleSecondHalves.has(`${d}|${p + 1}`);
+                    const isFirstHalfOfDouble = doubleSecondHalves.has(
+                      `${d}|${p + 1}`,
+                    );
                     cells.push(
-                      <td key={`c-${p}`} colSpan={isFirstHalfOfDouble ? 2 : 1} className="ptt-td-cell">
-                        <Cell slot={grid.get(`${d}|${p}`)} fontSize={cellFontSize} mode={mode} bandW={bandW} isDoubleMerged={isFirstHalfOfDouble} />
-                      </td>
+                      <td
+                        key={`c-${p}`}
+                        colSpan={isFirstHalfOfDouble ? 2 : 1}
+                        className="ptt-td-cell"
+                      >
+                        <Cell
+                          slot={grid.get(`${d}|${p}`)}
+                          fontSize={cellFontSize}
+                          mode={mode}
+                          bandW={bandW}
+                          isDoubleMerged={isFirstHalfOfDouble}
+                        />
+                      </td>,
                     );
                   }
                   nonLessonBreakRowsForPeriod(p, config).forEach((row) => {
                     if (dIdx === 0) {
                       cells.push(
-                        <td key={row.key} rowSpan={days.length} className={`ptt-nonlesson-vert ptt-nonlesson-${row.tone}`}>
+                        <td
+                          key={row.key}
+                          rowSpan={days.length}
+                          className={`ptt-nonlesson-vert ptt-nonlesson-${row.tone}`}
+                        >
                           {row.label}
-                        </td>
+                        </td>,
                       );
                     }
                   });
@@ -479,7 +647,16 @@ export function PrintTimetablePage({
 
       <div className="ptt-footer">
         <div className="ptt-footer-right">
-          <span>Generated {new Date().toLocaleString("en-KE", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+          <span>
+            Generated{" "}
+            {new Date().toLocaleString("en-KE", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
           <strong>Powered by NEYO</strong>
         </div>
       </div>
@@ -492,7 +669,9 @@ export function PrintTimetablePage({
           margin: 3mm;
         }
         .ptt-page {
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+          font-family:
+            -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+            sans-serif;
           color: #000000;
           width: 100%;
           min-height: ${daysVertical ? "204mm" : "291mm"};
@@ -697,7 +876,9 @@ export function PrintTimetablePage({
           font-weight: 600;
           color: #000000;
         }
-        .ptt-footer-right strong { font-weight: 900; }
+        .ptt-footer-right strong {
+          font-weight: 900;
+        }
         @media screen {
           .ptt-page {
             max-width: ${daysVertical ? "297mm" : "210mm"};
