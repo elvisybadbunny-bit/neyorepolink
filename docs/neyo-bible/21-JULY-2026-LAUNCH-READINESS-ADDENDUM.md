@@ -65,7 +65,7 @@ Credentials & Secrets Vault is the canonical encrypted company integration store
 
 1. Contextual guided help is implemented with a governed model, Founder review/versioning, route/role mapping, permanent Help action, one dismissible Dynamic Island offer per version, movable mini-player and transcript fallback. Deployed browser/video verification remains required.
 2. Founder-controlled onboarding pricing is implemented: operational factor toggles, real school/submission calculation, reviewed override/FREE waiver, separate school-approved onboarding payment, protected callback and checklist activation. Deployment/payment-provider verification remains required.
-3. Public asset operations: safe versioned Founder logo upload, friendly social/FAQ/media editors and rollback.
+3. Public asset operations are implemented: Founder-only sanitised/versioned logo and media upload, preview, activation/rollback, audit, friendly social/FAQ/media editors and public rendering. Deployment verification remains required.
 4. CBC leadership: verify and, only where absent, connect completeness/readiness, report review governance, human-reviewed appraisal evidence and secure family report access.
 5. WWDC26 refinement: use existing reversible appearance controls for navigation/contextual controls and selected surfaces; do not blanket-convert dense content to glass.
 

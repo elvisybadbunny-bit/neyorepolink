@@ -236,7 +236,9 @@ export default async function Home() {
     const faqSchema = {
       "@context": "https://schema.org",
       "@type": "FAQPage",
-      mainEntity: [
+      mainEntity: landingContent.faqs.length > 0
+        ? landingContent.faqs.map((item) => ({ "@type": "Question", name: item.question, acceptedAnswer: { "@type": "Answer", text: item.answer } }))
+        : [
         [
           "What kind of schools is NEYO designed for?",
           "NEYO School OS is being prepared for Kenyan primary, junior and senior schools. Each approved school is configured around its real classes, terms, curriculum and staff responsibilities.",

@@ -5050,6 +5050,6 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [~] Offline code contracts pass 12/12; deployed browser → reconnect → exactly-once database evidence remains required.
 - [x] Contextual governed YouTube Help includes versioned Founder publication, route/role matching, permanent Help action, one dismissible Dynamic Island offer per version, movable mini-player and transcript fallback.
 - [x] Founder-controlled onboarding Pricing Engine supports operational factor toggles, real school/submission inputs, reviewed override/FREE waiver, separate school-approved M-Pesa payment, verified callback and checklist activation.
-- [ ] Safe Founder public-logo upload and friendly social/FAQ/media editors remain pending implementation.
+- [x] Founder public assets support sanitised/versioned logo and media upload, preview, activation/rollback and audit; friendly social, FAQ and media editors update public rendering.
 - [ ] CBC leadership completeness/report-governance/appraisal/report-sharing audit remains pending.
 - [ ] WWDC26-inspired refinement is approved only for reversible navigation/contextual controls and selected surfaces; whole-app module audit remains pending and solid forms/tables must remain readable.

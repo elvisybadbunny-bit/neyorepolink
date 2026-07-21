@@ -4071,6 +4071,23 @@ model OnboardingFeeQuote {
   @@index([status, updatedAt])
 }
 
+model PublicBrandAsset {
+  id            String   @id @default(cuid())
+  kind          String   // LOGO | WORDMARK | FAVICON | LANDING_MEDIA
+  label         String
+  mimeType      String
+  bytes         Bytes
+  byteSize      Int
+  active        Boolean  @default(false)
+  replacedById  String?
+  createdById   String
+  createdByName String
+  createdAt     DateTime @default(now())
+
+  @@index([kind, active])
+  @@index([createdAt])
+}
+
 model OnboardingPayment {
   id                String   @id @default(cuid())
   quoteId           String

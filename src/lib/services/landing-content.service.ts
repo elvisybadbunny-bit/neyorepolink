@@ -14,6 +14,7 @@ const productSchema = z.object({
   mediaUrl: z.string().trim().max(500).optional().or(z.literal("")),
 });
 const mediaSchema = z.object({ label: z.string().trim().min(1).max(80), type: z.enum(["image", "video", "embed"]), url: z.string().trim().max(500).optional().or(z.literal("")), caption: z.string().trim().max(180).optional().or(z.literal("")) });
+const faqSchema = z.object({ question: z.string().trim().min(3).max(180), answer: z.string().trim().min(8).max(700) });
 
 export const landingContentSchema = z.object({
   version: z.literal(1).default(1),
@@ -34,6 +35,7 @@ export const landingContentSchema = z.object({
   finalSubheadline: z.string().trim().min(8).max(220),
   footerLinks: z.array(linkSchema).min(4).max(16),
   socialLinks: z.array(linkSchema).max(8),
+  faqs: z.array(faqSchema).max(16).default([]),
   seoTitle: z.string().trim().min(8).max(80),
   seoDescription: z.string().trim().min(20).max(180),
   ogImageUrl: z.string().trim().max(500).optional().or(z.literal("")),

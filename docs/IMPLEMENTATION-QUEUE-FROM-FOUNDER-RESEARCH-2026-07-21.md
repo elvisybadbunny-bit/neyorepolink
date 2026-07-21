@@ -54,10 +54,10 @@ Founder decisions recorded 21 July 2026:
 
 ### D. Public asset and content operations
 
-- [ ] Founder-only public logo upload with sanitisation, versioning, preview, rollback and audit.
-- [ ] Friendly social-link editor (storage already exists; footer rendering is complete).
-- [ ] Friendly FAQ editor with visible structured-data parity.
-- [ ] Editable approved screenshots and media without exposing private storage.
+- [x] Founder-only public logo/media upload with SVG sanitisation, raster validation, versioning, preview, rollback and audit.
+- [x] Friendly social-link editor with public footer rendering.
+- [x] Friendly FAQ editor with public rendering and structured-data parity.
+- [x] Editable approved screenshots/media gallery using hardened public asset URLs.
 
 ### E. CBC leadership workflow audit
 

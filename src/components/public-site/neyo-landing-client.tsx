@@ -932,6 +932,17 @@ export function NeyoLandingClient({
           </div>
         </section>
 
+        {landingContent.mediaShowcase.some((item) => item.url) ? (
+          <section className="px-4 py-20 sm:px-6 sm:py-28">
+            <div className="mx-auto max-w-[1240px]">
+              <SectionIntro eyebrow="Inside NEYO School OS" title="See the real product before the demonstration." text="Founder-approved screenshots and media update here without changing the website code." />
+              <div className="mt-10 grid gap-4 md:grid-cols-3">
+                {landingContent.mediaShowcase.filter((item) => item.url).slice(0,6).map((item) => <article key={`${item.label}-${item.url}`} className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-3"><div className="aspect-video overflow-hidden rounded-2xl bg-slate-100">{item.type==="image"?<img src={item.url} alt={item.label} className="h-full w-full object-cover object-top"/>:<div className="flex h-full items-center justify-center text-sm font-bold text-slate-500">Approved video media</div>}</div><h3 className="mt-4 px-1 text-sm font-black text-[#101a2e]">{item.label}</h3>{item.caption?<p className="mt-1 px-1 pb-2 text-xs leading-5 text-slate-500">{item.caption}</p>:null}</article>)}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         <section className="px-4 py-20 sm:px-6 sm:py-28">
           <div className="mx-auto max-w-[1240px] overflow-hidden rounded-[34px] bg-[#101a2e] px-6 py-12 text-center text-white sm:px-12 sm:py-16">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">

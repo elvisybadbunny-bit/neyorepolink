@@ -67,12 +67,13 @@ import { BundiOcrConfigTab } from "@/components/founder/bundi-ocr-config-tab";
 import { TrialLimitsOpsTab } from "@/components/founder/trial-limits-ops-tab";
 import { FounderCredentialsVault } from "@/components/founder/founder-credentials-vault";
 import { GuidedHelpOpsTab } from "@/components/founder/guided-help-ops-tab";
+import { PublicAssetsOpsTab } from "@/components/founder/public-assets-ops-tab";
 import { UiVersionToggleOpsCard } from "@/components/founder/ui-version-toggle-ops-card";
 import { NeyoWayOpsTab } from "@/components/founder/neyo-way-ops-tab";
 import { SchoolVisitsOpsTab } from "@/components/founder/school-visits-ops-tab";
 import { YoutubeCandidateReviewTab } from "@/components/founder/youtube-candidate-review-tab";
 
-const TABS = ["Overview", "The NEYO Way", "School Visits", "Video Review", "Guided Help", "Founder Dashboard", "Credentials & Secrets Vault", "Demo Requests", "Diagnostic Replay", "Maintenance Ops", "Trial Limits", "Release Whitelists", "Bundi OCR Quotas", "Tenant Health Radar", "SMS Health Monitor", "Exam Sharing Approval", "Unit Economics", "Build log", "Metrics", "Cadence", "Interviews", "Platform Flags", "Feature Toggles", "Revenue Grants", "Custom Feature Requests", "Discount Campaigns", "Influencer Codes", "Pathway Guide", "Revenue Ops", "Pricing Engine", "Storage Intelligence", "Storage Archive Tiers", "Developer Center", "Bundi Import", "Curriculum Library", "Business Operations", "Ecosystem Trends", "Team & Access"] as const;
+const TABS = ["Overview", "The NEYO Way", "School Visits", "Video Review", "Guided Help", "Public Website", "Founder Dashboard", "Credentials & Secrets Vault", "Demo Requests", "Diagnostic Replay", "Maintenance Ops", "Trial Limits", "Release Whitelists", "Bundi OCR Quotas", "Tenant Health Radar", "SMS Health Monitor", "Exam Sharing Approval", "Unit Economics", "Build log", "Metrics", "Cadence", "Interviews", "Platform Flags", "Feature Toggles", "Revenue Grants", "Custom Feature Requests", "Discount Campaigns", "Influencer Codes", "Pathway Guide", "Revenue Ops", "Pricing Engine", "Storage Intelligence", "Storage Archive Tiers", "Developer Center", "Bundi Import", "Curriculum Library", "Business Operations", "Ecosystem Trends", "Team & Access"] as const;
 type Tab = (typeof TABS)[number];
 
 type Dashboard = {
@@ -797,6 +798,7 @@ export function FounderOpsClient() {
       {tab === "School Visits" && <SchoolVisitsOpsTab />}
       {tab === "Video Review" && <YoutubeCandidateReviewTab />}
       {tab === "Guided Help" && <GuidedHelpOpsTab />}
+      {tab === "Public Website" && <PublicAssetsOpsTab />}
       {tab === "Founder Dashboard" && <FounderMorningDashboardTab />}
       {tab === "Credentials & Secrets Vault" && <FounderCredentialsVault />}
       {tab === "Unit Economics" && <UnitEconomicsTab />}
@@ -1364,13 +1366,24 @@ function LandingContentEditor({ content, onSave, saving }: { content: any; onSav
         </div>
         <Field label="SEO description"><Textarea rows={2} value={draft.seoDescription || ""} onChange={(e) => set("seoDescription", e.target.value)} /></Field>
         <div className="grid gap-3 lg:grid-cols-3">
-          {(draft.mediaShowcase || []).slice(0, 3).map((item: any, index: number) => (
+          {(draft.mediaShowcase || []).map((item: any, index: number) => (
             <div key={index} className="rounded-2xl border border-navy-100 bg-navy-50/40 p-3 dark:border-navy-800 dark:bg-navy-900/40">
               <p className="text-xs font-black text-navy-900 dark:text-white">Media slot {index + 1}</p>
               <Input className="mt-2 h-9 text-xs" value={item.label || ""} onChange={(e) => { const media = [...(draft.mediaShowcase || [])]; media[index] = { ...media[index], label: e.target.value }; set("mediaShowcase", media); }} />
               <Input className="mt-2 h-9 text-xs" value={item.url || ""} onChange={(e) => { const media = [...(draft.mediaShowcase || [])]; media[index] = { ...media[index], url: e.target.value }; set("mediaShowcase", media); }} placeholder="Screenshot or video URL" />
+              <Input className="mt-2 h-9 text-xs" value={item.caption || ""} onChange={(e) => { const media = [...(draft.mediaShowcase || [])]; media[index] = { ...media[index], caption: e.target.value }; set("mediaShowcase", media); }} placeholder="Public caption" />
+              <div className="mt-2 flex gap-2"><select className="h-9 flex-1 rounded-xl border border-navy-200 bg-white px-2 text-xs dark:border-navy-700 dark:bg-navy-900" value={item.type || "image"} onChange={(e) => { const media=[...(draft.mediaShowcase||[])];media[index]={...media[index],type:e.target.value};set("mediaShowcase",media); }}><option value="image">Image</option><option value="video">Video</option><option value="embed">Embed</option></select><Button size="sm" variant="ghost" onClick={() => set("mediaShowcase",(draft.mediaShowcase||[]).filter((_:any,i:number)=>i!==index))}>Remove</Button></div>
             </div>
           ))}
+        </div>
+        <Button size="sm" variant="secondary" onClick={() => set("mediaShowcase", [...(draft.mediaShowcase || []), { label: "New public media", type: "image", url: "", caption: "" }])}>Add media slot</Button>
+        <div className="space-y-3 rounded-2xl border border-navy-100 p-3 dark:border-navy-800">
+          <div className="flex items-center justify-between"><p className="text-xs font-black text-navy-900 dark:text-white">Social accounts</p><Button size="sm" variant="secondary" onClick={() => set("socialLinks", [...(draft.socialLinks || []), { label: "YouTube", href: "https://" }])}>Add link</Button></div>
+          {(draft.socialLinks || []).map((item: any, index: number) => <div key={index} className="grid gap-2 sm:grid-cols-[180px_1fr_auto]"><Input value={item.label || ""} onChange={(e) => { const rows=[...(draft.socialLinks||[])]; rows[index]={...rows[index],label:e.target.value}; set("socialLinks",rows); }} placeholder="Platform"/><Input value={item.href || ""} onChange={(e) => { const rows=[...(draft.socialLinks||[])]; rows[index]={...rows[index],href:e.target.value}; set("socialLinks",rows); }} placeholder="https://…"/><Button size="sm" variant="ghost" onClick={() => set("socialLinks",(draft.socialLinks||[]).filter((_:any,i:number)=>i!==index))}>Remove</Button></div>)}
+        </div>
+        <div className="space-y-3 rounded-2xl border border-navy-100 p-3 dark:border-navy-800">
+          <div className="flex items-center justify-between"><p className="text-xs font-black text-navy-900 dark:text-white">Public FAQ</p><Button size="sm" variant="secondary" onClick={() => set("faqs", [...(draft.faqs || []), { question: "New question", answer: "Add the verified public answer." }])}>Add FAQ</Button></div>
+          {(draft.faqs || []).map((item: any, index: number) => <div key={index} className="space-y-2 rounded-xl bg-navy-50 p-3 dark:bg-navy-900"><Input value={item.question || ""} onChange={(e) => { const rows=[...(draft.faqs||[])]; rows[index]={...rows[index],question:e.target.value}; set("faqs",rows); }}/><Textarea rows={2} value={item.answer || ""} onChange={(e) => { const rows=[...(draft.faqs||[])]; rows[index]={...rows[index],answer:e.target.value}; set("faqs",rows); }}/><Button size="sm" variant="ghost" onClick={() => set("faqs",(draft.faqs||[]).filter((_:any,i:number)=>i!==index))}>Remove FAQ</Button></div>)}
         </div>
         <button type="button" onClick={() => setAdvancedOpen((v) => !v)} className="text-xs font-bold text-green-700 dark:text-green-300">{advancedOpen ? "Hide" : "Show"} advanced JSON editor for products, stats, footer and media</button>
         {advancedOpen ? <Field label="Landing content JSON"><Textarea rows={16} value={jsonText} onChange={(e) => setJsonText(e.target.value)} className="font-mono text-xs" /></Field> : null}
