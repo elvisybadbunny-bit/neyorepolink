@@ -67,6 +67,7 @@ export interface CompetencyBoardView {
   canApproveEvidence: boolean;
   groups: CompetencyGroupView[];
   competencies: CompetencyView[];
+  learners: { id: string; name: string; admissionNo: string; className: string }[];
   summary: CompetencySummaryView;
 }
 

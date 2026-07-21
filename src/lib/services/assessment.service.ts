@@ -197,7 +197,8 @@ export async function assessmentBoard(user: SessionUser) {
   assertRead(user);
   return withTenant(user.tenantId, async () => {
     const where = await visiblePlanWhereForUser(user);
-    const [types, plans] = await Promise.all([
+    const allowedClassIds = await teacherClassIds(user);
+    const [types, plans, classes, teachingNeeds, subjects] = await Promise.all([
       tenantDb().assessmentType.findMany({ orderBy: [{ active: "desc" }, { name: "asc" }] }),
       tenantDb().assessmentPlan.findMany({
         where,
@@ -205,7 +206,12 @@ export async function assessmentBoard(user: SessionUser) {
         include: { assessmentType: true, records: { include: { evidence: true } } },
         take: 200,
       }),
+      tenantDb().schoolClass.findMany({ where: { archived: false, ...(allowedClassIds === null ? {} : { id: { in: allowedClassIds } }) }, select: { id: true, level: true, stream: true }, orderBy: [{ level: "asc" }, { stream: "asc" }] }),
+      tenantDb().classSubjectNeed.findMany({ where: { ...(allowedClassIds === null ? {} : { classId: { in: allowedClassIds }, teacherId: user.id }) }, select: { classId: true, subjectId: true } }),
+      tenantDb().subject.findMany({ where: { archived: false }, select: { id: true, name: true, code: true, learningAreaId: true, learningArea: { select: { name: true } } }, orderBy: { name: "asc" } }),
     ]);
+    const neededSubjectIds = new Set(teachingNeeds.map((need) => need.subjectId));
+    const subjectChoices = subjects.filter((subject) => neededSubjectIds.has(subject.id)).map((subject) => ({ id: subject.id, name: subject.name, code: subject.code, learningAreaId: subject.learningAreaId, learningAreaName: subject.learningArea?.name ?? null }));
     return {
       canManagePlans: userCanManageAssessmentPlans(user),
       canScore: userCanScoreAssessments(user),
@@ -213,6 +219,11 @@ export async function assessmentBoard(user: SessionUser) {
       canRelease: userCanReleaseAssessments(user),
       types,
       plans,
+      setup: {
+        classes: classes.map((row) => ({ id: row.id, name: [row.level, row.stream].filter(Boolean).join(" ") })),
+        subjects: subjectChoices,
+        teachingLinks: teachingNeeds.map((need) => ({ classId: need.classId, subjectId: need.subjectId })),
+      },
       summary: {
         types: types.length,
         plans: plans.length,

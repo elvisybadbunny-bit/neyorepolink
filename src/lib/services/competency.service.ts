@@ -161,10 +161,12 @@ export async function ensureDefaultCompetencyFramework(user: SessionUser) {
 export async function competencyBoard(user: SessionUser) {
   assertRead(user);
   return withTenant(user.tenantId, async () => {
-    const [groups, competencies, evidence] = await Promise.all([
+    const learnerScope = await scopeWhere(user);
+    const [groups, competencies, evidence, learners] = await Promise.all([
       tenantDb().competencyGroup.findMany({ orderBy: [{ sequence: "asc" }, { name: "asc" }], include: { competencies: { orderBy: [{ sequence: "asc" }, { name: "asc" }] } } }),
       tenantDb().competency.findMany({ where: { active: true }, orderBy: [{ sequence: "asc" }, { name: "asc" }] }),
       tenantDb().competencyEvidence.findMany({ where: ["PARENT", "STUDENT"].includes(user.role) ? { approved: true, visibleToParents: true } : {}, take: 500 }),
+      tenantDb().student.findMany({ where: learnerScope, select: { id: true, firstName: true, middleName: true, lastName: true, admissionNo: true, schoolClass: { select: { level: true, stream: true } } }, orderBy: [{ firstName: "asc" }, { lastName: "asc" }], take: 1000 }),
     ]);
     return {
       canManage: userCanManageCompetencies(user),
@@ -172,6 +174,7 @@ export async function competencyBoard(user: SessionUser) {
       canApproveEvidence: userCanApproveCompetencyEvidence(user),
       groups,
       competencies,
+      learners: learners.map((learner) => ({ id: learner.id, name: [learner.firstName, learner.middleName, learner.lastName].filter(Boolean).join(" "), admissionNo: learner.admissionNo, className: learner.schoolClass ? [learner.schoolClass.level, learner.schoolClass.stream].filter(Boolean).join(" ") : "Unassigned" })),
       summary: {
         groups: groups.length,
         competencies: competencies.length,

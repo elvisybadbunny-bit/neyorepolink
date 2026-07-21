@@ -37,6 +37,7 @@ const EMPTY_BOARD: AssessmentBoardView = {
   canRelease: false,
   types: [],
   plans: [],
+  setup: { classes: [], subjects: [], teachingLinks: [] },
   summary: { types: 0, plans: 0, records: 0, evidence: 0, releasedPlans: 0 },
 };
 
@@ -210,6 +211,7 @@ export function AssessmentEngineClient() {
           {modal.type === "plan" ? (
             <AssessmentPlanForm
               types={currentBoard.types}
+              setup={currentBoard.setup}
               saving={saving}
               onCancel={() => setModal(null)}
               onSubmit={(draft) => post(draft.id ? "update_plan" : "create_plan", compactPayload({

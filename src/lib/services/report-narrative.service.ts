@@ -3,18 +3,27 @@ import { withTenant } from "@/lib/core/tenant-context";
 
 export class ReportNarrativeError extends Error {}
 
-export function deterministicSubjectComment(mark: number, deviation: number) {
-  if (mark >= 80 && deviation >= 0)
-    return "Excellent achievement. Maintain the strong understanding and consistent effort shown.";
-  if (mark >= 65 && deviation >= 0)
-    return "Good achievement. Keep practising consistently to strengthen mastery further.";
-  if (mark >= 50 && deviation >= 0)
-    return "Steady achievement. Continue practising the areas covered to build greater confidence.";
-  if (mark >= 50)
-    return "A fair foundation is visible. Focused revision and regular practice can close the gap to the class mean.";
-  if (deviation >= -10)
-    return "Developing understanding. Review difficult areas and seek support during the next learning cycle.";
-  return "More support is needed. Use guided revision and regular practice, then review progress with the subject teacher.";
+export function deterministicSubjectComment(mark: number, deviation: number, subjectLabel = "", variantKey = "") {
+  const swahili = /kiswahili|swahili|\bkis\b|\bswa\b/i.test(subjectLabel);
+  const variant = [...variantKey].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 2;
+  const band = mark >= 80 && deviation >= 0 ? 0 : mark >= 65 && deviation >= 0 ? 1 : mark >= 50 && deviation >= 0 ? 2 : mark >= 50 ? 3 : deviation >= -10 ? 4 : 5;
+  const english = [
+    ["Excellent achievement. Maintain the strong understanding and consistent effort shown.", "Strong mastery is evident. Sustain this focused effort in the next learning cycle."],
+    ["Good achievement. Keep practising consistently to strengthen mastery further.", "Good progress is visible. Regular revision can lift this result further."],
+    ["Steady achievement. Continue practising the areas covered to build greater confidence.", "A sound foundation is developing. Consistent practice will build confidence."],
+    ["A fair foundation is visible. Focused revision can close the gap to the class mean.", "The basics are present. Give extra attention to the weaker assessed areas."],
+    ["Developing understanding. Review difficult areas and seek support during the next learning cycle.", "More guided practice will help. Review difficult areas with the subject teacher."],
+    ["More support is needed. Use guided revision and regular practice with the subject teacher.", "Focused support is required. Build a regular revision routine with teacher guidance."],
+  ];
+  const kiswahili = [
+    ["Ufaulu bora umeonekana. Endelea kudumisha uelewa na bidii hii.", "Umahiri mzuri umeonekana. Dumisha juhudi na umakini huu."],
+    ["Umefanya vizuri. Endelea kufanya mazoezi ili kuimarisha umahiri zaidi.", "Maendeleo mazuri yanaonekana. Marudio ya mara kwa mara yataongeza ufaulu."],
+    ["Maendeleo ni ya kuridhisha. Endelea kufanya mazoezi ili kuongeza kujiamini.", "Msingi mzuri unaendelea kujengeka. Mazoezi ya mara kwa mara yatasaidia."],
+    ["Msingi unaonekana. Marudio yenye kulenga maeneo dhaifu yatasaidia kufikia wastani wa darasa.", "Uelewa wa msingi upo. Zingatia zaidi maeneo yaliyokuwa magumu."],
+    ["Uelewa bado unakua. Pitia maeneo magumu na uombe msaada inapohitajika.", "Mazoezi zaidi yanahitajika. Jadili maeneo magumu na mwalimu wa somo."],
+    ["Msaada zaidi unahitajika. Tumia marudio yaliyoongozwa na mazoezi ya mara kwa mara.", "Juhudi za ziada na mwongozo wa mwalimu vinahitajika ili kuboresha."],
+  ];
+  return (swahili ? kiswahili : english)[band][variant];
 }
 
 async function resolveSubjectTeacher(
@@ -71,12 +80,17 @@ export async function getOrCreateReportNarratives(
           Math.max(1, same.length),
       );
     }
+    const subjectIds = subjectRows.map((row) => row.subjectId).filter((id): id is string => Boolean(id));
+    const subjects = await tDb.subject.findMany({ where: { id: { in: subjectIds } }, select: { id: true, name: true, code: true } });
+    const subjectById = new Map(subjects.map((subject) => [subject.id, subject]));
     for (const row of subjectRows) {
       if (!row.subjectId) continue;
       const deviation =
         row.finalMark - (means.get(row.subjectId) ?? row.finalMark);
-      const autoComment = deterministicSubjectComment(row.finalMark, deviation);
+      const subject = subjectById.get(row.subjectId);
+      const autoComment = deterministicSubjectComment(row.finalMark, deviation, `${subject?.name ?? ""} ${subject?.code ?? ""}`, `${studentId}:${row.subjectId}`);
       const teacher = await resolveSubjectTeacher(tDb, classId, row.subjectId);
+      const existingComment = await tDb.reportSubjectComment.findUnique({ where: { tenantId_termId_studentId_subjectId: { tenantId, termId, studentId, subjectId: row.subjectId } }, select: { state: true } });
       await tDb.reportSubjectComment.upsert({
         where: {
           tenantId_termId_studentId_subjectId: {
@@ -99,6 +113,7 @@ export async function getOrCreateReportNarratives(
         },
         update: {
           autoComment,
+          ...(existingComment?.state === "AUTO" ? { comment: autoComment } : {}),
           resolvedTeacherId: teacher.id,
           resolvedTeacherName: teacher.name,
         },

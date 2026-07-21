@@ -781,10 +781,13 @@ function nonLessonRowsForPeriod(p: number, config: any, realLunchPeriods?: Set<n
 // it already occupies its own real 2-period reservation with its own
 // existing Options Block cell styling, never double-merged again on top
 // of that.
-function computeDoubleSpanSecondHalves(grid: Map<string, Slot>, periodsPerDay: number): Set<string> {
+function computeDoubleSpanSecondHalves(grid: Map<string, Slot>, periodsPerDay: number, config?: any, realLunchPeriods?: Set<number>): Set<string> {
   const secondHalves = new Set<string>();
   for (let d = 1; d <= 6; d++) {
     for (let p = 1; p < periodsPerDay; p++) {
+      // A school-wide break/lunch is a locked boundary after period p. A
+      // visual double must never row-span across it or displace that row.
+      if (nonLessonRowsForPeriod(p, config, realLunchPeriods).length > 0) continue;
       const a = grid.get(`${d}|${p}`);
       const b = grid.get(`${d}|${p + 1}`);
       if (!a || !b) continue;
@@ -1054,8 +1057,12 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
   // can skip drawing a separate cell for them (they're absorbed into the
   // first period's own cell via rowSpan/colSpan={2}).
   const doubleSecondHalves = React.useMemo(
-    () => computeDoubleSpanSecondHalves(grid, config?.periodsPerDay || 8),
-    [slots, config?.periodsPerDay]
+    () => {
+      const lockedLunchPeriods = new Set<number>((slots ?? []).filter((slot) => (slot.subjectCode || "").toUpperCase() === "LUNCH").map((slot) => slot.period));
+      if (lockedLunchPeriods.size === 0 && config) lockedLunchPeriods.add(config.lunchAfterPeriod ?? config.lunchStart ?? 6);
+      return computeDoubleSpanSecondHalves(grid, config?.periodsPerDay || 8, config, lockedLunchPeriods);
+    },
+    [slots, config]
   );
 
   // Z.3/Z.4 bugfix — the single real source of truth for "which period is

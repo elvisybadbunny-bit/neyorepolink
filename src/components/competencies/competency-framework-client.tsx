@@ -30,6 +30,7 @@ const EMPTY_BOARD: CompetencyBoardView = {
   canApproveEvidence: false,
   groups: [],
   competencies: [],
+  learners: [],
   summary: { groups: 0, competencies: 0, evidence: 0, visibleEvidence: 0, approvedEvidence: 0 },
 };
 
@@ -157,7 +158,7 @@ export function CompetencyFrameworkClient() {
         <Card className="border-white/40 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-navy-950/70">
           <CardHeader><CardTitle className="flex items-center gap-2"><Brain className="h-5 w-5 text-green-600" /> Learner summary</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex gap-2"><input value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="Paste student ID" className="h-11 flex-1 rounded-2xl border border-navy-200 bg-white/80 px-3 text-sm outline-none dark:border-navy-700 dark:bg-navy-900/80" /><Button variant="secondary" disabled={saving} onClick={() => loadStudentSummary(studentId)}>Load</Button></div>
+            <div className="flex gap-2"><select value={studentId} onChange={(e) => setStudentId(e.target.value)} className="h-11 flex-1 rounded-2xl border border-navy-200 bg-white/80 px-3 text-sm outline-none dark:border-navy-700 dark:bg-navy-900/80"><option value="">Choose a learner from your classes</option>{currentBoard.learners.map((learner)=><option key={learner.id} value={learner.id}>{learner.name} · {learner.admissionNo} · {learner.className}</option>)}</select><Button variant="secondary" disabled={saving || !studentId} onClick={() => loadStudentSummary(studentId)}>Load</Button></div>
             {studentSummary ? <StudentCompetencySummaryCard summary={studentSummary} /> : <p className="text-sm text-navy-500">Load a learner to see approved competency evidence.</p>}
           </CardContent>
         </Card>
