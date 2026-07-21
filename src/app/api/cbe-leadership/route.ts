@@ -1,0 +1,1 @@
+import{requirePermission}from"@/lib/core/session";import{handleError,ok}from"@/lib/api/respond";import{cbeLeadershipBoard}from"@/lib/services/cbe-leadership.service";export const dynamic="force-dynamic";export async function GET(){try{const user=await requirePermission("academics.manage");return ok({board:await cbeLeadershipBoard(user)})}catch(e){return handleError(e)}}

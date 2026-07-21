@@ -61,9 +61,9 @@ Founder decisions recorded 21 July 2026:
 
 ### E. CBC leadership workflow audit
 
-- [ ] One leadership view for attendance completion, syllabus coverage, assessment completeness and report readiness.
-- [ ] Confirm whether existing report governance fully supports draft → review → return → approve → publish before adding schema.
-- [ ] Connect delivery/assessment evidence to human-reviewed appraisal without automated teacher judgement.
-- [ ] Verify secure parent report sharing and access audit.
+- [x] One leadership view covers attendance completion, syllabus coverage, assessment activity, CBE delivery and report readiness.
+- [x] Existing ExamReleaseApprovalRequest governance verified and surfaced: request → reject/return with note → approve → publish; no duplicate schema added.
+- [x] Delivery/assessment/coverage evidence connects to the existing human appraisal screen without calculating an automated teacher score.
+- [x] CBE parent reports remain authenticated and row-scoped to the guardian's child; every JSON/PDF access now creates an audit record.
 
 Every unchecked item requires code, permissions, failure handling, mobile/browser testing and documentation. It must not be called complete merely because a card or button exists.

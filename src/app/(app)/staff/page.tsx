@@ -5,7 +5,7 @@ import { StaffClient } from "@/components/hr/staff-client";
 export const dynamic = "force-dynamic";
 
 /** B.9 Staff & HR — directory, leave, recruitment, records. */
-export default async function StaffPage() {
+export default async function StaffPage({ searchParams }: { searchParams: { userId?: string } }) {
   const user = await requirePagePermission("staff.view");
   const effectivePermissions = await effectivePermissionsForUser(user);
 
@@ -20,6 +20,7 @@ export default async function StaffPage() {
       <StaffClient
         canManage={effectivePermissions.includes("staff.manage")}
         canInvite={effectivePermissions.includes("user.manage_roles")}
+        initialUserId={searchParams.userId}
       />
     </div>
   );

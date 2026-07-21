@@ -49,7 +49,7 @@ const LEAVE_STATUS_TONE: Record<string, "green" | "amber" | "red" | "neutral"> =
 const SUB_STATUS_TONE: Record<string, "green" | "amber" | "red" | "neutral"> = { PROPOSED: "amber", CONFIRMED: "green", DECLINED: "neutral", UNFILLED: "red", REVERTED: "neutral" };
 const STAFF_ROLES = ["PRINCIPAL", "DEPUTY_PRINCIPAL", "DEAN_OF_STUDIES", "HOD", "TEACHER", "CLASS_TEACHER", "BURSAR", "ACCOUNTANT", "RECEPTIONIST", "LIBRARIAN", "HOSTEL_MASTER", "SUPPORT_STAFF"];
 
-export function StaffClient({ canManage, canInvite }: { canManage: boolean; canInvite: boolean }) {
+export function StaffClient({ canManage, canInvite, initialUserId }: { canManage: boolean; canInvite: boolean; initialUserId?: string }) {
   const [tab, setTab] = React.useState<"directory" | "leave" | "recruitment">("directory");
   return (
     <div className="space-y-5">
@@ -69,7 +69,7 @@ export function StaffClient({ canManage, canInvite }: { canManage: boolean; canI
 function DirectoryTab({ canManage, canInvite }: { canManage: boolean; canInvite: boolean }) {
   const [rows, setRows] = React.useState<StaffRow[] | null>(null);
   const [error, setError] = React.useState(false);
-  const [file, setFile] = React.useState<string | null>(null);
+  const [file, setFile] = React.useState<string | null>(initialUserId || null);
   const [q, setQ] = React.useState("");
   const [importing, setImporting] = React.useState(false);
   const [inviting, setInviting] = React.useState(false);
