@@ -14,6 +14,7 @@ const recordClient = readFileSync("src/components/academics/record-of-work-clien
 const recordRoute = readFileSync("src/app/api/teacher/record-of-work/route.ts", "utf8");
 const deliveryClient = readFileSync("src/components/cbe-delivery/cbe-delivery-client.tsx", "utf8");
 const deliveryRoute = readFileSync("src/app/api/cbe-delivery/route.ts", "utf8");
+const browserProof = readFileSync("scripts/offline-exactly-once-browser-test.ts", "utf8");
 
 check(client.includes('queuedPost("/api/cbc/assess"') || client.includes('queuedPost(\n        "/api/cbc/assess"'), "CBE assessment rounds use the IndexedDB offline outbox");
 check(client.includes("saved offline") && client.includes("sync this assessment round"), "teacher receives an honest queued-offline message");
@@ -27,5 +28,7 @@ check(deliveryClient.includes('offlineSafe=["create_session","record_evidence","
 check(deliveryRoute.includes("cbe_delivery.${action}") && deliveryRoute.includes("withIdempotency"), "CBE Delivery replay is tenant-scoped and at-most-once");
 check(queue.includes('DB_VERSION = 3') && queue.includes('FAILED_STORE = "failedOutbox"'), "pending, bundle and rejected records share one compatible IndexedDB version");
 check(queue.includes("retainFailedQueued") && queue.includes("reason") && queue.includes("failedAt"), "permanent sync rejection is retained for user review instead of disappearing");
+check(browserProof.includes("context.setOffline(true)") && browserProof.includes('window.dispatchEvent(new Event("online"))'), "browser proof uses genuine network-offline and reconnect events");
+check(browserProof.includes("gatePass.count") && browserProof.includes("===1") && browserProof.includes("failedOutbox"), "browser proof verifies exactly-one database side effect and rejected-action review retention");
 
-console.log(`OFFLINE SCHOOL RECORD CONTRACT COMPLETE: ${passed}/12`);
+console.log(`OFFLINE SCHOOL RECORD CONTRACT COMPLETE: ${passed}/14`);

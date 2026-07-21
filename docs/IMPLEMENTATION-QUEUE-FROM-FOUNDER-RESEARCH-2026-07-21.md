@@ -31,7 +31,7 @@ Founder decisions recorded 21 July 2026:
 - [x] Add a visible failed-sync review inbox for queued records rejected because their source changed.
 - [x] Expand read-only snapshots with merged role-permission filtering and CBE Delivery sessions.
 - [~] Stale-data timestamp and 24-hour old-data warning completed on the offline viewer; module-level labels remain to be audited progressively.
-- [~] Offline code contracts are complete for listed workflows; deployed browser → reconnect → exactly-once database evidence remains pending and must not be claimed.
+- [~] Offline code contracts and the real Playwright/database exactly-once harness are complete; execution against a migrated running deployment remains blocked by Vercel rate limiting and must not be claimed.
 
 ### B. Contextual guided help
 

@@ -5047,7 +5047,7 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Bundle Saver snapshots are filtered server-side by effective merged permissions and include bounded CBE Delivery sessions for academic roles.
 - [x] `/settings/offline` documents queued, read-only and online-required workflows; offline snapshots show age and warn red after 24 hours.
 - [x] NEYO Bible Level 21 records the source-grounded launch-readiness addendum and active pending decisions.
-- [~] Offline code contracts pass 12/12; deployed browser → reconnect → exactly-once database evidence remains required.
+- [~] Offline static contracts pass 14/14 and a real Playwright/database exactly-once harness exists; execution against a migrated running deployment remains required.
 - [x] Contextual governed YouTube Help includes versioned Founder publication, route/role matching, permanent Help action, one dismissible Dynamic Island offer per version, movable mini-player and transcript fallback.
 - [x] Founder-controlled onboarding Pricing Engine supports operational factor toggles, real school/submission inputs, reviewed override/FREE waiver, separate school-approved M-Pesa payment, verified callback and checklist activation.
 - [x] Founder public assets support sanitised/versioned logo and media upload, preview, activation/rollback and audit; friendly social, FAQ and media editors update public rendering.
