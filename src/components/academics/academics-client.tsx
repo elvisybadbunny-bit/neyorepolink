@@ -3186,11 +3186,13 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       </div>
 
       {schoolLevelActivation?.isSeniorSchool && (
-        <SeniorReadinessCard classes={classes} />
-        <SeniorLearnerProofCard />
-        <TimetableGovernanceCard />
-        <TeacherElectiveStaffingCard />
-        <KicdSeniorTemplateCard canManage={canManage} classes={classes} subjects={subjects} onApplied={load} />
+        <>
+          <SeniorReadinessCard classes={classes} />
+          <SeniorLearnerProofCard />
+          <TimetableGovernanceCard />
+          <TeacherElectiveStaffingCard />
+          <KicdSeniorTemplateCard canManage={canManage} classes={classes} subjects={subjects} onApplied={load} />
+        </>
       )}
 
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
