@@ -520,6 +520,7 @@ export function ComputationDashboardClient({
       {reportPortal && (
         <MasterReportModal
           portal={reportPortal}
+          canManage={canManage}
           onClose={() => setReportPortal(null)}
         />
       )}
@@ -531,9 +532,11 @@ export function ComputationDashboardClient({
  *  subject marks + overall mean and class position. */
 function MasterReportModal({
   portal,
+  canManage,
   onClose,
 }: {
   portal: any;
+  canManage: boolean;
   onClose: () => void;
 }) {
   const { toast } = useToast();
@@ -543,6 +546,10 @@ function MasterReportModal({
   const [classId, setClassId] = React.useState("");
   const [data, setData] = React.useState<any | null>(null);
   const [selectedStudentId, setSelectedStudentId] = React.useState("");
+  const [narratives, setNarratives] = React.useState<any>({
+    comments: [],
+    remarks: [],
+  });
   const [loading, setLoading] = React.useState(false);
   const selectedStudent =
     data?.students?.find(
@@ -579,6 +586,34 @@ function MasterReportModal({
       })
       .finally(() => setLoading(false));
   }, [classId, portal.termId, toast]);
+
+  const loadNarratives = React.useCallback(async () => {
+    if (!selectedStudent?.studentId || !classId) return;
+    const response = await fetch(
+      `/api/academics/grading/report-narratives?termId=${portal.termId}&classId=${classId}&studentId=${selectedStudent.studentId}`,
+    );
+    const json = await response.json();
+    if (json.ok) setNarratives(json.data);
+  }, [classId, portal.termId, selectedStudent?.studentId]);
+  React.useEffect(() => {
+    void loadNarratives();
+  }, [loadNarratives]);
+
+  async function saveNarrative(body: any) {
+    const response = await fetch("/api/academics/grading/report-narratives", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = await response.json();
+    toast({
+      title: json.ok
+        ? "Report wording saved"
+        : json.error?.message || "Could not save report wording.",
+      tone: json.ok ? "success" : "error",
+    });
+    if (json.ok) await loadNarratives();
+  }
 
   return (
     <div
@@ -757,8 +792,197 @@ function MasterReportModal({
                         assessments conducted and recorded by the school are
                         included.
                       </p>
+                      {(() => {
+                        const row = narratives.comments.find(
+                          (comment: any) =>
+                            comment.subjectId === subject.subjectId,
+                        );
+                        if (!row)
+                          return (
+                            <p className="mt-3 text-xs text-navy-400">
+                              Preparing deterministic comment and teacher
+                              resolution…
+                            </p>
+                          );
+                        return (
+                          <div className="mt-3 rounded-xl bg-navy-50 p-3 dark:bg-navy-900">
+                            <div className="mb-2 flex flex-wrap justify-between gap-2 text-[11px]">
+                              <strong>
+                                {row.resolvedTeacherName ||
+                                  "Subject teacher not resolved"}
+                              </strong>
+                              <Badge
+                                tone={
+                                  row.state === "LOCKED" ? "green" : "neutral"
+                                }
+                              >
+                                {row.state.replace("_", " ")}
+                              </Badge>
+                            </div>
+                            <textarea
+                              aria-label={`Comment for ${subject.subjectName}`}
+                              disabled={!canManage || row.state === "LOCKED"}
+                              value={row.comment}
+                              onChange={(event) =>
+                                setNarratives((current: any) => ({
+                                  ...current,
+                                  comments: current.comments.map(
+                                    (comment: any) =>
+                                      comment.id === row.id
+                                        ? {
+                                            ...comment,
+                                            comment: event.target.value,
+                                          }
+                                        : comment,
+                                  ),
+                                }))
+                              }
+                              className="min-h-20 w-full rounded-xl border bg-white p-2 text-xs dark:bg-navy-950"
+                            />
+                            <p className="mt-1 text-[10px] text-navy-500">
+                              Deterministic starting text; a teacher edit is
+                              clearly recorded and never disguised as automatic
+                              wording.
+                            </p>
+                            {canManage && row.state !== "LOCKED" && (
+                              <div className="mt-2 flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() =>
+                                    saveNarrative({
+                                      action: "SAVE_SUBJECT_COMMENT",
+                                      termId: portal.termId,
+                                      studentId: selectedStudent.studentId,
+                                      subjectId: subject.subjectId,
+                                      comment: row.comment,
+                                    })
+                                  }
+                                >
+                                  Save Teacher Edit
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    saveNarrative({
+                                      action: "SAVE_SUBJECT_COMMENT",
+                                      termId: portal.termId,
+                                      studentId: selectedStudent.studentId,
+                                      subjectId: subject.subjectId,
+                                      comment: row.comment,
+                                      lock: true,
+                                    })
+                                  }
+                                >
+                                  Lock Comment
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </details>
                   ))}
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {["CLASS_TEACHER", "PRINCIPAL"].map((remarkRole) => {
+                    const existing = narratives.remarks.find(
+                      (remark: any) => remark.role === remarkRole,
+                    );
+                    const value = existing?.remark ?? "";
+                    return (
+                      <div
+                        key={remarkRole}
+                        className="rounded-xl border bg-white p-3 dark:border-navy-700 dark:bg-navy-950"
+                      >
+                        <div className="mb-2 flex justify-between text-xs">
+                          <strong>
+                            {remarkRole === "CLASS_TEACHER"
+                              ? "Class Teacher remark"
+                              : "Principal remark"}
+                          </strong>
+                          <Badge
+                            tone={
+                              existing?.state === "LOCKED" ? "green" : "neutral"
+                            }
+                          >
+                            {existing?.state ?? "DRAFT"}
+                          </Badge>
+                        </div>
+                        <textarea
+                          disabled={!canManage || existing?.state === "LOCKED"}
+                          value={value}
+                          placeholder="Human-written remark required"
+                          onChange={(event) =>
+                            setNarratives((current: any) => ({
+                              ...current,
+                              remarks: existing
+                                ? current.remarks.map((remark: any) =>
+                                    remark.id === existing.id
+                                      ? {
+                                          ...remark,
+                                          remark: event.target.value,
+                                        }
+                                      : remark,
+                                  )
+                                : [
+                                    ...current.remarks,
+                                    {
+                                      id: `draft-${remarkRole}`,
+                                      role: remarkRole,
+                                      remark: event.target.value,
+                                      state: "DRAFT",
+                                    },
+                                  ],
+                            }))
+                          }
+                          className="min-h-24 w-full rounded-xl border p-2 text-xs dark:bg-navy-900"
+                        />
+                        {canManage && existing?.state !== "LOCKED" && (
+                          <div className="mt-2 flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={value.trim().length < 3}
+                              onClick={() =>
+                                saveNarrative({
+                                  action: "SAVE_REMARK",
+                                  termId: portal.termId,
+                                  classId,
+                                  studentId: selectedStudent.studentId,
+                                  remarkRole,
+                                  remark: value,
+                                })
+                              }
+                            >
+                              Save Draft
+                            </Button>
+                            <Button
+                              size="sm"
+                              disabled={value.trim().length < 3}
+                              onClick={() =>
+                                saveNarrative({
+                                  action: "SAVE_REMARK",
+                                  termId: portal.termId,
+                                  classId,
+                                  studentId: selectedStudent.studentId,
+                                  remarkRole,
+                                  remark: value,
+                                  lock: true,
+                                })
+                              }
+                            >
+                              Lock Remark
+                            </Button>
+                          </div>
+                        )}
+                        <p className="mt-2 text-[10px] text-navy-500">
+                          Written and approved by a person; NEYO does not
+                          generate leadership remarks.
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

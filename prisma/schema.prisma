@@ -484,6 +484,8 @@ model Tenant {
   MasterReportCard             MasterReportCard[]
   reportPresentationSetting    ReportPresentationSetting?
   reportPublicationSnapshots   ReportPublicationSnapshot[]
+  reportSubjectComments        ReportSubjectComment[]
+  reportLeadershipRemarks      ReportLeadershipRemark[]
   CombinationGroup             CombinationGroup[]
   ElectiveBlock                ElectiveBlock[]
   TimetableConstraint          TimetableConstraint[]
@@ -7513,6 +7515,55 @@ model ReportPublicationSnapshot {
   @@unique([tenantId, termId, studentId, version])
   @@index([tenantId, termId, classId])
   @@index([tenantId, studentId])
+}
+
+// Deterministic starting comment with an explicit human-edit and lock trail.
+model ReportSubjectComment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  termId          String
+  classId         String
+  studentId       String
+  subjectId       String
+  autoComment     String
+  comment         String
+  state           String   @default("AUTO") // AUTO | TEACHER_EDITED | LOCKED
+  resolvedTeacherId   String?
+  resolvedTeacherName String?
+  editedById      String?
+  editedByName    String?
+  editedAt        DateTime?
+  lockedById      String?
+  lockedAt        DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, termId, studentId, subjectId])
+  @@index([tenantId, termId, classId])
+}
+
+// Human-owned report remarks. There is no generated Principal/Class Teacher
+// statement and publication requires an explicit lock by authorised staff.
+model ReportLeadershipRemark {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  termId       String
+  classId      String
+  studentId    String
+  role         String // CLASS_TEACHER | PRINCIPAL
+  remark       String
+  state        String   @default("DRAFT") // DRAFT | LOCKED
+  authorId     String
+  authorName   String
+  lockedById   String?
+  lockedAt     DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tenantId, termId, studentId, role])
+  @@index([tenantId, termId, classId])
 }
 
 model SubjectPaperConfig {

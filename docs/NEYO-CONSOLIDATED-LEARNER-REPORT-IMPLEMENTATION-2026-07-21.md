@@ -30,11 +30,17 @@ Founder decisions:
 - Release freezes one immutable learner payload per publication version with `AVAILABLE_WORK_V1` and a SHA-256 calculation hash. Existing publication evidence is never overwritten.
 - The controls are reachable at `Academics → Grading Engine → Consolidated learner report policy`; the detailed report is reachable from a released marks portal through `Master report`, then by selecting a learner.
 
+## Phase 3 implemented
+
+- Each subject receives a deterministic, rule-based starting comment using the learner mark and deviation from the class mean. No Bundi or external provider is required.
+- Subject teachers resolve deterministically from the class's real timetable slots; unresolved teachers remain visibly unresolved rather than guessed.
+- Comment provenance is explicit: `AUTO`, `TEACHER_EDITED`, or `LOCKED`, with editor and lock timestamps retained.
+- Class Teacher and Principal remarks are always human-authored. Class Teacher ownership is checked against the assigned class, while Principal remarks are restricted to authorised leadership.
+- The learner drill-down exposes save/lock controls and blocks edits after locking. Corrections must use the governed result-correction workflow.
+
 ## Remaining build phases
 
-1. Teacher resolution and deterministic editable/lockable subject comments.
-2. Class Teacher and Principal governed remarks.
-3. Academic dates and safe fee-data resolution when fee visibility is enabled.
-4. One-page rounded NEYO A4 report, comparison and trend charts.
-5. Exam practical resource feasibility and multi-session generation.
-6. Browser, PDF and database-backed computation tests.
+1. Academic dates and safe fee-data resolution when fee visibility is enabled.
+2. One-page rounded NEYO A4 report, comparison and trend charts.
+3. Exam practical resource feasibility and multi-session generation.
+4. Browser, PDF and database-backed computation tests.
