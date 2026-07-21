@@ -3,6 +3,17 @@
 > Every line below is ONE feature. Tick `[x]` only when fully built full-stack (DB → service → API → UI → 4 UX states → seed) and testable.
 > Legend: `[ ]` not started · `[~]` in progress · `[x]` done & testable.
 
+## 22 July 2026 — Ministry Grade 10 Selection change-readiness audit
+
+- [x] Reviewed the official public `selection.education.go.ke` Home, About, Pathways, Schools and Downloads surfaces without Ministry credentials.
+- [x] Confirmed the official boundary: selection records pathway, subject-combination and senior-school choices; placement is separate.
+- [x] Confirmed NEYO already separates pathways, school offerings, learner choices, resources and deterministic timetabling.
+- [x] Recorded the comparison and safe workflow in `docs/MOE-GRADE-10-SELECTION-PORTAL-CHANGE-READINESS-AUDIT-2026-07-22.md`.
+- [ ] Add an immutable, effective-year national combination catalogue with official code, source, checksum and reviewed activation/rollback.
+- [ ] Add national school-choice dimensions: KNEC code, cluster, sex, accommodation, county/sub-county and preference order.
+- [ ] Add manual confirmation-slip import and learner reconciliation without claiming direct Ministry submission.
+- [ ] Obtain evidence of an authorised Ministry API/data agreement before any authenticated integration; never collect Ministry credentials in NEYO.
+
 > ⚠️ **2026-07-01 REPO-WIDE AUDIT NOTE (read before trusting any `[x]` above the Foundation Setup section):** a fresh GitHub clone into a new chat revealed that this repo had TypeScript's `.tsbuildinfo` incremental-compile cache files committed to git. That stale cache made `npm run typecheck` silently skip most files and report 0 errors even when 224 real errors existed (missing `withTenant()` wraps, broken copy-pasted code in `academics-client.tsx`, UI component prop misuse, null-unsafe optional-subject fields, missing `tenantId` on audit-log writes, a genuinely unimplemented button handler, and more). All 224 were found and fixed, and re-verified with a real cache-free typecheck (0 errors), full test suite (24/24), all touched feature regression scripts, a clean production build, and a live logged-in HTTP smoke test of previously-broken pages/routes. Full detail: `docs/I60B-TYPECHECK-CACHE-AUDIT-2026-07-01.md` + the matching `CONTEXT-ANCHOR.md` entry. **Lesson for all future work in this repo: never trust `npm run typecheck` alone — always confirm no `*.tsbuildinfo` files exist first (now gitignored), and periodically re-verify checklist `[x]` items by actually running/clicking them, not just reading the prose.**
 
 ---
