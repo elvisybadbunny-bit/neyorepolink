@@ -308,7 +308,8 @@ export function NeyoLandingClient({
                 Built for Kenyan school operations
               </div>
               <h1 className="max-w-3xl text-[44px] font-black leading-[0.98] tracking-[-0.055em] text-[#101a2e] sm:text-6xl lg:text-[72px]">
-                Run your entire school from one <span style={{ color: brandAccent }}>operating system.</span>
+                Run your entire school from one{" "}
+                <span style={{ color: brandAccent }}>operating system.</span>
               </h1>
               <p className="mt-6 max-w-xl text-base font-medium leading-7 text-slate-600 sm:text-lg">
                 Run admissions, fees, attendance, CBE, exams, timetables, parent
@@ -410,9 +411,6 @@ export function NeyoLandingClient({
             "M-Pesa reconciliation workflows",
             "Finance reporting and controlled approvals",
           ]}
-          image="/screenshots/neyo-ops-cockpit.png"
-          imageAlt="NEYO operations and finance interface"
-          dark={false}
         />
 
         <section
@@ -651,10 +649,15 @@ export function NeyoLandingClient({
                   the everyday campus.
                 </p>
               </div>
-              <p className="mt-6 border-l-4 border-emerald-500 pl-5 text-sm font-bold italic leading-6 text-slate-700">
-                “Build with schools, test real workflows, and improve from
-                evidence—not appearances.”
-              </p>
+              <div className="mt-6 border-l-4 border-emerald-500 pl-5">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
+                  The building principle
+                </p>
+                <p className="mt-2 text-sm font-bold leading-6 text-slate-700">
+                  Build with schools, test real workflows and improve from
+                  evidence—not appearances.
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -1079,17 +1082,12 @@ function FeatureBand({
   title,
   text,
   bullets,
-  image,
-  imageAlt,
 }: {
   id: string;
   eyebrow: string;
   title: string;
   text: string;
   bullets: string[];
-  image: string;
-  imageAlt: string;
-  dark: boolean;
 }) {
   return (
     <section id={id} className="bg-[#f4f6f8] px-4 py-20 sm:px-6 sm:py-28">
@@ -1100,13 +1098,81 @@ function FeatureBand({
           text={text}
           bullets={bullets}
         />
-        <ProductFrame
-          src={image}
-          alt={imageAlt}
-          label="A real NEYO product workspace"
-        />
+        <FinancePreview />
       </div>
     </section>
+  );
+}
+
+function FinancePreview() {
+  const summary = [
+    ["Billed", "KES 4.82M"],
+    ["Allocated", "KES 3.67M"],
+    ["Outstanding", "KES 1.15M"],
+  ];
+  const steps = [
+    "Payment received and matched to learner",
+    "Receipt available to authorised users",
+    "Balance and audit trail updated",
+  ];
+  return (
+    <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.13)]">
+      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
+            Illustrative school workflow
+          </p>
+          <p className="mt-1 text-sm font-black">Fees overview</p>
+        </div>
+        <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-700">
+          Current term
+        </span>
+      </div>
+      <div className="grid gap-3 p-4 sm:grid-cols-3 sm:p-5">
+        {summary.map(([label, value], index) => (
+          <div
+            key={label}
+            className={`rounded-2xl p-4 ${index === 1 ? "bg-emerald-500 text-white" : "bg-slate-50"}`}
+          >
+            <p
+              className={`text-[10px] font-bold uppercase tracking-wider ${index === 1 ? "text-emerald-50" : "text-slate-400"}`}
+            >
+              {label}
+            </p>
+            <p className="mt-2 text-lg font-black tracking-tight">{value}</p>
+          </div>
+        ))}
+      </div>
+      <div className="px-4 pb-5 sm:px-5">
+        <div className="rounded-2xl border border-slate-100 p-4">
+          <div className="mb-4 flex items-end justify-between">
+            <div>
+              <p className="text-xs font-black">Collection movement</p>
+              <p className="mt-1 text-[10px] font-semibold text-slate-400">
+                Example presentation—not live school data
+              </p>
+            </div>
+            <span className="text-xs font-black text-emerald-700">76%</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full w-[76%] rounded-full bg-emerald-500" />
+          </div>
+        </div>
+        <div className="mt-3 grid gap-2">
+          {steps.map((item, index) => (
+            <div
+              key={item}
+              className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-600"
+            >
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white text-[10px] text-emerald-700 shadow-sm">
+                {index + 1}
+              </span>
+              {item}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 function DarkStep({
