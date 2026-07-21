@@ -2,12 +2,28 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { requirePermission } from "@/lib/core/session";
 import { ok, fail, handleError } from "@/lib/api/respond";
-import { listExamTimetableSetup, saveExamTimetableSlot, saveExamInvigilatorPool, generateExamInvigilators, deleteExamTimetableSlot, ExamTimetableEngineError } from "@/lib/services/exam-timetable-invigilator.service";
+import {
+  listExamTimetableSetup,
+  saveExamTimetableSlot,
+  saveExamInvigilatorPool,
+  generateExamInvigilators,
+  deleteExamTimetableSlot,
+  saveExamPracticalResource,
+  deleteExamPracticalResource,
+  ExamTimetableEngineError,
+} from "@/lib/services/exam-timetable-invigilator.service";
 
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  action: z.enum(["save_slot", "save_invigilator_pool", "generate_invigilators", "delete_slot"]),
+  action: z.enum([
+    "save_slot",
+    "save_invigilator_pool",
+    "generate_invigilators",
+    "delete_slot",
+    "save_resource",
+    "delete_resource",
+  ]),
   id: z.string().optional(),
   classId: z.string().optional(),
   subjectId: z.string().optional(),
@@ -24,6 +40,23 @@ const schema = z.object({
   invigilatorScope: z.string().optional(),
   eligibleInvigilatorIds: z.array(z.string()).optional(),
   slotId: z.string().optional(),
+  requiredInvigilators: z.number().optional(),
+  subjectTeacherPolicy: z.string().optional().nullable(),
+  durationMode: z.string().optional(),
+  preparationMins: z.number().optional(),
+  cleanupMins: z.number().optional(),
+  candidateCount: z.number().optional().nullable(),
+  sessionCapacity: z.number().optional().nullable(),
+  sessionLengthMins: z.number().optional().nullable(),
+  sessionGapMins: z.number().optional(),
+  practicalResourceIds: z.array(z.string()).optional(),
+  name: z.string().optional(),
+  resourceType: z.string().optional(),
+  quantity: z.number().optional(),
+  learnerCapacity: z.number().optional().nullable(),
+  availableFrom: z.string().optional().nullable(),
+  availableTo: z.string().optional().nullable(),
+  active: z.boolean().optional(),
 });
 
 function mapErr(e: unknown) {
@@ -47,10 +80,17 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requirePermission("exam.manage");
     const body = schema.parse(await req.json());
-    if (body.action === 'save_slot') return ok(await saveExamTimetableSlot(user, body));
-    if (body.action === 'save_invigilator_pool') return ok(await saveExamInvigilatorPool(user, body as any));
-    if (body.action === 'delete_slot') return ok(await deleteExamTimetableSlot(user, body.id || ''));
-    return ok(await generateExamInvigilators(user, body.examName || ''));
+    if (body.action === "save_slot")
+      return ok(await saveExamTimetableSlot(user, body));
+    if (body.action === "save_invigilator_pool")
+      return ok(await saveExamInvigilatorPool(user, body as any));
+    if (body.action === "delete_slot")
+      return ok(await deleteExamTimetableSlot(user, body.id || ""));
+    if (body.action === "save_resource")
+      return ok(await saveExamPracticalResource(user, body));
+    if (body.action === "delete_resource")
+      return ok(await deleteExamPracticalResource(user, body.id || ""));
+    return ok(await generateExamInvigilators(user, body.examName || ""));
   } catch (e) {
     return mapErr(e) ?? handleError(e);
   }

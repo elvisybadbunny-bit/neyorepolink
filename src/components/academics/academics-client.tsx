@@ -5444,7 +5444,7 @@ function ExamTimetableTab({ canManage }: { canManage: boolean }) {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
-  const [setup, setSetup] = React.useState<{ slots: ExamSlotRow[]; papers: ExamPaper[]; classes: ClassOpt[]; subjects: Subject[]; streamGroups: { id: string; label: string; classIds: string[] }[]; combinationGroups: { id: string; label: string; classIds: string[]; subjectId: string; source: string; scope: string }[] } | null>(null);
+  const [setup, setSetup] = React.useState<{ slots: ExamSlotRow[]; papers: ExamPaper[]; classes: ClassOpt[]; subjects: Subject[]; streamGroups: { id: string; label: string; classIds: string[] }[]; combinationGroups: { id: string; label: string; classIds: string[]; subjectId: string; source: string; scope: string }[]; practicalResources: any[] } | null>(null);
   const [teachers, setTeachers] = React.useState<Staff[]>([]);
   const [examName, setExamName] = React.useState('Midterm');
   const [editingSlotId, setEditingSlotId] = React.useState<string | null>(null);
@@ -5466,8 +5466,11 @@ function ExamTimetableTab({ canManage }: { canManage: boolean }) {
     durationMode: 'CUSTOM_TIME',
     preparationMins: 0,
     cleanupMins: 0,
+    candidateCount: 0, sessionCapacity: 0, sessionLengthMins: 60, sessionGapMins: 15,
+    practicalResourceIds: [] as string[],
     notes: '',
   });
+  const [resourceDraft, setResourceDraft] = React.useState({ name: '', resourceType: 'LAB', quantity: 1, learnerCapacity: 0, availableFrom: '', availableTo: '' });
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -5532,6 +5535,8 @@ function ExamTimetableTab({ canManage }: { canManage: boolean }) {
       durationMode: 'CUSTOM_TIME',
       preparationMins: 0,
       cleanupMins: 0,
+      candidateCount: 0, sessionCapacity: 0, sessionLengthMins: 60, sessionGapMins: 15,
+      practicalResourceIds: [],
       notes: '',
     });
   }
@@ -5557,6 +5562,11 @@ function ExamTimetableTab({ canManage }: { canManage: boolean }) {
       durationMode: (slot as any).durationMode || 'CUSTOM_TIME',
       preparationMins: (slot as any).preparationMins || 0,
       cleanupMins: (slot as any).cleanupMins || 0,
+      candidateCount: (slot as any).candidateCount || 0,
+      sessionCapacity: (slot as any).sessionCapacity || 0,
+      sessionLengthMins: (slot as any).sessionLengthMins || 60,
+      sessionGapMins: (slot as any).sessionGapMins || 0,
+      practicalResourceIds: (slot as any).practicalResourceIds || [],
       notes: slot.notes || '',
     });
   }
@@ -5608,6 +5618,11 @@ function ExamTimetableTab({ canManage }: { canManage: boolean }) {
           durationMode: form.durationMode,
           preparationMins: Number(form.preparationMins || 0),
           cleanupMins: Number(form.cleanupMins || 0),
+          candidateCount: form.candidateCount ? Number(form.candidateCount) : null,
+          sessionCapacity: form.sessionCapacity ? Number(form.sessionCapacity) : null,
+          sessionLengthMins: form.sessionLengthMins ? Number(form.sessionLengthMins) : null,
+          sessionGapMins: Number(form.sessionGapMins || 0),
+          practicalResourceIds: form.practicalResourceIds || [],
           notes: form.notes || null,
         }),
       });
@@ -5621,6 +5636,14 @@ function ExamTimetableTab({ canManage }: { canManage: boolean }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function savePracticalResource() {
+    if (!resourceDraft.name.trim()) { toast({ title: 'Enter the practical resource name first.', tone: 'error' }); return; }
+    const response = await fetch('/api/academics/exam-timetable', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save_resource', ...resourceDraft, learnerCapacity: resourceDraft.learnerCapacity || null, availableFrom: resourceDraft.availableFrom || null, availableTo: resourceDraft.availableTo || null }) });
+    const json = await response.json();
+    toast({ title: json.ok ? 'Practical resource saved' : json.error?.message || 'Could not save practical resource.', tone: json.ok ? 'success' : 'error' });
+    if (json.ok) { setResourceDraft({ name: '', resourceType: 'LAB', quantity: 1, learnerCapacity: 0, availableFrom: '', availableTo: '' }); await load(); }
   }
 
   async function generateInvigilators() {
@@ -5858,6 +5881,10 @@ function ExamTimetableTab({ canManage }: { canManage: boolean }) {
               <div><Label>Subject-teacher policy</Label><select value={form.subjectTeacherPolicy} onChange={(e)=>setForm((p:any)=>({...p,subjectTeacherPolicy:e.target.value}))} className={selectClass}><option value="">Use school/subject default</option><option value="ALLOW_SUBJECT_TEACHER">Allow</option><option value="PREFER_SUBJECT_TEACHER">Prefer (useful for practicals)</option><option value="AVOID_SUBJECT_TEACHER">Avoid if alternatives exist</option><option value="PROHIBIT_SUBJECT_TEACHER">Prohibit</option></select></div>
               <div className="grid grid-cols-2 gap-2"><div><Label>Preparation mins</Label><Input type="number" min={0} value={form.preparationMins} onChange={(e)=>setForm((p:any)=>({...p,preparationMins:Number(e.target.value)}))}/></div><div><Label>Cleanup mins</Label><Input type="number" min={0} value={form.cleanupMins} onChange={(e)=>setForm((p:any)=>({...p,cleanupMins:Number(e.target.value)}))}/></div></div>
             </div>
+
+            {form.durationMode === 'MULTI_SESSION' && <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20"><p className="mb-3 text-xs font-bold text-blue-900 dark:text-blue-200">Deterministic multi-session plan</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><div><Label>Total candidates</Label><Input type="number" min={1} value={form.candidateCount} onChange={(e)=>setForm((p:any)=>({...p,candidateCount:Number(e.target.value)}))}/></div><div><Label>Candidates/session</Label><Input type="number" min={1} value={form.sessionCapacity} onChange={(e)=>setForm((p:any)=>({...p,sessionCapacity:Number(e.target.value)}))}/></div><div><Label>Session minutes</Label><Input type="number" min={1} value={form.sessionLengthMins} onChange={(e)=>setForm((p:any)=>({...p,sessionLengthMins:Number(e.target.value)}))}/></div><div><Label>Gap minutes</Label><Input type="number" min={0} value={form.sessionGapMins} onChange={(e)=>setForm((p:any)=>({...p,sessionGapMins:Number(e.target.value)}))}/></div></div><p className="mt-2 text-[11px] text-blue-700 dark:text-blue-300">NEYO creates numbered candidate ranges in stable order and refuses a plan that runs beyond the selected end time.</p></div>}
+
+            <div className="rounded-2xl border border-navy-200 p-3 dark:border-navy-700"><p className="text-xs font-bold">Practical resources</p><p className="mb-2 text-[11px] text-navy-500">Reserve labs, workshops, venues or equipment. Capacity, availability dates and overlapping bookings are checked before saving.</p><div className="space-y-2">{(setup.practicalResources ?? []).map((resource:any)=><label key={resource.id} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={form.practicalResourceIds.includes(resource.id)} onChange={(e)=>setForm((p:any)=>({...p,practicalResourceIds:e.target.checked?[...new Set([...p.practicalResourceIds,resource.id])]:p.practicalResourceIds.filter((id:string)=>id!==resource.id)}))}/><span className="font-semibold">{resource.name}</span><span className="text-navy-400">{resource.resourceType} · {resource.learnerCapacity ? `${resource.learnerCapacity} learners` : 'capacity not measured'}</span></label>)}</div>{canManage && <div className="mt-3 grid gap-2 sm:grid-cols-6"><Input placeholder="New resource name" value={resourceDraft.name} onChange={(e)=>setResourceDraft(p=>({...p,name:e.target.value}))}/><select className={selectClass} value={resourceDraft.resourceType} onChange={(e)=>setResourceDraft(p=>({...p,resourceType:e.target.value}))}><option value="LAB">Lab</option><option value="WORKSHOP">Workshop</option><option value="EQUIPMENT">Equipment</option><option value="VENUE">Venue</option><option value="OTHER">Other</option></select><Input aria-label="Resource quantity" type="number" min={1} value={resourceDraft.quantity} onChange={(e)=>setResourceDraft(p=>({...p,quantity:Number(e.target.value)}))}/><Input aria-label="Learner capacity" type="number" min={0} placeholder="Learner capacity" value={resourceDraft.learnerCapacity || ''} onChange={(e)=>setResourceDraft(p=>({...p,learnerCapacity:Number(e.target.value)}))}/><Input aria-label="Available from" type="date" value={resourceDraft.availableFrom} onChange={(e)=>setResourceDraft(p=>({...p,availableFrom:e.target.value}))}/><Button type="button" variant="secondary" onClick={savePracticalResource}>Add Resource</Button></div>}</div>
 
             <div>
               <Label>Invigilator pool mode</Label>

@@ -486,6 +486,8 @@ model Tenant {
   reportPublicationSnapshots   ReportPublicationSnapshot[]
   reportSubjectComments        ReportSubjectComment[]
   reportLeadershipRemarks      ReportLeadershipRemark[]
+  examPracticalResources       ExamPracticalResource[]
+  examTimetableSessions        ExamTimetableSession[]
   CombinationGroup             CombinationGroup[]
   ElectiveBlock                ElectiveBlock[]
   TimetableConstraint          TimetableConstraint[]
@@ -6337,6 +6339,11 @@ model ExamTimetableSlot {
   durationMode            String   @default("CUSTOM_TIME") // PERIOD | CUSTOM_TIME | HALF_DAY_AM | HALF_DAY_PM | FULL_DAY | MULTI_SESSION
   preparationMins         Int      @default(0)
   cleanupMins             Int      @default(0)
+  candidateCount          Int?
+  sessionCapacity         Int?
+  sessionLengthMins       Int?
+  sessionGapMins          Int      @default(0)
+  practicalResourceIdsJson String? @default("[]")
   invigilatorJson         String?  @default("[]")
   warningJson             String?  @default("[]")
   notes                   String?
@@ -6360,10 +6367,48 @@ model ExamTimetableSlot {
   // paper, not just which class it's nominally under.
   electiveBlockId String?
   studentIdsJson  String? @default("[]")
+  sessions        ExamTimetableSession[]
 
   @@unique([tenantId, classId, subjectId, examDate, startTime, paperName])
   @@index([tenantId, examDate])
   @@index([tenantId, classId])
+}
+
+model ExamPracticalResource {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  resourceType String // LAB | WORKSHOP | EQUIPMENT | VENUE | OTHER
+  quantity    Int      @default(1)
+  learnerCapacity Int?
+  availableFrom String?
+  availableTo   String?
+  active      Boolean  @default(true)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId, active])
+}
+
+model ExamTimetableSession {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slotId         String
+  slot           ExamTimetableSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  sessionNo      Int
+  startTime      String
+  endTime        String
+  candidateStart Int
+  candidateEnd   Int
+  candidateCount Int
+  createdAt      DateTime @default(now())
+
+  @@unique([slotId, sessionNo])
+  @@index([tenantId, startTime])
 }
 
 // I.21 — records for exam applications and assembled exam materials.

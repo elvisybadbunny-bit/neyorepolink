@@ -46,7 +46,14 @@ Founder decisions:
 - A compact rounded one-page A4 consolidated PDF includes dynamic available assessments, effective weights, deviation, grade/CBE level, policy-controlled rank, resolved teacher, comments, human remarks, dates, optional fees and trend.
 - The same renderer supports school-controlled colour and black-and-white output. A published report carries the latest calculation-hash evidence; an unreleased preview is labelled as a live computed preview.
 
-## Remaining build phases
+## Exam practical and multi-session phase implemented
 
-1. Exam practical resource feasibility and multi-session generation.
-2. Browser, PDF and database-backed computation tests, including migrated preview verification and 360px/A4 inspection.
+- Schools can register labs, workshops, venues and equipment with quantity, learner capacity and availability dates.
+- Saving a practical paper checks active resources, date availability, learner capacity and overlapping reservations. Multiple physical units permit only that many simultaneous reservations.
+- `MULTI_SESSION` requires total candidates, per-session capacity, session length and gap. NEYO creates stable numbered candidate ranges and concrete session rows; it rejects plans that run past the selected end time.
+- The exam timetable API now accepts the duration, preparation/cleanup, required-invigilator and subject-teacher-policy fields already shown by the UI instead of silently stripping them.
+- All scheduling remains deterministic and provider-independent. Generation is not approval, and infeasible work is never hidden.
+
+## Remaining verification phase
+
+- Browser, PDF and database-backed computation tests, including migrated preview verification and 360px/A4 inspection.

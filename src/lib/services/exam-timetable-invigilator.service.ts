@@ -17,19 +17,28 @@ function parseJson<T>(value: string | null | undefined, fallback: T): T {
 type Invigilator = { teacherId: string; teacherName: string; warning?: string };
 type EligibleInvigilator = { teacherId: string; teacherName: string };
 
-function overlap(aStart: string, aEnd: string, bStart: string, bEnd: string) {
-  return aStart < bEnd && bStart < aEnd;
+function overlap(aStart: string, aEnd: string, bStart: string, bEnd: string) { return aStart < bEnd && bStart < aEnd; }
+function timeToMinutes(value: string) { const [h, m] = value.split(":").map(Number); return h * 60 + m; }
+function minutesToTime(value: number) { return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`; }
+function buildDeterministicSessions(input: any) {
+  if (input.durationMode !== "MULTI_SESSION") return [];
+  if (!input.candidateCount || !input.sessionCapacity || !input.sessionLengthMins) throw new ExamTimetableEngineError("INVALID", "Multiple sessions require candidate count, candidates per session and session length.");
+  const candidates = Math.max(1, Number(input.candidateCount)); const capacity = Math.max(1, Number(input.sessionCapacity)); const length = Math.max(1, Number(input.sessionLengthMins)); const gap = Math.max(0, Number(input.sessionGapMins || 0));
+  const count = Math.ceil(candidates / capacity); const start = timeToMinutes(input.startTime); const requiredEnd = start + count * length + Math.max(0, count - 1) * gap;
+  if (requiredEnd > timeToMinutes(input.endTime)) throw new ExamTimetableEngineError("CONFLICT", `The ${count} required sessions need until ${minutesToTime(requiredEnd)}, after the selected end time.`);
+  return Array.from({ length: count }, (_, i) => { const candidateStart = i * capacity + 1; const candidateEnd = Math.min(candidates, (i + 1) * capacity); const sessionStart = start + i * (length + gap); return { sessionNo: i + 1, startTime: minutesToTime(sessionStart), endTime: minutesToTime(sessionStart + length), candidateStart, candidateEnd, candidateCount: candidateEnd - candidateStart + 1 }; });
 }
 
 export async function listExamTimetableSetup(user: SessionUser) {
   return withTenant(user.tenantId, async () => {
     const tdb = tenantDb();
-    const [slots, papers, classes, subjects, combinationGroupsRaw] = await Promise.all([
-      tdb.examTimetableSlot.findMany({ orderBy: [{ examDate: 'asc' }, { startTime: 'asc' }] }),
+    const [slots, papers, classes, subjects, combinationGroupsRaw, practicalResources] = await Promise.all([
+      tdb.examTimetableSlot.findMany({ include: { sessions: { orderBy: { sessionNo: "asc" } } }, orderBy: [{ examDate: 'asc' }, { startTime: 'asc' }] }),
       tdb.subjectPaperConfig.findMany({ orderBy: [{ subjectId: 'asc' }, { name: 'asc' }] }),
       tdb.schoolClass.findMany({ where: { archived: false }, orderBy: [{ level: 'asc' }, { stream: 'asc' }] }),
       tdb.subject.findMany({ where: { archived: false }, orderBy: { name: 'asc' } }),
       tdb.combinationGroup.findMany({ where: { active: true }, include: { members: true }, orderBy: { name: 'asc' } }),
+      tdb.examPracticalResource.findMany({ orderBy: [{ active: "desc" }, { name: "asc" }] }),
     ]);
     const streamGroups = Array.from(new Map(
       classes
@@ -44,7 +53,7 @@ export async function listExamTimetableSetup(user: SessionUser) {
       source: group.source,
       scope: group.scope,
     }));
-    return { slots: slots.map((s) => ({ ...s, targetIds: parseJson<string[]>(s.targetJson, []), invigilators: parseJson<any[]>(s.invigilatorJson, []), eligibleInvigilators: parseJson<any[]>(s.eligibleInvigilatorJson, []), warnings: parseJson<string[]>(s.warningJson, []) })), papers, classes, subjects, streamGroups, combinationGroups };
+    return { slots: slots.map((s) => ({ ...s, targetIds: parseJson<string[]>(s.targetJson, []), practicalResourceIds: parseJson<string[]>(s.practicalResourceIdsJson, []), invigilators: parseJson<any[]>(s.invigilatorJson, []), eligibleInvigilators: parseJson<any[]>(s.eligibleInvigilatorJson, []), warnings: parseJson<string[]>(s.warningJson, []) })), papers, classes, subjects, streamGroups, combinationGroups, practicalResources };
   });
 }
 
@@ -56,6 +65,20 @@ export async function saveExamTimetableSlot(user: SessionUser, input: any) {
       tdb.subject.findUnique({ where: { id: input.subjectId }, select: { examSubjectTeacherPolicy: true } }),
     ]);
     const subjectTeacherPolicy = input.subjectTeacherPolicy || subject?.examSubjectTeacherPolicy || tenant?.examSubjectTeacherPolicy || "AVOID_SUBJECT_TEACHER";
+    const sessions = buildDeterministicSessions(input);
+    const resourceIds = Array.from(new Set((input.practicalResourceIds ?? []).filter(Boolean))) as string[];
+    const resources = resourceIds.length ? await tdb.examPracticalResource.findMany({ where: { id: { in: resourceIds }, active: true } }) : [];
+    if (resources.length !== resourceIds.length) throw new ExamTimetableEngineError("INVALID", "One or more selected practical resources are unavailable or inactive.");
+    for (const resource of resources) {
+      if ((resource.availableFrom && input.examDate < resource.availableFrom) || (resource.availableTo && input.examDate > resource.availableTo)) throw new ExamTimetableEngineError("CONFLICT", `${resource.name} is not available on ${input.examDate}.`);
+      const largestSession = sessions.length ? Math.max(...sessions.map((s) => s.candidateCount)) : Number(input.candidateCount || 0);
+      if (resource.learnerCapacity && largestSession > resource.learnerCapacity) throw new ExamTimetableEngineError("CONFLICT", `${resource.name} holds ${resource.learnerCapacity} learners, below the required session size of ${largestSession}.`);
+    }
+    const sameDaySlots = resourceIds.length ? await tdb.examTimetableSlot.findMany({ where: { examDate: input.examDate, ...(input.id ? { id: { not: input.id } } : {}) }, select: { startTime: true, endTime: true, practicalResourceIdsJson: true } }) : [];
+    for (const resource of resources) {
+      const concurrent = sameDaySlots.filter((slot) => overlap(input.startTime, input.endTime, slot.startTime, slot.endTime) && parseJson<string[]>(slot.practicalResourceIdsJson, []).includes(resource.id)).length;
+      if (concurrent >= resource.quantity) throw new ExamTimetableEngineError("CONFLICT", `${resource.name} has all ${resource.quantity} available unit(s) reserved during this time.`);
+    }
     const data = {
       classId: input.classId,
       subjectId: input.subjectId,
@@ -75,15 +98,39 @@ export async function saveExamTimetableSlot(user: SessionUser, input: any) {
       durationMode: input.durationMode || "CUSTOM_TIME",
       preparationMins: Math.max(0, Math.min(240, Number(input.preparationMins || 0))),
       cleanupMins: Math.max(0, Math.min(240, Number(input.cleanupMins || 0))),
+      candidateCount: input.candidateCount ? Math.max(1, Number(input.candidateCount)) : null,
+      sessionCapacity: input.sessionCapacity ? Math.max(1, Number(input.sessionCapacity)) : null,
+      sessionLengthMins: input.sessionLengthMins ? Math.max(1, Number(input.sessionLengthMins)) : null,
+      sessionGapMins: Math.max(0, Number(input.sessionGapMins || 0)),
+      practicalResourceIdsJson: JSON.stringify(resourceIds),
       notes: input.notes || null,
       createdById: user.id,
       createdByName: user.fullName,
     };
-    if (input.id) return tdb.examTimetableSlot.update({ where: { id: input.id }, data });
-    return tdb.examTimetableSlot.create({ data: { tenantId: user.tenantId, ...data } });
+    const slot = input.id ? await tdb.examTimetableSlot.update({ where: { id: input.id }, data }) : await tdb.examTimetableSlot.create({ data: { tenantId: user.tenantId, ...data } });
+    await tdb.examTimetableSession.deleteMany({ where: { slotId: slot.id } });
+    for (const session of sessions) await tdb.examTimetableSession.create({ data: { tenantId: user.tenantId, slotId: slot.id, ...session } });
+    return { ...slot, sessions };
   });
 }
 
+
+export async function saveExamPracticalResource(user: SessionUser, input: any) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb(); const name = String(input.name || "").trim();
+    if (!name) throw new ExamTimetableEngineError("INVALID", "Resource name is required.");
+    const data = { name, resourceType: input.resourceType || "OTHER", quantity: Math.max(1, Number(input.quantity || 1)), learnerCapacity: input.learnerCapacity ? Math.max(1, Number(input.learnerCapacity)) : null, availableFrom: input.availableFrom || null, availableTo: input.availableTo || null, active: input.active !== false, notes: input.notes || null };
+    if (data.availableFrom && data.availableTo && data.availableFrom > data.availableTo) throw new ExamTimetableEngineError("INVALID", "Resource availability end date must be on or after its start date.");
+    return input.id ? tdb.examPracticalResource.update({ where: { id: input.id }, data }) : tdb.examPracticalResource.create({ data: { tenantId: user.tenantId, ...data } });
+  });
+}
+export async function deleteExamPracticalResource(user: SessionUser, id: string) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb(); const used = await tdb.examTimetableSlot.findMany({ select: { practicalResourceIdsJson: true } });
+    if (used.some((slot) => parseJson<string[]>(slot.practicalResourceIdsJson, []).includes(id))) throw new ExamTimetableEngineError("CONFLICT", "This resource is used by an exam slot. Remove the reservation before deleting it.");
+    await tdb.examPracticalResource.delete({ where: { id } }); return { deleted: true, id };
+  });
+}
 
 export async function saveExamInvigilatorPool(user: SessionUser, input: { examName: string; slotId?: string; invigilatorScope?: string; eligibleInvigilatorIds?: string[] }) {
   return withTenant(user.tenantId, async () => {
