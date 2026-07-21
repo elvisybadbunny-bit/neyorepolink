@@ -2533,6 +2533,38 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
     return teachers.filter((t: any) => qualifiedIds.has(t.id));
   }
 
+  async function runTeacherRotation() {
+    if (!canManage || rotatingTeachers) return;
+    const confirmed = window.confirm(
+      "Rotate only the class-subject assignments explicitly flagged for term rotation? All other teacher assignments will remain unchanged.",
+    );
+    if (!confirmed) return;
+    setRotatingTeachers(true);
+    try {
+      const res = await fetch("/api/academics/timetable/generator", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "rotate_flagged_teachers" }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Could not rotate flagged teacher assignments.");
+      await load();
+      const rotated = Number(json.data?.rotatedCount ?? 0);
+      const reassigned = Number(json.data?.reassignedCount ?? 0);
+      toast({
+        title: rotated > 0 ? "Flagged teacher assignments rotated" : "No flagged assignments found",
+        description: rotated > 0
+          ? `${rotated} flagged assignment${rotated === 1 ? "" : "s"} reviewed; ${reassigned} reassigned.`
+          : "Flag a class-subject row for term rotation before running this action.",
+        tone: rotated > 0 ? "success" : "info",
+      });
+    } catch (e: any) {
+      toast({ title: e?.message || "Could not rotate flagged teacher assignments.", tone: "error" });
+    } finally {
+      setRotatingTeachers(false);
+    }
+  }
+
   async function saveNeed(classId: string, subjectId: string, patch: any) {
     setSaving(true);
     try {
@@ -2579,6 +2611,27 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   // a school pick a genuinely different teacher per stream for this
   // same subject, since a school may legitimately want that even while
   // everything else about the subject is shared.
+  function needAgreementForLevelSubject(levelClasses: any[], subjectId: string) {
+    const perClass: Record<string, any> = {};
+    const comparable = (need: any) => ({
+      lessonsPerWeek: Number(need?.lessonsPerWeek ?? 0),
+      doubleCount: Number(need?.doubleCount ?? 0),
+      allowSplitDouble: Boolean(need?.allowSplitDouble ?? false),
+      venueId: need?.venueId ?? null,
+      requiresMovement: Boolean(need?.requiresMovement ?? false),
+      noLabAccess: Boolean(need?.noLabAccess ?? false),
+      labPriority: need?.labPriority ?? "NORMAL",
+      rotateTeacherEachTerm: Boolean(need?.rotateTeacherEachTerm ?? false),
+    });
+    for (const cls of levelClasses) {
+      perClass[cls.id] = (classNeeds[cls.id] ?? []).find((need: any) => need.subjectId === subjectId) ?? {};
+    }
+    const rows = levelClasses.map((cls) => perClass[cls.id]);
+    const firstSignature = JSON.stringify(comparable(rows[0]));
+    const agrees = rows.every((row) => JSON.stringify(comparable(row)) === firstSignature);
+    return { agrees, shared: agrees ? (rows[0] ?? {}) : {}, perClass };
+  }
+
   async function saveNeedForLevel(level: string, subjectId: string, patch: any, sharedCurrent: any, teacherIdByClassId?: Record<string, string | null>) {
     setSaving(true);
     try {
