@@ -23,7 +23,9 @@ html.glass.dark .neyo-public-site header {
 }
 
 html.glass .neyo-public-site .bg-white,
-html.glass.dark .neyo-public-site .bg-white {
+html.glass.dark .neyo-public-site .bg-white,
+html.glass .neyo-public-site [data-public-dialog],
+html.glass.dark .neyo-public-site [data-public-dialog] {
   background-color: #ffffff !important;
   border-color: rgb(226 232 240) !important;
   -webkit-backdrop-filter: none !important;

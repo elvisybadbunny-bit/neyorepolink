@@ -26,7 +26,7 @@ export function FounderCredentialsVault() {
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/founder-ops");
+      const res = await fetch("/api/founder-ops?view=settings");
       const json = await res.json();
       if (json.ok && json.data?.integrationCredentials) {
         setCredentials(json.data.integrationCredentials);

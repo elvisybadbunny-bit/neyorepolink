@@ -61,6 +61,7 @@ type LandingContent = {
   finalSubheadline: string;
   footerLinks: LinkItem[];
   socialLinks: LinkItem[];
+  faqs?: { question: string; answer: string }[];
 };
 
 interface LandingClientProps {
@@ -198,6 +199,9 @@ export function NeyoLandingClient({
   const schoolMedia =
     landingContent.products.find((product) => product.key === "school")
       ?.mediaUrl || "/screenshots/neyo-school-os-dashboard.png";
+  const faqItems = landingContent.faqs?.length
+    ? landingContent.faqs.map((item) => [item.question, item.answer] as const)
+    : FAQS;
 
   return (
     <div className="neyo-public-site min-h-screen overflow-x-hidden bg-white text-[#111c32] selection:bg-emerald-200">
@@ -317,10 +321,6 @@ export function NeyoLandingClient({
           <div className="absolute inset-x-0 top-0 -z-10 h-[620px] bg-[radial-gradient(circle_at_80%_10%,rgba(21,148,95,0.10),transparent_36%),radial-gradient(circle_at_10%_30%,rgba(59,130,246,0.08),transparent_30%)]" />
           <div className="mx-auto grid max-w-[1240px] gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <div>
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-extrabold text-emerald-800">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                Built for Kenyan school operations
-              </div>
               <h1 className="max-w-3xl text-[44px] font-black leading-[0.98] tracking-[-0.055em] text-[#101a2e] sm:text-6xl lg:text-[72px]">
                 Run your entire school from one{" "}
                 <span style={{ color: brandAccent }}>operating system.</span>
@@ -917,7 +917,7 @@ export function NeyoLandingClient({
               title="Clear answers before a demonstration."
             />
             <div className="mt-10 divide-y divide-slate-200 border-y border-slate-200">
-              {FAQS.map(([question, answer]) => (
+              {faqItems.map(([question, answer]) => (
                 <details key={question} className="group py-1">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-left font-extrabold">
                     <span>{question}</span>
@@ -1002,6 +1002,24 @@ export function NeyoLandingClient({
                 <Download className="h-4 w-4" />
                 Install NEYO
               </button>
+              {landingContent.socialLinks.length > 0 ? (
+                <div
+                  className="mt-6 flex flex-wrap gap-2"
+                  aria-label="NEYO social media links"
+                >
+                  {landingContent.socialLinks.map((link) => (
+                    <a
+                      key={`${link.label}-${link.href}`}
+                      href={link.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full border border-white/15 px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-emerald-300 hover:text-white"
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
             </div>
             <FooterGroup
               title="Product"
@@ -1054,7 +1072,8 @@ export function NeyoLandingClient({
             role="dialog"
             aria-modal="true"
             aria-labelledby="demo-title"
-            className="my-6 w-full max-w-lg rounded-[28px] bg-white p-6 shadow-2xl sm:p-8"
+            data-public-dialog
+            className="my-6 w-full max-w-lg rounded-[28px] bg-white p-6 text-[#101a2e] shadow-2xl sm:p-8"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -1199,19 +1218,20 @@ function ProductFrame({
 }) {
   return (
     <div>
-      <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white p-2 shadow-[0_28px_80px_rgba(15,23,42,0.15)]">
-        <div className="flex h-8 items-center gap-1.5 px-3">
-          <span className="h-2.5 w-2.5 rounded-full bg-rose-300" />
-          <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
-          <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
+      <div className="mx-auto max-w-3xl drop-shadow-[0_30px_45px_rgba(15,23,42,0.22)]">
+        <div className="rounded-t-[22px] border-[7px] border-b-0 border-[#111827] bg-[#111827] p-1 sm:border-[10px] sm:border-b-0">
+          <div className="mx-auto mb-1 h-1.5 w-1.5 rounded-full bg-blue-400/70" aria-hidden="true" />
+          <img
+            src={src}
+            alt={alt}
+            className="aspect-[16/10] w-full rounded-sm bg-slate-50 object-cover object-top"
+          />
         </div>
-        <img
-          src={src}
-          alt={alt}
-          className="aspect-[16/10] w-full rounded-[16px] bg-slate-50 object-cover object-top"
-        />
+        <div className="relative h-3 rounded-b-[55%] bg-gradient-to-b from-slate-300 to-slate-500 sm:h-4">
+          <div className="absolute left-1/2 top-0 h-1 w-20 -translate-x-1/2 rounded-b-lg bg-slate-500/70 sm:w-28" />
+        </div>
       </div>
-      <p className="mt-3 text-center text-[11px] font-bold text-slate-400">
+      <p className="mt-4 text-center text-[11px] font-bold text-slate-400">
         {label}
       </p>
     </div>
