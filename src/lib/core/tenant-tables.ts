@@ -245,6 +245,7 @@ export const TENANT_OWNED_MODELS = [
   // bug class previously found for pathway/pathwaySubjectRequirement/
   // studentPathwayPreference/subjectSelectionPortal (BB.4) and AA.1/AA.2.
   "blockedTimetableSlot",
+  "practiceTeacherPlacement",
   "timetableGenerationJob",
   "seniorLearnerTimetableProof",
   "timetableGovernanceDecision",

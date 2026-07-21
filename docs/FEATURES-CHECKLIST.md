@@ -5071,3 +5071,10 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Student duty allocation now uses stable term+student ordering instead of `Math.random`, while preserving one duty per learner/term.
 - [x] Ordinary marks entry supports Enter/up/down navigation; paper-aware Grading Engine supports Enter and all four arrows.
 - [ ] Remaining notebook gaps continue in `docs/FOUNDER-NOTEBOOK-IDEAS-FULL-STACK-AUDIT-2026-07-21.md`.
+
+### Founder notebook gap batch 2 — class sets and practice teachers — 2026-07-21
+- [x] Hard timetable/activity blocks support arbitrary validated `CLASS_SET` selection in addition to school/level/single-class scopes.
+- [x] Deterministic timetable reservation expands the saved class set atomically at the chosen day/period.
+- [x] Practice-teacher placements store trainee, mentor, supervised subjects/classes, dates, notes and explicit solo-teaching approval.
+- [x] Auto teacher allocation excludes active supervised trainees unless leadership approves solo responsibility.
+- [x] Manual sole assignment of a supervised trainee is blocked with guidance to assign the mentor or approve solo teaching.

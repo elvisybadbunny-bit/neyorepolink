@@ -23,13 +23,13 @@ Status meanings:
 | Two short breaks | FULL STACK / REACHABLE | `shortBreak2Start` / `shortBreak2Mins` | Deployment verification pending. |
 | Games/PE for whole school, level or class at chosen time | FULL STACK / REACHABLE | Smart Timetable blocked slots + co-curricular configuration | Activity-category UI and co-curricular config remain separate surfaces. |
 | Period count reflects configured 10 rather than fixed 8 | FULL STACK / REACHABLE | `periodsPerDay`; timetable and print derive ranges | Real browser regression still required. |
-| Activity timetable linkage and class ranges | PARTIAL | Academics → Co-curricular; activity categories; blocked-slot scopes | No single arbitrary range picker covers every activity workflow. |
+| Activity timetable linkage and class ranges | FULL STACK / REACHABLE | Smart Timetable blocked slots now support SCHOOL, LEVEL, CLASS and arbitrary CLASS_SET selection; co-curricular configuration remains linked | Browser verification pending. |
 | Fair automatic teacher-to-class allocation with strengths | FULL STACK / REACHABLE | Smart Timetable teacher-subject strengths, auto assignment, staffing report | Human review remains required. |
 | Recompute when teacher joins/transfers or settings change | FULL STACK / REACHABLE | transfer-impact/continuity services, allocation review, regeneration | Never automatically publishes changed timetable. |
 | Exam PP1/PP2/PP3 and grouped classes | FULL STACK / REACHABLE | Exam Timetable, paper configs, combination/elective targeting | Grading paper UI was unreachable; repaired in this audit. |
 | Each teacher receives personal timetable with venue | FULL STACK / REACHABLE | Teacher portal/timetable print bundles | Deployment print verification pending. |
 | Lab venue displayed and capacity checked | FULL STACK / REACHABLE | Venue pool, pinned/resolved venue, print cells | Learner capacity requires latest migration. |
-| Teacher-in-practice/trainee scenario | NOT BUILT | No dedicated trainee/practice-teacher workflow found | Define permissions, supervision and timetable ownership first. |
+| Teacher-in-practice/trainee scenario | FULL STACK / REACHABLE | Smart Timetable → Practice Teachers and Mentors; placement, subject/class scope, dates and solo approval | Deployed role/browser verification pending. |
 
 ## Grading Engine repair in this audit
 
@@ -118,13 +118,11 @@ Repairs:
 
 ## Priority gaps found
 
-1. Arbitrary class-range selection for every shared timetable/activity rule.
-2. Teacher-in-practice role/supervision.
-3. Parent-originated exam-application package upload.
-4. Printed ID QR attendance with one session token and duplicate-scan protection.
-5. Newsletter pagination/blank-space reproduction.
-6. Messaging 360px scroll/overlay reproduction.
-7. Parent-facing split-payment verification.
-8. Deployed browser evidence for many already-built workflows.
+1. Parent-originated exam-application package upload.
+2. Printed ID QR attendance with one session token and duplicate-scan protection.
+3. Newsletter pagination/blank-space reproduction.
+4. Messaging 360px scroll/overlay reproduction.
+5. Parent-facing split-payment verification.
+6. Deployed browser evidence for many already-built workflows.
 
 No row marked PARTIAL/NOT BUILT should be presented as completed in marketing or the NEYO Bible.

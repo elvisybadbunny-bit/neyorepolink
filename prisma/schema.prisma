@@ -5804,9 +5804,10 @@ model BlockedTimetableSlot {
 
   label String // school-facing name, e.g. "Whole-School Assembly", "Games Afternoon"
 
-  scope   String // SCHOOL | LEVEL | CLASS
+  scope   String // SCHOOL | LEVEL | CLASS | CLASS_SET
   level   String?
   classId String?
+  classIdsJson String @default("[]") // arbitrary selected classes for CLASS_SET
 
   dayOfWeek Int // 1=Mon..6=Sat
   period    Int // specific real period number this slot occupies
@@ -7531,6 +7532,30 @@ model StudentDutyEligibility {
 
   @@index([tenantId, medicalRestriction])
   @@index([tenantId, isStudentLeader])
+}
+
+model PracticeTeacherPlacement {
+  id              String   @id @default(cuid())
+  tenantId        String
+  traineeUserId   String
+  traineeName     String
+  mentorUserId    String
+  mentorName      String
+  subjectIdsJson  String   @default("[]")
+  classIdsJson    String   @default("[]")
+  startsOn        String
+  endsOn          String
+  canTeachSolo    Boolean  @default(false)
+  status          String   @default("ACTIVE") // ACTIVE | COMPLETED | CANCELLED
+  note            String?
+  createdById     String
+  createdByName   String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, traineeUserId])
+  @@index([tenantId, mentorUserId])
 }
 
 model SubjectSelectionPortal {

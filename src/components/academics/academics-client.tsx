@@ -13,6 +13,7 @@ import { CurriculumVersionManagerClient } from "./curriculum-version-manager";
 import { PathwayManagerClient } from "./pathway-manager";
 import { SubjectSelectionManager } from "./subject-selection-manager";
 import { ComputationDashboardClient } from "./computation-dashboard";
+import { PracticeTeacherCard } from "./practice-teacher-card";
 import {
   BookOpen, Building2, CalendarRange, Grid3X3, NotebookPen, Plus,
   AlertCircle, Loader2, X, Sparkles, Trash2, Check, Calendar, Printer, Palette, Sliders, Info, HelpCircle, Save, Trophy,
@@ -2349,7 +2350,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   // distinct from the soft co-curricular ClassSubjectNeed approach).
   const [blockedSlots, setBlockedSlots] = React.useState<any[]>([]);
   const [blockedSlotSaving, setBlockedSlotSaving] = React.useState(false);
-  const emptyBlockedSlotForm = { id: "", label: "", scope: "SCHOOL", level: "", classId: "", dayOfWeek: 1, period: 1, isDouble: false, enabled: true };
+  const emptyBlockedSlotForm = { id: "", label: "", scope: "SCHOOL", level: "", classId: "", classIds: [] as string[], dayOfWeek: 1, period: 1, isDouble: false, enabled: true };
   const [blockedSlotForm, setBlockedSlotForm] = React.useState<any>(emptyBlockedSlotForm);
   const [combinationForm, setCombinationForm] = React.useState<any>({
     id: "",
@@ -2725,6 +2726,10 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       toast({ title: "Choose which class this block applies to.", tone: "error" });
       return;
     }
+    if (blockedSlotForm.scope === "CLASS_SET" && blockedSlotForm.classIds.length === 0) {
+      toast({ title: "Select at least one class for this shared block.", tone: "error" });
+      return;
+    }
     setBlockedSlotSaving(true);
     try {
       const res = await fetch("/api/academics/timetable/engine", {
@@ -2737,6 +2742,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
           scope: blockedSlotForm.scope,
           level: blockedSlotForm.scope === "LEVEL" ? blockedSlotForm.level : undefined,
           classId: blockedSlotForm.scope === "CLASS" ? blockedSlotForm.classId : undefined,
+          classIds: blockedSlotForm.scope === "CLASS_SET" ? blockedSlotForm.classIds : undefined,
           dayOfWeek: Number(blockedSlotForm.dayOfWeek),
           period: Number(blockedSlotForm.period),
           isDouble: !!blockedSlotForm.isDouble,
@@ -3347,10 +3353,11 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
               </div>
               <div>
                 <Label>Applies to</Label>
-                <select value={blockedSlotForm.scope} onChange={(e) => setBlockedSlotForm((f: any) => ({ ...f, scope: e.target.value, level: "", classId: "" }))} className="mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
+                <select value={blockedSlotForm.scope} onChange={(e) => setBlockedSlotForm((f: any) => ({ ...f, scope: e.target.value, level: "", classId: "", classIds: [] }))} className="mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800">
                   <option value="SCHOOL">Whole school</option>
                   <option value="LEVEL">One grade</option>
                   <option value="CLASS">One specific class</option>
+                  <option value="CLASS_SET">Selected classes (any range/group)</option>
                 </select>
               </div>
               {blockedSlotForm.scope === "LEVEL" && (
@@ -3369,6 +3376,14 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
                     <option value="">Choose class…</option>
                     {classes.map((c: any) => <option key={c.id} value={c.id}>{c.level} {c.stream}</option>)}
                   </select>
+                </div>
+              )}
+              {blockedSlotForm.scope === "CLASS_SET" && (
+                <div className="col-span-2">
+                  <Label>Selected classes</Label>
+                  <div className="mt-1 grid max-h-40 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-navy-200 p-3 dark:border-navy-700 sm:grid-cols-3">
+                    {classes.map((c:any)=><label key={c.id} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={blockedSlotForm.classIds.includes(c.id)} onChange={(e)=>setBlockedSlotForm((f:any)=>({...f,classIds:e.target.checked?[...f.classIds,c.id]:f.classIds.filter((id:string)=>id!==c.id)}))}/>{c.level} {c.stream}</label>)}
+                  </div>
                 </div>
               )}
               <div>
@@ -3706,6 +3721,8 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       {allocationImportOpen && (
         <TeacherAllocationImportModal onClose={() => setAllocationImportOpen(false)} onDone={load} />
       )}
+
+      <PracticeTeacherCard canManage={canManage} />
 
       <Card>
         <CardHeader>

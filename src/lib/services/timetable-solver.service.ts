@@ -92,6 +92,10 @@ export async function saveClassSubjectNeed(
     // AA.9 — real, school-set "deliberately re-roll this subject's
     // teacher assignment at the start of each new term" flag.
     const rotateTeacherEachTerm = input.rotateTeacherEachTerm ?? false;
+    if (teacherId) {
+      const supervised = await tdb.practiceTeacherPlacement.findFirst({ where: { traineeUserId: teacherId, status: "ACTIVE", canTeachSolo: false } });
+      if (supervised) throw new TimetableSolverError("CONFLICT", `${supervised.traineeName} is a supervised practice teacher. Assign the mentor as responsible teacher, or explicitly approve solo teaching in Practice Teachers.`);
+    }
 
     const row = await tdb.classSubjectNeed.upsert({
       where: { tenantId_classId_subjectId: { tenantId: user.tenantId, classId, subjectId } },
@@ -1015,8 +1019,15 @@ export async function autoAssignTeachersToClasses(user: SessionUser) {
 
     if (needs.length === 0) return { success: true, assignedCount: 0 };
 
-    // 2. Get all teachers and their subjects (including new Teaching Practice enrollees)
-    const teacherSubjects = await tDb.teacherSubject.findMany();
+    // 2. Get qualified teachers. Active practice teachers who have not been
+    // explicitly approved to teach solo remain visible under their mentor,
+    // but are never silently selected as the sole responsible teacher.
+    const [allTeacherSubjects, supervisedPlacements] = await Promise.all([
+      tDb.teacherSubject.findMany(),
+      tDb.practiceTeacherPlacement.findMany({ where: { status: "ACTIVE", canTeachSolo: false }, select: { traineeUserId: true } }),
+    ]);
+    const supervisedTraineeIds = new Set(supervisedPlacements.map((p) => p.traineeUserId));
+    const teacherSubjects = allTeacherSubjects.filter((row) => !supervisedTraineeIds.has(row.teacherId));
     
     // 3. Track current workload to ensure mathematically fair distribution
     const workload = new Map<string, number>(); 

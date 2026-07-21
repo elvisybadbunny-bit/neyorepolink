@@ -272,6 +272,7 @@ export async function upsertBlockedTimetableSlot(
     scope: string;
     level?: string | null;
     classId?: string | null;
+    classIds?: string[];
     dayOfWeek: number;
     period: number;
     isDouble?: boolean;
@@ -282,8 +283,8 @@ export async function upsertBlockedTimetableSlot(
 ) {
   return withTenant(user.tenantId, async () => {
     const tdb = tenantDb();
-    if (!["SCHOOL", "LEVEL", "CLASS"].includes(input.scope)) {
-      throw new TimetableEngineError("INVALID", "Scope must be SCHOOL, LEVEL, or CLASS.");
+    if (!["SCHOOL", "LEVEL", "CLASS", "CLASS_SET"].includes(input.scope)) {
+      throw new TimetableEngineError("INVALID", "Scope must be SCHOOL, LEVEL, CLASS, or CLASS_SET.");
     }
     if (input.scope === "LEVEL" && !input.level) {
       throw new TimetableEngineError("INVALID", "A LEVEL-scoped block requires a level.");
@@ -291,17 +292,26 @@ export async function upsertBlockedTimetableSlot(
     if (input.scope === "CLASS" && !input.classId) {
       throw new TimetableEngineError("INVALID", "A CLASS-scoped block requires a classId.");
     }
+    if (input.scope === "CLASS_SET" && (!input.classIds || input.classIds.length === 0)) {
+      throw new TimetableEngineError("INVALID", "Select at least one class for this class-set block.");
+    }
     if (!Number.isInteger(input.dayOfWeek) || input.dayOfWeek < 1 || input.dayOfWeek > 6) {
       throw new TimetableEngineError("INVALID", "dayOfWeek must be 1 (Mon) through 6 (Sat).");
     }
     if (!Number.isInteger(input.period) || input.period < 1) {
       throw new TimetableEngineError("INVALID", "period must be a positive integer.");
     }
+    if (input.scope === "CLASS_SET") {
+      const unique = [...new Set(input.classIds)];
+      const found = await tdb.schoolClass.count({ where: { id: { in: unique }, archived: false } });
+      if (found !== unique.length) throw new TimetableEngineError("INVALID", "One or more selected classes are not active in this school.");
+    }
     const data = {
       label: input.label,
       scope: input.scope,
       level: input.scope === "LEVEL" ? input.level ?? null : null,
       classId: input.scope === "CLASS" ? input.classId ?? null : null,
+      classIdsJson: input.scope === "CLASS_SET" ? JSON.stringify([...new Set(input.classIds ?? [])]) : "[]",
       dayOfWeek: input.dayOfWeek,
       period: input.period,
       isDouble: input.isDouble ?? false,
@@ -1066,6 +1076,7 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     if (b.scope === "SCHOOL") targetClassIds = data.classes.map((c) => c.id);
     else if (b.scope === "LEVEL") targetClassIds = data.classes.filter((c) => c.level === b.level).map((c) => c.id);
     else if (b.scope === "CLASS" && b.classId) targetClassIds = [b.classId];
+    else if (b.scope === "CLASS_SET") { try { targetClassIds = JSON.parse(b.classIdsJson || "[]"); } catch { targetClassIds = []; } }
 
     for (const cid of targetClassIds) {
       const periods = b.isDouble && b.period + 1 <= maxPeriodsForClass(cid, b.dayOfWeek) ? [b.period, b.period + 1] : [b.period];
