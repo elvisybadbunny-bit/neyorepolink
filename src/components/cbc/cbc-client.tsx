@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
+import { queuedPost } from "@/lib/offline/queue";
 
 interface Subject { id: string; name: string; code: string; curriculum: string }
 interface Strand { id: string; name: string; learningOutcome: string | null; subjectId: string; subjectName: string; subjectCode: string; assessmentCount: number }
@@ -708,22 +709,31 @@ function AssessTab({ classes, subjects }: { classes: ClassOpt[]; subjects: Subje
     if (!students) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/cbc/assess", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          strandId, classId, date: new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10),
-          entries: students.map((s) => ({
-            studentId: s.id,
-            level: levels.get(s.id) ?? null,
-            substrandId: substrandId || undefined,
-            comment: comments.get(s.id)?.text || undefined,
-            commentFromBank: comments.get(s.id)?.fromBank ?? false,
-          })),
-        }),
-      });
-      const json = await res.json();
-      if (json.ok) { toast({ title: `${json.data.saved} observation${json.data.saved === 1 ? "" : "s"} recorded`, tone: "success" }); loadSheet(); }
-      else toast({ title: json.error?.message || "Failed", tone: "error" });
+      const body = {
+        strandId, classId, date: new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10),
+        entries: students.map((s) => ({
+          studentId: s.id,
+          level: levels.get(s.id) ?? null,
+          substrandId: substrandId || undefined,
+          comment: comments.get(s.id)?.text || undefined,
+          commentFromBank: comments.get(s.id)?.fromBank ?? false,
+        })),
+      };
+      const result = await queuedPost(
+        "/api/cbc/assess",
+        body,
+        `CBE observations — ${strand?.name || "strand"}`,
+      );
+      if (result.queued) {
+        toast({ title: `${marked} observation${marked === 1 ? "" : "s"} saved offline`, description: "NEYO will sync this assessment round once the connection returns.", tone: "success" });
+        setLevels(new Map());
+        setComments(new Map());
+      } else if (result.ok) {
+        toast({ title: `${marked} observation${marked === 1 ? "" : "s"} recorded`, tone: "success" });
+        loadSheet();
+      } else {
+        toast({ title: "The assessment round was rejected. Check the class, strand and your permission.", tone: "error" });
+      }
     } finally { setSaving(false); }
   }
 

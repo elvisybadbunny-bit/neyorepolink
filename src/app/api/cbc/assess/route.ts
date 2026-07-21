@@ -8,6 +8,7 @@ import { requirePermission } from "@/lib/core/session";
 import { ok, handleError, fail } from "@/lib/api/respond";
 import { assessSchema } from "@/lib/validations/cbc";
 import { getAssessSheet, saveAssessments, deleteCbcAssessment } from "@/lib/services/cbc.service";
+import { withIdempotency } from "@/lib/services/idempotency.service";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,16 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     if (body.action === "delete") return ok(await deleteCbcAssessment(user, body.id || ""));
     const parsed = assessSchema.extend({ classId: z.string().min(1) }).parse(body);
+    const idempotencyKey = req.headers.get("Idempotency-Key");
+    if (idempotencyKey) {
+      const replay = await withIdempotency(
+        user.tenantId,
+        "cbc.assessment_round",
+        idempotencyKey,
+        () => saveAssessments(user, parsed, parsed.classId),
+      );
+      return ok({ ...replay.result, replayed: replay.replayed });
+    }
     return ok(await saveAssessments(user, parsed, parsed.classId));
   } catch (e) {
     return handleError(e);

@@ -24,8 +24,8 @@ Founder decisions recorded 21 July 2026:
 ### A. Offline reliability
 
 - [ ] Add an in-app Offline Capabilities screen generated from the matrix.
-- [ ] CBE assessment observation outbox with idempotency.
-- [ ] Record-of-work/syllabus-coverage outbox with idempotency.
+- [x] CBE assessment observation outbox with tenant-scoped at-most-once idempotency.
+- [x] Teacher record-of-work/coverage outbox with tenant-scoped at-most-once idempotency.
 - [ ] CBE Delivery session/evidence drafts, with reconnect review before commit where conflicts are possible.
 - [ ] Expand opt-in read-only snapshot data by role.
 - [ ] Add stale-data timestamps and explicit offline/online-required labels to every supported module.

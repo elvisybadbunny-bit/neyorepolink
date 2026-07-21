@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getCurrentUser, requirePermission } from "@/lib/core/session";
 import { ok, handleError } from "@/lib/api/respond";
 import { listTeacherRecordsOfWork, recordSyllabusWorkCovered } from "@/lib/services/kenyan-extensions.service";
+import { withIdempotency } from "@/lib/services/idempotency.service";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
       return handleError(new Error("teacherId, subjectId, classId, strandName, weekNumber, and dateCovered required."));
     }
 
-    const rec = await recordSyllabusWorkCovered(user.tenantId, {
+    const save = () => recordSyllabusWorkCovered(user.tenantId, {
       teacherId,
       teacherName: teacherName || user.fullName,
       subjectId,
@@ -46,8 +47,12 @@ export async function POST(req: NextRequest) {
       status: status || "COVERED",
       supervisorComment,
     }, user);
-
-    return ok({ record: rec });
+    const idempotencyKey = req.headers.get("Idempotency-Key");
+    if (idempotencyKey) {
+      const replay = await withIdempotency(user.tenantId, "teacher.record_of_work", idempotencyKey, save);
+      return ok({ record: replay.result, replayed: replay.replayed });
+    }
+    return ok({ record: await save() });
   } catch (err) {
     return handleError(err);
   }

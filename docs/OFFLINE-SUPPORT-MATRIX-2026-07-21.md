@@ -18,12 +18,20 @@ A page must be visited/saved while online before its shell or data can be availa
 |---|---|---|
 | Attendance register save | Queued in IndexedDB and synced on reconnect | Server upsert/idempotency |
 | Exam marks autosave | Queued and replayed | Idempotency key |
+| CBE rubric observation round | Queued in IndexedDB and synced on reconnect | Tenant-scoped at-most-once replay ledger |
+| Teacher record of work/coverage | Queued in IndexedDB and synced on reconnect | Tenant-scoped at-most-once replay ledger |
 | Gate-pass proposal/issuance | Queued where supported | Server replay ledger |
 | Visitor sign-in | Queued | Idempotency key |
 | Plain cash/manual reception payment | Queued where biometric live verification is not required | Duplicate-payment protection |
 | Read-only learners, balances, calendar and timetable | Available in opt-in Bundle Saver snapshot | Local IndexedDB; bounded/versioned |
 | Previously opened page shell | Exact URL network-first cache, then saved response | No API mutation caching |
 | Static icons/assets | Cache-first | Versioned service-worker cache |
+
+## Infrastructure cost
+
+This offline layer adds no external offline provider, message broker, storage bucket or scheduled polling service. Pending actions and snapshots live in the browser's IndexedDB on the user's own device. Reconnection sends the same bounded API request that an online save would have sent. The server stores one small idempotency receipt for an offline-safe mutation so retries do not duplicate school records. That creates negligible database storage compared with the assessment records themselves, but it is not honest to call it mathematically zero bytes.
+
+Offline video playback is not promised: YouTube and unsaved media still require their provider/network. NEYO does not download copyrighted videos in the background.
 
 ## Workflows that remain online-only
 

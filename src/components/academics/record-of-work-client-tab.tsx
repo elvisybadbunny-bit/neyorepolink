@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
+import { queuedPost } from "@/lib/offline/queue";
 
 interface RecordRow {
   id: string;
@@ -80,10 +81,9 @@ export function RecordOfWorkClientTab({ canManage }: { canManage: boolean }) {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/teacher/record-of-work", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const result = await queuedPost(
+        "/api/teacher/record-of-work",
+        {
           teacherId: me.id,
           teacherName: me.fullName,
           subjectId,
@@ -94,17 +94,21 @@ export function RecordOfWorkClientTab({ canManage }: { canManage: boolean }) {
           dateCovered,
           status,
           supervisorComment: supervisorComment.trim() || undefined,
-        }),
-      });
-      const json = await res.json();
-      if (json.ok) {
-        toast({ title: "Coverage recorded", tone: "success" });
+        },
+        `Record of work — ${strandName.trim()}`,
+      );
+      if (result.ok) {
+        toast({
+          title: result.queued ? "Coverage saved offline" : "Coverage recorded",
+          description: result.queued ? "NEYO will sync this record once the connection returns." : undefined,
+          tone: "success",
+        });
         setStrandName("");
         setSubstrandName("");
         setSupervisorComment("");
-        load();
+        if (!result.queued) load();
       } else {
-        toast({ title: json.error?.message || "Could not record coverage", tone: "error" });
+        toast({ title: "Could not record coverage. Check the fields and your permission.", tone: "error" });
       }
     } finally {
       setSaving(false);
