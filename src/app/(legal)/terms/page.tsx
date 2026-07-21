@@ -1,70 +1,28 @@
-import { db } from "@/lib/db";
+import { NEYO_TERMS_EFFECTIVE_DATE, NEYO_TERMS_SECTIONS, NEYO_TERMS_VERSION } from "@/lib/legal/terms-of-service";
 
-export const metadata = { title: "Terms of Service — NEYO" };
+export const metadata = {
+  title: "Terms of Service — NEYO",
+  description: "Terms governing use of NEYO School OS, demos, pilots, subscriptions, data, security and connected services.",
+  alternates: { canonical: "/terms" },
+};
 
-/** Terms of Service. */
-export default async function TermsPage() {
-  const setting = await db.platformSetting.findUnique({ where: { key: "terms_of_service" } }).catch(() => null);
-
-  if (setting && setting.value) {
-    return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-semibold text-navy-900 dark:text-navy-50">Terms of Service</h1>
-        <p className="text-xs text-navy-400">Dynamically Updated via Platform Operations Control Panel</p>
-        <div className="text-sm text-navy-700 dark:text-navy-200 whitespace-pre-wrap leading-relaxed">
-          {setting.value}
-        </div>
-      </div>
-    );
-  }
-
-  // Fallback to compliant original terms
+export default function TermsPage() {
   return (
-    <>
-      <h1 className="text-2xl font-semibold text-navy-900 dark:text-navy-50">Terms of Service</h1>
-      <p className="text-navy-500 dark:text-navy-400">Last updated: 11 June 2026</p>
+    <article className="mx-auto max-w-4xl space-y-7">
+      <header className="border-b border-navy-200 pb-5 dark:border-navy-700">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-green-700 dark:text-green-300">Legal</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-navy-950 dark:text-white">Terms of Service</h1>
+        <p className="mt-2 text-sm text-navy-600 dark:text-navy-300">Effective: {NEYO_TERMS_EFFECTIVE_DATE} · Version {NEYO_TERMS_VERSION}</p>
+        <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">These public Terms are a product-operating document and should be reviewed by qualified Kenyan legal counsel before broad commercial launch. A signed customer agreement may contain additional commercial terms.</p>
+      </header>
 
-      <p>
-        These terms govern your use of NEYO. By creating a school account or using the service,
-        you agree to them.
-      </p>
-
-      <h2 className="text-lg font-semibold text-navy-900 dark:text-navy-50">Accounts</h2>
-      <p>
-        You are responsible for the accuracy of information you enter and for keeping your login
-        credentials secure. The school owner is responsible for managing staff access.
-      </p>
-
-      <h2 className="text-lg font-semibold text-navy-900 dark:text-navy-50">Plans &amp; payments</h2>
-      <p>
-        NEYO offers a 30-Day Free Trial (1-Month Free Trial) across the operational system for new signups, after which schools continue on our capacity-based or Msingi / Pro subscription plans if they feel the system is operational to them. Paid plans are billed per term in KES via
-        M-Pesa. Soft usage limits apply; exceeding them may prompt an upgrade. We honour the price
-        agreed at sign-up (price grandfathering). Missing a payment starts a grace period during
-        which your data is preserved.
-      </p>
-
-      <h2 className="text-lg font-semibold text-navy-900 dark:text-navy-50">Acceptable use</h2>
-      <ul className="list-disc space-y-1 pl-5">
-        <li>Use NEYO only for legitimate school administration.</li>
-        <li>Do not attempt to access another school&rsquo;s data or disrupt the service.</li>
-        <li>Comply with Kenyan law, including the Data Protection Act, 2019.</li>
-      </ul>
-
-      <h2 className="text-lg font-semibold text-navy-900 dark:text-navy-50">Your data</h2>
-      <p>
-        Your school&rsquo;s data belongs to your school. You can export it at any time. If you
-        stop using NEYO, you may request deletion of your data subject to legal retention
-        requirements.
-      </p>
-
-      <h2 className="text-lg font-semibold text-navy-900 dark:text-navy-50">Availability</h2>
-      <p>
-        We work hard to keep NEYO available and publish live status at /status. We are not liable
-        for losses arising from circumstances beyond our reasonable control.
-      </p>
-
-      <h2 className="text-lg font-semibold text-navy-900 dark:text-navy-50">Contact</h2>
-      <p>Questions about these terms — hello@neyo.co.ke</p>
-    </>
+      {NEYO_TERMS_SECTIONS.map((section) => (
+        <section key={section.title} className="space-y-3">
+          <h2 className="text-lg font-black text-navy-950 dark:text-white">{section.title}</h2>
+          {"paragraphs" in section && section.paragraphs?.map((paragraph) => <p key={paragraph} className="text-sm leading-7 text-navy-700 dark:text-navy-200">{paragraph}</p>)}
+          {"bullets" in section && section.bullets ? <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-navy-700 dark:text-navy-200">{section.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul> : null}
+        </section>
+      ))}
+    </article>
   );
 }

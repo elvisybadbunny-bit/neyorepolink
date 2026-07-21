@@ -403,10 +403,10 @@ export function FounderOpsClient() {
         const maintEtaSetting = settingsRes.data.settings.find((s: any) => s.key === "maintenance_eta");
         if (maintEtaSetting) setMaintEta(maintEtaSetting.value);
 
-        const priv = settingsRes.data.settings.find((s: any) => s.key === "privacy_policy");
+        const priv = settingsRes.data.settings.find((s: any) => s.key === "privacy_draft_notes");
         if (priv) setPrivacyText(priv.value);
 
-        const terms = settingsRes.data.settings.find((s: any) => s.key === "terms_of_service");
+        const terms = settingsRes.data.settings.find((s: any) => s.key === "terms_draft_notes");
         if (terms) setTermsText(terms.value);
 
         const logo = settingsRes.data.settings.find((s: any) => s.key === "neyo_logo_url");
@@ -879,10 +879,10 @@ export function FounderOpsClient() {
           onAliveToggle={updateAliveMode}
           privacyText={privacyText}
           onPrivacyChange={setPrivacyText}
-          onPrivacySave={(v) => updatePlatformSetting("privacy_policy", v)}
+          onPrivacySave={(v) => updatePlatformSetting("privacy_draft_notes", v)}
           termsText={termsText}
           onTermsChange={setTermsText}
-          onTermsSave={(v) => updatePlatformSetting("terms_of_service", v)}
+          onTermsSave={(v) => updatePlatformSetting("terms_draft_notes", v)}
           broadcastMessage={broadcastMessage}
           broadcastSegment={broadcastSegment}
           onBroadcastSegmentChange={setBroadcastSegment}
@@ -2477,16 +2477,16 @@ function BusinessOperationsTab({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <FileText className="h-5 w-5 text-green-600" />
-            Live Legal & Compliance Editor
+            Legal & Compliance Workspace
           </CardTitle>
           <p className="text-xs text-navy-400">
-            Modify live regulatory documents (Privacy Policy, Terms of Service) dynamically. Changes immediately apply to `/privacy` and `/terms` public web routes.
+            Privacy and Terms entries here are drafting notes only. Public `/privacy` and `/terms` are versioned in code and require reviewed publication.
           </p>
         </CardHeader>
         <CardContent className="grid gap-5 sm:grid-cols-2">
           {/* Privacy Policy */}
           <div className="space-y-2">
-            <Label>Privacy Policy Copy</Label>
+            <Label>Privacy drafting notes (not live)</Label>
             <textarea
               rows={8}
               value={privacyText}
@@ -2494,13 +2494,13 @@ function BusinessOperationsTab({
               className="w-full rounded-2xl border border-navy-200 bg-white p-3.5 text-xs text-navy-900 transition-colors focus:border-green-500 focus:outline-none dark:border-navy-700 dark:bg-navy-950 dark:text-navy-50 font-mono"
             />
             <Button size="sm" onClick={() => onPrivacySave(privacyText)}>
-              <Save className="h-4 w-4" /> Save Live Privacy Policy
+              <Save className="h-4 w-4" /> Save Privacy Draft Notes
             </Button>
           </div>
 
           {/* Terms of Service */}
           <div className="space-y-2">
-            <Label>Terms of Service Copy</Label>
+            <Label>Terms drafting notes (not live)</Label>
             <textarea
               rows={8}
               value={termsText}
@@ -2508,7 +2508,7 @@ function BusinessOperationsTab({
               className="w-full rounded-2xl border border-navy-200 bg-white p-3.5 text-xs text-navy-900 transition-colors focus:border-green-500 focus:outline-none dark:border-navy-700 dark:bg-navy-950 dark:text-navy-50 font-mono"
             />
             <Button size="sm" onClick={() => onTermsSave(termsText)}>
-              <Save className="h-4 w-4" /> Save Live Terms of Service
+              <Save className="h-4 w-4" /> Save Terms Draft Notes
             </Button>
           </div>
         </CardContent>

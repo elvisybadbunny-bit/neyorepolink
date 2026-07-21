@@ -5026,3 +5026,12 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Recovery OTP uses cryptographic RNG, keyed digest storage, expiry, rate limits, active-user check, generic anti-enumeration response and session revocation.
 - [x] High-use app pages now use effective merged permissions rather than primary role alone.
 - [x] Historical 1,670 Question Bank verification claim documented as stale/inconsistent with current 3,170 expected total.
+
+### Versioned Terms and Privacy legal pages — 2026-07-21
+- [x] Replaced old 11 June Terms with canonical version 2026-07-21.
+- [x] Terms now cover pilot/demo status, organisations/users, minors, multi-role approvals, pricing/promotions, paid communications, data, security, storage, providers/government services, Bundi, IP, suspension and Kenyan law.
+- [x] Replaced old Privacy copy and removed unsupported ODPC-registration/designated-DPO claims.
+- [x] Stale Platform Settings can no longer silently override public legal documents.
+- [x] Founder Operations legal editors now save non-live drafting notes only.
+- [x] Public pages show effective date/version and requirement for qualified Kenyan legal/privacy review.
+- [ ] External legal review, ODPC assessment/registration evidence, DPO/privacy contact decision and customer/DPA documents remain founder/legal actions.
