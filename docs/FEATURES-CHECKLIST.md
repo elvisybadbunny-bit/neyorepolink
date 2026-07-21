@@ -5092,3 +5092,9 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] `QrAttendanceResponse` has a database unique key on session + learner, enforcing one accepted response per learner/session.
 - [x] The same printed student ID remains reusable in later sessions; duplicate protection is session-specific.
 - [x] QR checkpoint renders the active session QR, response count and selected-session scan workflow while retaining payment lookup.
+
+### Founder notebook final source-gap closure — 2026-07-21
+- [x] Newsletter PDF computes layout per recipient text length, packs 1/2/4-up pages, and shows cut marks only for multi-up output.
+- [x] Messaging measures the live visual viewport, confines scrolling to the conversation list, and keeps the composer above the mobile safe-area inset.
+- [x] Parent-facing family split payment is reachable, scope-verifies linked children, allocates whole KES deterministically, records a split plan before STK, and applies each share only after the existing PAID callback.
+- [~] All notebook source gaps are now implemented or explicitly external; deployed browser, physical print/camera and live provider evidence remains pending where stated.

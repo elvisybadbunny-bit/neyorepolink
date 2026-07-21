@@ -77,7 +77,7 @@ Repairs:
 |---|---|---|---|
 | Class teacher updates guardian number/adds guardian | PARTIAL | Student profile/guardian management and scoped student permissions exist | Confirm class-teacher button/action in deployed UI; role-specific denial has not been browser-proven. |
 | Phone-calendar event feed; audience-specific events; parents cannot add | FULL STACK / REACHABLE | Calendar feed token, role/audience permissions | Native calendar subscription depends on user device. |
-| Message composer/header should not hide sent content | NEEDS BROWSER REPRODUCTION | Messaging is implemented, but the described scroll/overlay defect is not proven from source alone | Capture 360px screen/video and fix first reproducible layout defect. |
+| Message composer/header should not hide sent content | FULL STACK / REACHABLE | Messages measures the real `visualViewport`, keeps page shell fixed, scrolls only the thread and pins the composer above safe-area inset | Deployed 360px browser evidence pending. |
 | SMS margin configurable for NEYO revenue | FULL STACK / REACHABLE | SMS margin ledger/configuration and Founder revenue operations | Provider cost/price must remain real and editable. |
 | Monthly/termly/yearly billing and storage/SMS costs | PARTIAL | Pricing models, term/month period fields, cost/unit economics, SMS/storage accounting | A single customer-facing cadence selector across every model is not uniformly evidenced. |
 | Referral code, mutual first-invoice benefits and post-payment prompt | FULL STACK / REACHABLE | Referral/revenue Ops services and payment hooks | Deployment payment test pending. |
@@ -89,7 +89,7 @@ Repairs:
 |---|---|---|---|
 | Result release notifications to teachers/parents | FULL STACK / REACHABLE | Exam release + in-app/SMS options | SMS depends on configured provider/credits. |
 | Multi-child portal and choose learner for payment | FULL STACK / REACHABLE | Parent portal sibling switcher/payment | Cross-school children under one identity is not proven. |
-| Split one payment across siblings | PARTIAL | Family payment allocation/intelligence exists | Verify explicit parent-facing split control. |
+| Split one payment across siblings | FULL STACK / REACHABLE | My Children → Pay for more than one child; row-scoped split plan, one STK push, callback allocation per invoice | Live M-Pesa callback evidence pending. |
 | Compact mobile cards for fees/results/attendance/safety/homework/library | PARTIAL | Responsive portal modules exist | Full 360px card-density audit remains. |
 | Download notes and see videos shown in class | FULL STACK / REACHABLE | Parent/student portal, LMS, Learning Videos class sessions | Video requires internet/provider. |
 
@@ -102,7 +102,7 @@ Repairs:
 | Transfer blocked by library arrears/unreturned books | FULL STACK / REACHABLE | Library clearance in transfer service | Replacement-book/payment workflow should be browser tested. |
 | Parent/teacher uploads exam application documents | FULL STACK / REACHABLE | Parent Portal → Exam application documents; Exams → application review/package manifest | Direct KNEC submission remains deliberately manual/external. |
 | Automatically send documents to KNEC | EXTERNAL / MANUAL | Export/manual workflow only; phantom KNEC gateway removed | Do not claim live KNEC submission without approval/integration evidence. |
-| Newsletter layout removes blank spaces/cut lines | NOT VERIFIED | Document/print systems exist | Requires exact newsletter template and print reproduction. |
+| Newsletter layout removes blank spaces/cut lines | FULL STACK / REACHABLE | Students → personalized newsletter PDF; per-card text-length layout, 1/2/4-up packing and conditional cut marks | Physical print verification pending. |
 | Bulk student IDs with names, photos, school logo and cut layout | FULL STACK / REACHABLE | Student ID bulk print/templates | Physical cut accuracy depends on printer/settings. |
 | QR on ID for attendance and fees | FULL STACK / REACHABLE | Security Gate QR Station supports student-ID attendance and payment lookup; unique expiring attendance sessions enforce one response per learner/session | Deployed camera/printed-card verification pending. |
 | Custom names, stamp, student number on IDs | FULL STACK / REACHABLE/PARTIAL | ID templates include identity fields/logo/photo | Exact optional stamp switch requires template verification. |
@@ -118,9 +118,6 @@ Repairs:
 
 ## Priority gaps found
 
-1. Newsletter pagination/blank-space reproduction.
-2. Messaging 360px scroll/overlay reproduction.
-3. Parent-facing split-payment verification.
-4. Deployed browser evidence for many already-built workflows.
+1. Deployed browser/hardware/provider evidence for already-built workflows remains pending; no source-level notebook gap remains untracked.
 
 No row marked PARTIAL/NOT BUILT should be presented as completed in marketing or the NEYO Bible.
