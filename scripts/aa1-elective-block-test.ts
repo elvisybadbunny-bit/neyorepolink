@@ -168,6 +168,7 @@ async function main() {
     }
 
     // Delete the block and regenerate — real ELECTIVE_BLOCK rows must clear.
+    if (!blockId) throw new Error("Elective block id was not created.");
     await deleteElectiveBlock(principal, blockId);
     blockId = null;
     const job2 = await db.timetableGenerationJob.create({ data: { tenantId: tid, status: "QUEUED", phase: "Queued", startedById: principal.id, startedByName: principal.fullName } });
@@ -186,7 +187,7 @@ async function main() {
     // above wipes+rebuilds ACADEMIC/ELECTIVE_BLOCK slots tenant-wide).
     await db.timetableSlot.deleteMany({ where: { tenantId: tid, slotType: { in: ["ACADEMIC", "ELECTIVE_BLOCK"] } } });
     if (existingSlots.length > 0) {
-      await db.timetableSlot.createMany({ data: existingSlots.map(({ id, ...rest }) => rest) });
+      await db.timetableSlot.createMany({ data: existingSlots.map((slot: any) => { const { id: _id, ...rest } = slot; return rest; }) });
     }
     const confirmClean = await db.schoolClass.findMany({ where: { id: { in: [clsA.id, clsB.id] } } });
     check("All AA.1 test fixtures fully cleaned up (confirmed via direct re-query)", confirmClean.length === 0);

@@ -2090,7 +2090,7 @@ trailer<</Root 1 0 R>>
           createdById: principalUser.id,
           createdByName: principalUser.fullName,
           payslips: {
-            create: await Promise.all(salaries.map(async (s) => {
+            create: await Promise.all(salaries.map(async (s: { userId: string; basicKes: number; houseAllowanceKes: number; transportAllowanceKes: number; otherAllowanceKes: number; saccoKes: number; loanKes: number }) => {
               const staffUser = await db.user.findUniqueOrThrow({ where: { id: s.userId } });
               const gross = s.basicKes + s.houseAllowanceKes + s.transportAllowanceKes + s.otherAllowanceKes;
               const calc = grossToNet(gross);
@@ -2167,7 +2167,7 @@ trailer<</Root 1 0 R>>
         const { generateSubstituteProposals, decideSubstitute } = await import("../src/lib/services/substitute.service");
         await generateSubstituteProposals(principalSessionUser, chebetLeave.id).catch(() => null);
         const proposals = await db.substituteAssignment.findMany({ where: { tenantId: tenant.id, leaveRequestId: chebetLeave.id } });
-        const firstProposed = proposals.find((p) => p.status === "PROPOSED" && p.substituteTeacherId);
+        const firstProposed = proposals.find((p: { status: string; substituteTeacherId: string | null }) => p.status === "PROPOSED" && p.substituteTeacherId);
         if (firstProposed) await decideSubstitute(principalSessionUser, firstProposed.id, true);
       }
     }
