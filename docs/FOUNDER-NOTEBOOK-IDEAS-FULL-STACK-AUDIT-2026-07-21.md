@@ -18,7 +18,7 @@ Status meanings:
 | Per-class Saturday start/end and HOME blocks | FULL STACK / REACHABLE | Academics → Smart Timetable → Schedule rules / Saturday scheduler | Must verify current deployment migration. |
 | Per-class free periods | FULL STACK / REACHABLE | Class TimetableConfig / Schedule rules | None found in code; deployment test pending. |
 | Configure a grade/range once | FULL STACK / REACHABLE | Smart Timetable grade grouping, whole-grade/contiguous-level save, Grade 6–9/Form 1–4 bulk Saturday | Arbitrary hand-picked non-contiguous class set is not available for every rule. |
-| Enter/arrow moves to next marks cell | NOT BUILT | Main marks grids do not implement spreadsheet keyboard navigation | Add focus-grid keyboard behaviour and accessibility rules. |
+| Enter/arrow moves to next marks cell | FULL STACK / REACHABLE | Ordinary Exams supports Enter/up/down; paper-aware Grading Engine supports Enter and all four arrow directions | Browser accessibility verification pending. |
 | Lunch selected as “after period N” | FULL STACK / REACHABLE | `lunchAfterPeriod`; Schedule Rules | Migration/deployed verification pending. |
 | Two short breaks | FULL STACK / REACHABLE | `shortBreak2Start` / `shortBreak2Mins` | Deployment verification pending. |
 | Games/PE for whole school, level or class at chosen time | FULL STACK / REACHABLE | Smart Timetable blocked slots + co-curricular configuration | Activity-category UI and co-curricular config remain separate surfaces. |
@@ -51,11 +51,11 @@ Repairs:
 | Idea | Status | Evidence / route | Remaining gap |
 |---|---|---|---|
 | Editable staff duty roster | FULL STACK / REACHABLE | Academics → Duty Roster | None identified. |
-| Configurable student duty areas/classes/gender/capacity | FULL STACK / REACHABLE | Academics → Duty Roster → Student Duties | Current auto assignment uses random shuffling; deterministic fairness should replace it. |
-| One active duty per learner | FULL STACK / REACHABLE | Assignment engine excludes already assigned learners | Verify term transition. |
-| Exclude leaders if school chooses | NOT BUILT | No leadership-exclusion setting in student duty engine | Add explicit school rule. |
-| Exclude medically restricted learners / easier duty after approved letter | NOT BUILT | Clinic records exist, but duty engine does not consume an approved restriction | Requires consent, expiry, severity and safe disclosure design. |
-| School may opt out of student duties | PARTIAL | No assignment occurs unless areas are configured | Add explicit Disabled state/explanation. |
+| Configurable student duty areas/classes/gender/capacity | FULL STACK / REACHABLE | Academics → Duty Roster → Student Duties | Assignment order is now deterministic per term. |
+| One active duty per learner | FULL STACK / REACHABLE | Assignment engine and unique tenant/student/term rule | Verify term transition. |
+| Exclude leaders if school chooses | FULL STACK / REACHABLE | Student Duties global `Exclude recorded student leaders` rule + approved eligibility profile | Browser verification pending. |
+| Exclude medically restricted learners / easier duty after approved letter | FULL STACK / REACHABLE | Approved `EXEMPT`/`LIGHT_ONLY` eligibility with expiry; light-duty areas | Actual medical document remains optional and private clinical details are not inferred. |
+| School may opt out of student duties | FULL STACK / REACHABLE | Student Duties enabled switch; assignment refuses while disabled | Browser verification pending. |
 | Opening-day attendance sets unknown transfers and excludes duties | FULL STACK / REACHABLE | Opening Day service removes no-show learners from duty assignment and records UNKNOWN | Browser evidence pending. |
 
 ## Subject selection, imports and progression
@@ -118,15 +118,13 @@ Repairs:
 
 ## Priority gaps found
 
-1. Student duties: medical restriction/easier duty and leader exclusion.
-2. Spreadsheet keyboard navigation in marks grids.
-3. Arbitrary class-range selection for every shared timetable/activity rule.
-4. Teacher-in-practice role/supervision.
-5. Parent-originated exam-application package upload.
-6. Printed ID QR attendance with one session token and duplicate-scan protection.
-7. Newsletter pagination/blank-space reproduction.
-8. Messaging 360px scroll/overlay reproduction.
-9. Parent-facing split-payment verification.
-10. Deployed browser evidence for many already-built workflows.
+1. Arbitrary class-range selection for every shared timetable/activity rule.
+2. Teacher-in-practice role/supervision.
+3. Parent-originated exam-application package upload.
+4. Printed ID QR attendance with one session token and duplicate-scan protection.
+5. Newsletter pagination/blank-space reproduction.
+6. Messaging 360px scroll/overlay reproduction.
+7. Parent-facing split-payment verification.
+8. Deployed browser evidence for many already-built workflows.
 
 No row marked PARTIAL/NOT BUILT should be presented as completed in marketing or the NEYO Bible.

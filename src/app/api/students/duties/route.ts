@@ -7,6 +7,8 @@ import {
   deleteStudentDutyArea,
   removeStudentDutyAssignment,
   autoAssignStudentDuties,
+  saveStudentDutyConfig,
+  saveStudentDutyEligibility,
   StudentDutyError,
 } from "@/lib/services/student-duty.service";
 
@@ -40,6 +42,10 @@ export async function POST(req: NextRequest) {
         return ok(await removeStudentDutyAssignment(user, body.id));
       case "auto_assign":
         return ok(await autoAssignStudentDuties(user, { classId: body.classId, termId: body.termId }));
+      case "save_config":
+        return ok(await saveStudentDutyConfig(user, { enabled: Boolean(body.enabled), excludeLeaders: Boolean(body.excludeLeaders) }));
+      case "save_eligibility":
+        return ok(await saveStudentDutyEligibility(user, body));
       default:
         return fail("INVALID", "Unknown action.", 400);
     }

@@ -23,7 +23,7 @@ interface StudentDutiesModalProps {
 
 export function StudentDutiesModal({ open, onOpenChange, classes, currentClassId = "", canManage }: StudentDutiesModalProps) {
   const { toast } = useToast();
-  const [data, setData] = React.useState<{ areas: any[]; assignments: any[] } | null>(null);
+  const [data, setData] = React.useState<{ areas: any[]; assignments: any[]; students: any[]; eligibility: any[]; config: { enabled: boolean; excludeLeaders: boolean } } | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [showAddArea, setShowAddArea] = React.useState(false);
@@ -33,6 +33,12 @@ export function StudentDutiesModal({ open, onOpenChange, classes, currentClassId
   const [description, setDescription] = React.useState("");
   const [genderConstraint, setGenderConstraint] = React.useState("MIXED");
   const [maxStudents, setMaxStudents] = React.useState("4");
+  const [lightDuty, setLightDuty] = React.useState(false);
+  const [eligibilityStudentId, setEligibilityStudentId] = React.useState("");
+  const [isStudentLeader, setIsStudentLeader] = React.useState(false);
+  const [medicalRestriction, setMedicalRestriction] = React.useState("NONE");
+  const [restrictionReason, setRestrictionReason] = React.useState("");
+  const [restrictionExpires, setRestrictionExpires] = React.useState("");
 
   const load = React.useCallback(async () => {
     if (!open) return;
@@ -86,6 +92,7 @@ export function StudentDutiesModal({ open, onOpenChange, classes, currentClassId
             description: description.trim() || undefined,
             genderConstraint,
             maxStudents: Number(maxStudents) || 4,
+            lightDuty,
             targetClassIds: currentClassId ? [currentClassId] : [],
           },
         }),
@@ -95,6 +102,7 @@ export function StudentDutiesModal({ open, onOpenChange, classes, currentClassId
         toast({ title: "Duty Area Saved", tone: "success" });
         setName("");
         setDescription("");
+        setLightDuty(false);
         setShowAddArea(false);
         load();
       } else {
@@ -120,6 +128,25 @@ export function StudentDutiesModal({ open, onOpenChange, classes, currentClassId
     } finally {
       setBusy(false);
     }
+  }
+
+  async function saveConfig(enabled: boolean, excludeLeaders: boolean) {
+    setBusy(true);
+    try { await fetch("/api/students/duties", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "save_config", enabled, excludeLeaders }) }); await load(); }
+    finally { setBusy(false); }
+  }
+
+  async function saveEligibility() {
+    if (!eligibilityStudentId) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/students/duties", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "save_eligibility", studentId: eligibilityStudentId, isStudentLeader, medicalRestriction, reasonSummary: restrictionReason || undefined, expiresAt: restrictionExpires ? new Date(`${restrictionExpires}T23:59:59Z`).toISOString() : undefined }) });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || "Could not save duty eligibility");
+      toast({ title: "Duty eligibility approved", tone: "success" });
+      setEligibilityStudentId(""); setIsStudentLeader(false); setMedicalRestriction("NONE"); setRestrictionReason(""); setRestrictionExpires(""); await load();
+    } catch (error) { toast({ title: error instanceof Error ? error.message : "Could not save", tone: "error" }); }
+    finally { setBusy(false); }
   }
 
   return (
@@ -150,6 +177,22 @@ export function StudentDutiesModal({ open, onOpenChange, classes, currentClassId
           </div>
         </DialogHeader>
 
+        {canManage && data && (
+          <div className="grid gap-3 rounded-2xl border border-navy-100 p-4 dark:border-navy-800 md:grid-cols-2">
+            <label className="flex items-center justify-between gap-3 text-sm font-bold"><span>Student duties enabled</span><input type="checkbox" checked={data.config.enabled} disabled={busy} onChange={(e) => saveConfig(e.target.checked, data.config.excludeLeaders)} /></label>
+            <label className="flex items-center justify-between gap-3 text-sm font-bold"><span>Exclude recorded student leaders</span><input type="checkbox" checked={data.config.excludeLeaders} disabled={busy || !data.config.enabled} onChange={(e) => saveConfig(data.config.enabled, e.target.checked)} /></label>
+          </div>
+        )}
+
+        {canManage && data && (
+          <div className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50/40 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
+            <div><h4 className="text-sm font-bold text-navy-900 dark:text-white">Leadership and approved medical duty eligibility</h4><p className="text-xs text-navy-500 dark:text-navy-400">Never inferred from private clinic notes. Record only the minimum duty-facing restriction, approver and optional expiry.</p></div>
+            <div className="grid gap-2 md:grid-cols-4"><select value={eligibilityStudentId} onChange={(e) => setEligibilityStudentId(e.target.value)} className="h-10 rounded-xl border border-navy-200 bg-white px-3 text-xs dark:border-navy-700 dark:bg-navy-900"><option value="">Learner…</option>{data.students.map((s:any)=><option key={s.id} value={s.id}>{s.name} · {s.admissionNo}</option>)}</select><label className="flex items-center gap-2 rounded-xl border border-navy-200 bg-white px-3 text-xs dark:border-navy-700 dark:bg-navy-900"><input type="checkbox" checked={isStudentLeader} onChange={(e)=>setIsStudentLeader(e.target.checked)}/>Student leader</label><select value={medicalRestriction} onChange={(e)=>setMedicalRestriction(e.target.value)} className="h-10 rounded-xl border border-navy-200 bg-white px-3 text-xs dark:border-navy-700 dark:bg-navy-900"><option value="NONE">No medical restriction</option><option value="LIGHT_ONLY">Light duty only</option><option value="EXEMPT">Fully exempt</option></select><Input type="date" value={restrictionExpires} onChange={(e)=>setRestrictionExpires(e.target.value)} /></div>
+            <Input value={restrictionReason} onChange={(e)=>setRestrictionReason(e.target.value)} placeholder="Minimum necessary reason, e.g. approved temporary mobility restriction" />
+            <Button size="sm" onClick={saveEligibility} disabled={busy || !eligibilityStudentId}>Save approved eligibility</Button>
+          </div>
+        )}
+
         {showAddArea && (
           <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 space-y-3 dark:border-amber-900/40 dark:bg-amber-950/20">
             <h4 className="text-sm font-bold text-navy-900 dark:text-navy-50">Create Student Duty Area &amp; Assignment Rules</h4>
@@ -175,6 +218,7 @@ export function StudentDutiesModal({ open, onOpenChange, classes, currentClassId
               <Label>Rule Description / Duties</Label>
               <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Inspects classroom cleanliness and reports morning attendance" className="bg-white dark:bg-navy-900" />
             </div>
+            <label className="flex items-center gap-2 text-xs font-bold text-navy-700 dark:text-navy-200"><input type="checkbox" checked={lightDuty} onChange={(e)=>setLightDuty(e.target.checked)}/>This is a light-duty area reserved for learners with an approved LIGHT_ONLY restriction</label>
             <div className="flex justify-end gap-2 pt-1">
               <Button size="sm" variant="secondary" onClick={() => setShowAddArea(false)}>Cancel</Button>
               <Button size="sm" onClick={handleCreateArea} disabled={busy || !name.trim()} className="bg-amber-600 hover:bg-amber-700 text-white font-bold">Save Duty Rule</Button>
@@ -199,7 +243,7 @@ export function StudentDutiesModal({ open, onOpenChange, classes, currentClassId
                     <li key={a.id} className="rounded-xl border border-navy-100 bg-navy-50/50 p-3 space-y-1 dark:border-navy-800 dark:bg-navy-900/50">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-sm text-navy-900 dark:text-navy-50">{a.name}</span>
-                        <Badge tone={a.genderConstraint === "MIXED" ? "blue" : "amber"} className="text-[10px]">{a.genderConstraint}</Badge>
+                        <div className="flex gap-1"><Badge tone={a.genderConstraint === "MIXED" ? "blue" : "amber"} className="text-[10px]">{a.genderConstraint}</Badge>{a.lightDuty?<Badge tone="green" className="text-[10px]">LIGHT DUTY</Badge>:null}</div>
                       </div>
                       <p className="text-xs text-navy-500 line-clamp-2">{a.description || "No specific duty instructions recorded."}</p>
                       <div className="flex items-center justify-between text-[11px] font-semibold text-navy-600 dark:text-navy-400 pt-1">

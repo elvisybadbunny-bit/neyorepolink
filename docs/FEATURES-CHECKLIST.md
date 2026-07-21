@@ -5062,3 +5062,12 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Unconfigured paper maximum follows the selected exam maximum rather than implicit `/100`.
 - [x] Weighted multi-paper score converts back to the exam final scale; term aggregation normalizes exams with different maxima before macro weighting.
 - [ ] Notebook gaps listed in the audit remain pending and must not be marketed as complete.
+
+### Founder notebook gap batch 1 — duties and marks keyboard — 2026-07-21
+- [x] Student duties can be explicitly disabled per school.
+- [x] Schools can exclude approved student leaders from automatic duty assignment.
+- [x] Duty eligibility stores approved NONE/LIGHT_ONLY/EXEMPT medical restriction, minimum duty-facing reason, optional document and expiry; private clinic text is never inferred.
+- [x] Light-duty areas receive only active LIGHT_ONLY learners; EXEMPT learners are skipped.
+- [x] Student duty allocation now uses stable term+student ordering instead of `Math.random`, while preserving one duty per learner/term.
+- [x] Ordinary marks entry supports Enter/up/down navigation; paper-aware Grading Engine supports Enter and all four arrows.
+- [ ] Remaining notebook gaps continue in `docs/FOUNDER-NOTEBOOK-IDEAS-FULL-STACK-AUDIT-2026-07-21.md`.

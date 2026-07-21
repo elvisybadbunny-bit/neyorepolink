@@ -385,6 +385,14 @@ function MarksEntry({ examId, examName, maxMarks, subjects, classes, onSaved }: 
     });
   }
 
+  function moveMarkCell(event: React.KeyboardEvent<HTMLInputElement>, index: number) {
+    if (!["Enter", "ArrowDown", "ArrowUp"].includes(event.key)) return;
+    event.preventDefault();
+    const nextIndex = event.key === "ArrowUp" ? index - 1 : index + 1;
+    const next = event.currentTarget.closest("ul")?.querySelector<HTMLInputElement>(`input[data-mark-index="${nextIndex}"]`);
+    if (next) { next.focus(); next.select(); }
+  }
+
   const filled = (students ?? []).filter((s) => s.marks !== null).length;
 
   return (
@@ -457,7 +465,7 @@ function MarksEntry({ examId, examName, maxMarks, subjects, classes, onSaved }: 
       ) : (
         <div className="rounded-2xl border border-navy-100 bg-white dark:border-navy-800 dark:bg-navy-900">
           <ul className="divide-y divide-navy-50 dark:divide-navy-800">
-            {students.map((s) => (
+            {students.map((s, index) => (
               <li key={s.id} className="flex items-center justify-between gap-3 px-4 py-2">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-navy-900 dark:text-navy-50">{s.name}</p>
@@ -467,6 +475,8 @@ function MarksEntry({ examId, examName, maxMarks, subjects, classes, onSaved }: 
                   type="number" min={0} max={maxMarks}
                   value={s.marks ?? ""}
                   onChange={(e) => setMark(s.id, e.target.value)}
+                  onKeyDown={(e) => moveMarkCell(e, index)}
+                  data-mark-index={index}
                   placeholder={`/${maxMarks}`}
                   className="h-10 w-20 shrink-0 rounded-xl border border-navy-200 bg-white px-2 text-right text-sm text-navy-900 outline-none placeholder:text-navy-300 focus:border-navy-300 focus:ring-2 focus:ring-green-500/30 dark:border-navy-700 dark:bg-navy-800 dark:text-navy-50"
                 />

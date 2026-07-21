@@ -319,6 +319,7 @@ export const TENANT_OWNED_MODELS = [
   "studentApprovalRequest",
   "studentDutyArea",
   "studentDutyAssignment",
+  "studentDutyEligibility",
   "promotionRequest",
   "knecExportBatch",
   "bundiLearnedCorrection",

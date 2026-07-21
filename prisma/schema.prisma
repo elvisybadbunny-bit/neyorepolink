@@ -236,6 +236,12 @@ model Tenant {
   smsSpendAlertThresholdKes         Int?
   smsSpendAlertLastNotifiedPeriodKey String?
 
+  // Student duty participation is explicit; schools may disable duties or
+  // exclude recorded student leaders. Medical restrictions are approved in
+  // StudentDutyEligibility and never inferred from private clinic text.
+  studentDutiesEnabled        Boolean @default(true)
+  studentDutyExcludeLeaders   Boolean @default(false)
+
   // G.34 Security Hardening: enforce 2FA for all leadership/staff roles
   enforce2Fa Boolean @default(false)
 
@@ -7478,6 +7484,7 @@ model StudentDutyArea {
   genderConstraint String  @default("MIXED") // MIXED | BOYS_ONLY | GIRLS_ONLY
   targetClassIds   String  @default("[]") // JSON array of class IDs allowed to do this
   maxStudents      Int     @default(5)
+  lightDuty        Boolean @default(false) // suitable for approved LIGHT_ONLY learners
   isActive         Boolean @default(true)
 
   assignments StudentDutyAssignment[]
@@ -7507,6 +7514,24 @@ model StudentDutyAssignment {
 
 // PART L.4 — Student Subject Selection (Electives)
 // =============================================================================
+
+model StudentDutyEligibility {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  studentId          String   @unique
+  isStudentLeader    Boolean  @default(false)
+  medicalRestriction String   @default("NONE") // NONE | LIGHT_ONLY | EXEMPT
+  reasonSummary      String? // minimum necessary duty-facing explanation
+  medicalDocumentUrl String?
+  expiresAt          DateTime?
+  approvedById       String
+  approvedByName     String
+  approvedAt         DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([tenantId, medicalRestriction])
+  @@index([tenantId, isStudentLeader])
+}
 
 model SubjectSelectionPortal {
   id       String @id @default(cuid())

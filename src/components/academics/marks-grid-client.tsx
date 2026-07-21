@@ -43,6 +43,16 @@ export function MarksGridClient({ examId, subjectId, classId, className }: any) 
     void load();
   }, [load]);
 
+  function moveCell(event: React.KeyboardEvent<HTMLInputElement>, row: number, col: number) {
+    if (!["Enter", "ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault();
+    const nextRow = event.key === "ArrowUp" ? row - 1 : event.key === "ArrowDown" || event.key === "Enter" ? row + 1 : row;
+    const nextCol = event.key === "ArrowLeft" ? col - 1 : event.key === "ArrowRight" ? col + 1 : col;
+    const table = event.currentTarget.closest("table");
+    const next = table?.querySelector<HTMLInputElement>(`input[data-mark-row="${nextRow}"][data-mark-col="${nextCol}"]`);
+    if (next) { next.focus(); next.select(); }
+  }
+
   const handleChange = (studentId: string, cfgId: string, val: string) => {
     setGridState(prev => ({
       ...prev,
@@ -108,11 +118,11 @@ export function MarksGridClient({ examId, subjectId, classId, className }: any) 
             </tr>
           </thead>
           <tbody className="divide-y divide-navy-100 dark:divide-navy-800">
-            {data.gridData.map((row: any) => (
+            {data.gridData.map((row: any, rowIndex: number) => (
               <tr key={row.studentId} className="hover:bg-navy-50/50 dark:hover:bg-navy-900/50">
                 <td className="p-3 font-semibold text-navy-900 dark:text-white">{row.studentName}</td>
                 <td className="p-3 text-center text-navy-600 dark:text-navy-400">{row.admissionNo}</td>
-                {data.configs.map((c: any) => {
+                {data.configs.map((c: any, colIndex: number) => {
                   const val = gridState[row.studentId]?.[c.id] || "";
                   const numVal = parseFloat(val);
                   const isInvalid = !isNaN(numVal) && numVal > c.outOfMarks;
@@ -121,7 +131,10 @@ export function MarksGridClient({ examId, subjectId, classId, className }: any) 
                       <Input 
                         type="number" 
                         value={val} 
-                        onChange={(e) => handleChange(row.studentId, c.id, e.target.value)} 
+                        onChange={(e) => handleChange(row.studentId, c.id, e.target.value)}
+                        onKeyDown={(e) => moveCell(e, rowIndex, colIndex)}
+                        data-mark-row={rowIndex}
+                        data-mark-col={colIndex}
                         className={`w-20 text-center mx-auto ${isInvalid ? "border-red-500 bg-red-50 text-red-900 focus:ring-red-500" : ""}`}
                         placeholder="—"
                       />
