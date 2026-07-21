@@ -17,8 +17,10 @@ import {
   LockKeyhole,
   Menu,
   QrCode,
+  Receipt,
   School,
   ShieldCheck,
+  Smartphone,
   Users,
   X,
 } from "lucide-react";
@@ -73,6 +75,7 @@ const NAV = [
   ["CBE & academics", "#academics"],
   ["Operations", "#operations"],
   ["Security", "#security"],
+  ["Pricing", "#pricing"],
   ["About", "#founder"],
   ["FAQ", "#faq"],
 ] as const;
@@ -97,6 +100,10 @@ const FAQS = [
   [
     "How does a demonstration work?",
     "Submit the request form with a valid Kenyan contact. It enters a pending review queue. NEYO does not automatically create a school or expose a shared public account before approval.",
+  ],
+  [
+    "How much does NEYO cost?",
+    "A demo request is free and creates no charge. Pilot pricing and rollout scope are explained after NEYO understands the school's size, operating model, data preparation and support needs. The school should receive the agreed KES price before activation.",
   ],
   [
     "Does timetable generation use Bundi?",
@@ -560,7 +567,52 @@ export function NeyoLandingClient({
           </div>
         </section>
 
-        <section id="security" className="px-4 pb-20 sm:px-6 sm:pb-28">
+        <section className="border-y border-slate-200 bg-[#f7f9fb] px-4 py-20 sm:px-6 sm:py-28">
+          <div className="mx-auto max-w-[1240px]">
+            <SectionIntro
+              eyebrow="A connected school day"
+              title="Useful to the office, the classroom and the family."
+              text="NEYO is designed around the moments each person needs to act—not around one oversized dashboard handed to everyone."
+            />
+            <div className="mt-12 grid gap-4 lg:grid-cols-3">
+              <PersonaCard
+                icon={BarChart3}
+                audience="For school leadership"
+                title="See the decisions waiting for you."
+                text="Follow admissions, collections, attendance, academic delivery and operational approvals without asking five departments for five different files."
+                points={[
+                  "Leadership overview",
+                  "Approvals and accountability",
+                  "Reports across school operations",
+                ]}
+              />
+              <PersonaCard
+                icon={ClipboardCheck}
+                audience="For teachers and staff"
+                title="Get to the work for today."
+                text="Move quickly between classes, attendance, lesson delivery, assessment, communication and assigned responsibilities from the tools your role permits."
+                points={[
+                  "Class and learner context",
+                  "Academic delivery evidence",
+                  "Clear role-specific actions",
+                ]}
+              />
+              <PersonaCard
+                icon={Smartphone}
+                audience="For parents and learners"
+                title="Stay informed from a smaller screen."
+                text="Give families an authorised view of the records the school chooses to share, without making routine questions another queue at the school office."
+                points={[
+                  "Balances and receipts",
+                  "Attendance and academic records",
+                  "Notices and school information",
+                ]}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section id="security" className="px-4 py-20 sm:px-6 sm:py-28">
           <div className="mx-auto grid max-w-[1240px] gap-10 overflow-hidden rounded-[32px] bg-[#101a2e] p-7 text-white sm:p-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <div>
               <div className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-emerald-400 text-[#101a2e]">
@@ -709,6 +761,75 @@ export function NeyoLandingClient({
           </div>
         </section>
 
+        <section
+          id="pricing"
+          className="bg-[#101a2e] px-4 py-20 text-white sm:px-6 sm:py-28"
+        >
+          <div className="mx-auto grid max-w-[1100px] gap-10 lg:grid-cols-[1fr_0.85fr] lg:items-center">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+                Pilot access and pricing
+              </p>
+              <h2 className="mt-4 max-w-2xl text-3xl font-black tracking-[-0.045em] sm:text-5xl">
+                Understand the school before prescribing the package.
+              </h2>
+              <p className="mt-5 max-w-2xl text-sm font-medium leading-7 text-slate-300 sm:text-base">
+                NEYO is preparing for approved pilot schools. A demo request is
+                free and creates no charge. Pricing and rollout scope are
+                discussed after understanding the school's size, selected
+                operating model, data preparation and support needs.
+              </p>
+              <div className="mt-7 grid gap-3 sm:grid-cols-2">
+                {[
+                  "No payment during a demo request",
+                  "No workspace created without review",
+                  "KES pricing explained before activation",
+                  "Scope and onboarding agreed with the school",
+                ].map((point) => (
+                  <div
+                    key={point}
+                    className="flex gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm font-bold text-slate-200"
+                  >
+                    <Check className="h-5 w-5 shrink-0 text-emerald-300" />
+                    {point}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-[28px] bg-white p-7 text-[#101a2e] shadow-2xl sm:p-9">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+                <Receipt className="h-6 w-6" />
+              </span>
+              <p className="mt-8 text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
+                The next step
+              </p>
+              <h3 className="mt-3 text-2xl font-black tracking-tight">
+                Request a guided school review.
+              </h3>
+              <ol className="mt-6 grid gap-4 text-sm font-semibold text-slate-600">
+                <li className="flex gap-3">
+                  <b className="text-emerald-700">1.</b> Tell NEYO who you are
+                  and which school you represent.
+                </li>
+                <li className="flex gap-3">
+                  <b className="text-emerald-700">2.</b> The request enters
+                  review instead of opening an uncontrolled account.
+                </li>
+                <li className="flex gap-3">
+                  <b className="text-emerald-700">3.</b> NEYO follows up with
+                  the suitable demonstration and rollout discussion.
+                </li>
+              </ol>
+              <button
+                onClick={() => setDemoOpen(true)}
+                className="mt-8 w-full rounded-full bg-[#101a2e] px-6 py-3.5 text-sm font-black text-white"
+              >
+                Request a guided demo
+              </button>
+            </div>
+          </div>
+        </section>
+
         <section id="faq" className="bg-slate-50 px-4 py-20 sm:px-6 sm:py-28">
           <div className="mx-auto max-w-3xl">
             <SectionIntro
@@ -809,6 +930,7 @@ export function NeyoLandingClient({
                 ["CBE & academics", "#academics"],
                 ["Operations", "#operations"],
                 ["Security", "#security"],
+                ["Pricing", "#pricing"],
               ]}
               onGo={(href) => scrollToId(href, router)}
             />
@@ -1213,6 +1335,50 @@ function Module({
     </div>
   );
 }
+function PersonaCard({
+  icon: Icon,
+  audience,
+  title,
+  text,
+  points,
+}: {
+  icon: any;
+  audience: string;
+  title: string;
+  text: string;
+  points: string[];
+}) {
+  return (
+    <article className="flex h-full flex-col rounded-[28px] border border-slate-200 bg-white p-6 sm:p-8">
+      <div className="flex items-center gap-3">
+        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-50 text-emerald-700">
+          <Icon className="h-5 w-5" />
+        </span>
+        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
+          {audience}
+        </p>
+      </div>
+      <h3 className="mt-8 text-2xl font-black tracking-[-0.03em] text-[#101a2e]">
+        {title}
+      </h3>
+      <p className="mt-4 text-sm font-medium leading-7 text-slate-600">
+        {text}
+      </p>
+      <ul className="mt-7 grid gap-3 border-t border-slate-100 pt-6">
+        {points.map((point) => (
+          <li
+            key={point}
+            className="flex items-center gap-3 text-xs font-bold text-slate-600"
+          >
+            <Check className="h-4 w-4 shrink-0 text-emerald-600" />
+            {point}
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
 function FooterGroup({
   title,
   links,

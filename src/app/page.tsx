@@ -248,6 +248,10 @@ export default async function Home() {
           "How does a demonstration work?",
           "Submit the request form with a valid Kenyan contact. It enters a pending review queue. NEYO does not automatically create a school or expose a shared public account before approval.",
         ],
+        [
+          "How much does NEYO cost?",
+          "A demo request is free and creates no charge. Pilot pricing and rollout scope are explained after NEYO understands the school's size, operating model, data preparation and support needs. The school should receive the agreed KES price before activation.",
+        ],
       ].map(([name, text]) => ({
         "@type": "Question",
         name,
