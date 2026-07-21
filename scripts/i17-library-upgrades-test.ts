@@ -74,7 +74,7 @@ async function main() {
     );
     await returnBook(librarian, { issueId: studentIssue.id, finePaid: true });
 
-    await setLibraryPolicy(librarian, { finesEnabled: true, finePerDayKes: 25 });
+    await setLibraryPolicy(librarian, { finesEnabled: true, finePerDayKes: 25, loanPeriodDays: originalPolicy.loanPeriodDays });
     const policy = await libraryPolicy(librarian);
     assert(policy.finesEnabled && policy.finePerDayKes === 25, "late-return fine switch supports a customizable amount");
 
