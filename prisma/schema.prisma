@@ -1606,6 +1606,9 @@ model Subject {
   // Learning (compulsory for ALL pathway groups) so this stays one shared
   // mechanism rather than a Math-only special case.
   compulsoryPathwayGroups   String?                     @default("[]")
+  recommendedMaxGroupSize   Int? // school-set theory/general elective planning threshold
+  practicalMaxGroupSize     Int? // school-set practical/lab safety and supervision threshold
+  practicalHeavy            Boolean                     @default(false)
   timetableSlots            TimetableSlot[]
   lessonPlans               LessonPlan[]
   homework                  Homework[]

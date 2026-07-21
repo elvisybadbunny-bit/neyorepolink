@@ -37,6 +37,7 @@ import { RecordOfWorkClientTab } from "@/components/academics/record-of-work-cli
 import { SeniorReadinessCard } from "@/components/academics/senior-readiness-card";
 import { SeniorLearnerProofCard } from "@/components/academics/senior-learner-proof-card";
 import { TimetableGovernanceCard } from "@/components/academics/timetable-governance-card";
+import { TeacherElectiveStaffingCard } from "@/components/academics/teacher-elective-staffing-card";
 import { DisciplineSuite } from "@/components/extensions-v2/discipline-suite";
 import { TextbookFineSuite } from "@/components/extensions-v2/textbook-fine-suite";
 import { V2HeroCard } from "@/components/ui/v2/v2-hero-card";
@@ -3189,6 +3190,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
         <SeniorReadinessCard classes={classes} />
         <SeniorLearnerProofCard />
         <TimetableGovernanceCard />
+        <TeacherElectiveStaffingCard />
         <KicdSeniorTemplateCard canManage={canManage} classes={classes} subjects={subjects} onApplied={load} />
       )}
 

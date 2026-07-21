@@ -4984,3 +4984,14 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Academic staff notified only after approved publication, not draft generation.
 - [x] Draft snapshot retention limits bulky non-published history while retaining summaries and decisions.
 - [x] No AI/Bundi/provider dependency.
+
+### Teacher elective load and staffing report — 2026-07-21
+- [x] Added per-subject school-set theory/general and practical group thresholds plus practical-heavy flag.
+- [x] Derives elective group learner counts from current confirmed choices, not manual estimates.
+- [x] Per teacher shows unique learners, learner-subject enrolments and weekly learner contacts separately.
+- [x] Shows group/lesson counts, largest group, practical groups, published timetable gaps, continuity and substitution exposure.
+- [x] Flags unassigned groups and calculates required teaching-group count when demand exceeds threshold.
+- [x] Includes Option Block teacher periods when calculating published timetable gaps.
+- [x] Adds authenticated tenant-scoped staffing API and mobile-adaptable Smart Timetable workspace.
+- [x] No AI/Bundi/provider dependency.
+- [ ] Multiple same-subject parallel teaching groups with separate learner partitions remains a distinct future extension; report never fakes a split by adding a name.
