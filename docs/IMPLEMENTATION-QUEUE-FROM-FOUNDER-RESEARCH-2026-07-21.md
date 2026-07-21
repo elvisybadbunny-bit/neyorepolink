@@ -23,13 +23,13 @@ Founder decisions recorded 21 July 2026:
 
 ### A. Offline reliability
 
-- [ ] Add an in-app Offline Capabilities screen generated from the matrix.
+- [x] Add an in-app Offline Capabilities screen linked from Settings and Bundle Saver.
 - [x] CBE assessment observation outbox with tenant-scoped at-most-once idempotency.
 - [x] Teacher record-of-work/coverage outbox with tenant-scoped at-most-once idempotency.
 - [x] CBE Delivery session/evidence/support creation outbox with source revalidation and at-most-once replay.
 - [x] Add a visible failed-sync review inbox for queued records rejected because their source changed.
 - [x] Expand read-only snapshots with merged role-permission filtering and CBE Delivery sessions.
-- [ ] Add stale-data timestamps and explicit offline/online-required labels to every supported module.
+- [~] Stale-data timestamp and 24-hour old-data warning completed on the offline viewer; module-level labels remain to be audited progressively.
 - [ ] Browser test each action offline → reconnect → exactly-once server result.
 
 ### B. Contextual guided help

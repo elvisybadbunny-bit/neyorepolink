@@ -12,6 +12,7 @@
  * a fast local cache of that same server value, never the source of truth.
  */
 import * as React from "react";
+import Link from "next/link";
 import { Database, RefreshCw, CheckCircle, WifiOff, Loader2, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -203,7 +204,7 @@ export function PwaDataSaverCard() {
         <div className="rounded-xl border border-navy-50 p-2.5 bg-navy-50/20 text-[10px] text-navy-500 flex items-start gap-1.5 dark:border-navy-800 text-left">
           <WifiOff className="h-3.5 w-3.5 text-green-600 shrink-0 mt-0.5" />
           <span>
-            This does not create a mobile-data bundle. It reduces repeat cloud reads by using this device&apos;s saved NEYO app snapshot when internet is patchy.
+            This does not create a mobile-data bundle. It reduces repeat cloud reads by using this device&apos;s saved NEYO app snapshot when internet is patchy. <Link href="/settings/offline" className="font-bold text-green-700 underline underline-offset-2 dark:text-green-300">See exactly what works offline.</Link>
           </span>
         </div>
       </CardContent>

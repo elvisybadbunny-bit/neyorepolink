@@ -16,7 +16,7 @@ async function main() {
   assert(cache.includes('DB_VERSION = 3') && cache.includes('"outbox"') && cache.includes('"failedOutbox"'), "bundle cache upgrades the shared offline DB without breaking pending or failed-action stores");
 
   const ui = readFileSync("src/components/dashboard/pwa-data-saver.tsx", "utf8");
-  assert(ui.includes("NEYO Bundle Saver Mode") && ui.includes("/api/offline/bundle"), "dashboard uses the real bundle API");
+  assert(ui.includes("NEYO Bundle Saver Mode") && ui.includes("/api/offline/bundle") && ui.includes("/settings/offline"), "dashboard uses the real bundle API and links its honest capability guide");
   assert(ui.includes("neyo-bundle-saver-enabled") && ui.includes("App-only IndexedDB cache"), "bundle saver requires permission and stores app-only data locally");
   assert(!ui.includes("Math.random") && !ui.includes("Simulate downloading"), "old fake bundle-saver simulation was removed");
 

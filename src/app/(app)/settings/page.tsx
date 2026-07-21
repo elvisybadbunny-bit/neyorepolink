@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   Building2, SlidersHorizontal, CreditCard, Smartphone, Database,
-  Trash2, Webhook, ShieldCheck, Globe2, ChevronRight, Printer, EyeOff, Users, Compass, Sparkles, Landmark, type LucideIcon,
+  Trash2, Webhook, ShieldCheck, Globe2, ChevronRight, Printer, EyeOff, Users, Compass, Sparkles, Landmark, WifiOff, type LucideIcon,
 } from "lucide-react";
 import { requirePageUser } from "@/lib/core/page-guards";
 import { effectivePermissionsForUser } from "@/lib/core/session";
@@ -33,6 +33,7 @@ const ITEMS: SettingItem[] = [
   { label: "BOM Governance Vault", description: "Board of Management documents and voting -- financial reports, audits, capex proposals, minutes.", href: "/settings/bom-vault", icon: Landmark, permission: "tenant.manage_settings" },
   { label: "Recycle Bin", description: "Restore or permanently remove deleted records.", href: "/settings/recycle-bin", icon: Trash2, permission: "tenant.manage_settings" },
   { label: "Developer", description: "API keys and webhooks for integrations.", href: "/settings/developer", icon: Webhook, permission: "api.manage" },
+  { label: "Offline capabilities", description: "See what works without internet, what queues, and what still requires a live connection.", href: "/settings/offline", icon: WifiOff },
   { label: "Security", description: "Your password, 2FA, passkeys and sessions.", href: "/settings/security", icon: ShieldCheck },
 ];
 
@@ -53,7 +54,7 @@ export default async function SettingsHubPage() {
 
   if (isNonConcerned) {
     // Forcefully strip out everything except their personal security credentials panel
-    items = items.filter((i) => i.href === "/settings/security");
+    items = items.filter((i) => i.href === "/settings/security" || i.href === "/settings/offline");
   }
 
   return (

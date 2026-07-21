@@ -71,6 +71,9 @@ export function OfflineSnapshotViewer() {
   const savedLabel = savedAt
     ? new Date(savedAt).toLocaleString("en-KE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
     : "unknown time";
+  const ageHours = savedAt ? Math.max(0, Math.floor((Date.now() - new Date(savedAt).getTime()) / 3_600_000)) : null;
+  const freshness = ageHours == null ? "Age unknown" : ageHours < 1 ? "Saved less than 1 hour ago" : ageHours < 24 ? `Saved ${ageHours} hours ago` : `Saved ${Math.floor(ageHours / 24)} day${Math.floor(ageHours / 24) === 1 ? "" : "s"} ago`;
+  const isOld = ageHours != null && ageHours >= 24;
   const capabilities = bundle.capabilities ?? { students: true, finance: true, calendar: true, timetable: true, cbeDelivery: false };
   const availableTabs = [
     capabilities.students ? { key: "students" as const, label: `Students (${bundle.students.length})`, icon: Users } : null,
@@ -83,12 +86,13 @@ export function OfflineSnapshotViewer() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
-      <div className="mb-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+      <div className={`mb-5 flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm ${isOld ? "border-red-200 bg-red-50 text-red-800 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300" : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300"}`}>
         <WifiOff className="mt-0.5 h-4.5 w-4.5 shrink-0" />
         <div>
           <p className="font-semibold">You&apos;re offline — showing saved data from {savedLabel}</p>
-          <p className="mt-0.5 text-xs text-amber-700/90 dark:text-amber-400/90">
-            {bundle.tenant?.name ?? "Your school"}&apos;s numbers may have changed since then. This will refresh automatically once you&apos;re back online.
+          <p className="mt-0.5 text-xs font-bold">{freshness}{isOld ? " · Treat as old until you reconnect." : ""}</p>
+          <p className="mt-0.5 text-xs opacity-90">
+            {bundle.tenant?.name ?? "Your school"}&apos;s records may have changed since then. This screen never presents saved data as live.
           </p>
         </div>
       </div>
