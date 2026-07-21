@@ -118,6 +118,6 @@ Repairs:
 
 ## Priority gaps found
 
-1. Deployed browser/hardware/provider evidence for already-built workflows remains pending; no source-level notebook gap remains untracked.
+1. The priority source-gap list is closed. PARTIAL rows elsewhere in this matrix and deployed browser/hardware/provider evidence remain explicitly pending.
 
 No row marked PARTIAL/NOT BUILT should be presented as completed in marketing or the NEYO Bible.
