@@ -145,6 +145,14 @@ export function NeyoLandingClient({
     schoolName: "",
     email: "",
     phone: "",
+    countySubCounty: "",
+    contactRole: "",
+    schoolType: "DAY",
+    approximateLearners: "",
+    topProblems: "",
+    preferredDemoDate: "",
+    consentToContact: false,
+    campaignSource: "AUGUST_2026_ORGANIC",
   });
 
   React.useEffect(() => {
@@ -176,7 +184,7 @@ export function NeyoLandingClient({
       const response = await fetch("/api/demo/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, approximateLearners: form.approximateLearners ? Number(form.approximateLearners) : undefined }),
       });
       const json = await response.json();
       if (!response.ok || !json.ok)
@@ -1171,12 +1179,17 @@ export function NeyoLandingClient({
                     }
                   />
                 </Field>
+                <div className="grid gap-4 sm:grid-cols-2"><Field label="Your role"><Input value={form.contactRole} onChange={(e)=>setForm({...form,contactRole:e.target.value})} placeholder="Principal / Owner / Director" /></Field><Field label="County / sub-county"><Input value={form.countySubCounty} onChange={(e)=>setForm({...form,countySubCounty:e.target.value})} placeholder="Nairobi · Westlands" /></Field></div>
+                <div className="grid gap-4 sm:grid-cols-2"><Field label="School type"><select value={form.schoolType} onChange={(e)=>setForm({...form,schoolType:e.target.value})} className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"><option value="DAY">Day</option><option value="BOARDING">Boarding</option><option value="BOTH">Day and boarding</option><option value="OTHER">Other / still planning</option></select></Field><Field label="Approximate learners"><Input type="number" min={1} value={form.approximateLearners} onChange={(e)=>setForm({...form,approximateLearners:e.target.value})} /></Field></div>
+                <Field label="Top school problems to demonstrate"><textarea value={form.topProblems} onChange={(e)=>setForm({...form,topProblems:e.target.value})} placeholder="For example: timetable, fee reconciliation, reports" className="min-h-20 w-full rounded-xl border border-slate-300 p-3 text-sm" /></Field>
+                <Field label="Preferred August demonstration date"><Input type="date" min="2026-08-01" max="2026-08-31" value={form.preferredDemoDate} onChange={(e)=>setForm({...form,preferredDemoDate:e.target.value})} /></Field>
+                <label className="flex items-start gap-2 rounded-2xl border border-slate-200 p-3 text-xs font-medium leading-5 text-slate-600"><input required type="checkbox" checked={form.consentToContact} onChange={(e)=>setForm({...form,consentToContact:e.target.checked})} className="mt-1"/>I consent to NEYO contacting me about this demonstration and the Term 3 pilot review. This is not automatic pilot approval or a purchase.</label>
                 <p className="rounded-2xl bg-slate-50 p-4 text-xs font-medium leading-5 text-slate-500">
                   Submitting creates a pending request for review by the NEYO
                   team. It does not create a tenant, session or automatic public
                   demo account.
                 </p>
-                <Button className="h-12 w-full" disabled={loading}>
+                <Button className="h-12 w-full" disabled={loading || !form.consentToContact}>
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (

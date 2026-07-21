@@ -3,6 +3,17 @@
 > Every line below is ONE feature. Tick `[x]` only when fully built full-stack (DB → service → API → UI → 4 UX states → seed) and testable.
 > Legend: `[ ]` not started · `[~]` in progress · `[x]` done & testable.
 
+## 22 July 2026 — August organic campaign and Term 3 pilot waitlist
+
+- [x] Campaign playbook defines truthful claims, production rhythm, platform packaging, lead funnel, two-person responsibilities, metrics and stop rules.
+- [x] Exact 3–28 August weekday calendar contains 160 original short-video briefs (8/day; no weekends) with title, hook, feature, audience, CTA and owner.
+- [x] Fictional demonstration data Bible covers core and supporting modules without real learner/school records.
+- [x] School-visit tracker schedules 20 appointment slots: five/week for four weeks.
+- [x] Public demo request upgraded into a consent-based Term 3 pilot waitlist with source attribution, role, location, school type, size, problems and preferred August date.
+- [ ] Create actual social accounts and publish only after human review; external/manual.
+- [ ] Book each school appointment; tracker rows are plans, not confirmed visits.
+- [ ] Apply waitlist migration and test submission in a migrated preview database.
+
 ## 22 July 2026 — Ministry Grade 10 Selection change-readiness audit
 
 - [x] Reviewed the official public `selection.education.go.ke` Home, About, Pathways, Schools and Downloads surfaces without Ministry credentials.

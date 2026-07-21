@@ -8934,6 +8934,15 @@ model DemoRequest {
   email             String    @unique
   fullName          String?
   schoolName        String?
+  countySubCounty   String?
+  contactRole       String?
+  schoolType        String?
+  levelsJson        String?   @default("[]")
+  approximateLearners Int?
+  topProblems       String?
+  preferredDemoDate String?
+  consentToContact  Boolean   @default(false)
+  campaignSource    String?
   status            String    @default("PENDING") // PENDING | APPROVED | REJECTED
   requestedAt       DateTime  @default(now())
   approvedAt        DateTime?
