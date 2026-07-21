@@ -58,7 +58,7 @@ export function StaffClient({ canManage, canInvite, initialUserId }: { canManage
           <button key={k} onClick={() => setTab(k)} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === k ? "bg-navy-900 text-white dark:bg-navy-50 dark:text-navy-900" : "text-navy-500"}`}>{label}</button>
         ))}
       </div>
-      {tab === "directory" && <DirectoryTab canManage={canManage} canInvite={canInvite} />}
+      {tab === "directory" && <DirectoryTab canManage={canManage} canInvite={canInvite} initialUserId={initialUserId} />}
       {tab === "leave" && <LeaveTab canManage={canManage} />}
       {tab === "recruitment" && <RecruitmentTab canManage={canManage} />}
     </div>
@@ -66,7 +66,7 @@ export function StaffClient({ canManage, canInvite, initialUserId }: { canManage
 }
 
 // ---- Directory --------------------------------------------------------------------
-function DirectoryTab({ canManage, canInvite }: { canManage: boolean; canInvite: boolean }) {
+function DirectoryTab({ canManage, canInvite, initialUserId }: { canManage: boolean; canInvite: boolean; initialUserId?: string }) {
   const [rows, setRows] = React.useState<StaffRow[] | null>(null);
   const [error, setError] = React.useState(false);
   const [file, setFile] = React.useState<string | null>(initialUserId || null);
