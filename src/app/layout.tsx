@@ -21,6 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }).catch(() => []);
   const setting = (key: string, fallback: string) => rows.find((row) => row.key === key)?.value || fallback;
   return {
+    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://www.neyo.co.ke"),
     title: "NEYO — School Operating System",
     description: "Run your school's admissions, attendance, fees and academics in one calm, fast place. Built for Kenyan schools.",
     manifest: "/manifest.webmanifest",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { ClassesClient } from "@/components/students/classes-client";
 
@@ -9,7 +10,9 @@ export const dynamic = "force-dynamic";
 /** Classes & streams management. */
 export default async function ClassesPage() {
   const user = await requirePagePermission("student.view");
-  const canManage = can(user.role, "class.manage");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
+  const canManage = hasEffective("class.manage");
   return (
     <div className="space-y-6">
       <Link href="/students" className="inline-flex items-center gap-1.5 text-sm text-navy-500 hover:text-navy-800 dark:text-navy-400">

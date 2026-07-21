@@ -39,7 +39,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const response = NextResponse.redirect(new URL("/dashboard", base));
+    const companyRoles = new Set(["FOUNDER", "SUPER_ADMIN", "NEYO_OPS", "NEYO_SUPPORT"]);
+    const response = NextResponse.redirect(new URL(companyRoles.has(result.user.role) ? "/founder" : "/dashboard", base));
     response.cookies.set(SESSION_COOKIE, result.sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

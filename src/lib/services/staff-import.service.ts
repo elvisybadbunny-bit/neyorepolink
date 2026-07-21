@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { withTenant } from "@/lib/core/tenant-context";
 import { isRole, type Role } from "@/lib/core/roles";
-import { generateNeyoLoginId } from "@/lib/services/identity.service";
+import { generateNeyoLoginId, ensureCuratedNeyoEmail } from "@/lib/services/identity.service";
 import { normalizeKePhone } from "@/lib/validations/auth";
 import type { SessionUser } from "@/lib/core/session";
 import { parseDelimited, parseXlsx } from "@/lib/services/student-import.service";
@@ -286,8 +286,10 @@ export async function importStaffBatch(user: SessionUser, rows: StaffImportRow[]
           email: r.email,
           role: r.role as Role,
           isActive: true,
+          hasSetInitialPassword: false,
         },
       });
+      await ensureCuratedNeyoEmail(staffUser.id);
       await db.staffProfile.create({
         data: {
           tenantId: user.tenantId,

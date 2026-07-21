@@ -1,58 +1,10 @@
-/**
- * G.14 — start a Day-One demo. PUBLIC, rate-limited. Spins a sandboxed, time-boxed
- * tenant with real Kenyan data and logs the visitor in as the owner.
- */
+/** Public demo request intake. A request never creates or logs into a school until NEYO Ops approves it. */
 import { NextRequest } from "next/server";
-import { SESSION_COOKIE, SESSION_TTL_DAYS } from "@/lib/core/session";
-import { deviceIdFromRequest, setDeviceCookie } from "@/lib/core/device-id";
+import { z } from "zod";
 import { enforceRate, clientIp } from "@/lib/security/rate-limit";
 import { ok, handleError } from "@/lib/api/respond";
-import { createDemoSchool } from "@/lib/services/demo.service";
 import { db } from "@/lib/db";
-
 export const dynamic = "force-dynamic";
-
-export async function POST(req: NextRequest) {
-  try {
-    // anti-abuse: 5 demo schools / hour / IP.
-    enforceRate(`demo:${clientIp(req)}`, 5, 3600);
-    const deviceId = deviceIdFromRequest(req);
-    const body = await req.json().catch(() => ({}));
-    const { phone, email, name } = body;
-
-    const result = await createDemoSchool({
-      userAgent: req.headers.get("user-agent") ?? undefined,
-      ipAddress: req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? undefined,
-      deviceId,
-    });
-
-    // If verified contact details were provided (`once approved he gets to see the demo`), log lead in audit trail
-    if (phone && email) {
-      await db.auditLog.create({
-        data: {
-          tenantId: result.tenantId,
-          actorId: "demo-lead",
-          actorName: name || email,
-          action: "platform.demo_lead_captured_approved",
-          entityType: "DemoLead",
-          entityId: result.tenantId,
-          metadata: JSON.stringify({ phone, email, name, approved: true, demoTenantSlug: result.tenantSlug }),
-        },
-      }).catch(() => {});
-    }
-
-    const res = ok({ tenantSlug: result.tenantSlug, demoExpiresAt: result.demoExpiresAt });
-    res.cookies.set(SESSION_COOKIE, result.sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      expires: result.sessionExpiry,
-      maxAge: SESSION_TTL_DAYS * 24 * 60 * 60,
-    });
-    setDeviceCookie(res, deviceId);
-    return res;
-  } catch (err) {
-    return handleError(err);
-  }
-}
+const schema=z.object({phone:z.string().trim().regex(/^(?:\+254|0)[17]\d{8}$/,"Use a valid Kenyan phone number."),email:z.string().trim().email().max(200),name:z.string().trim().min(2).max(120),schoolName:z.string().trim().max(160).optional()});
+const normalize=(phone:string)=>phone.startsWith("0")?`+254${phone.slice(1)}`:phone;
+export async function POST(req:NextRequest){try{enforceRate(`demo-request:${clientIp(req)}`,3,3600);const raw=await req.json();if(typeof raw.phone==="string")raw.phone=raw.phone.replace(/\s+/g,"");const input=schema.parse(raw);const request=await db.demoRequest.upsert({where:{email:input.email.toLowerCase()},create:{phone:normalize(input.phone),email:input.email.toLowerCase(),fullName:input.name,schoolName:input.schoolName||null,status:"PENDING"},update:{phone:normalize(input.phone),fullName:input.name,schoolName:input.schoolName||null,status:"PENDING",requestedAt:new Date(),approvedAt:null,approvedBy:null,spawnedTenantId:null,spawnedTenantSlug:null,notes:null}});return ok({requestId:request.id,status:"PENDING",message:"Your request is awaiting NEYO Ops review."},202);}catch(error){return handleError(error);}}

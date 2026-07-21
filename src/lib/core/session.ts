@@ -21,6 +21,7 @@ export interface SessionUser {
   id: string;
   tenantId: string;
   neyoLoginId: string;
+  customNeyoEmail?: string | null;
   fullName: string;
   phone: string | null;
   email: string | null;
@@ -122,6 +123,7 @@ function toSessionUser(u: {
   id: string;
   tenantId: string;
   neyoLoginId: string;
+  customNeyoEmail?: string | null;
   fullName: string;
   phone: string | null;
   email: string | null;
@@ -135,6 +137,7 @@ function toSessionUser(u: {
     id: u.id,
     tenantId: u.tenantId,
     neyoLoginId: u.neyoLoginId,
+    customNeyoEmail: u.customNeyoEmail ?? null,
     fullName: u.fullName,
     phone: u.phone,
     email: u.email,

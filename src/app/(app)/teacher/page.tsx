@@ -1,4 +1,5 @@
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { TeacherPortalClient } from "@/components/teacher/teacher-portal-client";
 
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 /** B.12 Teacher Portal — My Classes: roster, timetable, homework, notes, reports. */
 export default async function TeacherPage() {
   const user = await requirePagePermission("portal.teacher");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
 
   return (
     <div className="space-y-6">
@@ -16,7 +19,7 @@ export default async function TeacherPage() {
           Your timetable, homework, class notes and one-tap links to registers and marks.
         </p>
       </div>
-      <TeacherPortalClient canAssign={can(user.role, "homework.assign")} />
+      <TeacherPortalClient canAssign={hasEffective("homework.assign")} />
     </div>
   );
 }

@@ -5013,3 +5013,16 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Master solver no longer consumes a numbered lesson with fake LUNCH rows; wall-clock lunch shifts remain enforced.
 - [x] Print remains app-shell-free, near-edge A4, title-centred, B&W-capable and on-demand.
 - [x] Added infrastructure cost-minimisation plan covering web, DB, R2, jobs, communications, observability and retention.
+
+### eBingwa/search image and auth-governance truth audit — 2026-07-21
+- [x] Moved real product screenshots into public crawlable paths and render them instead of literal file names.
+- [x] Added SoftwareApplication screenshot JSON-LD, metadataBase, canonical, OG/Twitter image metadata, robots and sitemap.
+- [x] Default school-management SEO title/description improved; legacy saved media paths normalize safely.
+- [x] Demo request button now creates PENDING request only; no sandbox/session before Ops approval.
+- [x] Approval uses random temporary password, first-login activation and one-time authorised access display; passwords excluded from notes/audits.
+- [x] Login routing is role-bound across password/OTP/passkey/magic paths; OS selector cannot grant Company access.
+- [x] Curated NEYO identities now assigned collision-safely for new imported/created school users and lazily for existing users at login.
+- [x] New school users require initial password activation where provisioned without their own password.
+- [x] Recovery OTP uses cryptographic RNG, keyed digest storage, expiry, rate limits, active-user check, generic anti-enumeration response and session revocation.
+- [x] High-use app pages now use effective merged permissions rather than primary role alone.
+- [x] Historical 1,670 Question Bank verification claim documented as stale/inconsistent with current 3,170 expected total.

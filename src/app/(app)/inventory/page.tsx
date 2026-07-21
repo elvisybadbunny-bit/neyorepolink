@@ -1,4 +1,5 @@
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { InventoryClient } from "@/components/inventory/inventory-client";
 
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 /** B.18 Inventory / Stores — stock, reorder + expiry alerts, sales to invoices, assets. */
 export default async function InventoryPage() {
   const user = await requirePagePermission("inventory.view");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
 
   return (
     <div className="space-y-6">
@@ -17,8 +20,8 @@ export default async function InventoryPage() {
         </p>
       </div>
       <InventoryClient
-        canManage={can(user.role, "inventory.manage")}
-        canApprove={can(user.role, "tenant.manage_settings")} // B.25 PO approval = leadership
+        canManage={hasEffective("inventory.manage")}
+        canApprove={hasEffective("tenant.manage_settings")} // B.25 PO approval = leadership
       />
     </div>
   );

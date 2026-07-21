@@ -6,7 +6,7 @@
 import { db } from "@/lib/db";
 import { tenantDb } from "@/lib/core/tenant-db";
 import { withTenant } from "@/lib/core/tenant-context";
-import { nextTenantId, generateNeyoLoginId } from "@/lib/services/identity.service";
+import { nextTenantId, generateNeyoLoginId, ensureCuratedNeyoEmail } from "@/lib/services/identity.service";
 import type { SessionUser } from "@/lib/core/session";
 import type { Role } from "@/lib/core/roles";
 import type {
@@ -353,8 +353,10 @@ async function createGuardian(tenantId: string, g: GuardianInput) {
         email: g.email || null,
         role: "PARENT",
         isActive: true,
+        hasSetInitialPassword: false,
       },
     });
+    await ensureCuratedNeyoEmail(u.id);
     userId = u.id;
   }
   const guardian = await tenantDb().guardian.create({
@@ -396,8 +398,10 @@ export async function createStudent(
           fullName: [input.firstName, input.lastName].join(" "),
           role: "STUDENT",
           isActive: true,
+          hasSetInitialPassword: false,
         },
       });
+      await ensureCuratedNeyoEmail(u.id);
       userId = u.id;
     }
 

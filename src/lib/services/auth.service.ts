@@ -7,6 +7,7 @@ import { hash as argonHash, verify as argonVerify } from "@node-rs/argon2";
 import { db } from "@/lib/db";
 import { SESSION_TTL_DAYS } from "@/lib/core/session";
 import { sendSms, SHOW_DEV_OTP } from "@/lib/notifications/sms";
+import { ensureCuratedNeyoEmail } from "@/lib/services/identity.service";
 
 // --- Tunables (EDIT POINTS) ---
 const OTP_LENGTH = 6;
@@ -249,6 +250,8 @@ export async function verifyLoginOtp(
       },
     }),
   ]);
+  let curatedEmail = user.customNeyoEmail;
+  if (!curatedEmail) { try { curatedEmail = await ensureCuratedNeyoEmail(user.id); } catch { curatedEmail = null; } }
 
   return {
     ok: true,
@@ -260,7 +263,7 @@ export async function verifyLoginOtp(
       role: user.role,
       tenantId: user.tenantId,
       hasSetInitialPassword: user.hasSetInitialPassword,
-      customNeyoEmail: user.customNeyoEmail,
+      customNeyoEmail: curatedEmail,
     },
   };
 }
@@ -350,6 +353,8 @@ export async function loginWithPassword(
       },
     }),
   ]);
+  let curatedEmail = user.customNeyoEmail;
+  if (!curatedEmail) { try { curatedEmail = await ensureCuratedNeyoEmail(user.id); } catch { curatedEmail = null; } }
 
   return {
     ok: true,
@@ -361,7 +366,7 @@ export async function loginWithPassword(
       role: user.role,
       tenantId: user.tenantId,
       hasSetInitialPassword: user.hasSetInitialPassword,
-      customNeyoEmail: user.customNeyoEmail,
+      customNeyoEmail: curatedEmail,
     },
   };
 }

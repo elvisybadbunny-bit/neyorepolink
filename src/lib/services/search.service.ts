@@ -85,7 +85,7 @@ export async function search(
     }
 
     // --- Students (B.1) — row-scoped + permission-gated ---
-    if (user && can(user.role as Role, "student.view")) {
+    if (user && (can(user.role as Role, "student.view") || (user.secondaryRole ? can(user.secondaryRole as Role, "student.view") : false))) {
       const scope = await scopeWhere(user);
       const digits = q.replace(/[\s\-()]/g, "");
       const nameOr: Record<string, unknown>[] = [

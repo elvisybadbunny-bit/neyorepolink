@@ -26,6 +26,7 @@ export function DemoRequestsOpsTab() {
   const [requests, setRequests] = React.useState<DemoRequestItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [processingId, setProcessingId] = React.useState<string | null>(null);
+  const [accessDetails, setAccessDetails] = React.useState<{ url: string; ownerEmail: string; temporaryPassword: string; smsDelivered: boolean } | null>(null);
 
   const fetchRequests = React.useCallback(async () => {
     try {
@@ -58,8 +59,9 @@ export function DemoRequestsOpsTab() {
         toast({ title: json.error?.message || `Could not ${action} request.`, tone: "error" });
         return;
       }
+      if (action === "approve" && json.data.demoRes) setAccessDetails(json.data.demoRes);
       toast({
-        title: action === "approve" ? "Demo Sandbox Spawned & Approved!" : "Demo Request Rejected",
+        title: action === "approve" ? "Demo sandbox approved" : "Demo Request Rejected",
         description: action === "approve" ? `Sandbox slug: ${json.data.demoRes?.tenantSlug || "ready"}` : "Visitor notified.",
         tone: action === "approve" ? "success" : "info",
       });
@@ -90,7 +92,7 @@ export function DemoRequestsOpsTab() {
             New Users Demo Requests (`Approval Verification`)
           </h2>
           <p className="text-xs text-navy-500 dark:text-navy-400">
-            Review and approve prospective school visitors who requested an interactive Day-One demo from `/login`. When approved, a sandboxed School OS (`Demo2026!`) is spawned right away and the lead is notified via SMS/Email.
+            Review and approve prospective school visitors who requested an interactive Day-One demo from `/login`. When approved, a sandboxed School OS (`Demo2026!`) is spawned right away and NEYO attempts SMS delivery and shows one-time access to authorised Ops if delivery needs manual follow-up.
           </p>
         </div>
         <Badge tone={pendingCount > 0 ? "amber" : "green"}>
@@ -191,6 +193,7 @@ export function DemoRequestsOpsTab() {
           ))}
         </div>
       )}
+      {accessDetails && <div className="fixed inset-0 z-[220] flex items-end justify-center bg-navy-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setAccessDetails(null)}><div className="w-full max-w-lg rounded-t-3xl bg-white p-5 shadow-pop dark:bg-navy-900 sm:rounded-3xl" onClick={(e) => e.stopPropagation()}><h3 className="text-lg font-black text-navy-950 dark:text-white">One-time demo access</h3><p className="mt-1 text-xs text-navy-500">{accessDetails.smsDelivered ? "SMS delivery was requested. Copy these details only if the lead needs assistance." : "SMS was not delivered. Contact the lead securely and share these one-time details."}</p><div className="mt-4 space-y-2 rounded-2xl border border-navy-200 p-4 font-mono text-sm dark:border-navy-700"><p>URL: {accessDetails.url}</p><p>Email: {accessDetails.ownerEmail}</p><p>Temporary password: {accessDetails.temporaryPassword}</p></div><p className="mt-3 text-xs text-amber-700 dark:text-amber-300">This password is not stored in DemoRequest notes or audit metadata. The lead must replace it on first login.</p><div className="mt-4 flex justify-end"><Button onClick={() => setAccessDetails(null)}>I have stored/shared it safely</Button></div></div></div>}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { TransportClient } from "@/components/transport/transport-client";
 
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 /** B.17 Transport — routes, drivers, vehicles, fuel + maintenance, riders. */
 export default async function TransportPage() {
   const user = await requirePagePermission("transport.view");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
 
   return (
     <div className="space-y-6">
@@ -16,7 +19,7 @@ export default async function TransportPage() {
           Routes and riders, drivers and vehicles, fuel and maintenance — with expiry alerts.
         </p>
       </div>
-      <TransportClient canManage={can(user.role, "transport.manage")} />
+      <TransportClient canManage={hasEffective("transport.manage")} />
     </div>
   );
 }

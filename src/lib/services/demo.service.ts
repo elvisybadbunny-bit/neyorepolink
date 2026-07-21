@@ -4,7 +4,7 @@ import { withTenant } from "@/lib/core/tenant-context";
 import { hash as argonHash } from "@node-rs/argon2";
 import { ensureTenantDek } from "@/lib/services/encryption.service";
 import { initialiseModules } from "@/lib/services/module.service";
-import { generateNeyoLoginId, nextTenantId, computeUniqueIdPrefix } from "@/lib/services/identity.service";
+import { generateNeyoLoginId, nextTenantId, computeUniqueIdPrefix, ensureCuratedNeyoEmail } from "@/lib/services/identity.service";
 
 /**
  * G.14 — Day-One Demo Mode.
@@ -33,6 +33,7 @@ export interface DemoResult {
   sessionToken: string;
   sessionExpiry: Date;
   demoExpiresAt: Date;
+  temporaryPassword: string;
 }
 
 // Real Kenyan demo data (never "John Doe").
@@ -53,7 +54,7 @@ export async function createDemoSchool(
   const suffix = crypto.randomBytes(3).toString("hex"); // 6 chars
   const slug = `demo-${suffix}`;
   const ownerEmail = `owner@${slug}.demo`;
-  const password = "Demo2026!";
+  const password = `Ny!${crypto.randomBytes(9).toString("base64url")}`;
   const passwordHash = await argonHash(password);
   const now = new Date();
   const demoExpiresAt = new Date(now.getTime() + ttlHours * 3600_000);
@@ -101,9 +102,10 @@ export async function createDemoSchool(
     data: {
       tenantId: tenant.id, neyoLoginId, fullName: "Demo Principal",
       email: ownerEmail, phone: "+254700000000", role: "SCHOOL_OWNER",
-      isActive: true, passwordHash,
+      isActive: true, passwordHash, hasSetInitialPassword: false,
     },
   });
+  await ensureCuratedNeyoEmail(owner.id);
 
   // Seed real data inside the tenant scope (so tenantDb stamps tenantId).
   await withTenant(tenant.id, async () => {
@@ -267,7 +269,7 @@ export async function createDemoSchool(
     },
   });
 
-  return { tenantId: tenant.id, tenantSlug: slug, ownerEmail, sessionToken, sessionExpiry, demoExpiresAt };
+  return { tenantId: tenant.id, tenantSlug: slug, ownerEmail, sessionToken, sessionExpiry, demoExpiresAt, temporaryPassword: password };
 }
 
 /** Demo status for the session's tenant (drives the app-shell banner). */

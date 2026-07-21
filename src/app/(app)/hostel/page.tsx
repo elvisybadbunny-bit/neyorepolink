@@ -1,4 +1,5 @@
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { HostelClient } from "@/components/hostel/hostel-client";
 
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 /** B.16 Hostel — dorms, beds, curfew register, boarding fees, visitors. */
 export default async function HostelPage() {
   const user = await requirePagePermission("hostel.view");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
 
   return (
     <div className="space-y-6">
@@ -16,7 +19,7 @@ export default async function HostelPage() {
           Dorms and beds, the nightly curfew register, and boarding fees.
         </p>
       </div>
-      <HostelClient canManage={can(user.role, "hostel.manage")} />
+      <HostelClient canManage={hasEffective("hostel.manage")} />
     </div>
   );
 }

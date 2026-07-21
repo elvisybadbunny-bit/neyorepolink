@@ -1,4 +1,5 @@
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { FinanceClient } from "@/components/finance/finance-client";
 
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 /** B.7 Finance — fee structures, invoices, arrears. (Payments = A.6 page.) */
 export default async function FinancePage() {
   const user = await requirePagePermission("finance.view");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
 
   return (
     <div className="space-y-6">
@@ -17,11 +20,11 @@ export default async function FinancePage() {
         </p>
       </div>
       <FinanceClient
-        canStructure={can(user.role, "finance.manage_structure")}
-        canInvoice={can(user.role, "finance.create_invoice")}
-        canRecord={can(user.role, "finance.record_payment")}
-        canDiscount={can(user.role, "finance.manage_structure")}
-        canManageSiblingDiscount={can(user.role, "tenant.manage_settings")}
+        canStructure={hasEffective("finance.manage_structure")}
+        canInvoice={hasEffective("finance.create_invoice")}
+        canRecord={hasEffective("finance.record_payment")}
+        canDiscount={hasEffective("finance.manage_structure")}
+        canManageSiblingDiscount={hasEffective("tenant.manage_settings")}
       />
     </div>
   );

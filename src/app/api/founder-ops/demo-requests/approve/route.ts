@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
 
     const request = await db.demoRequest.findUnique({ where: { id } });
     if (!request) return handleError(new Error("Demo request not found."));
+    if (request.status !== "PENDING") return handleError(new Error(`This request is already ${request.status.toLowerCase()}.`));
 
     if (action === "reject") {
       const updated = await db.demoRequest.update({
@@ -45,20 +46,19 @@ export async function POST(req: NextRequest) {
         approvedBy: user.fullName,
         spawnedTenantId: demoRes.tenantId,
         spawnedTenantSlug: demoRes.tenantSlug,
-        notes: notes || `Spawned sandbox: ${demoRes.tenantSlug} (${demoRes.ownerEmail} / Demo2026!)`,
+        notes: notes || `Spawned sandbox: ${demoRes.tenantSlug}. Temporary access sent to the approved lead.`,
       },
     });
 
-    // Send an automated SMS and Email notification (or simulated notification in dev)
-    const [{ sendSms }, { createInApp }] = await Promise.all([
-      import("@/lib/notifications/sms"),
-      import("@/lib/services/notification.service"),
-    ]);
-
+    // Send SMS when configured. Return one-time credentials to authorised Ops so failed delivery can be handled securely.
+    const { sendSms } = await import("@/lib/notifications/sms");
+    const demoUrl = `https://${demoRes.tenantSlug}.neyo.co.ke`;
+    let smsDelivered = true;
     await sendSms(
       request.phone,
-      `NEYO Ops: Your interactive demo sandbox is approved and ready! Login at https://${demoRes.tenantSlug}.neyo.co.ke using email: ${demoRes.ownerEmail} and password: Demo2026!`
-    ).catch(() => {});
+      `NEYO Ops: Your demo is approved. Open ${demoUrl} and sign in as ${demoRes.ownerEmail} with temporary password ${demoRes.temporaryPassword}. You will be required to replace it on first login.`,
+      { prefix: false }
+    ).then((result) => { smsDelivered = result.ok; }).catch(() => { smsDelivered = false; });
 
     await db.auditLog.create({
       data: {
@@ -68,11 +68,11 @@ export async function POST(req: NextRequest) {
         action: "platform.demo_request_approved_and_spawned",
         entityType: "DemoRequest",
         entityId: updated.id,
-        metadata: JSON.stringify({ email: request.email, phone: request.phone, tenantSlug: demoRes.tenantSlug }),
+        metadata: JSON.stringify({ email: request.email, phone: request.phone, tenantSlug: demoRes.tenantSlug, temporaryPasswordExposed: false }),
       },
     }).catch(() => {});
 
-    return ok({ request: updated, demoRes });
+    return ok({ request: updated, demoRes: { tenantId: demoRes.tenantId, tenantSlug: demoRes.tenantSlug, ownerEmail: demoRes.ownerEmail, demoExpiresAt: demoRes.demoExpiresAt, url: demoUrl, temporaryPassword: demoRes.temporaryPassword, smsDelivered } });
   } catch (err) {
     return handleError(err);
   }

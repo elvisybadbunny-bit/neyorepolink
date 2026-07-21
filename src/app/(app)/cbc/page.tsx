@@ -1,4 +1,5 @@
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { CbcClient } from "@/components/cbc/cbc-client";
 
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 /** B.6 CBC Management — strands, formative assessments, competency reports. */
 export default async function CbcPage() {
   const user = await requirePagePermission("academics.view");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
 
   return (
     <div className="space-y-6">
@@ -16,7 +19,7 @@ export default async function CbcPage() {
           Competency strands, formative observations on the EE/ME/AE/BE rubric, and learner reports.
         </p>
       </div>
-      <CbcClient canManage={can(user.role, "academics.manage")} canAssess={can(user.role, "exam.enter_marks")} />
+      <CbcClient canManage={hasEffective("academics.manage")} canAssess={hasEffective("exam.enter_marks")} />
     </div>
   );
 }

@@ -62,14 +62,14 @@ export function defaultLandingContent(): LandingContent {
     heroSubheadline: "NEYO helps schools, farms, retailers and growing teams run daily work from one calm cloud platform.",
     primaryCta: { label: "Request demo", href: "#demo" },
     secondaryCta: { label: "Explore products", href: "#products" },
-    launchBanner: "School OS is live. Farm, Business and Creator OS are opening through waitlists.",
+    launchBanner: "School OS is preparing for pilot schools. Farm, Business and Creator OS remain on waitlists.",
     trustStats: [
       { value: "99.9%", label: "Uptime target", note: "Built for school-day reliability" },
-      { value: "16", label: "Role groups", note: "Clear permissions by responsibility" },
+      { value: "19", label: "Role groups", note: "Clear permissions by responsibility" },
       { value: "KES", label: "Kenyan billing", note: "Local money flows and M-Pesa-ready seams" },
     ],
     products: [
-      { key: "school", name: "School OS", status: "LIVE", description: "Admissions, fees, attendance, exams, learning and parent communication for Kenyan schools.", features: ["Fees and receipts", "Attendance", "CBE and exams", "Learning videos"], mediaUrl: "screenshots/i25-dashboard-sparklines.png" },
+      { key: "school", name: "School OS", status: "WAITLIST", description: "Admissions, fees, attendance, exams, learning and parent communication for Kenyan schools.", features: ["Fees and receipts", "Attendance", "CBE and exams", "Learning videos"], mediaUrl: "/screenshots/neyo-school-os-dashboard.png" },
       { key: "farm", name: "Farm OS", status: "WAITLIST", description: "Operations layer for farms, cooperatives, stock, teams and field records.", features: ["Stock", "Teams", "Payments", "Reports"], mediaUrl: "" },
       { key: "business", name: "Business OS", status: "WAITLIST", description: "Customer, inventory, billing and team workflows for small and growing businesses.", features: ["Customers", "Inventory", "Sales", "Team tasks"], mediaUrl: "" },
       { key: "creator", name: "Creator OS", status: "WAITLIST", description: "A clean operating base for creator businesses, content calendars, sales and community.", features: ["Content calendar", "Sales", "Audience", "Reports"], mediaUrl: "" },
@@ -77,9 +77,9 @@ export function defaultLandingContent(): LandingContent {
     industries: ["Education", "Agriculture", "Retail", "SMEs", "NGOs", "Healthcare", "Enterprise"],
     whyNeyo: ["Modular architecture", "Unified reporting", "Local compliance", "Multi-device access", "Audit logs", "Role-based permissions"],
     mediaShowcase: [
-      { label: "School OS dashboard", type: "image", url: "screenshots/i25-dashboard-sparklines.png", caption: "A real school operations dashboard." },
-      { label: "NEYO Ops cockpit", type: "image", url: "screenshots/i48-neyo-business-os-cockpit.png", caption: "NEYO runs NEYO inside NEYO." },
-      { label: "Learning video casting", type: "image", url: "screenshots/i27-youtube-learning.png", caption: "Teachers can search, watch and cast lessons." },
+      { label: "School OS timetable", type: "image", url: "/screenshots/neyo-school-os-dashboard.png", caption: "A real print-ready school timetable workspace." },
+      { label: "NEYO Ops cockpit", type: "image", url: "/screenshots/neyo-ops-cockpit.png", caption: "NEYO runs NEYO inside NEYO." },
+      { label: "Learning video casting", type: "image", url: "/screenshots/neyo-learning-videos.png", caption: "Teachers can search, watch and cast lessons." },
     ],
     securityPoints: ["Role-based access", "Audit logs", "Protected settings", "Data isolation", "Backups-ready architecture"],
     finalHeadline: "Ready to run your organization smarter?",
@@ -93,16 +93,43 @@ export function defaultLandingContent(): LandingContent {
       { label: "Terms", href: "/terms" },
     ],
     socialLinks: [],
-    seoTitle: "NEYO — Operating systems for modern organizations",
-    seoDescription: "NEYO builds cloud operating systems for schools, farms, businesses and creators in Kenya.",
-    ogImageUrl: "/brand/pattern-tile.png",
+    seoTitle: "NEYO School Management System Kenya — CBE School OS",
+    seoDescription: "NEYO is a Kenyan school management system for admissions, fees, M-Pesa reconciliation, attendance, CBE assessments, timetables, parents and daily operations.",
+    ogImageUrl: "/screenshots/neyo-school-os-dashboard.png",
   });
+}
+
+function publicMediaUrl(value: string | undefined): string {
+  if (!value) return "";
+  const legacy: Record<string, string> = {
+    "screenshots/i25-dashboard-sparklines.png": "/screenshots/neyo-school-os-dashboard.png",
+    "screenshots/i48-neyo-business-os-cockpit.png": "/screenshots/neyo-ops-cockpit.png",
+    "screenshots/i27-youtube-learning.png": "/screenshots/neyo-learning-videos.png",
+  };
+  if (legacy[value]) return legacy[value];
+  if (/^https?:\/\//i.test(value) || value.startsWith("/")) return value;
+  return `/${value.replace(/^\/+/, "")}`;
+}
+
+function normalizeLandingMedia(content: LandingContent): LandingContent {
+  const legacySeo = content.seoTitle === "NEYO — Operating systems for modern organizations";
+  const legacyLaunch = content.launchBanner === "School OS is live. Farm, Business and Creator OS are opening through waitlists.";
+  return {
+    ...content,
+    launchBanner: legacyLaunch ? "School OS is preparing for pilot schools. Farm, Business and Creator OS remain on waitlists." : content.launchBanner,
+    trustStats: content.trustStats.map((stat) => stat.label === "Role groups" && stat.value === "16" ? { ...stat, value: "19" } : stat),
+    seoTitle: legacySeo ? "NEYO School Management System Kenya — CBE School OS" : content.seoTitle,
+    seoDescription: legacySeo ? "NEYO is a Kenyan school management system for admissions, fees, M-Pesa reconciliation, attendance, CBE assessments, timetables, parents and daily operations." : content.seoDescription,
+    products: content.products.map((product) => ({ ...product, status: legacyLaunch && product.key === "school" ? "WAITLIST" as const : product.status, mediaUrl: publicMediaUrl(product.mediaUrl) })),
+    mediaShowcase: content.mediaShowcase.map((item) => ({ ...item, url: publicMediaUrl(item.url) })),
+    ogImageUrl: publicMediaUrl(content.ogImageUrl),
+  };
 }
 
 export async function getLandingContent(): Promise<LandingContent> {
   const row = await db.platformSetting.findUnique({ where: { key: LANDING_CONTENT_KEY } });
-  if (!row?.value) return defaultLandingContent();
-  try { return landingContentSchema.parse(JSON.parse(row.value)); } catch { return defaultLandingContent(); }
+  if (!row?.value) return normalizeLandingMedia(defaultLandingContent());
+  try { return normalizeLandingMedia(landingContentSchema.parse(JSON.parse(row.value))); } catch { return normalizeLandingMedia(defaultLandingContent()); }
 }
 
 export async function saveLandingContent(input: unknown, actor: { id: string; fullName: string; tenantId: string }) {

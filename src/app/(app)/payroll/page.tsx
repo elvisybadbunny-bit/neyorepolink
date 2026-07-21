@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requirePageUser } from "@/lib/core/page-guards";
-import { can } from "@/lib/core/permissions";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { PayrollClient } from "@/components/payroll/payroll-client";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
  *  ANY-of: staff.manage (leadership) OR finance.manage_structure (bursar). */
 export default async function PayrollPage() {
   const user = await requirePageUser();
-  if (!can(user.role, "staff.manage") && !can(user.role, "finance.manage_structure")) redirect("/forbidden");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  if (!effectivePermissions.includes("staff.manage") && !effectivePermissions.includes("finance.manage_structure")) redirect("/forbidden");
 
   return (
     <div className="space-y-6">

@@ -1,4 +1,5 @@
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { CalendarView } from "@/components/calendar/calendar-view";
 
@@ -7,7 +8,9 @@ export const dynamic = "force-dynamic";
 /** School calendar: month/week/day, KE holidays, iCal, invites. */
 export default async function CalendarPage() {
   const user = await requirePagePermission("calendar.view");
-  const canManage = can(user.role, "calendar.manage");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
+  const canManage = hasEffective("calendar.manage");
 
   return (
     <div className="space-y-6">

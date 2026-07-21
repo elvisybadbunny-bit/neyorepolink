@@ -1,4 +1,5 @@
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { ClinicClient } from "@/components/clinic/clinic-client";
 
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 /** B.21 Medical / Clinic — visits, allergies, medications, health report. */
 export default async function ClinicPage() {
   const user = await requirePagePermission("clinic.view");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
 
   return (
     <div className="space-y-6">
@@ -14,7 +17,7 @@ export default async function ClinicPage() {
       <p className="-mt-4 text-sm text-navy-500 dark:text-navy-400">
         Sickbay visits, the allergy register, medication tracking — referrals SMS the parent.
       </p>
-      <ClinicClient canManage={can(user.role, "clinic.manage")} />
+      <ClinicClient canManage={hasEffective("clinic.manage")} />
     </div>
   );
 }

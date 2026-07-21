@@ -1,4 +1,5 @@
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { LibraryClient } from "@/components/library/library-client";
 
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 /** B.15 Library — catalog, issue/return, fines, barcode, reading history. */
 export default async function LibraryPage() {
   const user = await requirePagePermission("library.view");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
 
   return (
     <div className="space-y-6">
@@ -16,7 +19,7 @@ export default async function LibraryPage() {
           Catalog, track physical copies, issue and return books, and apply your school&apos;s configured overdue-fine policy.
         </p>
       </div>
-      <LibraryClient canManage={can(user.role, "library.manage")} />
+      <LibraryClient canManage={hasEffective("library.manage")} />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { ExamsClient } from "@/components/exams/exams-client";
 import { ExamAnalyticsClient } from "@/components/exams/exam-analytics-client";
@@ -23,7 +24,8 @@ export default async function ExamsPage() {
     educationLevelsOffered: [] as string[],
   }));
 
-  const has = (permission: Parameters<typeof can>[1]) => can(user.role, permission) || (user.secondaryRole ? can(user.secondaryRole, permission) : false);
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const has = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
   const requestRoles = ["HOD", "DEAN_OF_STUDIES", "DEPUTY_PRINCIPAL", "PRINCIPAL", "SCHOOL_OWNER", "SUPER_ADMIN"];
   const approveRoles = ["PRINCIPAL", "SCHOOL_OWNER", "SUPER_ADMIN"];
   const canRequestRelease = requestRoles.includes(user.role) || (user.secondaryRole ? requestRoles.includes(user.secondaryRole) : false);

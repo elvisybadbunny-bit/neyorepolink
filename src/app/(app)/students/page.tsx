@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Users, UploadCloud, GraduationCap, ArrowUpRight } from "lucide-react";
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { Button } from "@/components/ui/button";
 import { StudentsClient } from "@/components/students/students-client";
@@ -10,8 +11,10 @@ export const dynamic = "force-dynamic";
 /** Students list (B.1.1/7/8). Row-scoped per role on the server. */
 export default async function StudentsPage() {
   const user = await requirePagePermission("student.view");
-  const canCreate = can(user.role, "student.create");
-  const canManageClasses = can(user.role, "class.manage");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
+  const canCreate = hasEffective("student.create");
+  const canManageClasses = hasEffective("class.manage");
 
   return (
     <div className="space-y-6">

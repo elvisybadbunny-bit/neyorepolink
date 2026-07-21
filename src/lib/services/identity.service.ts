@@ -165,3 +165,20 @@ export function generateCuratedNeyoEmail(fullName: string, tenantSlugOrCode: str
   const domainSlug = tenantSlugOrCode.toLowerCase().replace(/[^a-z0-9]/g, "") || "school";
   return `${prefix}.${Math.floor(100 + Math.random() * 900)}@${domainSlug}.neyo.co.ke`;
 }
+
+/** Assign a collision-checked curated identity once. Existing values never rotate. */
+export async function ensureCuratedNeyoEmail(userId: string): Promise<string> {
+  const user = await db.user.findUnique({ where: { id: userId }, include: { tenant: { select: { slug: true } } } });
+  if (!user) throw new Error("User not found.");
+  if (user.customNeyoEmail) return user.customNeyoEmail;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const candidate = generateCuratedNeyoEmail(user.fullName, user.tenant.slug);
+    const clash = await db.user.findUnique({ where: { customNeyoEmail: candidate }, select: { id: true } });
+    if (clash) continue;
+    await db.user.update({ where: { id: user.id }, data: { customNeyoEmail: candidate } });
+    return candidate;
+  }
+  const fallback = `user.${user.id.slice(-10).toLowerCase()}@${user.tenant.slug.replace(/[^a-z0-9]/gi, "").toLowerCase()}.neyo.co.ke`;
+  await db.user.update({ where: { id: user.id }, data: { customNeyoEmail: fallback } });
+  return fallback;
+}

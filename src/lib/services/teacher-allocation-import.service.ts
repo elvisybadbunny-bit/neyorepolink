@@ -18,7 +18,7 @@
 import { db } from "@/lib/db";
 import { withTenant } from "@/lib/core/tenant-context";
 import { tenantDb } from "@/lib/core/tenant-db";
-import { generateNeyoLoginId } from "@/lib/services/identity.service";
+import { generateNeyoLoginId, ensureCuratedNeyoEmail } from "@/lib/services/identity.service";
 import type { SessionUser } from "@/lib/core/session";
 import { parseDelimited, parseXlsx } from "@/lib/services/student-import.service";
 import {
@@ -243,8 +243,9 @@ export async function commitTeacherAllocationImport(user: SessionUser, input: Co
         } else {
           const loginId = await generateNeyoLoginId();
           const newTeacher = await tdb.user.create({
-            data: { tenantId: user.tenantId, neyoLoginId: loginId, fullName: p.teacherName, role: "TEACHER", isActive: true },
+            data: { tenantId: user.tenantId, neyoLoginId: loginId, fullName: p.teacherName, role: "TEACHER", isActive: true, hasSetInitialPassword: false },
           });
+          await ensureCuratedNeyoEmail(newTeacher.id);
           teacherId = newTeacher.id;
           newlyCreatedTeacherIdByName.set(nameKey, teacherId);
           createdTeachers++;

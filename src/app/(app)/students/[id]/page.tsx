@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { getStudent, StudentError } from "@/lib/services/student.service";
 import { StudentProfileClient } from "@/components/students/student-profile-client";
@@ -12,7 +13,9 @@ export const dynamic = "force-dynamic";
 /** Student profile (B.1.2). Row-scoped: getStudent enforces visibility. */
 export default async function StudentProfilePage({ params }: { params: { id: string } }) {
   const user = await requirePagePermission("student.view");
-  const canEdit = can(user.role, "student.edit");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
+  const canEdit = hasEffective("student.edit");
   const isCurriculumEngineEnabledFlag = await isCurriculumEngineEnabled();
 
   let student;

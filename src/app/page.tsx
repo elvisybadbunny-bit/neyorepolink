@@ -36,12 +36,14 @@ export async function generateMetadata(): Promise<Metadata> {
   if (!slug) {
     const landing = await getLandingContent();
     return {
+      metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://www.neyo.co.ke"),
       title: landing.seoTitle,
       description: landing.seoDescription,
+      alternates: { canonical: "/" },
       openGraph: {
         title: landing.seoTitle,
         description: landing.seoDescription,
-        images: landing.ogImageUrl ? [landing.ogImageUrl] : undefined,
+        images: landing.ogImageUrl ? [{ url: landing.ogImageUrl, width: 1400, height: 1000, alt: "NEYO School OS timetable and product interface" }] : undefined,
       },
       twitter: {
         card: "summary_large_image",
@@ -162,13 +164,29 @@ export default async function Home() {
       getLandingContent(),
     ]);
 
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.neyo.co.ke";
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: "NEYO School OS",
+      applicationCategory: "EducationalApplication",
+      operatingSystem: "Web",
+      url: baseUrl,
+      description: landingContent.seoDescription,
+      screenshot: landingContent.mediaShowcase.filter((item) => item.type === "image" && item.url).map((item) => new URL(item.url, baseUrl).toString()),
+      featureList: landingContent.products.find((product) => product.key === "school")?.features ?? [],
+      provider: { "@type": "Organization", name: "NEYO", url: baseUrl, email: "hello@neyo.co.ke" },
+    };
     return (
-      <NeyoLandingClient
-        customLogoUrl={customLogo?.value || null}
-        brandPrimary={customPrimary?.value || undefined}
-        brandAccent={customAccent?.value || undefined}
-        landingContent={landingContent}
-      />
+      <>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }} />
+        <NeyoLandingClient
+          customLogoUrl={customLogo?.value || null}
+          brandPrimary={customPrimary?.value || undefined}
+          brandAccent={customAccent?.value || undefined}
+          landingContent={landingContent}
+        />
+      </>
     );
   }
 

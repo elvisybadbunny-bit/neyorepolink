@@ -1,4 +1,5 @@
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { redirect } from "next/navigation";
 import { LmsClient } from "@/components/lms/lms-client";
@@ -8,8 +9,10 @@ export const dynamic = "force-dynamic";
 /** B.13 LMS — staff side: quizzes, homework grading, class forums. */
 export default async function LmsPage() {
   const user = await requirePagePermission("academics.view");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
   // Families use the shared portal for LMS; staff without teaching scope see a hint.
-  if (!can(user.role, "homework.assign")) redirect("/portal");
+  if (!hasEffective("homework.assign")) redirect("/portal");
 
   return (
     <div className="space-y-6">

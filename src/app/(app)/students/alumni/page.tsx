@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requirePagePermission } from "@/lib/core/page-guards";
+import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { AlumniClient } from "@/components/students/alumni-client";
 
@@ -9,7 +10,9 @@ export const dynamic = "force-dynamic";
 /** B.1 Alumni directory — graduated students by "Class of YYYY". */
 export default async function AlumniPage() {
   const user = await requirePagePermission("student.view");
-  const canEdit = can(user.role, "student.edit");
+  const effectivePermissions = await effectivePermissionsForUser(user);
+  const hasEffective = (permission: Parameters<typeof can>[1]) => effectivePermissions.includes(permission);
+  const canEdit = hasEffective("student.edit");
 
   return (
     <div className="space-y-6">

@@ -14,6 +14,9 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { useToast } from "@/components/ui/toast";
 import { getOperatingSystem, OPERATING_SYSTEMS, type OperatingSystemKey, isOperatingSystemKey } from "@/lib/core/operating-systems";
 
+const COMPANY_ROLES = new Set(["FOUNDER", "SUPER_ADMIN", "NEYO_OPS", "NEYO_SUPPORT"]);
+const destinationForRole = (role?: string | null) => role && COMPANY_ROLES.has(role) ? "/founder" : "/dashboard";
+
 type Step =
   | "phone"
   | "code"
@@ -90,7 +93,7 @@ export default function LoginPage() {
         toast({ title: "Password Reset & Account Unlocked!", description: "Taking you to your dashboard...", tone: "success" });
         setForgotOpen(false);
         setStep("success");
-        const dest = json.data?.user?.role === "FOUNDER" || json.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+        const dest = destinationForRole(json.data?.user?.role);
         setTimeout(() => window.location.assign(dest), 800);
       } else {
         toast({ title: json.error?.message || "Verification failed.", tone: "error" });
@@ -145,8 +148,9 @@ export default function LoginPage() {
       });
       const json = await res.json();
       if (json.ok) {
-        toast({ title: "Interactive Demo Approved!", description: "Launching your sandboxed School OS...", tone: "success" });
-        setTimeout(() => { window.location.href = "/dashboard"; }, 700);
+        toast({ title: "Demo request received", description: "The NEYO team will review it and send access details to the contact you supplied after approval.", tone: "success" });
+        setDemoLeadOpen(false);
+        setDemoLoading(false);
       } else {
         toast({ title: json.error?.message || "Could not start the demo. Try again.", tone: "error" });
         setDemoLoading(false);
@@ -205,7 +209,7 @@ export default function LoginPage() {
       .then((r) => r.json())
       .then((j) => {
         if (active && j.ok && j.data?.user) {
-          window.location.assign(j.data.user.role === "FOUNDER" || j.data.user.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard");
+          window.location.assign(destinationForRole(j.data.user.role));
         }
       })
       .catch(() => {});
@@ -303,7 +307,7 @@ export default function LoginPage() {
         tone: "success",
       });
       // Full reload so server components pick up the new session cookie.
-      const dest = json.data?.user?.role === "FOUNDER" || json.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+      const dest = destinationForRole(json.data?.user?.role);
       if (json.data?.user?.hasSetInitialPassword === false) {
         setFirstLoginDest(dest);
         setFirstLoginOpen(true);
@@ -350,7 +354,7 @@ export default function LoginPage() {
       setSignedInName(json.data.user.fullName);
       setStep("success");
       toast({ title: `Welcome, ${json.data.user.fullName}`, tone: "success" });
-      const dest = json.data?.user?.role === "FOUNDER" || json.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+      const dest = destinationForRole(json.data?.user?.role);
       if (json.data?.user?.hasSetInitialPassword === false) {
         setFirstLoginDest(dest);
         setFirstLoginOpen(true);
@@ -424,7 +428,7 @@ export default function LoginPage() {
       setSignedInName(json.data.user.fullName);
       setStep("success");
       toast({ title: `Welcome, ${json.data.user.fullName}`, tone: "success" });
-      const dest = json.data?.user?.role === "FOUNDER" || json.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+      const dest = destinationForRole(json.data?.user?.role);
       if (json.data?.user?.hasSetInitialPassword === false) {
         setFirstLoginDest(dest);
         setFirstLoginOpen(true);
@@ -478,7 +482,7 @@ export default function LoginPage() {
       setSignedInName(verJson.data.user.fullName);
       setStep("success");
       toast({ title: `Welcome, ${verJson.data.user.fullName}`, tone: "success" });
-      const dest = verJson.data?.user?.role === "FOUNDER" || verJson.data?.user?.role === "SUPER_ADMIN" || (osKey as string) === "company" ? "/founder" : "/dashboard";
+      const dest = destinationForRole(verJson.data?.user?.role);
       if (verJson.data?.user?.hasSetInitialPassword === false) {
         setFirstLoginDest(dest);
         setFirstLoginOpen(true);
@@ -943,7 +947,7 @@ export default function LoginPage() {
           className="inline-flex items-center justify-center gap-2 rounded-full border border-navy-200 bg-white px-4 py-2 text-sm font-medium text-navy-700 transition-colors hover:bg-warm-50 disabled:opacity-60 dark:border-navy-700 dark:bg-navy-900 dark:text-navy-200"
         >
           {demoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-green-600" />}
-          {demoLoading ? "Setting up your demo school…" : "Try NEYO with a demo school"}
+          {demoLoading ? "Sending request…" : "Try NEYO with a demo school"}
         </button>
         <p className="mt-1.5 text-xs text-navy-400">No sign-up. Real Kenyan data. Expires in 24 hours.</p>
       </div>
@@ -969,7 +973,7 @@ export default function LoginPage() {
               </button>
             </div>
             <p className="mt-3 text-xs text-navy-600 dark:text-navy-300">
-              Experience NEYO with pre-seeded Kenyan high school data (<strong className="text-green-700 dark:text-green-400">Karibu High School</strong>). Enter your verified contact details to approve and launch instantly.
+              Experience NEYO with pre-seeded Kenyan high school data (<strong className="text-green-700 dark:text-green-400">Demo Academy</strong>). Enter your contact details. The NEYO team reviews the request before any sandbox is created.
             </p>
             <form onSubmit={submitAndLaunchDemo} className="mt-4 space-y-3">
               <div>
