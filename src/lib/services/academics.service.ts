@@ -381,7 +381,7 @@ export async function teacherTimetable(user: SessionUser, teacherId: string) {
     const classes = classIds.length ? await tenantDb().schoolClass.findMany({ where: { id: { in: classIds } } }) : [];
     const cMap = new Map(classes.map((c) => [c.id, [c.level, c.stream].filter(Boolean).join(" ")]));
     return slots.map((s) => ({
-      id: s.id, dayOfWeek: s.dayOfWeek, period: s.period,
+      id: s.id, classId: s.classId, dayOfWeek: s.dayOfWeek, period: s.period,
       subjectName: s.subject?.name ?? null, subjectCode: s.subject?.code ?? null,
       className: cMap.get(s.classId) ?? "—",
       venue: (s as any).venue ?? null,
