@@ -308,11 +308,7 @@ export function NeyoLandingClient({
                 Built for Kenyan school operations
               </div>
               <h1 className="max-w-3xl text-[44px] font-black leading-[0.98] tracking-[-0.055em] text-[#101a2e] sm:text-6xl lg:text-[72px]">
-                One school.
-                <br />
-                <span style={{ color: brandAccent }}>Every operation.</span>
-                <br />
-                Finally connected.
+                Run your entire school from one <span style={{ color: brandAccent }}>operating system.</span>
               </h1>
               <p className="mt-6 max-w-xl text-base font-medium leading-7 text-slate-600 sm:text-lg">
                 Run admissions, fees, attendance, CBE, exams, timetables, parent

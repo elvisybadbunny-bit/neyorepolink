@@ -101,7 +101,7 @@ async function main() {
       runId: preview.runId,
       blockName: `${suffix} Auto Block`,
       preferAfterBreak: false,
-      subjects: preview.rows.map((r) => ({ subjectId: r.subjectId, teacherId: r.suggestedTeacherId, lessonsPerWeek: 4, classIds: r.classIds })),
+      subjects: preview.rows.map((r) => ({ subjectId: r.subjectId, teacherId: r.suggestedTeacherId, lessonsPerWeek: 4, classIds: r.classIds, teachingGroups: [] })),
     });
     blockId = confirmed.blockId;
     check("1. Real confirm still creates exactly one real ElectiveBlock (pre-existing BB.2 behaviour unaffected)", Boolean(blockId));

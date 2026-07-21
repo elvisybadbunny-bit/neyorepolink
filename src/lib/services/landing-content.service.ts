@@ -58,7 +58,7 @@ export function defaultLandingContent(): LandingContent {
       { label: "Company", href: "#company" },
     ],
     heroEyebrow: "School management system for Kenya",
-    heroHeadline: "One school. Every operation. Finally connected.",
+    heroHeadline: "Run your entire school from one operating system.",
     heroSubheadline: "Run admissions, fees, attendance, CBE, exams, timetables, parent communication and campus operations from one clear school operating system.",
     primaryCta: { label: "Request a guided demo", href: "#demo" },
     secondaryCta: { label: "Explore School OS", href: "#product" },

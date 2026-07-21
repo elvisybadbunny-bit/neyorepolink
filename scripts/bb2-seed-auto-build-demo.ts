@@ -183,7 +183,7 @@ async function main() {
       runId: electivesPreview.runId,
       blockName: "Grade 10 Options (auto-built from student choices)",
       preferAfterBreak: false,
-      subjects: electivesPreview.rows.map((r) => ({ subjectId: r.subjectId, teacherId: r.suggestedTeacherId, lessonsPerWeek: 5, classIds: r.classIds })),
+      subjects: electivesPreview.rows.map((r) => ({ subjectId: r.subjectId, teacherId: r.suggestedTeacherId, lessonsPerWeek: 5, classIds: r.classIds, teachingGroups: [] })),
     });
     console.log(`✓ Real ElectiveBlock created from student choices: ${electivesConfirmed.blockId}`);
 
@@ -195,7 +195,7 @@ async function main() {
       runId: mathPreview.runId,
       blockName: "Grade 10 Core/Essential Mathematics (auto-built)",
       preferAfterBreak: false,
-      subjects: mathPreview.rows.map((r) => ({ subjectId: r.subjectId, teacherId: r.suggestedTeacherId, lessonsPerWeek: 5, classIds: r.classIds })),
+      subjects: mathPreview.rows.map((r) => ({ subjectId: r.subjectId, teacherId: r.suggestedTeacherId, lessonsPerWeek: 5, classIds: r.classIds, teachingGroups: [] })),
     });
     console.log(`✓ Real Core/Essential Mathematics split ElectiveBlock created: ${mathConfirmed.blockId}`);
 

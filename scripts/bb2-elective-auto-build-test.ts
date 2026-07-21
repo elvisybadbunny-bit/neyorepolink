@@ -106,7 +106,7 @@ async function main() {
       runId: preview.runId,
       blockName: `BB2 Auto Block ${suffix}`,
       preferAfterBreak: false,
-      subjects: preview.rows.map((r) => ({ subjectId: r.subjectId, teacherId: r.suggestedTeacherId, lessonsPerWeek: 5, classIds: r.classIds })),
+      subjects: preview.rows.map((r) => ({ subjectId: r.subjectId, teacherId: r.suggestedTeacherId, lessonsPerWeek: 5, classIds: r.classIds, teachingGroups: [] })),
     });
     blockId = confirmed.blockId;
     const blockRow = await db.electiveBlock.findUnique({ where: { id: blockId }, include: { slots: { include: { subjects: true } } } });
@@ -117,7 +117,7 @@ async function main() {
     try {
       await confirmElectiveBlockAutoBuild(principal1, {
         action: "confirm", runId: preview.runId, blockName: "should not work", preferAfterBreak: false,
-        subjects: preview.rows.map((r) => ({ subjectId: r.subjectId, teacherId: null, lessonsPerWeek: 5, classIds: r.classIds })),
+        subjects: preview.rows.map((r) => ({ subjectId: r.subjectId, teacherId: null, lessonsPerWeek: 5, classIds: r.classIds, teachingGroups: [] })),
       });
     } catch (e) {
       blockedDoubleConfirm = e instanceof ElectiveBlockAutoBuildError && e.code === "CONFLICT";
@@ -130,7 +130,7 @@ async function main() {
     try {
       await confirmElectiveBlockAutoBuild(principal1, {
         action: "confirm", runId: preview2.runId, blockName: "fake", preferAfterBreak: false,
-        subjects: [{ subjectId: english.id, teacherId: null, lessonsPerWeek: 5, classIds: [cls1.id] }], // English was never in the real preview
+        subjects: [{ subjectId: english.id, teacherId: null, lessonsPerWeek: 5, classIds: [cls1.id], teachingGroups: [] }], // English was never in the real preview
       });
     } catch (e) {
       rejectedFakeSubject = e instanceof ElectiveBlockAutoBuildError && e.code === "INVALID";
@@ -145,7 +145,7 @@ async function main() {
     try {
       await confirmElectiveBlockAutoBuild(principal1, {
         action: "confirm", runId: preview3.runId, blockName: "should not work", preferAfterBreak: false,
-        subjects: preview3.rows.map((r) => ({ subjectId: r.subjectId, teacherId: null, lessonsPerWeek: 5, classIds: r.classIds })),
+        subjects: preview3.rows.map((r) => ({ subjectId: r.subjectId, teacherId: null, lessonsPerWeek: 5, classIds: r.classIds, teachingGroups: [] })),
       });
     } catch (e) {
       blockedAfterDiscard = e instanceof ElectiveBlockAutoBuildError && e.code === "CONFLICT";
@@ -190,7 +190,7 @@ async function main() {
 
     const mathConfirmed = await confirmElectiveBlockAutoBuild(principal1, {
       action: "confirm", runId: mathPreview.runId, blockName: `BB2 Math Split ${suffix}`, preferAfterBreak: false,
-      subjects: mathPreview.rows.map((r) => ({ subjectId: r.subjectId, teacherId: null, lessonsPerWeek: 5, classIds: r.classIds })),
+      subjects: mathPreview.rows.map((r) => ({ subjectId: r.subjectId, teacherId: null, lessonsPerWeek: 5, classIds: r.classIds, teachingGroups: [] })),
     });
     mathBlockId = mathConfirmed.blockId;
     check("Real Core/Essential Mathematics ElectiveBlock genuinely created", Boolean(mathBlockId));

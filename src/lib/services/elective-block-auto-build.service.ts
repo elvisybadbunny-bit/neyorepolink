@@ -399,7 +399,7 @@ export async function confirmElectiveBlockAutoBuild(user: SessionUser, input: Co
     // group, exact learner coverage, teacher qualification and venue.
     const assignmentRows = input.subjects.flatMap((subject) => {
       const previewRow = preview.rows.find((row) => row.subjectId === subject.subjectId)!;
-      const groups = previewRow.requiredTeachingGroups > 1 ? subject.teachingGroups : [];
+      const groups = previewRow.requiredTeachingGroups > 1 ? (subject.teachingGroups ?? []) : [];
       if (previewRow.requiredTeachingGroups > 1) {
         if (groups.length !== previewRow.requiredTeachingGroups) throw new ElectiveBlockAutoBuildError("INVALID", `${previewRow.subjectName} requires exactly ${previewRow.requiredTeachingGroups} real teaching groups.`);
         const allIds = groups.flatMap((group) => group.studentIds);
