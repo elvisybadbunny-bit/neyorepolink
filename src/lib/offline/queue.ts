@@ -14,28 +14,36 @@ export interface QueuedAction {
 }
 
 const DB_NAME = "neyo-offline";
+const DB_VERSION = 3;
 const STORE = "outbox";
+const FAILED_STORE = "failedOutbox";
+
+export interface FailedQueuedAction extends QueuedAction {
+  failedAt: number;
+  status: number;
+  reason: string;
+}
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE, { keyPath: "id" });
-      }
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: "id" });
+      if (!db.objectStoreNames.contains("bundleCache")) db.createObjectStore("bundleCache", { keyPath: "key" });
+      if (!db.objectStoreNames.contains(FAILED_STORE)) db.createObjectStore(FAILED_STORE, { keyPath: "id" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
 
-function tx<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest): Promise<T> {
+function tx<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest, storeName = STORE): Promise<T> {
   return openDb().then(
     (db) =>
       new Promise<T>((resolve, reject) => {
-        const t = db.transaction(STORE, mode);
-        const req = fn(t.objectStore(STORE));
+        const t = db.transaction(storeName, mode);
+        const req = fn(t.objectStore(storeName));
         req.onsuccess = () => resolve(req.result as T);
         req.onerror = () => reject(req.error);
       })
@@ -67,6 +75,22 @@ export async function remove(id: string): Promise<void> {
 export async function queueCount(): Promise<number> {
   if (typeof indexedDB === "undefined") return 0;
   return tx<number>("readonly", (s) => s.count());
+}
+
+export async function listFailedQueued(): Promise<FailedQueuedAction[]> {
+  if (typeof indexedDB === "undefined") return [];
+  const rows = await tx<FailedQueuedAction[]>("readonly", (s) => s.getAll(), FAILED_STORE);
+  return (rows ?? []).sort((a, b) => b.failedAt - a.failedAt);
+}
+
+export async function removeFailedQueued(id: string): Promise<void> {
+  await tx("readwrite", (s) => s.delete(id), FAILED_STORE);
+  window.dispatchEvent(new Event("neyo:queue-failed-changed"));
+}
+
+async function retainFailedQueued(item: FailedQueuedAction): Promise<void> {
+  await tx("readwrite", (s) => s.put(item), FAILED_STORE);
+  window.dispatchEvent(new Event("neyo:queue-failed-changed"));
 }
 
 /**
@@ -111,7 +135,17 @@ export async function syncQueue(): Promise<{ sent: number; failed: number }> {
         body: JSON.stringify(item.body),
       });
       if (res.ok || (res.status >= 400 && res.status < 500)) {
-        // success OR permanent client error -> drop it (don't retry forever).
+        // A permanent rejection must stop retrying, but never disappear. Keep
+        // an app-only review copy so the user can see which stale/invalid
+        // record needs correction after reconnecting.
+        if (!res.ok) {
+          let reason = `Server rejected this saved action (${res.status}).`;
+          try {
+            const payload = await res.clone().json();
+            reason = payload?.error?.message || reason;
+          } catch { /* non-JSON rejection */ }
+          await retainFailedQueued({ ...item, status: res.status, reason, failedAt: Date.now() });
+        }
         await remove(item.id);
         if (res.ok) sent++;
         else failed++;

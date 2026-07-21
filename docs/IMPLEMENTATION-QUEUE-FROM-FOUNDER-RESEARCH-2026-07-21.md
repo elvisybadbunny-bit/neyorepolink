@@ -27,7 +27,7 @@ Founder decisions recorded 21 July 2026:
 - [x] CBE assessment observation outbox with tenant-scoped at-most-once idempotency.
 - [x] Teacher record-of-work/coverage outbox with tenant-scoped at-most-once idempotency.
 - [x] CBE Delivery session/evidence/support creation outbox with source revalidation and at-most-once replay.
-- [ ] Add a visible failed-sync review inbox for queued records rejected because their source changed.
+- [x] Add a visible failed-sync review inbox for queued records rejected because their source changed.
 - [ ] Expand opt-in read-only snapshot data by role.
 - [ ] Add stale-data timestamps and explicit offline/online-required labels to every supported module.
 - [ ] Browser test each action offline → reconnect → exactly-once server result.

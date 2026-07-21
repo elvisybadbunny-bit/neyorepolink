@@ -5,7 +5,7 @@ export interface OfflineBundleRecord<T = unknown> {
 }
 
 const DB_NAME = "neyo-offline";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE = "bundleCache";
 
 function openBundleDb(): Promise<IDBDatabase> {
@@ -15,6 +15,7 @@ function openBundleDb(): Promise<IDBDatabase> {
       const db = req.result;
       if (!db.objectStoreNames.contains("outbox")) db.createObjectStore("outbox", { keyPath: "id" });
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: "key" });
+      if (!db.objectStoreNames.contains("failedOutbox")) db.createObjectStore("failedOutbox", { keyPath: "id" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

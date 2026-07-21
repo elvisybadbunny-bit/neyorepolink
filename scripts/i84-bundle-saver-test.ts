@@ -12,7 +12,7 @@ async function main() {
   const cache = readFileSync("src/lib/offline/bundle-cache.ts", "utf8");
   assert(cache.includes("IndexedDB") || cache.includes("indexedDB"), "bundle cache uses IndexedDB");
   assert(cache.includes("bundleCache") && cache.includes("saveBundle") && cache.includes("readBundle") && cache.includes("clearBundle"), "bundle cache supports save/read/clear operations");
-  assert(cache.includes('DB_VERSION = 2') && cache.includes('"outbox"'), "bundle cache upgrades the existing offline DB without breaking the outbox");
+  assert(cache.includes('DB_VERSION = 3') && cache.includes('"outbox"') && cache.includes('"failedOutbox"'), "bundle cache upgrades the shared offline DB without breaking pending or failed-action stores");
 
   const ui = readFileSync("src/components/dashboard/pwa-data-saver.tsx", "utf8");
   assert(ui.includes("NEYO Bundle Saver Mode") && ui.includes("/api/offline/bundle"), "dashboard uses the real bundle API");

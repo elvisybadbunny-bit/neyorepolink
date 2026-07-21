@@ -49,6 +49,8 @@ Offline video playback is not promised: YouTube and unsaved media still require 
 
 The service worker previously cached full browser navigations but not Next.js RSC requests used when a signed-in user clicks links. It now caches successful same-origin RSC page responses and can reuse an exact previously loaded response when offline. API calls remain network-only. Cache version moved to `neyo-v2` so clients activate the corrected strategy.
 
+The shared IndexedDB schema is now version 3 across both the action queue and Bundle Saver. This fixes a real version mismatch where Bundle Saver could upgrade the database to version 2 while the queue still attempted to open version 1. A `failedOutbox` store now retains permanently rejected 4xx sync actions with the server reason, timestamp and label. The top-bar Review control lets the user inspect and dismiss them after correcting the source workflow; rejected school work no longer disappears silently.
+
 ## Founder verification
 
 1. Sign in online and install/open NEYO once.

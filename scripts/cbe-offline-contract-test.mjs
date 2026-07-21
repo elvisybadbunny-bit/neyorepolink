@@ -25,5 +25,7 @@ check(recordClient.includes('queuedPost(\n        "/api/teacher/record-of-work"'
 check(recordRoute.includes('"teacher.record_of_work"') && recordRoute.includes("withIdempotency"), "record-of-work replay is at-most-once per tenant and key");
 check(deliveryClient.includes('offlineSafe=["create_session","record_evidence","create_intervention"]') && deliveryClient.includes("queuedPost"), "bounded CBE Delivery creates use the local outbox");
 check(deliveryRoute.includes("cbe_delivery.${action}") && deliveryRoute.includes("withIdempotency"), "CBE Delivery replay is tenant-scoped and at-most-once");
+check(queue.includes('DB_VERSION = 3') && queue.includes('FAILED_STORE = "failedOutbox"'), "pending, bundle and rejected records share one compatible IndexedDB version");
+check(queue.includes("retainFailedQueued") && queue.includes("reason") && queue.includes("failedAt"), "permanent sync rejection is retained for user review instead of disappearing");
 
-console.log(`OFFLINE SCHOOL RECORD CONTRACT COMPLETE: ${passed}/10`);
+console.log(`OFFLINE SCHOOL RECORD CONTRACT COMPLETE: ${passed}/12`);
