@@ -3955,6 +3955,7 @@ model Subscription {
   // real renewal boundary per the founder's own confirmed "next billing"
   // answer, never mid-term.
   sizeBasedPriceKes Int @default(0)
+  billingCycle String @default("TERMLY") // MONTHLY | TERMLY | YEARLY
 
   currentPeriodStart DateTime  @default(now())
   currentPeriodEnd   DateTime // when the next payment is due

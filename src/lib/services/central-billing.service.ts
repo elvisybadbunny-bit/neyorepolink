@@ -9,8 +9,8 @@ import { DEFAULT_PLAN_KEY } from "@/lib/core/plans";
 import { pendingReferralDiscountKes, markReferralCreditsApplied, processReferralRewardsForPayment, promptReferralAfterPayment } from "@/lib/services/revenue-ops.service";
 import { newSignupDiscountKes, markFirstTermDiscountClaimed } from "@/lib/services/discount-campaign.service";
 import { influencerSignupDiscountKes, creditInfluencerCommission } from "@/lib/services/influencer-code.service";
+import { cycleAmount, cycleDays } from "@/lib/services/billing-cycle.service";
 
-const TERM_DAYS = 120;
 const mock = new MockProvider();
 const daraja = new DarajaProvider();
 
@@ -93,9 +93,9 @@ export function centralAccountRef(slug: string) {
 
 export async function subscriptionRenewalAmount(tenantId: string) {
   const sub = await db.subscription.findUnique({ where: { tenantId } });
-  if (sub?.grandfatheredPrice && sub.grandfatheredPrice > 0) return sub.grandfatheredPrice;
   const plan = await getPlanFromCatalog(sub?.planKey || DEFAULT_PLAN_KEY);
-  return plan?.pricePerTerm && plan.pricePerTerm > 0 ? plan.pricePerTerm : 15000;
+  const base = sub?.sizeBasedPriceKes || sub?.grandfatheredPrice || plan?.pricePerTerm || 15000;
+  return sub ? cycleAmount(base, sub.pricingMode, sub.billingCycle as "MONTHLY"|"TERMLY"|"YEARLY") : base;
 }
 
 async function ensureSubscriptionForCentralPayment(tenantId: string) {
@@ -139,7 +139,7 @@ export async function initiateCentralSubscriptionStk(input: { tenantId: string; 
 
   const accountRef = centralAccountRef(tenant.slug);
   const periodStart = new Date();
-  const periodEnd = addDays(periodStart, TERM_DAYS);
+  const periodEnd = addDays(periodStart, cycleDays(sub.billingCycle));
 
   const payment = await db.subscriptionPayment.create({
     data: {
@@ -202,7 +202,7 @@ async function activateSubscriptionFromPayment(paymentId: string, mpesaRef: stri
   }
 
   const now = new Date();
-  const periodEnd = addDays(now, TERM_DAYS);
+  const periodEnd = payment.periodEnd > now ? payment.periodEnd : addDays(now, TERM_DAYS);
   await db.$transaction([
     db.subscriptionPayment.update({ where: { id: payment.id }, data: { status: "PAID", paidAt: now, mpesaRef, resultCode, resultDesc, rawCallback: JSON.stringify(raw), periodStart: now, periodEnd } }),
     db.subscription.update({ where: { id: payment.subscriptionId }, data: { status: "ACTIVE", currentPeriodStart: now, currentPeriodEnd: periodEnd, graceEndsAt: null } }),
@@ -285,6 +285,6 @@ export async function handleCentralSubscriptionCallback(body: unknown) {
   const now = new Date();
   const existing = parsed.mpesaRef ? await db.subscriptionPayment.findUnique({ where: { mpesaRef: parsed.mpesaRef } }).catch(() => null) : null;
   if (existing) return activateSubscriptionFromPayment(existing.id, parsed.mpesaRef, body, parsed.resultCode || "0", parsed.resultDesc || "Success");
-  const created = await db.subscriptionPayment.create({ data: { subscriptionId: sub.id, tenantId: tenant.id, amount, status: "PENDING", method: "central_mpesa_c2b", phone: b?.phone || b?.MSISDN || null, accountRef: centralAccountRef(tenant.slug), periodStart: now, periodEnd: addDays(now, TERM_DAYS) } });
+  const created = await db.subscriptionPayment.create({ data: { subscriptionId: sub.id, tenantId: tenant.id, amount, status: "PENDING", method: "central_mpesa_c2b", phone: b?.phone || b?.MSISDN || null, accountRef: centralAccountRef(tenant.slug), periodStart: now, periodEnd: addDays(now, cycleDays(sub.billingCycle)) } });
   return activateSubscriptionFromPayment(created.id, parsed.mpesaRef, body, parsed.resultCode || "0", parsed.resultDesc || "Success");
 }

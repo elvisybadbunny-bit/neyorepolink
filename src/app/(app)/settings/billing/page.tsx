@@ -7,6 +7,7 @@ import { BillingManager } from "@/components/settings/billing-manager";
 import { ReferralCard } from "@/components/settings/referral-card";
 import { InfluencerCodeCard } from "@/components/settings/influencer-code-card";
 import { OnboardingFeeCard } from "@/components/settings/onboarding-fee-card";
+import { BillingCadenceCard } from "@/components/settings/billing-cadence-card";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,7 @@ export default async function BillingSettingsPage() {
         </p>
       </div>
       <BillingManager data={data} canManage={true} />
+      <BillingCadenceCard />
       <OnboardingFeeCard />
       <ReferralCard />
       <InfluencerCodeCard />

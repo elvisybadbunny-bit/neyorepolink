@@ -5098,3 +5098,10 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Messaging measures the live visual viewport, confines scrolling to the conversation list, and keeps the composer above the mobile safe-area inset.
 - [x] Parent-facing family split payment is reachable, scope-verifies linked children, allocates whole KES deterministically, records a split plan before STK, and applies each share only after the existing PAID callback.
 - [~] The notebook audit's priority gap list is closed in source; remaining PARTIAL rows and deployed browser, physical print/camera and live-provider evidence remain pending where stated.
+
+### Founder notebook partial-gap closure — 2026-07-21
+- [x] Class Teacher `student.edit` reachability verified through Student Profile Add/Edit Guardian, including changed phone and linked portal identity update.
+- [x] My Children cards use compact six-chip mobile entry points for fees, results, attendance, pickup safety, homework and library; pressing the child opens full detail.
+- [x] Subscription billing cadence is stored and customer-selectable as MONTHLY/TERMLY/YEARLY; central M-Pesa amount and period dates follow the choice.
+- [x] SMS remains a separate top-up and storage/usage remains governed by Pricing Engine rather than hidden cadence charges.
+- [x] Social account creation/posting is classified EXTERNAL/MANUAL; NEYO stores approved public URLs/content governance but not social passwords.

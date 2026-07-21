@@ -75,13 +75,13 @@ Repairs:
 
 | Idea | Status | Evidence / route | Remaining gap |
 |---|---|---|---|
-| Class teacher updates guardian number/adds guardian | PARTIAL | Student profile/guardian management and scoped student permissions exist | Confirm class-teacher button/action in deployed UI; role-specific denial has not been browser-proven. |
+| Class teacher updates guardian number/adds guardian | FULL STACK / REACHABLE | Class Teacher has `student.edit`; Student Profile renders Add Guardian and Edit Guardian, including phone change and linked portal identity update | Deployed role/browser denial evidence pending. |
 | Phone-calendar event feed; audience-specific events; parents cannot add | FULL STACK / REACHABLE | Calendar feed token, role/audience permissions | Native calendar subscription depends on user device. |
 | Message composer/header should not hide sent content | FULL STACK / REACHABLE | Messages measures the real `visualViewport`, keeps page shell fixed, scrolls only the thread and pins the composer above safe-area inset | Deployed 360px browser evidence pending. |
 | SMS margin configurable for NEYO revenue | FULL STACK / REACHABLE | SMS margin ledger/configuration and Founder revenue operations | Provider cost/price must remain real and editable. |
-| Monthly/termly/yearly billing and storage/SMS costs | PARTIAL | Pricing models, term/month period fields, cost/unit economics, SMS/storage accounting | A single customer-facing cadence selector across every model is not uniformly evidenced. |
+| Monthly/termly/yearly billing and storage/SMS costs | FULL STACK / REACHABLE | Settings → Billing → Payment cadence; central M-Pesa period/amount follows MONTHLY/TERMLY/YEARLY, SMS top-ups remain separate, storage/usage stays in Pricing Engine | Live renewal verification pending. |
 | Referral code, mutual first-invoice benefits and post-payment prompt | FULL STACK / REACHABLE | Referral/revenue Ops services and payment hooks | Deployment payment test pending. |
-| Company YouTube/TikTok links and feature marketing | PARTIAL | Landing social links + Founder editor completed | External accounts/content calendar still need real account creation and approved posts. |
+| Company YouTube/TikTok links and feature marketing | EXTERNAL / MANUAL | Founder landing editor stores and publishes official social links; Guided Help/Video Review govern approved content | Founder must create/secure real platform accounts and approve real posts externally; NEYO must not store social passwords here. |
 
 ## Parent/student portal
 
@@ -90,7 +90,7 @@ Repairs:
 | Result release notifications to teachers/parents | FULL STACK / REACHABLE | Exam release + in-app/SMS options | SMS depends on configured provider/credits. |
 | Multi-child portal and choose learner for payment | FULL STACK / REACHABLE | Parent portal sibling switcher/payment | Cross-school children under one identity is not proven. |
 | Split one payment across siblings | FULL STACK / REACHABLE | My Children → Pay for more than one child; row-scoped split plan, one STK push, callback allocation per invoice | Live M-Pesa callback evidence pending. |
-| Compact mobile cards for fees/results/attendance/safety/homework/library | PARTIAL | Responsive portal modules exist | Full 360px card-density audit remains. |
+| Compact mobile cards for fees/results/attendance/safety/homework/library | FULL STACK / REACHABLE | My Children uses a six-chip 3-column compact card; pressing the child opens full Fees, Results, Attendance, Pickup Safety, Homework and Library details | Deployed 360px screenshot remains pending. |
 | Download notes and see videos shown in class | FULL STACK / REACHABLE | Parent/student portal, LMS, Learning Videos class sessions | Video requires internet/provider. |
 
 ## Documents, identity and reporting

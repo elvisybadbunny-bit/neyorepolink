@@ -94,19 +94,13 @@ export function ParentPortalClient({ isCurriculumEngineEnabled = false }: { isCu
                   <p className="text-xs text-navy-400">{c.className ?? "—"} · <span className="font-mono">{c.admissionNo}</span></p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-warm-50 px-3 py-2 dark:bg-navy-800">
-                  <p className="text-[11px] text-navy-400">Attendance (30d)</p>
-                  <p className={`text-sm font-semibold ${c.attendancePct === null ? "text-navy-400" : c.attendancePct >= 90 ? "text-green-600" : c.attendancePct >= 75 ? "text-amber-600" : "text-red-600"}`}>
-                    {c.attendancePct === null ? "—" : `${c.attendancePct}%`}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-warm-50 px-3 py-2 dark:bg-navy-800">
-                  <p className="text-[11px] text-navy-400">Fee balance</p>
-                  <p className={`text-sm font-semibold ${!c.hasFeeInvoices ? "text-navy-400" : c.feeBalanceKes > 0 ? "text-red-600" : "text-green-600"}`}>
-                    {!c.hasFeeInvoices ? "No fees billed yet" : c.feeBalanceKes > 0 ? kes(c.feeBalanceKes) : "Cleared ✓"}
-                  </p>
-                </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <MiniPortalMetric label="Fees" value={!c.hasFeeInvoices ? "Not billed" : c.feeBalanceKes > 0 ? kes(c.feeBalanceKes) : "Cleared"} tone={c.feeBalanceKes > 0 ? "red" : "green"}/>
+                <MiniPortalMetric label="Results" value={c.latestPublishedExam ? "New" : "Open"} tone={c.latestPublishedExam ? "green" : "neutral"}/>
+                <MiniPortalMetric label="Attendance" value={c.attendancePct === null ? "—" : `${c.attendancePct}%`} tone={c.attendancePct !== null && c.attendancePct < 75 ? "red" : "green"}/>
+                <MiniPortalMetric label="Pickup safety" value="Open" tone="neutral"/>
+                <MiniPortalMetric label="Homework" value="Open" tone="neutral"/>
+                <MiniPortalMetric label="Library" value="Open" tone="neutral"/>
               </div>
               {c.latestPublishedExam && (
                 <p className="flex items-center gap-1.5 text-xs text-navy-500 dark:text-navy-400">
@@ -830,6 +824,8 @@ function ParentUploadCard({ studentId, studentName }: { studentId: string; stude
     </Card>
   );
 }
+
+function MiniPortalMetric({label,value,tone}:{label:string;value:string;tone:"green"|"red"|"neutral"}){return <div className="min-w-0 rounded-xl bg-warm-50 px-2 py-2 dark:bg-navy-800"><p className="truncate text-[9px] font-bold uppercase tracking-wide text-navy-400">{label}</p><p className={`mt-0.5 truncate text-[11px] font-semibold ${tone==="green"?"text-green-600":tone==="red"?"text-red-600":"text-navy-600 dark:text-navy-300"}`}>{value}</p></div>}
 
 function Avatar({ name, photoUrl, size = 44 }: { name: string; photoUrl: string | null; size?: number }) {
   const initials = name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();

@@ -1,0 +1,1 @@
+ALTER TABLE "Subscription" ADD COLUMN "billingCycle" TEXT NOT NULL DEFAULT 'TERMLY';
