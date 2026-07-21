@@ -39,6 +39,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { formatKES } from "@/lib/utils";
 import type { PricingEngineConfig } from "@/lib/validations/pricing-engine";
+import { OnboardingFeeOpsCard } from "@/components/founder/onboarding-fee-ops-card";
 
 type SchoolPricingRow = {
   tenantId: string;
@@ -300,6 +301,7 @@ export function PricingEngineOpsTab() {
 
   return (
     <div className="space-y-6">
+      <OnboardingFeeOpsCard />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Coins className="h-5 w-5 text-green-600" />Capacity-Based Pricing 2.0 — the engine</CardTitle>

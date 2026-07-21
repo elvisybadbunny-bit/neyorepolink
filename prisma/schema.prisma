@@ -4045,6 +4045,32 @@ model SchoolQuoteRequest {
 }
 
 // A payment attempt/record against a subscription (A.5/A.6).
+model OnboardingFeeQuote {
+  id                    String   @id @default(cuid())
+  tenantId              String?
+  schoolQuoteRequestId  String?
+  schoolName            String
+  inputJson             String
+  breakdownJson         String
+  formulaVersion        Int      @default(1)
+  calculatedFeeKes      Int
+  finalFeeKes           Int?
+  status                String   @default("DRAFT") // DRAFT | REVIEWED | APPROVED | WAIVED | INVOICED | PAID | CANCELLED
+  waiverReason          String?
+  reviewedById          String?
+  reviewedByName        String?
+  reviewedAt            DateTime?
+  approvedAt            DateTime?
+  createdById           String
+  createdByName         String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([schoolQuoteRequestId])
+  @@index([status, updatedAt])
+}
+
 model SubscriptionPayment {
   id                    String       @id @default(cuid())
   subscriptionId        String

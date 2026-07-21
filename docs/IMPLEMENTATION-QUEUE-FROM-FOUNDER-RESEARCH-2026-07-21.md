@@ -45,12 +45,12 @@ Founder decisions recorded 21 July 2026:
 
 ### C. School-size onboarding fee
 
-- [ ] Founder defines formula inputs and included work.
-- [ ] Build quote calculation with Founder review/override.
-- [ ] Separate onboarding invoice/payment purpose and audit trail.
+- [x] Founder-controlled formula factors/rates, minimum/maximum and operational toggles live in Pricing Engine.
+- [x] Draft quote calculation uses real linked-school counts or reviewed submission inputs, with Founder review/override and audited FREE waiver.
+- [~] Separate onboarding quote purpose/history is implemented; invoice and payment records remain pending.
 - [ ] School approval before M-Pesa initiation.
-- [ ] Verified callback and onboarding-checklist activation.
-- [ ] Waiver/campaign support without stacking or hidden charges.
+- [ ] Verified onboarding-payment callback and onboarding-checklist activation.
+- [ ] Campaign waiver support without stacking or hidden charges.
 
 ### D. Public asset and content operations
 
