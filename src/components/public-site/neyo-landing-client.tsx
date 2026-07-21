@@ -201,6 +201,12 @@ export function NeyoLandingClient({
 
   return (
     <div className="neyo-public-site min-h-screen overflow-x-hidden bg-white text-[#111c32] selection:bg-emerald-200">
+      <a
+        href="#main-content"
+        className="sr-only z-[120] rounded-lg bg-white px-4 py-3 font-bold text-[#101a2e] focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+      >
+        Skip to main content
+      </a>
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex h-[72px] max-w-[1240px] items-center justify-between px-4 sm:px-6">
           <button
@@ -305,7 +311,8 @@ export function NeyoLandingClient({
         )}
       </header>
 
-      <main id="top">
+      <main id="main-content" tabIndex={-1}>
+        <span id="top" className="sr-only" aria-hidden="true" />
         <section className="relative overflow-hidden px-4 pb-16 pt-14 sm:px-6 sm:pb-24 sm:pt-20">
           <div className="absolute inset-x-0 top-0 -z-10 h-[620px] bg-[radial-gradient(circle_at_80%_10%,rgba(21,148,95,0.10),transparent_36%),radial-gradient(circle_at_10%_30%,rgba(59,130,246,0.08),transparent_30%)]" />
           <div className="mx-auto grid max-w-[1240px] gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
@@ -403,6 +410,49 @@ export function NeyoLandingClient({
                 text="Use role-aware actions, protected settings and audit trails so the right people can act without opening every record to everyone."
                 color="bg-amber-50 text-amber-700"
               />
+            </div>
+          </div>
+        </section>
+
+        <section className="px-4 pb-20 sm:px-6 sm:pb-28">
+          <div className="mx-auto max-w-[1240px] overflow-hidden rounded-[32px] border border-slate-200 bg-[#101a2e] p-6 text-white sm:p-10">
+            <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:items-center">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+                  One connected learner journey
+                </p>
+                <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
+                  From first enquiry to the alumni record.
+                </h2>
+                <p className="mt-4 text-sm font-medium leading-7 text-slate-300">
+                  The same learner should not become a new disconnected row
+                  every time they move to another school office.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  "Enquiry",
+                  "Application",
+                  "Admission",
+                  "Class placement",
+                  "Attendance",
+                  "Fees & receipts",
+                  "Assessment",
+                  "Promotion & alumni",
+                ].map((stage, index) => (
+                  <div
+                    key={stage}
+                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                  >
+                    <span className="text-[10px] font-black text-emerald-300">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <p className="mt-5 text-xs font-bold leading-5 text-slate-100">
+                      {stage}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -648,6 +698,36 @@ export function NeyoLandingClient({
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section className="px-4 pb-20 sm:px-6 sm:pb-28">
+          <div className="mx-auto grid max-w-[1240px] gap-6 rounded-[28px] border border-slate-200 bg-white p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div className="flex gap-4">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-700">
+                <QrCode className="h-6 w-6" />
+              </span>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
+                  Approved connections
+                </p>
+                <h2 className="mt-2 text-2xl font-black tracking-tight">
+                  Connect existing systems without opening the database.
+                </h2>
+                <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-600">
+                  School-authorised API keys and signed webhooks provide a
+                  controlled path for future device, accounting, transport or
+                  specialist integrations. Access stays scoped to the school and
+                  the permissions it approves.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push("/developers")}
+              className="rounded-full border border-slate-300 px-6 py-3 text-sm font-black text-[#101a2e]"
+            >
+              Developer Center
+            </button>
           </div>
         </section>
 

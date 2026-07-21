@@ -205,6 +205,11 @@ export default async function Home() {
       applicationCategory: "EducationalApplication",
       operatingSystem: "Web",
       url: baseUrl,
+      areaServed: { "@type": "Country", name: "Kenya" },
+      audience: {
+        "@type": "EducationalAudience",
+        educationalRole: "school administrator, teacher, parent, learner",
+      },
       description: landingContent.seoDescription,
       screenshot: landingContent.mediaShowcase
         .filter(
