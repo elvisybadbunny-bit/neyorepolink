@@ -7,7 +7,8 @@ const packageJson = JSON.parse(read("package.json"));
 const checks = [
   [route.includes("timetableConfig.findMany") && route.includes("configs"), "teacher timetable returns real school time configuration"],
   [teacher.includes('timeZone: "Africa/Nairobi"') && teacher.includes("currentNairobiLesson"), "current lesson is calculated in the school timezone"],
-  [teacher.includes("scrollIntoView") && teacher.includes("currentCellRef"), "small-phone view opens and centres the current timetable cell"],
+  [teacher.includes("scrollIntoView") && teacher.includes("mobileCurrentRef"), "small-phone view opens and centres the current timetable lesson"],
+  [teacher.includes("sm:hidden") && teacher.includes("No assigned lesson"), "mobile timetable uses an aligned day agenda instead of a squeezed desktop grid"],
   [teacher.includes("ring-blue-500") && teacher.includes("current.period"), "current day and period are visibly highlighted"],
   [academics.includes("Both halves of an adjacent double lesson must use the same subject teacher"), "manual doubles reject different teachers"],
   [academics.includes("lockedAfter") && academics.includes("lunchAfterPeriod"), "break/lunch boundaries separate independent adjacent lessons"],

@@ -152,6 +152,7 @@ function Overview({ home }: { home: Home }) {
   const [coverage, setCoverage] = React.useState<CoverageRow[] | null>(null);
   const timetableRef = React.useRef<HTMLDivElement>(null);
   const currentCellRef = React.useRef<HTMLTableCellElement>(null);
+  const mobileCurrentRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     fetch("/api/teacher/timetable").then((r) => r.json()).then((j) => { if (j.ok) { setSlots(j.data.slots); setConfigs(j.data.configs ?? []); } }).catch(() => setSlots([]));
     fetch("/api/hr?view=my-coverage").then((r) => r.json()).then((j) => j.ok && setCoverage(j.data.coverage)).catch(() => setCoverage([]));
@@ -161,7 +162,7 @@ function Overview({ home }: { home: Home }) {
     if (!slots?.length || window.innerWidth > 640) return;
     const timer = window.setTimeout(() => {
       timetableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      currentCellRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      (mobileCurrentRef.current ?? currentCellRef.current)?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
     }, 250);
     return () => window.clearTimeout(timer);
   }, [slots, current.day, current.period]);
@@ -257,7 +258,16 @@ function Overview({ home }: { home: Home }) {
           ) : slots.length === 0 ? (
             <p className="py-2 text-center text-sm text-navy-400">You&apos;re not on the timetable yet — set in Academics → Timetable.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              <div className="space-y-2 sm:hidden">
+                <div className="flex items-center justify-between"><p className="text-xs font-bold text-navy-700 dark:text-navy-200">{current.day >= 1 && current.day <= 5 ? `${DAYS[current.day]} · today` : "Next school day"}</p><Badge tone="neutral">Nairobi time</Badge></div>
+                {[...new Set(slots.map((slot) => slot.period))].sort((a, b) => a - b).map((period) => {
+                  const slot = slots.find((item) => item.dayOfWeek === current.day && item.period === period);
+                  const isCurrent = period === current.period;
+                  return <div key={period} ref={isCurrent ? mobileCurrentRef : undefined} className={`grid grid-cols-[42px_1fr] items-center gap-2 rounded-xl border p-2 ${isCurrent ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/20 dark:bg-blue-950/30" : "border-navy-100 dark:border-navy-800"}`}><span className="font-mono text-xs font-bold text-navy-500">P{period}</span>{slot ? <div><p className="text-sm font-bold text-navy-900 dark:text-white">{slot.subjectName}</p><p className="text-xs text-navy-500">{slot.className} · {slot.subjectCode}</p></div> : <span className="text-xs italic text-navy-400">No assigned lesson</span>}</div>;
+                })}
+              </div>
+              <div className="hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[520px] text-xs">
                 <thead>
                   <tr>
@@ -289,6 +299,7 @@ function Overview({ home }: { home: Home }) {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>
