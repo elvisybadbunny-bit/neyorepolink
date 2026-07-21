@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
+import "./public-landing.css";
 import { ToastProvider } from "@/components/ui/toast";
 import { BiometricGateProvider } from "@/components/auth/biometric-gate";
 import { CookieConsent } from "@/components/legal/cookie-consent";
@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const rows = await db.platformSetting.findMany({
     where: { key: { in: ["neyo_logo_url", "neyo_wordmark_light_url", "neyo_favicon_url", "neyo_favicon_32_url", "neyo_favicon_16_url", "neyo_icon_192_url", "neyo_apple_touch_icon_url"] } },
   }).catch(() => []);
-  const setting = (key: string, fallback: string) => rows.find((row) => row.key === key)?.value || fallback;
+  const setting = (key: string, fallback: string) => rows.find((row: { key: string; value: string }) => row.key === key)?.value || fallback;
   return {
     metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://www.neyo.co.ke"),
     title: "NEYO — School Operating System",

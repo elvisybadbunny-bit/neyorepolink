@@ -1,0 +1,40 @@
+/*
+ * The corporate website has its own deliberately light editorial art direction.
+ * The signed-in School OS inherits the user's Liquid Glass/dark preference, but
+ * that global material system must not recolour public marketing surfaces.
+ * Without this boundary, `html.glass .bg-white` turns homepage cards into dark
+ * translucent app cards while their intentionally dark editorial text remains
+ * dark, making the website unreadable for visitors whose device prefers dark.
+ */
+html.glass .neyo-public-site,
+html.glass.dark .neyo-public-site {
+  color-scheme: light;
+  color: #111c32;
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+html.glass .neyo-public-site header,
+html.glass.dark .neyo-public-site header {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(203, 213, 225, 0.8) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  backdrop-filter: blur(18px) !important;
+}
+
+html.glass .neyo-public-site .bg-white,
+html.glass.dark .neyo-public-site .bg-white {
+  background-color: #ffffff !important;
+  border-color: rgb(226 232 240) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* The app-wide liquid sheen is useful on School OS cards, but crossing the
+   public site's real text and controls makes them look dim. */
+html.glass .neyo-public-site .rounded-2xl.bg-white::before,
+html.glass .neyo-public-site .rounded-3xl.bg-white::before,
+html.glass.dark .neyo-public-site .rounded-2xl.bg-white::before,
+html.glass.dark .neyo-public-site .rounded-3xl.bg-white::before {
+  display: none !important;
+}

@@ -193,7 +193,7 @@ export function NeyoLandingClient({
       ?.mediaUrl || "/screenshots/neyo-school-os-dashboard.png";
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white text-[#111c32] selection:bg-emerald-200">
+    <div className="neyo-public-site min-h-screen overflow-x-hidden bg-white text-[#111c32] selection:bg-emerald-200">
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex h-[72px] max-w-[1240px] items-center justify-between px-4 sm:px-6">
           <button
