@@ -10,6 +10,7 @@ import { PwaProvider } from "@/components/offline/pwa-provider";
 import { SeasonalThemeBanner } from "./seasonal-theme-banner";
 import { AliveModeLayer } from "./alive-mode-layer";
 import { PlatformMaintenanceAndDiagnosticBanner } from "./maintenance-banner";
+import { ContextualGuidedHelp } from "./contextual-guided-help";
 import { cn } from "@/lib/utils";
 
 /**
@@ -46,6 +47,7 @@ export function AppShell({
     <div className="min-h-screen bg-warm-100 dark:bg-navy-950">
       <CommandPalette />
       <HelpOverlay />
+      <ContextualGuidedHelp />
       <PwaProvider />
       <AliveModeLayer />
       <PlatformMaintenanceAndDiagnosticBanner />

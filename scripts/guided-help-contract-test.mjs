@@ -1,0 +1,15 @@
+import { readFileSync } from "node:fs";
+let passed=0; const check=(ok,msg)=>{if(!ok)throw new Error(`FAIL: ${msg}`);console.log(`PASS ${++passed}: ${msg}`)};
+const schema=readFileSync("prisma/schema.prisma","utf8");
+const route=readFileSync("src/app/api/guided-help/route.ts","utf8");
+const service=readFileSync("src/lib/services/guided-help.service.ts","utf8");
+const shell=readFileSync("src/components/shell/contextual-guided-help.tsx","utf8");
+const ops=readFileSync("src/components/founder/guided-help-ops-tab.tsx","utf8");
+check(schema.includes("model GuidedHelpVideo")&&schema.includes("routePattern")&&schema.includes("rolesJson"),"versioned route/role guide model exists");
+check(route.includes('requirePermission("platform.founder_ops")'),"management requires Founder Operations permission");
+check(service.includes('status: "PUBLISHED"')&&service.includes("routeMatches")&&service.includes("roles.includes"),"school users receive only published route-and-role-matched guides");
+check(shell.includes("neyo-guide-offer:")&&shell.includes("dismissed"),"Dynamic Island offer is once per guide version and dismissible");
+check(shell.includes("youtube-nocookie.com")&&!shell.includes("autoplay=1"),"video uses privacy-enhanced embed without autoplay");
+check(shell.includes("transcript")&&shell.includes("cursor-move"),"floating guide is movable and has transcript fallback");
+check(ops.includes("DRAFT")&&ops.includes("REVIEWED")&&ops.includes("PUBLISHED")&&ops.includes("ARCHIVED"),"Founder controls review/publication lifecycle");
+console.log(`GUIDED HELP CONTRACT COMPLETE: ${passed}/7`);

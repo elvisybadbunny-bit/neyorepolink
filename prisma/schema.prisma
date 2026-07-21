@@ -9356,6 +9356,35 @@ model FounderOperatingTask {
 }
 
 /// Founder-only field-sales CRM for physical school visits and follow-up.
+/// Founder-governed contextual help videos. Company-wide guidance; never
+/// tenant-owned and never auto-published from YouTube discovery.
+model GuidedHelpVideo {
+  id                String   @id @default(cuid())
+  title             String
+  youtubeId         String
+  routePattern      String
+  actionKey         String?
+  rolesJson         String   @default("[]")
+  language          String   @default("en")
+  durationSeconds   Int?
+  status            String   @default("DRAFT") // DRAFT | REVIEWED | PUBLISHED | ARCHIVED
+  version           Int      @default(1)
+  transcript        String?
+  thumbnailUrl      String?
+  reviewedById      String?
+  reviewedByName    String?
+  reviewedAt        DateTime?
+  publishedAt       DateTime?
+  createdById       String
+  createdByName     String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([status, routePattern])
+  @@index([actionKey, status])
+  @@index([updatedAt])
+}
+
 model SchoolOutreachVisit {
   id                String   @id @default(cuid())
   schoolName        String

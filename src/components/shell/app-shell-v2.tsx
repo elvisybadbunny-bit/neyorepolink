@@ -22,6 +22,7 @@ import { FloatingModuleBar } from "./floating-module-bar";
 import { ShellSidePanel } from "./shell-side-panel";
 import { Sidebar } from "./sidebar";
 import { PlatformMaintenanceAndDiagnosticBanner } from "./maintenance-banner";
+import { ContextualGuidedHelp } from "./contextual-guided-help";
 import { cn } from "@/lib/utils";
 
 export function AppShellV2({
@@ -57,6 +58,7 @@ export function AppShellV2({
     <div className="min-h-screen bg-warm-100 dark:bg-navy-950">
       <CommandPalette />
       <HelpOverlay />
+      <ContextualGuidedHelp />
       <PwaProvider />
       <AliveModeLayer />
       <PlatformMaintenanceAndDiagnosticBanner />

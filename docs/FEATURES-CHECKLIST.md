@@ -5048,7 +5048,7 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] `/settings/offline` documents queued, read-only and online-required workflows; offline snapshots show age and warn red after 24 hours.
 - [x] NEYO Bible Level 21 records the source-grounded launch-readiness addendum and active pending decisions.
 - [~] Offline code contracts pass 12/12; deployed browser → reconnect → exactly-once database evidence remains required.
-- [ ] Contextual governed YouTube Help + Dynamic Island + PIP/transcript remains pending implementation.
+- [x] Contextual governed YouTube Help includes versioned Founder publication, route/role matching, permanent Help action, one dismissible Dynamic Island offer per version, movable mini-player and transcript fallback.
 - [ ] Founder-controlled school-size onboarding formula/invoice/payment workflow remains pending implementation.
 - [ ] Safe Founder public-logo upload and friendly social/FAQ/media editors remain pending implementation.
 - [ ] CBC leadership completeness/report-governance/appraisal/report-sharing audit remains pending.

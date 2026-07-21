@@ -63,7 +63,7 @@ Credentials & Secrets Vault is the canonical encrypted company integration store
 
 ## Active founder decisions still pending implementation
 
-1. Contextual guided help: governed video model, Founder review/versioning, Help action, one Dynamic Island offer, movable PIP and transcript.
+1. Contextual guided help is implemented with a governed model, Founder review/versioning, route/role mapping, permanent Help action, one dismissible Dynamic Island offer per version, movable mini-player and transcript fallback. Deployed browser/video verification remains required.
 2. School-size onboarding fee: NEYO Ops-controlled formula components, Pricing Engine calculation, Founder review/override/waiver, separate invoice purpose and approved payment.
 3. Public asset operations: safe versioned Founder logo upload, friendly social/FAQ/media editors and rollback.
 4. CBC leadership: verify and, only where absent, connect completeness/readiness, report review governance, human-reviewed appraisal evidence and secure family report access.

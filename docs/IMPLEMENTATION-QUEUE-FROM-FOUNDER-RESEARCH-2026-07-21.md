@@ -35,13 +35,13 @@ Founder decisions recorded 21 July 2026:
 
 ### B. Contextual guided help
 
-- [ ] `GuidedHelpVideo` schema and migration.
-- [ ] Founder review/publish/version controls.
-- [ ] Route + action + role + language mapping.
-- [ ] Permanent Help action.
-- [ ] One dismissible Dynamic Island offer per published version.
-- [ ] Movable PIP player, captions, transcript and slow-network fallback.
-- [ ] Never autoplay sound or require a video to finish a workflow.
+- [x] `GuidedHelpVideo` schema and migration.
+- [x] Founder review/publish/version controls.
+- [x] Route + optional action + role + language mapping.
+- [x] Permanent screen-level Help action.
+- [x] One dismissible Dynamic Island offer per published version.
+- [x] Movable inline mini-player and transcript/slow-network fallback; YouTube supplies available captions.
+- [x] No autoplay sound and no workflow requires a video.
 
 ### C. School-size onboarding fee
 
