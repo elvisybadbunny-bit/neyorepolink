@@ -67,7 +67,7 @@ export async function generateSeniorLearnerTimetableProofs(tenantId: string, gen
       const optionAId = familySubjects["Option A"][0] ?? null, optionBId = familySubjects["Option B"][0] ?? null, optionCId = familySubjects["Option C"][0] ?? null;
       for (const id of [optionAId, optionBId, optionCId]) if (id && !selected.has(id)) issues.push("Personal option subject is not in the learner's confirmed choices.");
       const valid = issues.length === 0;
-      const proof = await db.seniorLearnerTimetableProof.create({ data: { generationJobId, studentId: student.id, classId: student.classId!, level: klass.level, valid, timetableJson: JSON.stringify(rows), issuesJson: JSON.stringify(issues), optionAId, optionBId, optionCId, mathVariant: expectedMathVariant } });
+      const proof = await db.seniorLearnerTimetableProof.create({ data: { tenantId, generationJobId, studentId: student.id, classId: student.classId!, level: klass.level, valid, timetableJson: JSON.stringify(rows), issuesJson: JSON.stringify(issues), optionAId, optionBId, optionCId, mathVariant: expectedMathVariant } });
       output.push({ id: proof.id, studentId: student.id, studentName: `${student.firstName} ${student.lastName}`, admissionNo: student.admissionNo, className: [klass.level, klass.stream].filter(Boolean).join(" "), valid, issues, timetable: rows });
     }
     // Detailed rows are the largest timetable data. Keep latest three jobs;
