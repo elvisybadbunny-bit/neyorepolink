@@ -1,12 +1,6 @@
 "use client";
 
 import * as React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -195,14 +189,13 @@ export function YouTubeLearningLibraryModal({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl dark:bg-navy-900/95">
-        <DialogHeader>
+    open ? <div className="space-y-5 rounded-3xl border border-navy-100 bg-white p-4 dark:border-navy-800 dark:bg-navy-900 sm:p-6">
+        <div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <DialogTitle className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
                 <Video className="h-5 w-5 text-red-600" /> YouTube Learning Library
-              </DialogTitle>
+              </h2>
               <p className="text-xs text-navy-500 dark:text-navy-400">
                 Strand-linked educational video repository with zero API quota cost and Platform Operations vetting queue.
               </p>
@@ -252,7 +245,7 @@ export function YouTubeLearningLibraryModal({
               </button>
             </div>
           </div>
-        </DialogHeader>
+        </div>
 
         {activeTab === "BROWSE" && (
           <div className="space-y-4 pt-2">
@@ -603,7 +596,6 @@ export function YouTubeLearningLibraryModal({
             )}
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </div> : null
   );
 }

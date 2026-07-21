@@ -1,0 +1,56 @@
+# NEYO offline support matrix
+
+Date: 21 July 2026
+
+## What offline means
+
+NEYO cannot safely make every server workflow fully writable without internet. School records are shared, permission-controlled and tenant-scoped. Offline support therefore has three categories:
+
+1. **Saved read-only snapshot** — data explicitly saved to this device through Bundle Saver.
+2. **Queued idempotent write** — a bounded action is stored in IndexedDB and replayed once after reconnection.
+3. **Online required** — identity, money-provider, publication or conflict-sensitive actions remain blocked until the server can verify them.
+
+A page must be visited/saved while online before its shell or data can be available offline. Turning Wi-Fi off before the first successful load cannot download that page.
+
+## Implemented offline-capable workflows
+
+| Workflow | Offline behaviour | Safety |
+|---|---|---|
+| Attendance register save | Queued in IndexedDB and synced on reconnect | Server upsert/idempotency |
+| Exam marks autosave | Queued and replayed | Idempotency key |
+| Gate-pass proposal/issuance | Queued where supported | Server replay ledger |
+| Visitor sign-in | Queued | Idempotency key |
+| Plain cash/manual reception payment | Queued where biometric live verification is not required | Duplicate-payment protection |
+| Read-only learners, balances, calendar and timetable | Available in opt-in Bundle Saver snapshot | Local IndexedDB; bounded/versioned |
+| Previously opened page shell | Exact URL network-first cache, then saved response | No API mutation caching |
+| Static icons/assets | Cache-first | Versioned service-worker cache |
+
+## Workflows that remain online-only
+
+- M-Pesa STK initiation and callbacks;
+- sign-in, OTP, password recovery and passkey verification;
+- biometric/action-ticket protected money actions;
+- timetable generation, approval and publication;
+- CBE Delivery shared record mutations until an idempotent offline contract is designed;
+- uploads, YouTube playback/search and external integrations;
+- permission changes and sensitive settings;
+- any operation needing current conflict/capacity validation.
+
+## Repair in this batch
+
+The service worker previously cached full browser navigations but not Next.js RSC requests used when a signed-in user clicks links. It now caches successful same-origin RSC page responses and can reuse an exact previously loaded response when offline. API calls remain network-only. Cache version moved to `neyo-v2` so clients activate the corrected strategy.
+
+## Founder verification
+
+1. Sign in online and install/open NEYO once.
+2. Enable Bundle Saver and press Sync now.
+3. Visit Attendance, Exams and at least two ordinary pages online.
+4. In browser developer tools select Offline, or disable Wi-Fi after pages finish loading.
+5. Confirm the offline indicator appears.
+6. Open `/offline` and confirm the saved timestamp and read-only data.
+7. Save one attendance register offline and confirm the queued count increases.
+8. Reconnect once and confirm the queue clears and server data appears exactly once.
+9. Confirm M-Pesa and protected payment actions clearly refuse offline operation.
+10. Clear site data and confirm private offline snapshots disappear.
+
+Offline support on a shared device has privacy implications. Schools should use device locks and clear local data before transferring a device to another person.

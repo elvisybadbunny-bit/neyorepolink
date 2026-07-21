@@ -5,7 +5,7 @@
  * - Static assets (_next/static, icons): cache-first.
  * - Never caches API calls (they go through the offline queue when offline).
  */
-const CACHE = "neyo-v1";
+const CACHE = "neyo-v2";
 const OFFLINE_URL = "/offline";
 const PRECACHE = [OFFLINE_URL, "/icon-192.png", "/manifest.webmanifest"];
 
@@ -46,7 +46,24 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Navigations / pages: network-first, fall back to cache, then offline shell.
+  // Next.js client navigation uses same-origin RSC GET requests rather than a
+  // browser `navigate` request. Cache those after a successful visit so links
+  // between already-opened School OS screens still resolve when connectivity
+  // drops. APIs remain excluded above; no mutation is ever invented offline.
+  if (url.searchParams.has("_rsc") || req.headers.get("RSC") === "1") {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res.ok) caches.open(CACHE).then((cache) => cache.put(req, res.clone()));
+          return res;
+        })
+        .catch(() => caches.match(req).then((hit) => hit || new Response("Offline page data is not saved on this device.", { status: 503, headers: { "Content-Type": "text/plain" } })))
+    );
+    return;
+  }
+
+  // Full navigations / pages: network-first, fall back to the last successful
+  // response for this exact URL, then the explicit offline snapshot screen.
   if (req.mode === "navigate") {
     event.respondWith(
       fetch(req)

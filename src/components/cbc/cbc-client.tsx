@@ -9,7 +9,6 @@ import * as React from "react";
 import {
   Layers, Plus, AlertCircle, Loader2, X, Sparkles, Check, FileText, Search, ChevronDown, Video, Trophy,
 } from "lucide-react";
-import { YouTubeLearningLibraryModal } from "@/components/academics/youtube-learning-library-modal";
 import { QuestionBankModal } from "@/components/academics/question-bank-modal";
 import { PaperQuizFormativeModal } from "@/components/academics/paper-quiz-formative-modal";
 import { InterSchoolContestModal } from "@/components/academics/inter-school-contest-modal";
@@ -108,11 +107,6 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
   const [seniorPreview, setSeniorPreview] = React.useState<{ name: string; learningOutcome: string; substrands: { name: string }[] }[] | null>(null);
   const [seniorBusy, setSeniorBusy] = React.useState(false);
   const [seniorAvailable, setSeniorAvailable] = React.useState(false);
-
-  // EE.7 — YouTube learning library modal state
-  const [videoModalOpen, setVideoModalOpen] = React.useState(false);
-  const [activeVideoStrandId, setActiveVideoStrandId] = React.useState("");
-  const [activeVideoSubjectId, setActiveVideoSubjectId] = React.useState("");
 
   // EE.8 — Question bank & self-marking practice state
   const [questionBankModalOpen, setQuestionBankModalOpen] = React.useState(false);
@@ -328,11 +322,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => {
-              setActiveVideoStrandId("");
-              setActiveVideoSubjectId("");
-              setVideoModalOpen(true);
-            }}
+            onClick={() => window.location.assign("/learning-videos")}
             className="rounded-full gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/60"
           >
             <Video className="h-3.5 w-3.5 fill-current" /> YouTube Video Library
@@ -513,12 +503,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
                             {st.assessmentCount > 0 && <Badge tone="neutral">{st.assessmentCount} obs</Badge>}
                             <button
                               type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveVideoStrandId(st.id);
-                                setActiveVideoSubjectId(st.subjectId);
-                                setVideoModalOpen(true);
-                              }}
+                              onClick={(e) => { e.stopPropagation(); window.location.assign("/learning-videos"); }}
                               className="flex items-center gap-1 rounded-full bg-red-50 hover:bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-950/60 dark:hover:bg-red-900 dark:text-red-300 transition-colors"
                             >
                               <Video className="h-3 w-3 fill-current" /> Videos
@@ -578,14 +563,6 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
         </div>
       )}
       {dialog && <StrandDialog subjects={subjects} onClose={() => setDialog(false)} onDone={() => { setDialog(false); load(); }} />}
-      <YouTubeLearningLibraryModal
-        open={videoModalOpen}
-        onOpenChange={setVideoModalOpen}
-        subjects={subjects}
-        strands={strands || []}
-        defaultSubjectId={activeVideoSubjectId}
-        defaultStrandId={activeVideoStrandId}
-      />
       <QuestionBankModal
         open={questionBankModalOpen}
         onOpenChange={setQuestionBankModalOpen}
