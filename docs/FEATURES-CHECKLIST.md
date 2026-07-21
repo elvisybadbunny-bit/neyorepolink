@@ -4995,3 +4995,9 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Adds authenticated tenant-scoped staffing API and mobile-adaptable Smart Timetable workspace.
 - [x] No AI/Bundi/provider dependency.
 - [ ] Multiple same-subject parallel teaching groups with separate learner partitions remains a distinct future extension; report never fakes a split by adding a name.
+
+### Complete Senior School Timetable Operations Guide — 2026-07-21
+- [x] Added end-to-end guide from empty setup through A–G, publication, printing and later governed changes.
+- [x] Covers roles, fields, dependencies, database effects, troubleshooting, cost controls and founder testing.
+- [x] Documents honest current same-subject split-group boundary.
+- [x] Guide: `docs/SENIOR-SCHOOL-TIMETABLE-COMPLETE-OPERATIONS-GUIDE-2026-07-21.md`.
