@@ -62,6 +62,9 @@ export async function listElectiveBlocks(user: SessionUser) {
           // pinning a real venueId instead, never by editing this field.
           resolvedVenueId: s.resolvedVenueId,
           classIds: safeParse<string[]>(s.comboClassIdsJson, []),
+          teachingGroupKey: s.teachingGroupKey,
+          teachingGroupLabel: s.teachingGroupLabel,
+          studentIds: safeParse<string[]>(s.studentIdsJson, []),
         })),
       })),
     }));
@@ -131,6 +134,9 @@ export async function saveElectiveBlock(user: SessionUser, input: ElectiveBlockS
             teacherId: s.teacherId || null,
             venueId: s.venueId || null,
             comboClassIdsJson: JSON.stringify(s.classIds && s.classIds.length > 0 ? s.classIds : input.classIds),
+            teachingGroupKey: s.teachingGroupKey ?? "MAIN",
+            teachingGroupLabel: s.teachingGroupLabel || null,
+            studentIdsJson: JSON.stringify(s.studentIds ?? []),
           },
         });
       }
@@ -188,6 +194,9 @@ export async function getElectiveBlocksForSolver(tenantId: string) {
             teacherId: s.teacherId,
             venueId: s.venueId,
             classIds: safeParse<string[]>(s.comboClassIdsJson, b.classes.map((c) => c.classId)),
+            teachingGroupKey: s.teachingGroupKey,
+            teachingGroupLabel: s.teachingGroupLabel,
+            studentIds: safeParse<string[]>(s.studentIdsJson, []),
           })),
         })),
       }));

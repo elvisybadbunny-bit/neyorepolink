@@ -5574,11 +5574,14 @@ model ElectiveBlockSlotSubject {
   // full class list; for a merged small cohort it may be a subset spanning
   // several real streams sharing one real lesson.
   comboClassIdsJson String @default("[]")
+  teachingGroupKey  String @default("MAIN") // MAIN or deterministic SPLIT-1, SPLIT-2...
+  teachingGroupLabel String?
+  studentIdsJson    String @default("[]") // exact learner partition for same-subject parallel groups
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([slotId, subjectId])
+  @@unique([slotId, subjectId, teachingGroupKey])
   @@index([tenantId])
 }
 

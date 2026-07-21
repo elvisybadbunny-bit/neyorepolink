@@ -27,6 +27,9 @@ const slotSubjectSchema = z.object({
   // the whole block's class list when omitted (the common case), but can be
   // a genuine subset when a school merges a small cohort across streams.
   classIds: z.array(z.string().min(1)).optional(),
+  teachingGroupKey: z.string().trim().min(1).max(30).optional().default("MAIN"),
+  teachingGroupLabel: z.string().trim().max(80).optional(),
+  studentIds: z.array(z.string().min(1)).optional().default([]),
 });
 
 const slotSchema = z.object({
@@ -36,8 +39,8 @@ const slotSchema = z.object({
   sortOrder: z.number().int().min(0).optional().default(0),
   subjects: z.array(slotSubjectSchema).min(1, "An Options Block slot needs at least one real subject."),
 }).refine(
-  (slot) => new Set(slot.subjects.map((s) => s.subjectId)).size === slot.subjects.length,
-  { message: "The same subject cannot appear twice in one real slot.", path: ["subjects"] },
+  (slot) => new Set(slot.subjects.map((s) => `${s.subjectId}:${s.teachingGroupKey ?? "MAIN"}`)).size === slot.subjects.length,
+  { message: "The same subject teaching-group key cannot appear twice in one slot.", path: ["subjects"] },
 ).refine(
   (slot) => {
     // Real, physically-necessary rule: one teacher cannot teach two

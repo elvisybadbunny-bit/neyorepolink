@@ -59,9 +59,9 @@ No AI, prediction service or external provider is used.
 - continuity/substitution exposure;
 - imbalance hidden by raw lesson count alone.
 
-## Important boundary
+## Real split-group integration
 
-The report calculates how many groups are required and prevents the school from overlooking the issue. The current Options Block row still represents one teacher/group per subject. Creating multiple same-subject parallel groups with separate learner partitions is a separate data-model extension and must not be faked by merely assigning a second teacher name. Until that extension exists, the school must review its threshold, staffing and subject offering before publication.
+When more than one group is required, NEYO now partitions confirmed learners deterministically and persists each group with its own key, learner IDs, qualified teacher and venue/home room. Teacher counts therefore represent the real group rather than repeating the full subject roster. Confirmation rejects missing/duplicate learners and parallel teacher or venue conflicts.
 
 ## API
 

@@ -53,8 +53,9 @@ export async function generateSeniorLearnerTimetableProofs(tenantId: string, gen
         const definition = electiveById.get(slot.electiveBlockSlotId);
         if (!definition) { issues.push(`Missing block definition for day ${slot.dayOfWeek}, period ${slot.period}.`); continue; }
         const family = familyOf(definition.label);
-        let candidates = definition.subjects.filter((row) => selected.has(row.subjectId));
-        if (family === "Mathematics") candidates = definition.subjects.filter((row) => subjectById.get(row.subjectId)?.mathVariant === expectedMathVariant);
+        const belongsToTeachingGroup = (row: any) => { const ids = parse<string[]>(row.studentIdsJson, []); return ids.length === 0 || ids.includes(student.id); };
+        let candidates = definition.subjects.filter((row) => selected.has(row.subjectId) && belongsToTeachingGroup(row));
+        if (family === "Mathematics") candidates = definition.subjects.filter((row) => subjectById.get(row.subjectId)?.mathVariant === expectedMathVariant && belongsToTeachingGroup(row));
         if (candidates.length !== 1) { issues.push(`${family} at day ${slot.dayOfWeek}, period ${slot.period} resolves to ${candidates.length} subjects instead of one.`); continue; }
         const picked = candidates[0]; const subject = subjectById.get(picked.subjectId);
         (familySubjects[family] ??= []).push(picked.subjectId);

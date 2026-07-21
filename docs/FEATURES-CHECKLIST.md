@@ -4994,10 +4994,22 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Includes Option Block teacher periods when calculating published timetable gaps.
 - [x] Adds authenticated tenant-scoped staffing API and mobile-adaptable Smart Timetable workspace.
 - [x] No AI/Bundi/provider dependency.
-- [ ] Multiple same-subject parallel teaching groups with separate learner partitions remains a distinct future extension; report never fakes a split by adding a name.
+- [x] Multiple same-subject parallel teaching groups now persist exact learner partitions, separate qualified teachers and venues; report counts each real group.
 
 ### Complete Senior School Timetable Operations Guide — 2026-07-21
 - [x] Added end-to-end guide from empty setup through A–G, publication, printing and later governed changes.
 - [x] Covers roles, fields, dependencies, database effects, troubleshooting, cost controls and founder testing.
 - [x] Documents honest current same-subject split-group boundary.
 - [x] Guide: `docs/SENIOR-SCHOOL-TIMETABLE-COMPLETE-OPERATIONS-GUIDE-2026-07-21.md`.
+
+### Real elective teaching groups, print layout and cost controls — 2026-07-21
+- [x] Same elective subject can now have multiple real parallel teaching groups with unique keys.
+- [x] Deterministic balanced learner partitions persist exact student IDs per group.
+- [x] Each split group requires its own qualified teacher and capacity-safe venue/home classroom.
+- [x] Personal learner timetable resolves only the split group containing that learner.
+- [x] Teacher staffing report counts actual split groups rather than duplicating full subject enrolment.
+- [x] Vertical days is default on screen and dedicated print route; horizontal remains explicit option.
+- [x] Vertical break/lunch columns merge across days and are inserted between numbered lessons.
+- [x] Master solver no longer consumes a numbered lesson with fake LUNCH rows; wall-clock lunch shifts remain enforced.
+- [x] Print remains app-shell-free, near-edge A4, title-centred, B&W-capable and on-demand.
+- [x] Added infrastructure cost-minimisation plan covering web, DB, R2, jobs, communications, observability and retention.

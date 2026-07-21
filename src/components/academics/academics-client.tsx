@@ -48,7 +48,7 @@ interface Subject { id: string; name: string; code: string; curriculum: string; 
 interface Dept { id: string; name: string; hodId: string | null; hodName: string | null; subjectCount: number }
 interface Term { id: string; year: number; term: number; startDate: string; endDate: string; current: boolean }
 interface ClassOpt { id: string; name: string }
-interface Slot { id: string; dayOfWeek: number; period: number; subjectId?: string | null; subjectName?: string | null; subjectCode?: string | null; activityCategoryId?: string | null; activityCategoryName?: string | null; activityCategoryColor?: string | null; teacherId: string | null; teacherName: string | null; venue?: string | null; className?: string; slotType?: string; weekRotation?: string; isCombined?: boolean; combinedDetails?: string; substituteTodayName?: string | null; electiveBlock?: { label: string; isDouble: boolean; subjects: { subjectName: string; subjectCode: string | null; teacherShortCode: string | null; venue: string | null }[] } | null; }
+interface Slot { id: string; dayOfWeek: number; period: number; subjectId?: string | null; subjectName?: string | null; subjectCode?: string | null; activityCategoryId?: string | null; activityCategoryName?: string | null; activityCategoryColor?: string | null; teacherId: string | null; teacherName: string | null; venue?: string | null; className?: string; slotType?: string; weekRotation?: string; isCombined?: boolean; combinedDetails?: string; substituteTodayName?: string | null; electiveBlock?: { label: string; isDouble: boolean; subjects: { subjectName: string; subjectCode: string | null; teacherShortCode: string | null; venue: string | null; teachingGroupLabel?: string | null; studentCount?: number }[] } | null; }
 interface TimetablePrintGroup { id: string; title: string; subtitle: string; config: any; slots: Slot[] }
 interface TimetablePrintBundle { mode: "classes" | "teachers" | "venues"; groups: TimetablePrintGroup[] }
 interface Plan { id: string; date: string; topic: string; status: string; subjectName: string; subjectCode: string; className: string; teacherName: string }
@@ -730,8 +730,7 @@ function timetablePeriodTimeRange(p: number, config: any, dayOfWeek?: number, re
 }
 
 function timetableNonLessonTimeRange(afterPeriod: number, minutes: number, config: any, realLunchPeriods?: Set<number>): string {
-  const isRealLunch = realLunchPeriods ? realLunchPeriods.has(afterPeriod) : afterPeriod === (config?.lunchStart ?? 6);
-  const startTotal = timetablePeriodStartMinutes(afterPeriod, config, undefined, realLunchPeriods) + (isRealLunch ? config?.lunchMins ?? 60 : config?.lessonDurationMins ?? 40);
+  const startTotal = timetablePeriodStartMinutes(afterPeriod, config, undefined, realLunchPeriods) + (config?.lessonDurationMins ?? 40);
   const endTotal = startTotal + minutes;
   return `${formatTimetableTime(startTotal)} - ${formatTimetableTime(endTotal)}`;
 }
@@ -826,7 +825,7 @@ function TimetableSlotCard({ slot, isBandW, fontSize, canManage, onClick, teache
     : getSubjectStyle(slot?.subjectCode || "FREE", isBandW);
 
   if (isElectiveBlock) {
-    const block = (slot as any).electiveBlock as { label: string; isDouble: boolean; subjects: { subjectName: string; subjectCode: string | null; teacherShortCode: string | null; venue: string | null }[] };
+    const block = (slot as any).electiveBlock as { label: string; isDouble: boolean; subjects: { subjectName: string; subjectCode: string | null; teacherShortCode: string | null; venue: string | null; teachingGroupLabel?: string | null; studentCount?: number }[] };
     return (
       <button
         disabled={!canManage}
@@ -839,7 +838,7 @@ function TimetableSlotCard({ slot, isBandW, fontSize, canManage, onClick, teache
           <span className="text-[7px] uppercase font-black bg-purple-500/25 px-1 py-0.5 rounded">Block</span>
         </div>
         <div className="flex flex-col mt-1 font-medium" style={{ fontSize: `${Math.max(7, fontSize - 3)}px` }}>
-          <span className="truncate">{block.subjects.map((s) => s.subjectCode || s.subjectName.slice(0, 4)).join("/")}</span>
+          <span className="truncate">{block.subjects.map((s) => `${s.subjectCode || s.subjectName.slice(0, 4)}${s.teachingGroupLabel ? ` ${s.teachingGroupLabel.replace(/^.* Group /, "G")}` : ""}`).join("/")}</span>
           {/* The founder's own real "HG/TY/EF/TS/GW" printed multi-teacher-code request. */}
           <span className="font-bold truncate">{block.subjects.map((s) => s.teacherShortCode).filter(Boolean).join("/")}</span>
         </div>
@@ -995,7 +994,7 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
   const [bulkSatOpen, setBulkSatOpen] = React.useState(false);
   const [configOpen, setConfigOpen] = React.useState(false);
   const [isBandW, setIsBandW] = React.useState(false);
-  const [daysVertical, setDaysVertical] = React.useState(false);
+  const [daysVertical, setDaysVertical] = React.useState(true);
   const [cellFontSize, setCellFontSize] = React.useState(11);
   const [printBundle, setPrintBundle] = React.useState<TimetablePrintBundle | null>(null);
   const [printBusy, setPrintBusy] = React.useState<"classes" | "teachers" | "venues" | null>(null);
@@ -1086,14 +1085,14 @@ function TimetableTab({ canManage }: { canManage: boolean }) {
   function printSingleClass() {
     if (!classId) return;
     const params = new URLSearchParams({ classId, font: String(cellFontSize) });
-    if (daysVertical) params.set("vertical", "1");
+    params.set("vertical", daysVertical ? "1" : "0");
     if (isBandW) params.set("bw", "1");
     window.open(`/print/timetable?${params.toString()}`, "_blank");
   }
 
   function printBulk(mode: "classes" | "teachers" | "venues") {
     const params = new URLSearchParams({ mode, font: String(cellFontSize) });
-    if (daysVertical) params.set("vertical", "1");
+    params.set("vertical", daysVertical ? "1" : "0");
     if (isBandW) params.set("bw", "1");
     window.open(`/print/timetable?${params.toString()}`, "_blank");
   }
@@ -3834,6 +3833,7 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
   const [preview, setPreview] = React.useState<any>(null);
   const [blockName, setBlockName] = React.useState("");
   const [rowOverrides, setRowOverrides] = React.useState<Record<string, { teacherId: string; venueId: string; lessonsPerWeek: number }>>({});
+  const [groupOverrides, setGroupOverrides] = React.useState<Record<string, { key: string; label: string; teacherId: string; venueId: string; studentIds: string[] }[]>>({});
 
   const levels = React.useMemo(() => Array.from(new Set(classes.map((c: any) => c.level))).sort(), [classes]);
 
@@ -3851,8 +3851,12 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
       setPreview(json.data);
       setBlockName(kind === "MATH_SPLIT" ? `${level} — Core/Essential Mathematics` : `${level} — Options`);
       const overrides: Record<string, { teacherId: string; venueId: string; lessonsPerWeek: number }> = {};
-      for (const row of json.data.rows) overrides[row.subjectId] = { teacherId: row.suggestedTeacherId || "", venueId: row.requiresSharedVenue ? (row.venueRecommendations.find((venue: any) => venue.learnerCapacity != null && venue.learnerCapacity >= row.studentCount)?.id || "") : "", lessonsPerWeek: row.defaultLessonsPerWeek };
-      setRowOverrides(overrides);
+      const splitGroups: Record<string, { key: string; label: string; teacherId: string; venueId: string; studentIds: string[] }[]> = {};
+      for (const row of json.data.rows) {
+        overrides[row.subjectId] = { teacherId: row.suggestedTeacherId || "", venueId: row.requiresSharedVenue ? (row.venueRecommendations.find((venue: any) => venue.learnerCapacity != null && venue.learnerCapacity >= row.studentCount)?.id || "") : "", lessonsPerWeek: row.defaultLessonsPerWeek };
+        splitGroups[row.subjectId] = (row.teachingGroups ?? []).map((group: any) => ({ key: group.key, label: group.label, teacherId: group.suggestedTeacherId || "", venueId: group.suggestedVenueId || "", studentIds: group.studentIds }));
+      }
+      setRowOverrides(overrides); setGroupOverrides(splitGroups);
     } catch (e: any) {
       setError(e?.message || "Could not build a real preview for that level");
     } finally { setBusy(false); }
@@ -3873,6 +3877,7 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
             subjectId: r.subjectId,
             teacherId: rowOverrides[r.subjectId]?.teacherId || null,
             venueId: rowOverrides[r.subjectId]?.venueId || null,
+            teachingGroups: groupOverrides[r.subjectId] ?? [],
             lessonsPerWeek: rowOverrides[r.subjectId]?.lessonsPerWeek || r.defaultLessonsPerWeek,
             classIds: r.classIds,
           })),
@@ -3951,7 +3956,7 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
                     <p className="text-sm font-bold text-navy-900 dark:text-white">{row.subjectName} ({row.subjectCode})</p>
                     <div className="flex items-center gap-1.5">{row.optionBlock && <Badge tone="green">{row.optionBlock === "MATH" ? "Math split" : `Option ${row.optionBlock}`}</Badge>}<Badge tone="blue">{row.studentCount} learner{row.studentCount === 1 ? "" : "s"}</Badge></div>
                   </div>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  {row.requiredTeachingGroups <= 1 && <div className="mt-2 grid gap-2 sm:grid-cols-3">
                     <select
                       value={rowOverrides[row.subjectId]?.teacherId ?? ""}
                       onChange={(e) => setRowOverrides((p) => ({ ...p, [row.subjectId]: { ...p[row.subjectId], teacherId: e.target.value } }))}
@@ -3965,14 +3970,15 @@ function ElectiveBlockAutoBuildModal({ classes, onClose, onDone }: { classes: an
                       {row.venueRecommendations.map((venue: any) => <option key={venue.id} value={venue.id}>{venue.name} · {venue.learnerCapacity ? `${venue.learnerCapacity} seats` : "capacity not set"}</option>)}
                     </select>
                     <div className="rounded-xl border border-navy-200 bg-navy-50 px-3 py-2 text-xs font-bold text-navy-700 dark:border-navy-700 dark:bg-navy-800 dark:text-navy-200">5 lessons/week · fixed</div>
-                  </div>
-                  <p className="mt-2 text-[11px] text-navy-500 dark:text-navy-400">{row.studentCount} learners · home-class capacity {row.homeClassCapacity ?? "not set"}{row.requiresSharedVenue ? " · shared venue required" : " · home classroom may be used"}</p>
+                  </div>}
+                  {row.requiredTeachingGroups > 1 && <div className="mt-3 space-y-2 rounded-xl border border-violet-200 bg-violet-50/60 p-3 dark:border-violet-900 dark:bg-violet-950/20"><p className="text-xs font-black text-violet-800 dark:text-violet-200">Real split required · {row.requiredTeachingGroups} parallel {row.subjectName} groups</p>{(groupOverrides[row.subjectId] ?? []).map((group,index)=><div key={group.key} className="grid gap-2 rounded-lg bg-white p-2 dark:bg-navy-900 sm:grid-cols-[1fr_1fr_1fr]"><div className="text-xs"><strong>{group.label}</strong><br/>{group.studentIds.length} learners</div><select value={group.teacherId} onChange={e=>setGroupOverrides(p=>({...p,[row.subjectId]:p[row.subjectId].map((g,i)=>i===index?{...g,teacherId:e.target.value}:g)}))} className="rounded-lg border border-navy-200 bg-white px-2 text-xs dark:border-navy-700 dark:bg-navy-900"><option value="">Teacher…</option>{row.teacherRecommendations.map((teacher:any)=><option key={teacher.teacherId} value={teacher.teacherId}>{teacher.teacherName}</option>)}</select><select value={group.venueId} onChange={e=>setGroupOverrides(p=>({...p,[row.subjectId]:p[row.subjectId].map((g,i)=>i===index?{...g,venueId:e.target.value}:g)}))} className="rounded-lg border border-navy-200 bg-white px-2 text-xs dark:border-navy-700 dark:bg-navy-900"><option value="">Home classroom</option>{row.venueRecommendations.map((venue:any)=><option key={venue.id} value={venue.id}>{venue.name} · {venue.learnerCapacity??"?"} seats</option>)}</select></div>)}</div>}
+                  <p className="mt-2 text-[11px] text-navy-500 dark:text-navy-400">{row.studentCount} learners · maximum {row.maxGroupSize ?? "not set"} · {row.requiredTeachingGroups} teaching group(s) · home-class capacity {row.homeClassCapacity ?? "not set"}</p>
                   {row.resourceBlockers.map((message: string) => <p key={message} className="mt-1 rounded-lg bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700 dark:bg-red-950/20 dark:text-red-300">{message}</p>)}
                 </div>
               ))}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={confirm} disabled={busy || !blockName.trim() || (preview.resourceReport?.blockers?.length ?? 0) > 0 || preview.rows.some((row: any) => !rowOverrides[row.subjectId]?.teacherId || (row.requiresSharedVenue && !rowOverrides[row.subjectId]?.venueId))}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Confirm and create block</Button>
+              <Button onClick={confirm} disabled={busy || !blockName.trim() || (preview.resourceReport?.blockers?.length ?? 0) > 0 || preview.rows.some((row: any) => row.requiredTeachingGroups > 1 ? (groupOverrides[row.subjectId] ?? []).some((group) => !group.teacherId) : (!rowOverrides[row.subjectId]?.teacherId || (row.requiresSharedVenue && !rowOverrides[row.subjectId]?.venueId)))}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Confirm and create block</Button>
               <Button variant="secondary" onClick={() => setPreview(null)} disabled={busy}>Back</Button>
             </div>
           </div>

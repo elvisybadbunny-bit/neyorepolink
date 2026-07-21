@@ -38,6 +38,7 @@ const confirmedSubjectSchema = z.object({
   subjectId: z.string().min(1),
   teacherId: z.string().min(1).nullable().optional(),
   venueId: z.string().min(1).nullable().optional(),
+  teachingGroups: z.array(z.object({ key: z.string().min(1), label: z.string().min(1), teacherId: z.string().min(1), venueId: z.string().min(1).nullable().optional(), studentIds: z.array(z.string().min(1)).min(1) })).optional().default([]),
   lessonsPerWeek: z.coerce.number().int().min(1).max(20).default(5),
   // Real classIds actually offering this subject inside the confirmed
   // block — a school may narrow this from the full preview if, e.g., one

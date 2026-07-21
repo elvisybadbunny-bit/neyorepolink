@@ -39,6 +39,7 @@ interface RealConfig {
   longBreakStart?: number;
   longBreakMins?: number;
   lunchStart?: number;
+  lunchAfterPeriod?: number;
   lunchMins?: number;
 }
 
@@ -63,12 +64,9 @@ function getMergedNonLessonPeriods(slots: RealSlot[], daysCount: number, config:
     slotsByPeriod.get(s.period)!.push(s);
   }
 
-  // 1. Config-driven lunch start
-  if (config?.lunchStart && typeof config.lunchStart === "number") {
-    map.set(config.lunchStart, { period: config.lunchStart, label: "LUNCH", tone: "lunch" });
-  }
-
-  // 2. Scan actual slot data for explicit LUNCH, BREAK, ASSEMBLY, PREP, RECESS, TEA
+  // Scan actual slot data for explicit non-lesson columns. Lunch itself is
+  // inserted AFTER the configured lesson below (like breaks), so it never
+  // consumes/replaces a numbered teaching period in vertical-days print.
   for (const [p, pSlots] of slotsByPeriod.entries()) {
     if (pSlots.length === 0) continue;
     const nonLessonKeywords = ["LUNCH", "BREAK", "SHORT BREAK", "LONG BREAK", "TEA", "TEA BREAK", "SNACK", "ASSEMBLY", "PREP", "GAMES", "RECESS"];
@@ -89,7 +87,7 @@ function getMergedNonLessonPeriods(slots: RealSlot[], daysCount: number, config:
       }) || pSlots[0];
       const code = (first.subjectCode || first.subjectName || "BREAK").trim().toUpperCase();
       const isLunch = code.includes("LUNCH");
-      map.set(p, { period: p, label: code, tone: isLunch ? "lunch" : "break" });
+      if (!isLunch) map.set(p, { period: p, label: code, tone: "break" });
     }
   }
 
@@ -163,8 +161,8 @@ function periodStartMinutes(p: number, config: RealConfig | null | undefined, me
   const lunchMins = config?.lunchMins ?? 45;
   let elapsed = dayStart;
   for (let i = 1; i < p; i++) {
-    const isLunch = mergedNonLessonMap.get(i)?.tone === "lunch";
-    elapsed += isLunch ? lunchMins : lessonMins;
+    elapsed += lessonMins;
+    if (i === (config?.lunchAfterPeriod ?? config?.lunchStart) && lunchMins > 0) elapsed += lunchMins;
     if (config?.shortBreakStart === i && (config?.shortBreakMins ?? 0) > 0) elapsed += config!.shortBreakMins!;
     if (config?.shortBreak2Start === i && (config?.shortBreak2Mins ?? 0) > 0) elapsed += config!.shortBreak2Mins!;
     if (config?.longBreakStart === i && (config?.longBreakMins ?? 0) > 0) elapsed += config!.longBreakMins!;
@@ -175,8 +173,7 @@ function periodStartMinutes(p: number, config: RealConfig | null | undefined, me
 function periodTimeRange(p: number, config: RealConfig | null | undefined, mergedNonLessonMap: Map<number, MergedNonLessonCol>): string | null {
   const start = periodStartMinutes(p, config, mergedNonLessonMap);
   if (start == null) return null;
-  const isLunch = mergedNonLessonMap.get(p)?.tone === "lunch";
-  const duration = isLunch ? config?.lunchMins ?? 45 : config?.lessonDurationMins ?? 40;
+  const duration = config?.lessonDurationMins ?? 40;
   return `${formatTimetableTime(start)}–${formatTimetableTime(start + duration)}`;
 }
 
@@ -184,18 +181,22 @@ interface NonLessonBreakRow {
   key: string;
   label: string;
   minutes: number;
+  tone: "break" | "lunch";
 }
 
 function nonLessonBreakRowsForPeriod(p: number, config: RealConfig | null | undefined): NonLessonBreakRow[] {
   const rows: NonLessonBreakRow[] = [];
   if (config?.shortBreakStart === p && (config?.shortBreakMins ?? 0) > 0) {
-    rows.push({ key: `short-${p}`, label: "BREAK", minutes: config!.shortBreakMins! });
+    rows.push({ key: `short-${p}`, label: "SHORT BREAK", minutes: config!.shortBreakMins!, tone: "break" });
   }
   if (config?.shortBreak2Start === p && (config?.shortBreak2Mins ?? 0) > 0) {
-    rows.push({ key: `short2-${p}`, label: "BREAK", minutes: config!.shortBreak2Mins! });
+    rows.push({ key: `short2-${p}`, label: "SHORT BREAK", minutes: config!.shortBreak2Mins!, tone: "break" });
   }
   if (config?.longBreakStart === p && (config?.longBreakMins ?? 0) > 0) {
-    rows.push({ key: `long-${p}`, label: "LONG BREAK", minutes: config!.longBreakMins! });
+    rows.push({ key: `long-${p}`, label: "LONG BREAK", minutes: config!.longBreakMins!, tone: "break" });
+  }
+  if (p === (config?.lunchAfterPeriod ?? config?.lunchStart) && (config?.lunchMins ?? 0) > 0) {
+    rows.push({ key: `lunch-${p}`, label: "LUNCH", minutes: config!.lunchMins!, tone: "lunch" });
   }
   return rows;
 }
@@ -313,7 +314,10 @@ export function PrintTimetablePage({
   bandW = false,
 }: PrintTimetablePageProps) {
   const grid = new Map<string, RealSlot>();
-  for (const s of slots) grid.set(`${s.dayOfWeek}|${s.period}`, s);
+  for (const s of slots) {
+    if ((s.subjectCode || "").trim().toUpperCase() === "LUNCH") continue;
+    grid.set(`${s.dayOfWeek}|${s.period}`, s);
+  }
 
   const hasSaturday = config?.hasSaturday !== false && slots.some((s) => s.dayOfWeek === 6);
   const days = hasSaturday ? DAY_NAMES : DAY_NAMES.slice(0, 5);
@@ -331,7 +335,7 @@ export function PrintTimetablePage({
     .trim();
 
   return (
-    <div className={`ptt-page ${daysVertical ? "ptt-landscape" : "ptt-portrait"}`}>
+    <div className={`ptt-page ${daysVertical ? "ptt-landscape" : "ptt-portrait"}${bandW ? " ptt-bw" : ""}`}>
       <div className="ptt-header">
         <div className="ptt-header-top-school">
           RATIBA YA {(tenantName || "NEYO SECONDARY SCHOOL").toUpperCase()} MWAKA {new Date().getFullYear()}
@@ -387,7 +391,7 @@ export function PrintTimetablePage({
                 </tr>
               );
               const configBreaks = nonLessonBreakRowsForPeriod(p, config).map((row) => (
-                <tr key={row.key} className="ptt-nonlesson-row ptt-nonlesson-break">
+                <tr key={row.key} className={`ptt-nonlesson-row ptt-nonlesson-${row.tone}`}>
                   <td className="ptt-period-num" />
                   <td colSpan={days.length}>{row.label} · {row.minutes} MINS</td>
                 </tr>
@@ -420,7 +424,7 @@ export function PrintTimetablePage({
                 }
                 nonLessonBreakRowsForPeriod(p, config).forEach((row) => {
                   headCells.push(
-                    <th key={row.key} className="ptt-nonlesson-head ptt-nonlesson-break">
+                    <th key={row.key} className={`ptt-nonlesson-head ptt-nonlesson-${row.tone}`}>
                       {row.label}
                     </th>
                   );
@@ -459,7 +463,7 @@ export function PrintTimetablePage({
                   nonLessonBreakRowsForPeriod(p, config).forEach((row) => {
                     if (dIdx === 0) {
                       cells.push(
-                        <td key={row.key} rowSpan={days.length} className="ptt-nonlesson-vert ptt-nonlesson-break">
+                        <td key={row.key} rowSpan={days.length} className={`ptt-nonlesson-vert ptt-nonlesson-${row.tone}`}>
                           {row.label}
                         </td>
                       );
@@ -474,11 +478,9 @@ export function PrintTimetablePage({
       )}
 
       <div className="ptt-footer">
-        <div className="ptt-footer-left">
-          Generated on {new Date().toLocaleDateString("en-KE", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-        </div>
         <div className="ptt-footer-right">
-          Powered by NEYO
+          <span>Generated {new Date().toLocaleString("en-KE", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+          <strong>Powered by NEYO</strong>
         </div>
       </div>
 
@@ -487,13 +489,13 @@ export function PrintTimetablePage({
       <style jsx global>{`
         @page {
           size: A4 ${daysVertical ? "landscape" : "portrait"};
-          margin: 6mm;
+          margin: 3mm;
         }
         .ptt-page {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
           color: #000000;
           width: 100%;
-          min-height: 100vh;
+          min-height: ${daysVertical ? "204mm" : "291mm"};
           page-break-after: avoid;
           display: flex;
           flex-direction: column;
@@ -635,16 +637,16 @@ export function PrintTimetablePage({
           letter-spacing: 0.8mm;
         }
         .ptt-nonlesson-lunch {
-          background: #ffffff;
-          color: #000000;
+          background: #dff5ef;
+          color: #14532d;
         }
         .ptt-nonlesson-lunch td {
           height: 12mm;
           font-size: 4mm;
         }
         .ptt-nonlesson-break {
-          background: #ffffff;
-          color: #000000;
+          background: #f8edda;
+          color: #78350f;
         }
         .ptt-nonlesson-break td {
           height: 10mm;
@@ -657,8 +659,8 @@ export function PrintTimetablePage({
           font-size: 4.2mm;
           letter-spacing: 0.5mm;
         }
-        .ptt-nonlesson-head.ptt-nonlesson-lunch,
-        .ptt-nonlesson-head.ptt-nonlesson-break {
+        .ptt-bw .ptt-nonlesson-lunch,
+        .ptt-bw .ptt-nonlesson-break {
           background: #ffffff !important;
           color: #000000 !important;
         }
@@ -668,8 +670,6 @@ export function PrintTimetablePage({
           font-weight: 900;
           font-size: 4.8mm;
           letter-spacing: 1.5mm;
-          background: #ffffff;
-          color: #000000;
         }
         .ptt-day-name {
           font-weight: 900;
@@ -680,7 +680,7 @@ export function PrintTimetablePage({
         .ptt-footer {
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content: flex-end;
           font-size: 3mm;
           color: #1e293b;
           margin-top: 3.5mm;
@@ -690,9 +690,14 @@ export function PrintTimetablePage({
           font-weight: 600;
         }
         .ptt-footer-right {
-          font-weight: 800;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 0.5mm;
+          font-weight: 600;
           color: #000000;
         }
+        .ptt-footer-right strong { font-weight: 900; }
         @media screen {
           .ptt-page {
             max-width: ${daysVertical ? "297mm" : "210mm"};

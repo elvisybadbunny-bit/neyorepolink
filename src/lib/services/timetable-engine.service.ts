@@ -1048,38 +1048,10 @@ async function buildAndSolve(tenantId: string, jobId: string) {
   const cardVenueUsed = new Map<string, string>(); // cardId -> venueId
   const venueUsedAt = new Map<string, string>(); // classId:day:period -> venueId
 
-  // Special subjects (lunch) so academics never collide.
-  const lunchSubject = await withTenant(tenantId, async () => {
-    const tdb = tenantDb();
-    let l = await tdb.subject.findFirst({ where: { code: "LUNCH" } });
-    if (!l) l = await tdb.subject.create({ data: { tenantId, name: "Lunch Break", code: "LUNCH", curriculum: "BOTH" } });
-    return l;
-  });
-
-  // Reserve lunch per class according to its own real configured lunch
-  // period — only on days/periods that actually exist for that class (a
-  // short Saturday with fewer periods than the lunch slot simply has no
-  // lunch reservation that day, matching how a real short day works
-  // instead of forcing a phantom period).
-  const lunchSlots: any[] = [];
-  for (const c of data.classes) {
-    const cfg = configByClass.get(c.id);
-    // CC.1 — a school's own explicit lunchAfterPeriod (any real period
-    // number) always wins; falls back to the legacy lunchShift enum for
-    // any class that hasn't been re-saved via the redesigned Schedule
-    // Rules UI yet. This is exactly how a real 2-group dual-shift lunch
-    // (e.g. Form 1&2 eat during period 7 while Form 3&4 are still in
-    // class, then swap) is now genuinely configured — a school sets each
-    // group's own real lunchAfterPeriod directly, no longer limited to 4
-    // fixed shift positions.
-    const lunchPeriod = resolveLunchPeriod(cfg);
-    for (const day of daysForClass(c.id)) {
-      if (lunchPeriod > maxPeriodsForClass(c.id, day)) continue;
-      classGrid.set(`${c.id}:${day}:${lunchPeriod}`, lunchSubject.id);
-      lunchSlots.push({ tenantId, classId: c.id, subjectId: lunchSubject.id, teacherId: null, dayOfWeek: day, period: lunchPeriod, slotType: "ACADEMIC" });
-    }
-  }
-
+  // Lunch is a wall-clock gap AFTER the configured period, not a fake
+  // numbered lesson. `realPeriodsOverlap()` already includes each class's
+  // own lunch duration/shift, so teachers remain protected across staggered
+  // lunches without consuming or erasing a teaching period.
   // AA.6 — real HARD-blocked timetable slots (whole-school assembly, PPI,
   // games afternoon, etc.). Reserved right after lunch, BEFORE any normal
   // lesson card or Elective Block is placed, so nothing can ever land on
@@ -1173,10 +1145,10 @@ async function buildAndSolve(tenantId: string, jobId: string) {
       // clash-avoidance, identical to how an ordinary ClassSubjectNeed
       // card already does via `venueCandidatesFor()`/`pickVenueFor()`.
       const overflowCount = Math.max(0, slot.subjects.length - block.classIds.length);
-      const overflowSubjectIds = new Set(slot.subjects.slice(slot.subjects.length - overflowCount).map((s) => s.subjectId));
+      const overflowRowIds = new Set(slot.subjects.slice(slot.subjects.length - overflowCount).map((s) => s.id));
       function venueCandidatesForSlotSubject(s: { subjectId: string; venueId: string | null }): string[] {
         if (s.venueId) return [s.venueId]; // explicit pin always wins
-        if (!overflowSubjectIds.has(s.subjectId)) return []; // home-classroom subject — no real venue needed
+        if (!overflowRowIds.has((s as any).id)) return []; // home-classroom subject — no real venue needed
         return venueCandidatesFor(s.subjectId); // genuine overflow, unpinned — pool candidates
       }
       const candidates: { day: number; periods: number[]; score: number }[] = [];
@@ -1281,7 +1253,7 @@ async function buildAndSolve(tenantId: string, jobId: string) {
             venueGrid.set(`${s.venueId}:${chosen.day}:${p}`, (venueGrid.get(`${s.venueId}:${chosen.day}:${p}`) ?? 0) + 1);
           }
           if (s.id) resolvedVenueUpdates.set(s.id, null); // an explicit pin means no auto-pick is needed/stored
-        } else if (overflowSubjectIds.has(s.subjectId)) {
+        } else if (overflowRowIds.has(s.id)) {
           // BB.1 — a genuine unpinned overflow subject: pick the first real
           // pool candidate with spare capacity across every chosen period,
           // reserve it, and remember the pick so it can be persisted onto
@@ -1868,8 +1840,6 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     venueGrid.clear();
     cardVenueUsed.clear();
     venueUsedAt.clear();
-    // re-reserve lunch
-    for (const s of lunchSlots) classGrid.set(`${s.classId}:${s.dayOfWeek}:${s.period}`, lunchSubject.id);
     // AA.6 — re-reserve real hard-blocked slots too, so a fallback-triggered
     // full re-solve can never place an ordinary lesson on top of a block.
     for (const b of blockedSlotRows) classGrid.set(`${b.classId}:${b.dayOfWeek}:${b.period}`, `BLOCKED:${b.classId}`);
@@ -1969,7 +1939,6 @@ async function buildAndSolve(tenantId: string, jobId: string) {
   }
 
   for (const [key, subjectId] of classGrid.entries()) {
-    if (subjectId === lunchSubject.id) continue;
     // AA.1 — skip the synthetic `ELECTIVE_BLOCK:<slotId>` classGrid marker
     // used only to keep ordinary cards from double-booking this period;
     // the REAL persisted row for this period comes from
@@ -1984,7 +1953,7 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     const teacherId = teacherForClassSubject.get(`${classId}::${subjectId}`) ?? null;
     const classExists = data.classes.some((c) => c.id === classId);
     const subjectExists = data.subjects.some((s) => s.id === subjectId);
-    const teacherExists = !teacherId || teacherId === lunchSubject.id ? true : data.needs.some((n) => n.teacherId === teacherId) || data.groups.some((g) => g.teacherId === teacherId) || data.teacherAssoc.some((a) => a.teacherId === teacherId) || true;
+    const teacherExists = !teacherId ? true : data.needs.some((n) => n.teacherId === teacherId) || data.groups.some((g) => g.teacherId === teacherId) || data.teacherAssoc.some((a) => a.teacherId === teacherId) || true;
     if (!classExists || !subjectExists || !teacherExists) continue;
     // Z.3 — real venue read-back: resolve the exact venue this class/day/
     // period was actually booked into (a pool venue can genuinely differ
@@ -2009,7 +1978,6 @@ async function buildAndSolve(tenantId: string, jobId: string) {
       venue: venueLabel,
     });
   }
-  slotRows.push(...lunchSlots);
 
   await withTenant(tenantId, async () => {
     const tdb = tenantDb();
@@ -2030,7 +1998,7 @@ async function buildAndSolve(tenantId: string, jobId: string) {
     await tdb.timetableSlot.deleteMany({ where: { slotType: "BLOCKED" } });
     const validTeacherIds = new Set((await tdb.user.findMany({ where: { isActive: true }, select: { id: true } })).map((u) => u.id));
     const validClassIds = new Set(data.classes.map((c) => c.id));
-    const validSubjectIds = new Set(data.subjects.map((s) => s.id).concat([lunchSubject.id]));
+    const validSubjectIds = new Set(data.subjects.map((s) => s.id));
     const safeRows = slotRows.filter((row) => validClassIds.has(row.classId) && validSubjectIds.has(row.subjectId) && (!row.teacherId || validTeacherIds.has(row.teacherId)));
     if (safeRows.length > 0) await tdb.timetableSlot.createMany({ data: safeRows });
     // AA.1 — real Elective Block rows validated the same way (real class

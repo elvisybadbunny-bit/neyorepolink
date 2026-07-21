@@ -17,10 +17,9 @@
  *                             instead of its real color-coded background,
  *                             a school's own explicit choice before printing.
  *
- * Orientation is real and automatic: `daysVertical=1` (days run down the
- * left column, periods run across) prints A4 LANDSCAPE; the default
- * horizontal-days layout (days across the top, periods down the left)
- * prints A4 PORTRAIT — exactly the founder's own requested rule.
+ * Orientation is real and automatic: vertical days is the system default
+ * (days down the left, periods across) and prints A4 LANDSCAPE. Explicit
+ * `vertical=0` keeps the alternative horizontal-days A4 portrait layout.
  */
 import { requireUser } from "@/lib/core/session";
 import { db } from "@/lib/db";

@@ -72,6 +72,9 @@ interface PreviewSubjectRow {
   requiresSharedVenue: boolean;
   venueRecommendations: { id: string; name: string; shortCode: string | null; learnerCapacity: number | null; capacityPerPeriod: number }[];
   resourceBlockers: string[];
+  maxGroupSize: number | null;
+  requiredTeachingGroups: number;
+  teachingGroups: { key: string; label: string; studentIds: string[]; studentCount: number; suggestedTeacherId: string | null; suggestedTeacherName: string | null; suggestedVenueId: string | null; suggestedVenueName: string | null }[];
 }
 
 /**
@@ -192,9 +195,19 @@ async function buildElectivesPreview(tenantId: string, level: string, defaultLes
       .sort((a, b) => ((b.learnerCapacity ?? 0) - (a.learnerCapacity ?? 0)) || a.name.localeCompare(b.name));
     const resourceBlockers: string[] = [];
     if (recs.length === 0) resourceBlockers.push("No qualified teacher is linked to this subject.");
-    if (requiresSharedVenue && !venueRecommendations.some((venue) => venue.learnerCapacity != null && venue.learnerCapacity >= memberStudents.length)) {
-      resourceBlockers.push(`Combined group has ${memberStudents.length} learners but no tagged venue has a verified learner capacity large enough.`);
-    }
+    const maxGroupSize = subject.practicalHeavy ? (subject.practicalMaxGroupSize ?? subject.recommendedMaxGroupSize) : (subject.recommendedMaxGroupSize ?? subject.practicalMaxGroupSize);
+    const requiredTeachingGroups = maxGroupSize ? Math.max(1, Math.ceil(memberStudents.length / maxGroupSize)) : 1;
+    if (recs.length < requiredTeachingGroups) resourceBlockers.push(`${requiredTeachingGroups} teaching groups are required but only ${recs.length} qualified available teacher(s) were found.`);
+    const orderedMembers = [...memberStudents].sort((a,b)=>a.admissionNo.localeCompare(b.admissionNo)||a.id.localeCompare(b.id));
+    const partitions = Array.from({length:requiredTeachingGroups},()=>[] as typeof memberStudents);
+    orderedMembers.forEach((student,index)=>partitions[index%requiredTeachingGroups].push(student));
+    const teachingGroups = partitions.map((members,index)=>{
+      const needsExtraVenue = index >= memberClassIds.length || (homeClassCapacity != null && members.length > homeClassCapacity);
+      const venue = needsExtraVenue ? venueRecommendations.find((candidate)=>candidate.learnerCapacity!=null&&candidate.learnerCapacity>=members.length) ?? null : null;
+      if (needsExtraVenue && !venue) resourceBlockers.push(`Teaching Group ${index+1} has ${members.length} learners but no capacity-safe tagged venue.`);
+      return { key: `SPLIT-${index+1}`, label: `${subject.name} Group ${index+1}`, studentIds: members.map(student=>student.id), studentCount: members.length, suggestedTeacherId: recs[index]?.teacherId ?? null, suggestedTeacherName: recs[index]?.teacherName ?? null, suggestedVenueId: venue?.id ?? null, suggestedVenueName: venue?.name ?? null };
+    });
+    if (requiredTeachingGroups === 1 && requiresSharedVenue && !venueRecommendations.some((venue) => venue.learnerCapacity != null && venue.learnerCapacity >= memberStudents.length)) resourceBlockers.push(`Combined group has ${memberStudents.length} learners but no tagged venue has a verified learner capacity large enough.`);
     rows.push({
       subjectId,
       subjectName: subject.name,
@@ -204,13 +217,16 @@ async function buildElectivesPreview(tenantId: string, level: string, defaultLes
       classIds: memberClassIds,
       suggestedTeacherId: recs[0]?.teacherId ?? null,
       suggestedTeacherName: recs[0]?.teacherName ?? null,
-      teacherRecommendations: recs.slice(0, 5),
+      teacherRecommendations: recs,
       defaultLessonsPerWeek,
       optionBlock: blockResult.assignment[subjectId],
       homeClassCapacity,
       requiresSharedVenue,
       venueRecommendations,
       resourceBlockers,
+      maxGroupSize: maxGroupSize ?? null,
+      requiredTeachingGroups,
+      teachingGroups,
     });
   }
   rows.sort((a, b) => (a.optionBlock ?? "").localeCompare(b.optionBlock ?? "") || b.studentCount - a.studentCount || a.subjectCode.localeCompare(b.subjectCode));
@@ -289,13 +305,16 @@ async function buildMathSplitPreview(tenantId: string, level: string, defaultLes
       classIds: memberClassIds,
       suggestedTeacherId: recs[0]?.teacherId ?? null,
       suggestedTeacherName: recs[0]?.teacherName ?? null,
-      teacherRecommendations: recs.slice(0, 5),
+      teacherRecommendations: recs,
       defaultLessonsPerWeek,
       optionBlock: "MATH",
       homeClassCapacity,
       requiresSharedVenue,
       venueRecommendations,
       resourceBlockers,
+      maxGroupSize: null,
+      requiredTeachingGroups: 1,
+      teachingGroups: [{ key: "MAIN", label: subject.name, studentIds: memberStudents.map(student => student.id), studentCount: memberStudents.length, suggestedTeacherId: recs[0]?.teacherId ?? null, suggestedTeacherName: recs[0]?.teacherName ?? null, suggestedVenueId: null, suggestedVenueName: null }],
     };
   }
 
@@ -376,24 +395,34 @@ export async function confirmElectiveBlockAutoBuild(user: SessionUser, input: Co
       throw new ElectiveBlockAutoBuildError("CONFLICT", "The preview has no valid per-learner A/B/C proof. Run Phase B preview again.");
     }
 
-    // Phase C: revalidate resources against live school records at confirm
-    // time—never trust recommendations or stale browser values.
-    if (input.subjects.some((subject) => !subject.teacherId)) throw new ElectiveBlockAutoBuildError("INVALID", "Every parallel subject needs one real qualified teacher before confirmation.");
-    const [teacherLinks, venues] = await Promise.all([
-      tdb.teacherSubject.findMany({ where: { subjectId: { in: input.subjects.map((subject) => subject.subjectId) }, teacherId: { in: input.subjects.map((subject) => subject.teacherId!).filter(Boolean) } } }),
-      tdb.venue.findMany({ where: { id: { in: input.subjects.map((subject) => subject.venueId).filter((id): id is string => Boolean(id)) }, active: true } }),
-    ]);
-    for (const subject of input.subjects) {
-      if (!teacherLinks.some((link) => link.subjectId === subject.subjectId && link.teacherId === subject.teacherId)) {
-        throw new ElectiveBlockAutoBuildError("INVALID", `The selected teacher is not linked as qualified for ${preview.rows.find((row) => row.subjectId === subject.subjectId)?.subjectName ?? "one subject"}.`);
+    // Phase C + real same-subject partitions: revalidate every teaching
+    // group, exact learner coverage, teacher qualification and venue.
+    const assignmentRows = input.subjects.flatMap((subject) => {
+      const previewRow = preview.rows.find((row) => row.subjectId === subject.subjectId)!;
+      const groups = previewRow.requiredTeachingGroups > 1 ? subject.teachingGroups : [];
+      if (previewRow.requiredTeachingGroups > 1) {
+        if (groups.length !== previewRow.requiredTeachingGroups) throw new ElectiveBlockAutoBuildError("INVALID", `${previewRow.subjectName} requires exactly ${previewRow.requiredTeachingGroups} real teaching groups.`);
+        const allIds = groups.flatMap((group) => group.studentIds);
+        const expected = new Set(previewRow.students.map((student) => student.id));
+        if (new Set(allIds).size !== allIds.length || allIds.length !== expected.size || allIds.some((id) => !expected.has(id))) throw new ElectiveBlockAutoBuildError("INVALID", `${previewRow.subjectName} split groups must cover every confirmed learner exactly once.`);
+        return groups.map((group) => ({ subject, previewRow, groupKey: group.key, groupLabel: group.label, teacherId: group.teacherId, venueId: group.venueId || null, studentIds: group.studentIds }));
       }
-      const row = preview.rows.find((candidate) => candidate.subjectId === subject.subjectId)!;
-      const venue = subject.venueId ? venues.find((candidate) => candidate.id === subject.venueId) : null;
-      if (row.requiresSharedVenue && !venue) throw new ElectiveBlockAutoBuildError("INVALID", `${row.subjectName} needs a shared venue for ${row.studentCount} learners.`);
+      if (!subject.teacherId) throw new ElectiveBlockAutoBuildError("INVALID", `Select a teacher for ${previewRow.subjectName}.`);
+      return [{ subject, previewRow, groupKey: "MAIN", groupLabel: previewRow.subjectName, teacherId: subject.teacherId, venueId: subject.venueId || null, studentIds: previewRow.students.map((student) => student.id) }];
+    });
+    const [teacherLinks, venues] = await Promise.all([
+      tdb.teacherSubject.findMany({ where: { subjectId: { in: assignmentRows.map((row) => row.subject.subjectId) }, teacherId: { in: assignmentRows.map((row) => row.teacherId) } } }),
+      tdb.venue.findMany({ where: { id: { in: assignmentRows.map((row) => row.venueId).filter((id): id is string => Boolean(id)) }, active: true } }),
+    ]);
+    for (const assignment of assignmentRows) {
+      if (!teacherLinks.some((link) => link.subjectId === assignment.subject.subjectId && link.teacherId === assignment.teacherId)) throw new ElectiveBlockAutoBuildError("INVALID", `${assignment.teacherId} is not a qualified teacher for ${assignment.previewRow.subjectName}.`);
+      const venue = assignment.venueId ? venues.find((candidate) => candidate.id === assignment.venueId) : null;
+      const homeCapacity = assignment.previewRow.homeClassCapacity as number | null;
+      const needsVenue = homeCapacity == null || assignment.studentIds.length > homeCapacity;
+      if (needsVenue && !venue) throw new ElectiveBlockAutoBuildError("INVALID", `${assignment.groupLabel} needs a venue for ${assignment.studentIds.length} learners.`);
       if (venue) {
-        if (!safeParse<string[]>(venue.supportsSubjectIds, []).includes(subject.subjectId)) throw new ElectiveBlockAutoBuildError("INVALID", `${venue.name} is not tagged to support ${row.subjectName}.`);
-        if (venue.learnerCapacity == null) throw new ElectiveBlockAutoBuildError("INVALID", `Set ${venue.name}'s learner-seat capacity before using it for Phase C.`);
-        if (venue.learnerCapacity < row.studentCount) throw new ElectiveBlockAutoBuildError("INVALID", `${venue.name} has ${venue.learnerCapacity} seats but ${row.subjectName} has ${row.studentCount} learners.`);
+        if (!safeParse<string[]>(venue.supportsSubjectIds, []).includes(assignment.subject.subjectId)) throw new ElectiveBlockAutoBuildError("INVALID", `${venue.name} is not tagged for ${assignment.previewRow.subjectName}.`);
+        if (venue.learnerCapacity == null || venue.learnerCapacity < assignment.studentIds.length) throw new ElectiveBlockAutoBuildError("INVALID", `${venue.name} cannot prove capacity for ${assignment.groupLabel} (${assignment.studentIds.length} learners).`);
       }
     }
 
@@ -407,13 +436,15 @@ export async function confirmElectiveBlockAutoBuild(user: SessionUser, input: Co
       throw new ElectiveBlockAutoBuildError("CONFLICT", "Each of Option A, B and C must contain at least one real subject.");
     }
     for (const group of slotGroups) {
-      const teacherIds = group.subjects.map((subject) => subject.teacherId!).filter(Boolean);
-      if (new Set(teacherIds).size !== teacherIds.length) throw new ElectiveBlockAutoBuildError("CONFLICT", `${group.key} assigns one teacher to two parallel subjects.`);
+      const subjectIds = new Set(group.subjects.map((subject) => subject.subjectId));
+      const expanded = assignmentRows.filter((row) => subjectIds.has(row.subject.subjectId));
+      const teacherIds = expanded.map((row) => row.teacherId);
+      if (new Set(teacherIds).size !== teacherIds.length) throw new ElectiveBlockAutoBuildError("CONFLICT", `${group.key} assigns one teacher to two parallel teaching groups.`);
       for (const venue of venues) {
-        const assigned = group.subjects.filter((subject) => subject.venueId === venue.id);
-        if (assigned.length > venue.capacityPerPeriod) throw new ElectiveBlockAutoBuildError("CONFLICT", `${venue.name} can host ${venue.capacityPerPeriod} simultaneous group(s), but ${assigned.length} ${group.key} subjects use it.`);
-        const learnerTotal = assigned.reduce((sum, subject) => sum + (preview.rows.find((row) => row.subjectId === subject.subjectId)?.studentCount ?? 0), 0);
-        if (assigned.length > 1 && venue.learnerCapacity != null && learnerTotal > venue.learnerCapacity) throw new ElectiveBlockAutoBuildError("CONFLICT", `${venue.name} has ${venue.learnerCapacity} learner seats, but parallel ${group.key} assignments total ${learnerTotal}.`);
+        const assigned = expanded.filter((row) => row.venueId === venue.id);
+        if (assigned.length > venue.capacityPerPeriod) throw new ElectiveBlockAutoBuildError("CONFLICT", `${venue.name} can host ${venue.capacityPerPeriod} simultaneous group(s), but ${assigned.length} ${group.key} groups use it.`);
+        const learnerTotal = assigned.reduce((sum, row) => sum + row.studentIds.length, 0);
+        if (assigned.length > 1 && venue.learnerCapacity != null && learnerTotal > venue.learnerCapacity) throw new ElectiveBlockAutoBuildError("CONFLICT", `${venue.name} has ${venue.learnerCapacity} seats, but parallel ${group.key} groups total ${learnerTotal}.`);
       }
     }
     const slots = slotGroups.flatMap((group, groupIndex) =>
@@ -421,11 +452,14 @@ export async function confirmElectiveBlockAutoBuild(user: SessionUser, input: Co
         label: `${group.key} · ${repetition + 1}/5`,
         isDouble: false,
         sortOrder: groupIndex * 5 + repetition,
-        subjects: group.subjects.map((s) => ({
-          subjectId: s.subjectId,
-          teacherId: s.teacherId || undefined,
-          venueId: s.venueId || undefined,
-          classIds: s.classIds,
+        subjects: assignmentRows.filter((row) => group.subjects.some((subject) => subject.subjectId === row.subject.subjectId)).map((row) => ({
+          subjectId: row.subject.subjectId,
+          teacherId: row.teacherId,
+          venueId: row.venueId || undefined,
+          classIds: row.subject.classIds,
+          teachingGroupKey: row.groupKey,
+          teachingGroupLabel: row.groupLabel,
+          studentIds: row.studentIds,
         })),
       }))
     );
@@ -460,6 +494,7 @@ export async function confirmElectiveBlockAutoBuild(user: SessionUser, input: Co
     // combination-creation path.
     const combinationGroupIds: string[] = [];
     for (const s of input.subjects) {
+      if ((s.teachingGroups?.length ?? 0) > 1) continue; // exact split rosters live on ElectiveBlockSlotSubject.studentIdsJson
       const group = await upsertCombinationGroup(user, {
         name: `${input.blockName} — ${preview.rows.find((r) => r.subjectId === s.subjectId)?.subjectName ?? "Subject"}`,
         subjectId: s.subjectId,

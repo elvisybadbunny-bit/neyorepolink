@@ -792,7 +792,7 @@ Confirmed learners: 58
 Required groups: 3
 ```
 
-Current boundary: NEYO reports required split groups but does not fake multiple groups by adding extra teacher names. Actual same-subject learner partitioning is a separate future extension.
+When demand exceeds the school-set maximum, NEYO now creates balanced, deterministic same-subject teaching groups. Every group stores exact learner IDs, its own qualified teacher and its own home room/venue while all groups run in parallel.
 
 ---
 
@@ -1238,8 +1238,6 @@ That is the complete NEYO Senior School timetable lifecycle.
 
 ---
 
-# 41. Current honest boundary
+# 41. Same-subject parallel teaching groups
 
-NEYO calculates when an elective group exceeds the school’s theory/practical maximum and how many teaching groups are required. It does not yet create several same-subject parallel learner partitions with separate teachers automatically. The report keeps this visible. The school must not pretend the split exists merely by writing another teacher’s name.
-
-This boundary should be resolved through a dedicated, reviewed learner-partition extension—not a shortcut in the timetable grid.
+When a subject exceeds its school-set theory/practical maximum, NEYO calculates the group count, sorts learners deterministically, partitions them evenly, and requires a separate qualified teacher and capacity-safe room for every group. The exact learner IDs are persisted on each repeated Option slot, so personal proofs and teacher staffing counts resolve the real group rather than merely adding another teacher name.

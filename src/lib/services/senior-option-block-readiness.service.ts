@@ -55,9 +55,9 @@ export async function seniorOptionBlocksReady(user: SessionUser, level: string) 
     if (counts.A !== 5 || counts.B !== 5 || counts.C !== 5) return { ready: false, reason: `${level} needs A × 5, B × 5 and C × 5; found A ${counts.A}, B ${counts.B}, C ${counts.C}.` };
 
     // One representative row per subject (the same assignment repeats five times).
-    const assignmentBySubject = new Map<string, any>();
-    for (const slot of block.slots) for (const subject of slot.subjects) if (!assignmentBySubject.has(subject.subjectId)) assignmentBySubject.set(subject.subjectId, subject);
-    const assignments = [...assignmentBySubject.values()];
+    const assignmentBySubjectGroup = new Map<string, any>();
+    for (const slot of block.slots) for (const subject of slot.subjects) { const key = `${subject.subjectId}:${subject.teachingGroupKey}`; if (!assignmentBySubjectGroup.has(key)) assignmentBySubjectGroup.set(key, subject); }
+    const assignments = [...assignmentBySubjectGroup.values()];
     if (assignments.some((assignment) => !assignment.teacherId)) return { ready: false, reason: `${level} has an option subject without a teacher.` };
     const [teacherLinks, venues] = await Promise.all([
       db.teacherSubject.findMany({ where: { subjectId: { in: assignments.map((a) => a.subjectId) }, teacherId: { in: assignments.map((a) => a.teacherId) } } }),
@@ -66,10 +66,12 @@ export async function seniorOptionBlocksReady(user: SessionUser, level: string) 
     for (const assignment of assignments) {
       if (!teacherLinks.some((link) => link.subjectId === assignment.subjectId && link.teacherId === assignment.teacherId)) return { ready: false, reason: `A Phase C teacher qualification changed after confirmation. Rebuild ${level} resources.` };
       const row = preview.rows?.find((candidate) => candidate.subjectId === assignment.subjectId);
-      if (row?.requiresSharedVenue && !assignment.venueId) return { ready: false, reason: `${row.subjectName} still needs a shared venue.` };
+      const groupSize = parse<string[]>(assignment.studentIdsJson, []).length || (row?.studentCount ?? 0);
+      const needsVenue = row?.homeClassCapacity == null || groupSize > row.homeClassCapacity;
+      if (needsVenue && !assignment.venueId) return { ready: false, reason: `${row?.subjectName ?? "An option group"} still needs a venue for ${groupSize} learners.` };
       if (assignment.venueId) {
         const venue = venues.find((candidate) => candidate.id === assignment.venueId);
-        if (!venue || venue.learnerCapacity == null || venue.learnerCapacity < (row?.studentCount ?? 0)) return { ready: false, reason: `${row?.subjectName ?? "An option subject"}'s selected venue is missing or too small.` };
+        if (!venue || venue.learnerCapacity == null || venue.learnerCapacity < groupSize) return { ready: false, reason: `${row?.subjectName ?? "An option subject"}'s selected venue is missing or too small.` };
         if (!parse<string[]>(venue.supportsSubjectIds, []).includes(assignment.subjectId)) return { ready: false, reason: `${venue.name} is no longer tagged for ${row?.subjectName ?? "the assigned subject"}.` };
       }
     }

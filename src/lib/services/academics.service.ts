@@ -11,6 +11,8 @@ import { can } from "@/lib/core/permissions";
 import type { SessionUser } from "@/lib/core/session";
 import type { Role } from "@/lib/core/roles";
 
+function safeParse<T>(value: string | null | undefined, fallback: T): T { try { return value ? JSON.parse(value) as T : fallback; } catch { return fallback; } }
+
 export class AcademicsError extends Error {
   constructor(public code: "NOT_FOUND" | "DUPLICATE" | "CONFLICT" | "FORBIDDEN" | "INVALID", message: string) {
     super(message);
@@ -285,7 +287,7 @@ export async function getTimetable(user: SessionUser, classId: string) {
     // per-subject/teacher/venue list is resolved here and handed to the
     // renderer to display together in that one cell.
     const blockSlotIds = [...new Set(slots.map((s) => (s as any).electiveBlockSlotId).filter((x): x is string => Boolean(x)))];
-    const blockBreakdownBySlotId = new Map<string, { label: string; isDouble: boolean; subjects: { subjectName: string; subjectCode: string | null; teacherShortCode: string | null; venue: string | null }[] }>();
+    const blockBreakdownBySlotId = new Map<string, { label: string; isDouble: boolean; subjects: { subjectName: string; subjectCode: string | null; teacherShortCode: string | null; venue: string | null; teachingGroupLabel?: string | null; studentCount?: number }[] }>();
     if (blockSlotIds.length > 0) {
       const blockSlots = await tenantDb().electiveBlockSlot.findMany({
         where: { id: { in: blockSlotIds } },
@@ -317,6 +319,8 @@ export async function getTimetable(user: SessionUser, classId: string) {
             // BB.1 — an explicit school pin always wins; otherwise show the
             // solver's own real auto-picked overflow venue, if any.
             venue: (s.venueId ? venueMap.get(s.venueId) : null) ?? (s.resolvedVenueId ? venueMap.get(s.resolvedVenueId) : null) ?? null,
+            teachingGroupLabel: s.teachingGroupLabel ?? null,
+            studentCount: safeParse<string[]>(s.studentIdsJson, []).length,
           })),
         });
       }
