@@ -57,19 +57,19 @@ export function defaultLandingContent(): LandingContent {
       { label: "Pricing", href: "#pricing" },
       { label: "Company", href: "#company" },
     ],
-    heroEyebrow: "One company. Many operating systems.",
-    heroHeadline: "All your organization on one platform.",
-    heroSubheadline: "NEYO helps schools, farms, retailers and growing teams run daily work from one calm cloud platform.",
-    primaryCta: { label: "Request demo", href: "#demo" },
-    secondaryCta: { label: "Explore products", href: "#products" },
-    launchBanner: "School OS is preparing for pilot schools. Farm, Business and Creator OS remain on waitlists.",
+    heroEyebrow: "School management system for Kenya",
+    heroHeadline: "One school. Every operation. Finally connected.",
+    heroSubheadline: "Run admissions, fees, attendance, CBE, exams, timetables, parent communication and campus operations from one clear school operating system.",
+    primaryCta: { label: "Request a guided demo", href: "#demo" },
+    secondaryCta: { label: "Explore School OS", href: "#product" },
+    launchBanner: "NEYO School OS is preparing carefully for approved pilot schools.",
     trustStats: [
-      { value: "99.9%", label: "Uptime target", note: "Built for school-day reliability" },
-      { value: "19", label: "Role groups", note: "Clear permissions by responsibility" },
-      { value: "KES", label: "Kenyan billing", note: "Local money flows and M-Pesa-ready seams" },
+      { value: "19", label: "Responsibility-based roles", note: "Clear permissions by responsibility" },
+      { value: "CBE", label: "Curriculum to evidence", note: "Delivery, assessment and learner support" },
+      { value: "KES", label: "Kenyan finance workflows", note: "Local billing and M-Pesa reconciliation workflows" },
     ],
     products: [
-      { key: "school", name: "School OS", status: "WAITLIST", description: "Admissions, fees, attendance, exams, learning and parent communication for Kenyan schools.", features: ["Fees and receipts", "Attendance", "CBE and exams", "Learning videos"], mediaUrl: "/screenshots/neyo-school-os-dashboard.png" },
+      { key: "school", name: "School OS", status: "WAITLIST", description: "A connected operating system for Kenyan school administration, learning and daily operations.", features: ["Admissions and learner records", "Fees and M-Pesa reconciliation", "Attendance", "CBE delivery and assessment", "Deterministic timetables", "Parent and learner access", "Library and campus services", "Role-controlled operations"], mediaUrl: "/screenshots/neyo-school-os-dashboard.png" },
       { key: "farm", name: "Farm OS", status: "WAITLIST", description: "Operations layer for farms, cooperatives, stock, teams and field records.", features: ["Stock", "Teams", "Payments", "Reports"], mediaUrl: "" },
       { key: "business", name: "Business OS", status: "WAITLIST", description: "Customer, inventory, billing and team workflows for small and growing businesses.", features: ["Customers", "Inventory", "Sales", "Team tasks"], mediaUrl: "" },
       { key: "creator", name: "Creator OS", status: "WAITLIST", description: "A clean operating base for creator businesses, content calendars, sales and community.", features: ["Content calendar", "Sales", "Audience", "Reports"], mediaUrl: "" },
@@ -112,6 +112,13 @@ function publicMediaUrl(value: string | undefined): string {
 }
 
 function normalizeLandingMedia(content: LandingContent): LandingContent {
+  // The former multi-OS homepage made School OS look like one experiment among
+  // four. Once the school-first public site launched, that exact stored legacy
+  // payload stopped being authoritative so an old database row cannot restore
+  // obsolete positioning or leak it into metadata/structured search data.
+  if (content.heroHeadline === "All your organization on one platform.") {
+    return normalizeLandingMedia(defaultLandingContent());
+  }
   const legacySeo = content.seoTitle === "NEYO — Operating systems for modern organizations";
   const legacyLaunch = content.launchBanner === "School OS is live. Farm, Business and Creator OS are opening through waitlists.";
   return {

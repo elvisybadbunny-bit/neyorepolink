@@ -2,17 +2,40 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CheckCircle, ChevronRight, Download, Layers, Loader2, Lock, Mail, Menu, PlayCircle, ShieldCheck, Sparkles, X } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  Bus,
+  Check,
+  ChevronDown,
+  ClipboardCheck,
+  CreditCard,
+  Download,
+  HeartPulse,
+  Library,
+  Loader2,
+  LockKeyhole,
+  Menu,
+  QrCode,
+  School,
+  ShieldCheck,
+  Users,
+  X,
+} from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type LinkItem = { label: string; href: string };
-type StatItem = { value: string; label: string; note?: string };
-type ProductItem = { key: string; name: string; status: "LIVE" | "WAITLIST" | "COMING_SOON"; description: string; features: string[]; mediaUrl?: string };
-type MediaItem = { label: string; type: "image" | "video" | "embed"; url?: string; caption?: string };
+type ProductItem = {
+  key: string;
+  name: string;
+  status: "LIVE" | "WAITLIST" | "COMING_SOON";
+  description: string;
+  features: string[];
+  mediaUrl?: string;
+};
 type LandingContent = {
   nav: LinkItem[];
   heroEyebrow: string;
@@ -21,11 +44,16 @@ type LandingContent = {
   primaryCta: LinkItem;
   secondaryCta: LinkItem;
   launchBanner?: string;
-  trustStats: StatItem[];
+  trustStats: { value: string; label: string; note?: string }[];
   products: ProductItem[];
   industries: string[];
   whyNeyo: string[];
-  mediaShowcase: MediaItem[];
+  mediaShowcase: {
+    label: string;
+    type: string;
+    url?: string;
+    caption?: string;
+  }[];
   securityPoints: string[];
   finalHeadline: string;
   finalSubheadline: string;
@@ -40,212 +68,1138 @@ interface LandingClientProps {
   landingContent: LandingContent;
 }
 
-const PRODUCT_ICONS: Record<string, string> = {
-  school: "S",
-  farm: "F",
-  business: "B",
-  creator: "C",
-};
+const NAV = [
+  ["Product", "#product"],
+  ["CBE & academics", "#academics"],
+  ["Operations", "#operations"],
+  ["Security", "#security"],
+  ["About", "#founder"],
+  ["FAQ", "#faq"],
+] as const;
 
-function waitlistValue(key: string): "school_os_demo" | "farm_os" | "business_os" | "creator_os" {
-  if (key === "farm") return "farm_os";
-  if (key === "business") return "business_os";
-  if (key === "creator") return "creator_os";
-  return "school_os_demo";
-}
+const FAQS = [
+  [
+    "What kind of schools is NEYO designed for?",
+    "NEYO School OS is being prepared for Kenyan primary, junior and senior schools. Each approved school is configured around its real classes, terms, curriculum and staff responsibilities.",
+  ],
+  [
+    "Does NEYO support CBE and 8-4-4 workflows?",
+    "Yes. NEYO includes CBE curriculum, delivery, evidence, assessment and intervention workflows alongside conventional marks, exams and school reporting. The exact setup depends on the levels a school operates.",
+  ],
+  [
+    "Can our existing records be moved into NEYO?",
+    "NEYO includes controlled import workflows for learners, guardians, staff, teachers and academic structures. Migration should be mapped, reviewed and verified before records are committed.",
+  ],
+  [
+    "Does NEYO work on a phone?",
+    "NEYO is a web platform designed for phones, tablets and computers. The team continues to test priority workflows at 360px so school staff and families can use smaller devices.",
+  ],
+  [
+    "How does a demonstration work?",
+    "Submit the request form with a valid Kenyan contact. It enters a pending review queue. NEYO does not automatically create a school or expose a shared public account before approval.",
+  ],
+  [
+    "Does timetable generation use Bundi?",
+    "No. NEYO timetable generation uses deterministic constraints, stable ordering, graph methods and backtracking. Generation is separate from review, approval and publication.",
+  ],
+  [
+    "Is Bundi required to operate NEYO?",
+    "No. Every core school workflow must remain usable without Bundi. Bundi is an optional future assistance layer, not a requirement for running a school.",
+  ],
+  [
+    "Can NEYO connect to existing systems or devices?",
+    "A school's authorised administrator can manage restricted API keys and webhooks from Settings → Developer. Integrations remain permission-controlled and should never receive direct database access.",
+  ],
+];
 
-function openHref(href: string, router: ReturnType<typeof useRouter>) {
-  if (href.startsWith("#")) document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+function scrollToId(href: string, router: ReturnType<typeof useRouter>) {
+  if (href.startsWith("#"))
+    document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
   else router.push(href);
 }
 
-export function NeyoLandingClient({ customLogoUrl, brandPrimary = "#121a2e", brandAccent = "#1f9d5f", landingContent }: LandingClientProps) {
-  const { toast } = useToast();
+export function NeyoLandingClient({
+  customLogoUrl,
+  brandPrimary = "#111c32",
+  brandAccent = "#15945f",
+  landingContent,
+}: LandingClientProps) {
   const router = useRouter();
-  const [modalOpen, setModalOpen] = React.useState(false);
-  const [modalType, setModalType] = React.useState<"select" | "waitlist">("select");
-  const [selectedOs, setSelectedOs] = React.useState<"school_os_demo" | "farm_os" | "business_os" | "creator_os">("school_os_demo");
-  const [name, setName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [phone, setPhone] = React.useState("");
+  const { toast } = useToast();
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const [demoOpen, setDemoOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [submitted, setSubmitted] = React.useState(false);
   const [pwaPrompt, setPwaPrompt] = React.useState<any>(null);
+  const [form, setForm] = React.useState({
+    name: "",
+    schoolName: "",
+    email: "",
+    phone: "",
+  });
 
   React.useEffect(() => {
-    function handleBeforeInstall(e: any) { e.preventDefault(); setPwaPrompt(e); }
-    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
-    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+    const receive = (event: any) => {
+      event.preventDefault();
+      setPwaPrompt(event);
+    };
+    window.addEventListener("beforeinstallprompt", receive);
+    return () => window.removeEventListener("beforeinstallprompt", receive);
   }, []);
 
-  async function handlePwaInstall() {
-    if (!pwaPrompt) { toast({ title: "App install not available yet", description: "If NEYO is already installed, open it from your device home screen.", tone: "info" }); return; }
+  async function install() {
+    if (!pwaPrompt)
+      return toast({
+        title: "Install option not available",
+        description:
+          "Use your browser's Add to Home Screen option, or NEYO may already be installed.",
+        tone: "info",
+      });
     pwaPrompt.prompt();
-    const choice = await pwaPrompt.userChoice;
-    if (choice.outcome === "accepted") toast({ title: "NEYO installed", tone: "success" });
+    await pwaPrompt.userChoice;
     setPwaPrompt(null);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name || !email) return;
+  async function submitDemo(event: React.FormEvent) {
+    event.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/waitlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, os: selectedOs }) });
-      const json = await res.json();
-      if (json.ok) { toast({ title: "Request received", description: "NEYO will follow up with the right product path.", tone: "success" }); setModalOpen(false); setName(""); setEmail(""); setPhone(""); }
-      else toast({ title: json.error?.message || "Could not register.", tone: "error" });
-    } catch { toast({ title: "Network problem during request.", tone: "error" }); }
-    finally { setLoading(false); }
+      const response = await fetch("/api/demo/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const json = await response.json();
+      if (!response.ok || !json.ok)
+        throw new Error(json.error?.message || "Could not submit the request.");
+      setSubmitted(true);
+      toast({
+        title: "Demo request received",
+        description: "Your request is awaiting review by the NEYO team.",
+        tone: "success",
+      });
+    } catch (error: any) {
+      toast({
+        title: error?.message || "Could not submit the request.",
+        tone: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function requestProduct(product?: ProductItem) {
-    if (!product || product.key === "school") { router.push("/os/school/login"); return; }
-    setSelectedOs(waitlistValue(product.key));
-    setModalType("waitlist");
-    setModalOpen(true);
-  }
+  const schoolMedia =
+    landingContent.products.find((product) => product.key === "school")
+      ?.mediaUrl || "/screenshots/neyo-school-os-dashboard.png";
 
   return (
-    <div className="min-h-screen bg-[#fbf8f1] text-navy-950 antialiased selection:bg-green-500/15">
-      <nav className="sticky top-0 z-40 border-b border-navy-950/10 bg-[#fbf8f1]/94 px-5 py-4 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-          <button onClick={() => router.push("/")} className="flex items-center gap-3 text-left">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-navy-950 text-white shadow-sm">
-              {customLogoUrl ? <img src={customLogoUrl} alt="NEYO" className="h-full w-full rounded-2xl object-contain" /> : "N"}
-            </span>
-            <span className="text-lg font-black tracking-tight" style={{ color: brandPrimary }}>NEYO</span>
+    <div className="min-h-screen overflow-x-hidden bg-white text-[#111c32] selection:bg-emerald-200">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-[72px] max-w-[1240px] items-center justify-between px-4 sm:px-6">
+          <button
+            onClick={() => scrollToId("#top", router)}
+            className="flex items-center gap-2.5"
+            aria-label="NEYO home"
+          >
+            {customLogoUrl ? (
+              <img
+                src={customLogoUrl}
+                alt="NEYO"
+                className="h-9 w-auto max-w-[130px] object-contain"
+              />
+            ) : (
+              <>
+                <span
+                  className="grid h-9 w-9 place-items-center rounded-xl text-sm font-black text-white"
+                  style={{ background: brandPrimary }}
+                >
+                  N
+                </span>
+                <span className="text-lg font-black tracking-[-0.04em]">
+                  NEYO
+                </span>
+              </>
+            )}
           </button>
-          <div className="hidden items-center gap-7 lg:flex">
-            {landingContent.nav.map((item) => <a key={`${item.label}-${item.href}`} href={item.href} className="text-[12px] font-black uppercase tracking-[0.18em] text-navy-500 transition hover:text-navy-950">{item.label}</a>)}
-          </div>
+          <nav
+            className="hidden items-center gap-7 lg:flex"
+            aria-label="Main navigation"
+          >
+            {NAV.map(([label, href]) => (
+              <button
+                key={href}
+                onClick={() => scrollToId(href, router)}
+                className="text-sm font-semibold text-slate-600 transition hover:text-slate-950"
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
           <div className="flex items-center gap-2">
-            <button onClick={handlePwaInstall} className="hidden rounded-full border border-navy-950/10 bg-white/80 px-4 py-2 text-xs font-bold text-navy-700 shadow-sm sm:inline-flex"><Download className="mr-1.5 h-3.5 w-3.5" />Install</button>
-            <button onClick={() => router.push("/login")} className="hidden rounded-full px-4 py-2 text-xs font-bold text-navy-700 hover:bg-white/70 sm:inline-flex">Login</button>
-            <button onClick={() => { setModalType("select"); setModalOpen(true); }} className="hidden rounded-full px-5 py-2.5 text-xs font-black text-white shadow-sm sm:inline-flex" style={{ backgroundColor: brandPrimary }}>Request demo</button>
-            <button aria-label="Open landing navigation" onClick={() => setMobileMenuOpen((open) => !open)} className="rounded-full border border-navy-950/10 bg-white/80 p-2 text-navy-800 shadow-sm lg:hidden"><Menu className="h-5 w-5" /></button>
+            <button
+              onClick={() => router.push("/login")}
+              className="hidden px-3 py-2 text-sm font-bold text-slate-700 sm:block"
+            >
+              Sign in
+            </button>
+            <button
+              onClick={() => setDemoOpen(true)}
+              className="hidden rounded-full px-5 py-2.5 text-sm font-bold text-white shadow-sm sm:block"
+              style={{ background: brandPrimary }}
+            >
+              Request a demo
+            </button>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 lg:hidden"
+              aria-label="Toggle menu"
+            >
+              {menuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </button>
           </div>
         </div>
-        {mobileMenuOpen ? (
-          <div className="mx-auto mt-4 max-w-7xl rounded-3xl border border-navy-950/10 bg-white p-3 shadow-card lg:hidden">
-            <div className="grid gap-1">
-              {landingContent.nav.map((item) => <a key={`mobile-${item.label}-${item.href}`} href={item.href} onClick={() => setMobileMenuOpen(false)} className="rounded-2xl px-4 py-3 text-sm font-black text-navy-700 hover:bg-navy-50">{item.label}</a>)}
-              <button onClick={() => { setMobileMenuOpen(false); router.push("/login"); }} className="rounded-2xl px-4 py-3 text-left text-sm font-black text-navy-700 hover:bg-navy-50">Login</button>
-              <button onClick={() => { setMobileMenuOpen(false); setModalType("select"); setModalOpen(true); }} className="rounded-2xl px-4 py-3 text-left text-sm font-black text-white" style={{ backgroundColor: brandPrimary }}>Request demo</button>
+        {menuOpen && (
+          <div className="border-t border-slate-100 bg-white px-4 py-4 lg:hidden">
+            <div className="mx-auto grid max-w-[1240px] gap-1">
+              {NAV.map(([label, href]) => (
+                <button
+                  key={href}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    scrollToId(href, router);
+                  }}
+                  className="rounded-xl px-4 py-3 text-left text-sm font-bold hover:bg-slate-50"
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                onClick={() => router.push("/login")}
+                className="rounded-xl px-4 py-3 text-left text-sm font-bold"
+              >
+                Sign in
+              </button>
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  setDemoOpen(true);
+                }}
+                className="mt-2 rounded-xl px-4 py-3 text-left text-sm font-bold text-white"
+                style={{ background: brandPrimary }}
+              >
+                Request a demo
+              </button>
             </div>
           </div>
-        ) : null}
-      </nav>
+        )}
+      </header>
 
-      <main>
-        <section className="relative overflow-hidden border-b border-navy-950/10 px-5 py-16 sm:py-24">
-          <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1fr_0.9fr] lg:items-center">
-            <div className="space-y-7">
-              {landingContent.launchBanner ? <div className="inline-flex max-w-full rounded-full border border-green-700/20 bg-white/80 px-4 py-2 text-xs font-bold text-green-800 shadow-sm">{landingContent.launchBanner}</div> : null}
-              <p className="text-xs font-black uppercase tracking-[0.28em] text-green-700">{landingContent.heroEyebrow}</p>
-              <h1 className="max-w-4xl text-5xl font-black leading-[0.96] tracking-[-0.05em] text-navy-950 sm:text-7xl lg:text-8xl">
-                {landingContent.heroHeadline}
+      <main id="top">
+        <section className="relative overflow-hidden px-4 pb-16 pt-14 sm:px-6 sm:pb-24 sm:pt-20">
+          <div className="absolute inset-x-0 top-0 -z-10 h-[620px] bg-[radial-gradient(circle_at_80%_10%,rgba(21,148,95,0.10),transparent_36%),radial-gradient(circle_at_10%_30%,rgba(59,130,246,0.08),transparent_30%)]" />
+          <div className="mx-auto grid max-w-[1240px] gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <div>
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-extrabold text-emerald-800">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Built for Kenyan school operations
+              </div>
+              <h1 className="max-w-3xl text-[44px] font-black leading-[0.98] tracking-[-0.055em] text-[#101a2e] sm:text-6xl lg:text-[72px]">
+                One school.
+                <br />
+                <span style={{ color: brandAccent }}>Every operation.</span>
+                <br />
+                Finally connected.
               </h1>
-              <p className="max-w-2xl text-lg font-semibold leading-relaxed text-navy-600">{landingContent.heroSubheadline}</p>
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <button onClick={() => openHref(landingContent.primaryCta.href, router)} className="rounded-full px-7 py-3.5 text-sm font-black text-white shadow-card" style={{ backgroundColor: brandPrimary }}>{landingContent.primaryCta.label}<ArrowRight className="ml-2 inline h-4 w-4" /></button>
-                <button onClick={() => openHref(landingContent.secondaryCta.href, router)} className="rounded-full border border-navy-950/15 bg-white px-7 py-3.5 text-sm font-black text-navy-900 shadow-sm">{landingContent.secondaryCta.label}</button>
+              <p className="mt-6 max-w-xl text-base font-medium leading-7 text-slate-600 sm:text-lg">
+                Run admissions, fees, attendance, CBE, exams, timetables, parent
+                communication and campus operations from one clear school
+                operating system.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <button
+                  onClick={() => setDemoOpen(true)}
+                  className="inline-flex min-h-12 items-center justify-center rounded-full px-7 text-sm font-extrabold text-white shadow-lg shadow-slate-900/10"
+                  style={{ background: brandPrimary }}
+                >
+                  Request a guided demo <ArrowRight className="ml-2 h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => scrollToId("#product", router)}
+                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-300 bg-white px-7 text-sm font-extrabold"
+                >
+                  Explore School OS
+                </button>
               </div>
+              <p className="mt-4 flex items-center gap-2 text-xs font-semibold text-slate-500">
+                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                Requests are reviewed before a school workspace is created.
+              </p>
             </div>
-            <div className="rounded-[2rem] border border-navy-950/10 bg-white p-5 shadow-pop">
-              <div className="rounded-[1.5rem] border border-navy-950/10 bg-[#f6f3ec] p-4">
-                <div className="mb-4 flex items-center justify-between"><span className="text-xs font-black uppercase tracking-[0.2em] text-green-700">NEYO apps</span><Layers className="h-5 w-5 text-green-700" /></div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {landingContent.products.slice(0, 4).map((p) => <AppTile key={p.key} product={p} />)}
+            <ProductFrame
+              src={schoolMedia}
+              alt="NEYO School OS timetable workspace"
+              label="Real NEYO School OS interface"
+            />
+          </div>
+        </section>
+
+        <section className="border-y border-slate-200 bg-slate-50/80 px-4 py-7 sm:px-6">
+          <div className="mx-auto grid max-w-[1240px] grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-5">
+            {[
+              ["19", "responsibility-based roles"],
+              ["CBE", "delivery to evidence"],
+              ["KES", "Kenyan finance workflows"],
+              ["360px", "small-phone attention"],
+              ["A4", "clear printable outputs"],
+            ].map(([value, text], index) => (
+              <div
+                key={value}
+                className={
+                  index === 4
+                    ? "col-span-2 text-center md:col-span-1"
+                    : "text-center"
+                }
+              >
+                <p className="text-xl font-black tracking-tight">{value}</p>
+                <p className="mt-1 text-[11px] font-semibold leading-4 text-slate-500">
+                  {text}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="product" className="px-4 py-20 sm:px-6 sm:py-28">
+          <div className="mx-auto max-w-[1240px]">
+            <SectionIntro
+              eyebrow="The whole school in view"
+              title="Know what needs attention before it becomes a problem."
+              text="NEYO connects the learner record, the school day and the work behind it. Leaders see the full picture while every team member receives the tools appropriate to their responsibility."
+            />
+            <div className="mt-12 grid gap-4 md:grid-cols-3">
+              <Outcome
+                icon={Users}
+                title="Follow every learner"
+                text="Move from enquiry and admission through classes, attendance, fees, assessment, promotion and alumni records without losing the learner's story."
+                color="bg-blue-50 text-blue-700"
+              />
+              <Outcome
+                icon={BarChart3}
+                title="Make informed decisions"
+                text="Bring operational signals, approvals and reports into one place instead of waiting for disconnected files and verbal updates."
+                color="bg-emerald-50 text-emerald-700"
+              />
+              <Outcome
+                icon={ClipboardCheck}
+                title="Keep responsibility clear"
+                text="Use role-aware actions, protected settings and audit trails so the right people can act without opening every record to everyone."
+                color="bg-amber-50 text-amber-700"
+              />
+            </div>
+          </div>
+        </section>
+
+        <FeatureBand
+          id="finance"
+          eyebrow="Fees and finance"
+          title="See what was billed, paid, allocated and still outstanding."
+          text="Build fee structures, follow learner balances, issue receipts and reconcile payment records with an accountable trail. NEYO is designed around Kenyan money workflows and school responsibilities—not a foreign accounting template."
+          bullets={[
+            "Student ledgers and fee structures",
+            "Receipts, balances and payment allocation",
+            "M-Pesa reconciliation workflows",
+            "Finance reporting and controlled approvals",
+          ]}
+          image="/screenshots/neyo-ops-cockpit.png"
+          imageAlt="NEYO operations and finance interface"
+          dark={false}
+        />
+
+        <section
+          id="academics"
+          className="bg-[#101a2e] px-4 py-20 text-white sm:px-6 sm:py-28"
+        >
+          <div className="mx-auto max-w-[1240px]">
+            <SectionIntro
+              eyebrow="CBE and academic delivery"
+              title="CBE is more than a report card."
+              text="Connect curriculum design, actual teaching, classroom evidence, assessment and learner support. Keep manual and rule-based paths available throughout."
+              light
+            />
+            <div className="mt-12 grid gap-4 lg:grid-cols-3">
+              <DarkStep
+                number="01"
+                title="Plan"
+                text="Organise curriculum designs, learning areas, strands and outcomes for the school context."
+              />
+              <DarkStep
+                number="02"
+                title="Deliver & capture"
+                text="Record delivery sessions and attach evidence instead of waiting until reporting week."
+              />
+              <DarkStep
+                number="03"
+                title="Support"
+                text="Connect assessment signals to interventions and follow-up for the individual learner."
+              />
+            </div>
+            <div className="mt-10 overflow-hidden rounded-[28px] border border-white/10 bg-white p-2 shadow-2xl sm:p-3">
+              <img
+                src="/screenshots/neyo-learning-videos.png"
+                alt="A real NEYO teacher learning workspace"
+                className="aspect-[16/8.5] w-full rounded-[20px] object-cover object-top"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="px-4 py-20 sm:px-6 sm:py-28">
+          <div className="mx-auto grid max-w-[1240px] gap-12 lg:grid-cols-2 lg:items-center">
+            <ProductFrame
+              src="/screenshots/neyo-school-os-dashboard.png"
+              alt="Print-ready class timetable produced in NEYO"
+              label="Deterministic, reviewable timetable output"
+            />
+            <FeatureCopy
+              eyebrow="Senior School and timetabling"
+              title="Plan learner choices without losing the individual learner."
+              text="NEYO's deterministic timetable engine checks the real constraints before publication. It never silently changes learner choices and never hides unplaced lessons."
+              bullets={[
+                "Confirmed elective choices and Option A/B/C blocks",
+                "Qualified teacher, venue and capacity checks",
+                "Same-subject teaching groups and personal learner proof",
+                "Committee review, Head approval and controlled publication",
+              ]}
+            />
+          </div>
+        </section>
+
+        <section
+          id="operations"
+          className="bg-[#f4f6f8] px-4 py-20 sm:px-6 sm:py-28"
+        >
+          <div className="mx-auto max-w-[1240px]">
+            <SectionIntro
+              eyebrow="Beyond the classroom"
+              title="The rest of the school belongs in the picture too."
+              text="Bring daily services and resources closer to the learner record while preserving clear ownership for each department."
+            />
+            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Module
+                icon={Library}
+                title="Library"
+                text="Catalogue, copy-level loans, QR and barcode labels, returns and due-date policy."
+              />
+              <Module
+                icon={Bus}
+                title="Transport"
+                text="Routes, vehicles, stops, assigned learners and operational transport records."
+              />
+              <Module
+                icon={HeartPulse}
+                title="Clinic & welfare"
+                text="Restricted medical records, visits, allergies, medication and learner support."
+              />
+              <Module
+                icon={CreditCard}
+                title="Campus services"
+                text="Cafeteria, hostel, inventory, uniforms, activities and resource workflows."
+              />
+            </div>
+            <div className="mt-5 rounded-[28px] bg-gradient-to-r from-emerald-500 to-lime-400 p-6 sm:p-9">
+              <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
+                <div>
+                  <QrCode className="mb-4 h-8 w-8" />
+                  <h3 className="text-2xl font-black tracking-tight sm:text-3xl">
+                    From screen to the physical school day.
+                  </h3>
+                  <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-emerald-950/75">
+                    Print scannable library labels, school documents and clear
+                    A4 timetables. NEYO is designed to support the work people
+                    actually carry out—not only dashboards.
+                  </p>
                 </div>
-                <div className="mt-4 rounded-2xl border border-green-700/15 bg-white p-4 text-sm font-semibold leading-relaxed text-navy-700">Pick the operating system your organization needs today. Add more when NEYO opens them.</div>
+                <button
+                  onClick={() => setDemoOpen(true)}
+                  className="rounded-full bg-[#101a2e] px-6 py-3 text-sm font-extrabold text-white"
+                >
+                  See the workflows
+                </button>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="border-b border-navy-950/10 bg-white px-5 py-12">
-          <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-3">
-            {landingContent.trustStats.map((stat) => <div key={stat.label} className="rounded-3xl border border-navy-950/10 bg-[#fbf8f1] p-6 shadow-sm"><p className="text-4xl font-black tracking-tight text-navy-950">{stat.value}</p><p className="mt-2 font-black text-navy-900">{stat.label}</p>{stat.note ? <p className="mt-1 text-sm text-navy-500">{stat.note}</p> : null}</div>)}
-          </div>
-        </section>
-
-        <section id="products" className="border-b border-navy-950/10 bg-[#fbf8f1] px-5 py-20">
-          <div className="mx-auto max-w-7xl space-y-10">
-            <div className="max-w-2xl"><p className="text-xs font-black uppercase tracking-[0.25em] text-green-700">Product ecosystem</p><h2 className="mt-3 text-4xl font-black tracking-tight text-navy-950">Start with one NEYO app. Grow into a complete operating system.</h2></div>
-            <div className="grid gap-5 md:grid-cols-2">
-              {landingContent.products.map((product) => <ProductCard key={product.key} product={product} onSelect={() => requestProduct(product)} />)}
+        <section className="px-4 py-20 sm:px-6 sm:py-28">
+          <div className="mx-auto max-w-[1240px]">
+            <SectionIntro
+              eyebrow="One system, different responsibilities"
+              title="Everyone sees the school from the role they hold."
+              text="A Headteacher, bursar, teacher, librarian, parent and learner should not receive the same controls. NEYO brings them into one system without pretending they have the same job."
+            />
+            <div className="mt-12 flex flex-wrap justify-center gap-2.5">
+              {[
+                "School director",
+                "Headteacher",
+                "Administrator",
+                "Bursar",
+                "Teacher",
+                "Class teacher",
+                "Librarian",
+                "Nurse",
+                "Transport team",
+                "Parent",
+                "Learner",
+              ].map((role, index) => (
+                <span
+                  key={role}
+                  className={`rounded-full border px-4 py-2.5 text-sm font-bold ${index < 3 ? "border-[#101a2e] bg-[#101a2e] text-white" : "border-slate-200 bg-white text-slate-600"}`}
+                >
+                  {role}
+                </span>
+              ))}
             </div>
           </div>
         </section>
 
-        <section id="showcase" className="border-b border-navy-950/10 bg-white px-5 py-20">
-          <div className="mx-auto max-w-7xl space-y-10">
-            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><p className="text-xs font-black uppercase tracking-[0.25em] text-green-700">Product proof</p><h2 className="mt-3 text-4xl font-black tracking-tight text-navy-950">Show the real product while people are deciding.</h2></div><p className="max-w-md text-sm text-navy-500">These slots are editable from Platform Operations, so the page can show real screenshots and videos as the platform improves.</p></div>
-            <div className="grid gap-5 lg:grid-cols-3">
-              {landingContent.mediaShowcase.map((item) => <MediaSlot key={item.label} item={item} />)}
+        <section id="security" className="px-4 pb-20 sm:px-6 sm:pb-28">
+          <div className="mx-auto grid max-w-[1240px] gap-10 overflow-hidden rounded-[32px] bg-[#101a2e] p-7 text-white sm:p-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <div>
+              <div className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-emerald-400 text-[#101a2e]">
+                <LockKeyhole className="h-6 w-6" />
+              </div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+                Security without theatre
+              </p>
+              <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
+                Protect access. Keep actions accountable.
+              </h2>
+              <p className="mt-5 text-sm font-medium leading-7 text-slate-300">
+                NEYO should earn trust through verifiable controls, careful
+                onboarding and honest policies—not badges or certifications it
+                has not earned.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                "School-specific data boundaries",
+                "Role and permission controls",
+                "Audit trails for sensitive actions",
+                "Protected settings and sessions",
+                "Restricted integration credentials",
+                "Versioned Terms and Privacy Policy",
+              ].map((point) => (
+                <div
+                  key={point}
+                  className="flex gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm font-bold"
+                >
+                  <Check className="h-5 w-5 shrink-0 text-emerald-300" />
+                  {point}
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        <section id="industries" className="border-b border-navy-950/10 bg-[#fbf8f1] px-5 py-20">
-          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.7fr_1.3fr]"><div><p className="text-xs font-black uppercase tracking-[0.25em] text-green-700">Industries</p><h2 className="mt-3 text-4xl font-black tracking-tight text-navy-950">Kenyan roots. Global operating discipline.</h2></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{landingContent.industries.map((x) => <div key={x} className="rounded-2xl border border-navy-950/10 bg-white p-4 text-sm font-black text-navy-800 shadow-sm">{x}</div>)}</div></div>
-        </section>
-
-        <section id="bundi" className="border-b border-navy-950/10 bg-white px-5 py-20">
-          <div className="mx-auto grid max-w-7xl gap-10 rounded-[2rem] border border-navy-950/10 bg-[#fbf8f1] p-8 md:grid-cols-[1fr_0.75fr] md:p-10">
-            <div><Badge tone="amber">Coming soon</Badge><h2 className="mt-4 text-4xl font-black tracking-tight text-navy-950">Bundi will help across every NEYO OS.</h2><p className="mt-4 max-w-2xl text-sm leading-relaxed text-navy-600">Bundi is NEYO’s future operating assistant for reports, summaries, task help, recommendations and natural language search. It stays paused until NEYO launches it officially.</p></div>
-            <div className="flex items-center justify-center rounded-[2rem] border border-navy-950/10 bg-white p-8"><div className="flex h-36 w-36 items-center justify-center rounded-[2rem] bg-navy-950 text-5xl shadow-card">🦉</div></div>
+        <section
+          id="founder"
+          className="border-y border-slate-200 bg-[#f7f4ed] px-4 py-20 sm:px-6 sm:py-28"
+        >
+          <div className="mx-auto grid max-w-[1100px] gap-10 lg:grid-cols-[0.65fr_1.35fr] lg:items-center">
+            <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-[32px] bg-[#101a2e] p-8 text-white shadow-xl">
+              <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-400/20" />
+              <div className="relative">
+                <div className="grid h-24 w-24 place-items-center rounded-full border border-white/20 bg-white/10 text-3xl font-black">
+                  EM
+                </div>
+                <p className="mt-8 text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+                  Founder of NEYO
+                </p>
+                <p className="mt-2 text-2xl font-black">Elvis Malimbe</p>
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  University of Nairobi
+                  <br />
+                  Project Planning & Management
+                </p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-700">
+                Built in Nairobi
+              </p>
+              <h2 className="mt-4 text-3xl font-black tracking-[-0.045em] sm:text-5xl">
+                Close to the schools it is designed to serve.
+              </h2>
+              <div className="mt-6 space-y-4 text-base font-medium leading-8 text-slate-600">
+                <p>
+                  NEYO was founded by Elvis Malimbe, a 19-year-old Kenyan
+                  founder and University of Nairobi student studying Project
+                  Planning and Management.
+                </p>
+                <p>
+                  He began building around a simple observation: important
+                  school work is often divided across paper files, spreadsheets,
+                  disconnected applications and knowledge held by individual
+                  staff members. The result is repeated work, delayed decisions
+                  and a learner story that is difficult to follow from admission
+                  to graduation.
+                </p>
+                <p>
+                  NEYO School OS is being built to connect those operations
+                  around the realities of Kenyan schools—from CBE delivery and
+                  Senior School choices to fees, timetables, parent access and
+                  the everyday campus.
+                </p>
+              </div>
+              <p className="mt-6 border-l-4 border-emerald-500 pl-5 text-sm font-bold italic leading-6 text-slate-700">
+                “Build with schools, test real workflows, and improve from
+                evidence—not appearances.”
+              </p>
+            </div>
           </div>
         </section>
 
-        <section className="border-b border-navy-950/10 bg-[#fbf8f1] px-5 py-20">
-          <div className="mx-auto max-w-7xl space-y-8"><div className="max-w-2xl"><p className="text-xs font-black uppercase tracking-[0.25em] text-green-700">Customer stories</p><h2 className="mt-3 text-4xl font-black tracking-tight text-navy-950">Prepared for real case studies.</h2><p className="mt-3 text-sm text-navy-500">No fake reviews. These cards are placeholders for future schools and organizations after approvals.</p></div><div className="grid gap-5 md:grid-cols-3">{["School launch story", "Farm cooperative story", "Business growth story"].map((story) => <div key={story} className="rounded-[2rem] border border-dashed border-navy-200 bg-white p-6"><p className="font-black text-navy-950">{story}</p><p className="mt-2 text-sm text-navy-500">Reserved for a verified NEYO customer story.</p></div>)}</div></div>
+        <section className="px-4 py-20 sm:px-6 sm:py-28">
+          <div className="mx-auto max-w-[1240px]">
+            <SectionIntro
+              eyebrow="A responsible rollout"
+              title="Move carefully. Verify every important record."
+              text="A school operating system should not be switched on like a disposable app. NEYO's rollout path is designed around understanding, verification and role-by-role readiness."
+            />
+            <div className="mt-12 grid gap-3 md:grid-cols-4">
+              {[
+                [
+                  "01",
+                  "Understand",
+                  "Map the school's levels, terms, responsibilities and current problems.",
+                ],
+                [
+                  "02",
+                  "Prepare",
+                  "Configure structures and review data before committing records.",
+                ],
+                [
+                  "03",
+                  "Pilot",
+                  "Train by role and test selected workflows with accountable owners.",
+                ],
+                [
+                  "04",
+                  "Approve",
+                  "Confirm readiness, move deliberately and support the school after go-live.",
+                ],
+              ].map(([number, title, text]) => (
+                <div
+                  key={number}
+                  className="rounded-3xl border border-slate-200 p-6"
+                >
+                  <span className="text-xs font-black text-emerald-700">
+                    {number}
+                  </span>
+                  <h3 className="mt-8 text-xl font-black">{title}</h3>
+                  <p className="mt-3 text-sm font-medium leading-6 text-slate-500">
+                    {text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
 
-        <section id="security" className="border-b border-navy-950/10 bg-navy-950 px-5 py-20 text-white">
-          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center"><div><p className="text-xs font-black uppercase tracking-[0.25em] text-green-300">Why NEYO</p><h2 className="mt-3 text-4xl font-black tracking-tight">Calm, modular software for organizations that need control.</h2><div className="mt-6 grid gap-2 sm:grid-cols-2">{landingContent.whyNeyo.map((point) => <div key={point} className="rounded-2xl border border-white/10 bg-white/7 p-3 text-sm font-bold text-white/80"><CheckCircle className="mr-2 inline h-4 w-4 text-green-300" />{point}</div>)}</div></div><div className="rounded-[2rem] border border-white/10 bg-white/7 p-6"><div className="mb-4 flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-green-300" /><p className="font-black">Security and trust</p></div><div className="space-y-3">{landingContent.securityPoints.map((point) => <div key={point} className="rounded-2xl border border-white/10 bg-navy-900 p-4 text-sm text-white/75"><Lock className="mr-2 inline h-4 w-4 text-green-300" />{point}</div>)}</div></div></div>
+        <section id="faq" className="bg-slate-50 px-4 py-20 sm:px-6 sm:py-28">
+          <div className="mx-auto max-w-3xl">
+            <SectionIntro
+              eyebrow="Questions school leaders ask"
+              title="Clear answers before a demonstration."
+            />
+            <div className="mt-10 divide-y divide-slate-200 border-y border-slate-200">
+              {FAQS.map(([question, answer]) => (
+                <details key={question} className="group py-1">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-left font-extrabold">
+                    <span>{question}</span>
+                    <ChevronDown className="h-5 w-5 shrink-0 transition group-open:rotate-180" />
+                  </summary>
+                  <p className="max-w-2xl pb-6 text-sm font-medium leading-7 text-slate-600">
+                    {answer}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </div>
         </section>
 
-        <section className="bg-white px-5 py-20 text-center"><div className="mx-auto max-w-3xl"><h2 className="text-4xl font-black tracking-tight text-navy-950 sm:text-6xl">{landingContent.finalHeadline}</h2><p className="mx-auto mt-4 max-w-xl text-base text-navy-500">{landingContent.finalSubheadline}</p><div className="mt-7 flex flex-wrap justify-center gap-3"><button onClick={() => { setModalType("select"); setModalOpen(true); }} className="rounded-full px-7 py-3.5 text-sm font-black text-white" style={{ backgroundColor: brandPrimary }}>Request demo</button><a href="mailto:hello@neyo.co.ke" className="rounded-full border border-navy-950/15 bg-white px-7 py-3.5 text-sm font-black text-navy-800">Contact sales</a></div></div></section>
+        <section className="px-4 py-20 sm:px-6 sm:py-28">
+          <div className="mx-auto max-w-[1240px] overflow-hidden rounded-[34px] bg-[#101a2e] px-6 py-12 text-center text-white sm:px-12 sm:py-16">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
+              School OS is the focus
+            </p>
+            <h2 className="mx-auto mt-4 max-w-3xl text-3xl font-black tracking-[-0.045em] sm:text-5xl">
+              See how one connected system could change your school day.
+            </h2>
+            <p className="mx-auto mt-5 max-w-2xl text-sm font-medium leading-7 text-slate-300">
+              Tell us about your school. NEYO will review the request and
+              arrange the most appropriate demonstration or follow-up.
+            </p>
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <button
+                onClick={() => setDemoOpen(true)}
+                className="rounded-full bg-emerald-400 px-7 py-3.5 text-sm font-black text-[#101a2e]"
+              >
+                Request a guided demo
+              </button>
+              <a
+                href="mailto:hello@neyo.co.ke"
+                className="rounded-full border border-white/20 px-7 py-3.5 text-sm font-black"
+              >
+                Email NEYO
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-slate-200 px-4 py-12 sm:px-6">
+          <div className="mx-auto flex max-w-[1240px] flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                What NEYO may build next
+              </p>
+              <p className="mt-2 text-sm font-semibold text-slate-600">
+                Farm OS, Business OS and Creator OS remain future product
+                directions. School OS is the current focus.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {["Farm OS", "Business OS", "Creator OS"].map((os) => (
+                <span
+                  key={os}
+                  className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-500"
+                >
+                  {os} · Future
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
 
-      <footer className="bg-black px-5 py-14 text-white">
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.2fr_1fr_1fr]">
-          <div><p className="text-lg font-black">NEYO</p><p className="mt-3 max-w-sm text-sm leading-relaxed text-white/60">Operating systems for schools, farms, businesses and creators. Built in Kenya with global standards.</p><div className="mt-6 flex gap-2">{landingContent.socialLinks.map((link) => <a key={link.label} href={link.href} className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70">{link.label}</a>)}</div></div>
-          <div><p className="text-xs font-black uppercase tracking-[0.22em] text-white/50">Links</p><div className="mt-4 grid gap-2">{landingContent.footerLinks.map((link) => <a key={`${link.label}-${link.href}`} href={link.href} className="text-sm text-white/75 hover:text-white">{link.label}</a>)}</div></div>
-          <div><p className="text-xs font-black uppercase tracking-[0.22em] text-white/50">Stay close</p><p className="mt-4 text-sm text-white/65">Get product updates and launch notes. No clutter.</p><div className="mt-4 flex rounded-full border border-white/10 bg-white/5 p-1"><input placeholder="Email address" className="min-w-0 flex-1 bg-transparent px-4 text-sm text-white outline-none placeholder:text-white/35" /><button className="rounded-full px-4 py-2 text-xs font-black text-white" style={{ backgroundColor: brandAccent }}><Mail className="mr-1 inline h-3.5 w-3.5" />Join</button></div></div>
+      <footer className="bg-[#0b1324] px-4 pb-8 pt-14 text-white sm:px-6">
+        <div className="mx-auto max-w-[1240px]">
+          <div className="grid gap-10 border-b border-white/10 pb-12 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="lg:col-span-2">
+              <p className="text-xl font-black">NEYO</p>
+              <p className="mt-4 max-w-sm text-sm leading-6 text-slate-400">
+                A connected operating system for Kenyan school administration,
+                learning and daily operations.
+              </p>
+              <button
+                onClick={install}
+                className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-emerald-300"
+              >
+                <Download className="h-4 w-4" />
+                Install NEYO
+              </button>
+            </div>
+            <FooterGroup
+              title="Product"
+              links={[
+                ["School OS", "#product"],
+                ["CBE & academics", "#academics"],
+                ["Operations", "#operations"],
+                ["Security", "#security"],
+              ]}
+              onGo={(href) => scrollToId(href, router)}
+            />
+            <FooterGroup
+              title="Company"
+              links={[
+                ["Founder", "#founder"],
+                ["Developers", "/developers"],
+                ["Contact", "mailto:hello@neyo.co.ke"],
+                ["Sign in", "/login"],
+              ]}
+              onGo={(href) => scrollToId(href, router)}
+            />
+            <FooterGroup
+              title="Legal"
+              links={[
+                ["Privacy Policy", "/privacy"],
+                ["Terms of Service", "/terms"],
+                ["Request a demo", "#demo"],
+              ]}
+              onGo={(href) =>
+                href === "#demo" ? setDemoOpen(true) : scrollToId(href, router)
+              }
+            />
+          </div>
+          <div className="flex flex-col gap-3 pt-7 text-xs font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <p>© {new Date().getFullYear()} NEYO. Built in Nairobi, Kenya.</p>
+            <p>School OS first. Evidence before claims.</p>
+          </div>
         </div>
-        <div className="mx-auto mt-10 flex max-w-7xl flex-col gap-3 border-t border-white/10 pt-6 text-xs text-white/40 sm:flex-row sm:items-center sm:justify-between"><p>© {new Date().getFullYear()} NEYO. Built for Kenyan organizations.</p><p>Features only. No private integration details exposed.</p></div>
       </footer>
 
-      {modalOpen && <WaitlistModal modalType={modalType} selectedOs={selectedOs} setSelectedOs={setSelectedOs} setModalType={setModalType} onClose={() => setModalOpen(false)} onSubmit={handleSubmit} loading={loading} name={name} email={email} phone={phone} setName={setName} setEmail={setEmail} setPhone={setPhone} products={landingContent.products} />}
+      {demoOpen && (
+        <div
+          className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-[#08101f]/70 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setDemoOpen(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="demo-title"
+            className="my-6 w-full max-w-lg rounded-[28px] bg-white p-6 shadow-2xl sm:p-8"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
+                  Guided school demonstration
+                </p>
+                <h2
+                  id="demo-title"
+                  className="mt-2 text-2xl font-black tracking-tight"
+                >
+                  Tell us about your school
+                </h2>
+              </div>
+              <button
+                onClick={() => setDemoOpen(false)}
+                className="grid h-10 w-10 place-items-center rounded-full bg-slate-100"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {submitted ? (
+              <div className="py-10 text-center">
+                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-emerald-700">
+                  <Check className="h-8 w-8" />
+                </div>
+                <h3 className="mt-5 text-xl font-black">Request received</h3>
+                <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-600">
+                  Your request is pending review. No school workspace or login
+                  was created automatically.
+                </p>
+                <Button className="mt-7" onClick={() => setDemoOpen(false)}>
+                  Done
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={submitDemo} className="mt-7 space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Your full name">
+                    <Input
+                      required
+                      minLength={2}
+                      value={form.name}
+                      onChange={(e) =>
+                        setForm({ ...form, name: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="School name">
+                    <Input
+                      value={form.schoolName}
+                      onChange={(e) =>
+                        setForm({ ...form, schoolName: e.target.value })
+                      }
+                    />
+                  </Field>
+                </div>
+                <Field label="Work email">
+                  <Input
+                    required
+                    type="email"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm({ ...form, email: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Kenyan phone number">
+                  <Input
+                    required
+                    inputMode="tel"
+                    placeholder="0712 345 678"
+                    value={form.phone}
+                    onChange={(e) =>
+                      setForm({ ...form, phone: e.target.value })
+                    }
+                  />
+                </Field>
+                <p className="rounded-2xl bg-slate-50 p-4 text-xs font-medium leading-5 text-slate-500">
+                  Submitting creates a pending request for review by the NEYO
+                  team. It does not create a tenant, session or automatic public
+                  demo account.
+                </p>
+                <Button className="h-12 w-full" disabled={loading}>
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <School className="h-4 w-4" />
+                  )}
+                  Submit demo request
+                </Button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function AppTile({ product }: { product: ProductItem }) {
-  return <div className="rounded-2xl border border-navy-950/10 bg-white p-4 shadow-sm"><div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/10 text-sm font-black text-green-800">{PRODUCT_ICONS[product.key] || product.name.slice(0, 1)}</div><p className="font-black text-navy-950">{product.name}</p><p className="mt-1 line-clamp-3 text-xs leading-relaxed text-navy-500">{product.description}</p></div>;
-}
-
-function ProductCard({ product, onSelect }: { product: ProductItem; onSelect: () => void }) {
-  const live = product.status === "LIVE";
-  return <div className="rounded-[2rem] border border-navy-950/10 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-card"><div className="flex items-start justify-between gap-3"><div><p className="text-xl font-black text-navy-950">{product.name}</p><p className="mt-2 text-sm leading-relaxed text-navy-500">{product.description}</p></div><Badge tone={live ? "green" : "amber"}>{live ? "Live" : "Waitlist"}</Badge></div><div className="mt-5 grid gap-2 sm:grid-cols-2">{product.features.map((f) => <div key={f} className="rounded-2xl bg-navy-50 p-3 text-xs font-bold text-navy-700">✓ {f}</div>)}</div>{product.mediaUrl ? <div className="mt-5 aspect-video overflow-hidden rounded-2xl border border-navy-100 bg-navy-50"><img src={product.mediaUrl} alt={`${product.name} product interface`} className="h-full w-full object-cover" loading="lazy" /></div> : <div className="mt-5 rounded-2xl border border-dashed border-navy-200 bg-navy-50/60 p-6 text-center text-xs font-bold text-navy-400">Screenshot / video slot</div>}<button onClick={onSelect} className="mt-5 flex h-11 w-full items-center justify-center rounded-full bg-navy-950 text-xs font-black text-white">{live ? "Enter School OS" : "Join waitlist"}<ArrowRight className="ml-2 h-4 w-4" /></button></div>;
-}
-
-function MediaSlot({ item }: { item: MediaItem }) {
-  const canRenderImage = Boolean(item.url && (item.url.startsWith("/") || item.url.startsWith("http")) && item.type === "image");
+function SectionIntro({
+  eyebrow,
+  title,
+  text,
+  light = false,
+}: {
+  eyebrow: string;
+  title: string;
+  text?: string;
+  light?: boolean;
+}) {
   return (
-    <div className="rounded-[2rem] border border-navy-950/10 bg-[#fbf8f1] p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-card">
-      <div className="overflow-hidden rounded-[1.5rem] border border-navy-950/10 bg-white">
-        <div className="flex h-8 items-center gap-1.5 border-b border-navy-950/10 bg-navy-50 px-4"><span className="h-2.5 w-2.5 rounded-full bg-red-300" /><span className="h-2.5 w-2.5 rounded-full bg-amber-300" /><span className="h-2.5 w-2.5 rounded-full bg-green-300" /><span className="ml-2 text-[10px] font-black uppercase tracking-[0.18em] text-navy-300">NEYO preview</span></div>
-        <div className="aspect-video overflow-hidden bg-white">{canRenderImage ? <img src={item.url} alt={item.label} className="h-full w-full object-cover" /> : item.url ? <div className="flex h-full flex-col items-center justify-center p-5 text-center text-xs font-bold text-navy-500">{item.type === "video" || item.type === "embed" ? <PlayCircle className="mb-2 h-7 w-7 text-green-700" /> : null}<span className="max-w-[18rem] break-words">{item.url}</span></div> : <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-xs font-black uppercase tracking-[0.2em] text-navy-300"><PlayCircle className="h-7 w-7" />Media slot</div>}</div>
-      </div><p className="mt-4 font-black text-navy-950">{item.label}</p>{item.caption ? <p className="mt-1 text-sm text-navy-500">{item.caption}</p> : null}
+    <div className="mx-auto max-w-3xl text-center">
+      <p
+        className={`text-xs font-black uppercase tracking-[0.2em] ${light ? "text-emerald-300" : "text-emerald-700"}`}
+      >
+        {eyebrow}
+      </p>
+      <h2
+        className={`mt-4 text-3xl font-black tracking-[-0.045em] sm:text-5xl ${light ? "text-white" : "text-[#101a2e]"}`}
+      >
+        {title}
+      </h2>
+      {text && (
+        <p
+          className={`mx-auto mt-5 max-w-2xl text-sm font-medium leading-7 sm:text-base ${light ? "text-slate-300" : "text-slate-600"}`}
+        >
+          {text}
+        </p>
+      )}
     </div>
   );
 }
-
-function WaitlistModal(props: any) {
-  const { modalType, selectedOs, setSelectedOs, setModalType, onClose, onSubmit, loading, name, email, phone, setName, setEmail, setPhone, products } = props;
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/45 px-4 backdrop-blur-sm" onClick={onClose}><div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-pop" onClick={(e) => e.stopPropagation()}><div className="mb-5 flex items-center justify-between"><h3 className="font-black text-navy-950">{modalType === "select" ? "Choose a NEYO OS" : "Join the waitlist"}</h3><button onClick={onClose}><X className="h-4 w-4" /></button></div>{modalType === "select" ? <div className="space-y-2">{products.map((p: ProductItem) => <button key={p.key} onClick={() => { if (p.key === "school") window.location.assign("/os/school/login"); else { setSelectedOs(waitlistValue(p.key)); setModalType("waitlist"); } }} className="flex w-full items-center justify-between rounded-2xl border border-navy-100 p-4 text-left"><span><span className="block text-sm font-black text-navy-950">{p.name}</span><span className="text-xs text-navy-500">{p.status === "LIVE" ? "Live portal" : "Early access waitlist"}</span></span><ChevronRight className="h-4 w-4" /></button>)}</div> : <form onSubmit={onSubmit} className="space-y-4"><p className="text-sm text-navy-500">You are requesting access for <strong>{selectedOs.replace(/_/g, " ")}</strong>.</p><div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} required /></div><div><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div><div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div><Button className="w-full" disabled={loading}>{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}Submit request</Button></form>}</div></div>;
+function ProductFrame({
+  src,
+  alt,
+  label,
+}: {
+  src: string;
+  alt: string;
+  label: string;
+}) {
+  return (
+    <div>
+      <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white p-2 shadow-[0_28px_80px_rgba(15,23,42,0.15)]">
+        <div className="flex h-8 items-center gap-1.5 px-3">
+          <span className="h-2.5 w-2.5 rounded-full bg-rose-300" />
+          <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
+        </div>
+        <img
+          src={src}
+          alt={alt}
+          className="aspect-[16/10] w-full rounded-[16px] bg-slate-50 object-cover object-top"
+        />
+      </div>
+      <p className="mt-3 text-center text-[11px] font-bold text-slate-400">
+        {label}
+      </p>
+    </div>
+  );
+}
+function Outcome({
+  icon: Icon,
+  title,
+  text,
+  color,
+}: {
+  icon: any;
+  title: string;
+  text: string;
+  color: string;
+}) {
+  return (
+    <article className="rounded-[26px] border border-slate-200 p-6 sm:p-8">
+      <div className={`grid h-11 w-11 place-items-center rounded-2xl ${color}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <h3 className="mt-8 text-xl font-black tracking-tight">{title}</h3>
+      <p className="mt-3 text-sm font-medium leading-6 text-slate-500">
+        {text}
+      </p>
+    </article>
+  );
+}
+function FeatureCopy({
+  eyebrow,
+  title,
+  text,
+  bullets,
+}: {
+  eyebrow: string;
+  title: string;
+  text: string;
+  bullets: string[];
+}) {
+  return (
+    <div>
+      <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-700">
+        {eyebrow}
+      </p>
+      <h2 className="mt-4 text-3xl font-black tracking-[-0.045em] sm:text-5xl">
+        {title}
+      </h2>
+      <p className="mt-5 text-sm font-medium leading-7 text-slate-600 sm:text-base">
+        {text}
+      </p>
+      <ul className="mt-7 grid gap-3">
+        {bullets.map((item) => (
+          <li
+            key={item}
+            className="flex gap-3 text-sm font-bold text-slate-700"
+          >
+            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700">
+              <Check className="h-3 w-3" />
+            </span>
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+function FeatureBand({
+  id,
+  eyebrow,
+  title,
+  text,
+  bullets,
+  image,
+  imageAlt,
+}: {
+  id: string;
+  eyebrow: string;
+  title: string;
+  text: string;
+  bullets: string[];
+  image: string;
+  imageAlt: string;
+  dark: boolean;
+}) {
+  return (
+    <section id={id} className="bg-[#f4f6f8] px-4 py-20 sm:px-6 sm:py-28">
+      <div className="mx-auto grid max-w-[1240px] gap-12 lg:grid-cols-2 lg:items-center">
+        <FeatureCopy
+          eyebrow={eyebrow}
+          title={title}
+          text={text}
+          bullets={bullets}
+        />
+        <ProductFrame
+          src={image}
+          alt={imageAlt}
+          label="A real NEYO product workspace"
+        />
+      </div>
+    </section>
+  );
+}
+function DarkStep({
+  number,
+  title,
+  text,
+}: {
+  number: string;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="rounded-[24px] border border-white/10 bg-white/5 p-6">
+      <p className="text-xs font-black text-emerald-300">{number}</p>
+      <h3 className="mt-8 text-xl font-black">{title}</h3>
+      <p className="mt-3 text-sm font-medium leading-6 text-slate-300">
+        {text}
+      </p>
+    </div>
+  );
+}
+function Module({
+  icon: Icon,
+  title,
+  text,
+}: {
+  icon: any;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="rounded-[24px] bg-white p-6 shadow-sm">
+      <Icon className="h-6 w-6 text-emerald-700" />
+      <h3 className="mt-8 text-lg font-black">{title}</h3>
+      <p className="mt-3 text-sm font-medium leading-6 text-slate-500">
+        {text}
+      </p>
+    </div>
+  );
+}
+function FooterGroup({
+  title,
+  links,
+  onGo,
+}: {
+  title: string;
+  links: readonly (readonly [string, string])[];
+  onGo: (href: string) => void;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+        {title}
+      </p>
+      <div className="mt-5 grid gap-3">
+        {links.map(([label, href]) =>
+          href.startsWith("mailto:") ? (
+            <a
+              key={href}
+              href={href}
+              className="text-sm font-semibold text-slate-300 hover:text-white"
+            >
+              {label}
+            </a>
+          ) : (
+            <button
+              key={href}
+              onClick={() => onGo(href)}
+              className="text-left text-sm font-semibold text-slate-300 hover:text-white"
+            >
+              {label}
+            </button>
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <Label className="mb-1.5 block">{label}</Label>
+      {children}
+    </div>
+  );
 }
