@@ -90,8 +90,8 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
     { key: "moe-returns" as const, label: "MOE Statutory Returns", icon: FileText },
     { key: "record-of-work" as const, label: "Record of Work", icon: ClipboardList },
     { key: "lessons" as const, label: "Lesson plans", icon: NotebookPen },
+    { key: "computation" as const, label: "Grading Engine", icon: Calculator },
     ...(isCurriculumEngineEnabled ? [
-      { key: "computation" as const, label: "Grading Engine", icon: Calculator },
       { key: "reports" as const, label: "Report Builder", icon: FileText },
       { key: "curriculum-versions" as const, label: "Curriculum Versions", icon: Sliders },
       ...(showPathwayTools ? [{ key: "pathways" as const, label: "Senior Pathways", icon: Sparkles }] : []),

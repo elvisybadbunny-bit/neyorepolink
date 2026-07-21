@@ -5053,3 +5053,12 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Founder public assets support sanitised/versioned logo and media upload, preview, activation/rollback and audit; friendly social, FAQ and media editors update public rendering.
 - [x] CBE Leadership dashboard connects attendance/syllabus/assessment/delivery/report readiness, surfaces existing release governance, provides non-scoring teacher evidence for human appraisal, and audits row-scoped parent report access.
 - [x] WWDC26-inspired refinement has Founder-controlled, reversible scopes for navigation/contextual controls and selected dashboard/hero surfaces; disabling either restores solid fallbacks without deleting the existing design.
+
+### Founder notebook transcription audit and Grading Engine reachability — 2026-07-21
+- [x] Extracted every distinct notebook idea into `docs/FOUNDER-NOTEBOOK-IDEAS-FULL-STACK-AUDIT-2026-07-21.md` with FULL/PARTIAL/NOT BUILT/EXTERNAL status and reachable UI evidence.
+- [x] Grading Engine is no longer hidden behind the curriculum-engine flag and has a direct School OS navigation link.
+- [x] Subject/class paper configuration is reachable: each paper has its own marks-out-of and weight; weights must total 100%.
+- [x] Previously orphaned paper-aware marks grid is mounted inside Grading Engine.
+- [x] Unconfigured paper maximum follows the selected exam maximum rather than implicit `/100`.
+- [x] Weighted multi-paper score converts back to the exam final scale; term aggregation normalizes exams with different maxima before macro weighting.
+- [ ] Notebook gaps listed in the audit remain pending and must not be marketed as complete.

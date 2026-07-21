@@ -18,7 +18,9 @@ async function computeSubjectExamScores(tenantId: string, examId: string) {
   return withTenant(tenantId, async () => {
     const tDb = tenantDb();
     
-    // Fetch all paper results for this exam
+    // Fetch all paper results and preserve the exam's declared final maximum.
+    const exam = await tDb.exam.findUnique({ where: { id: examId }, select: { maxMarks: true } });
+    if (!exam) throw new ComputationError("Exam not found for paper computation.");
     const results = await tDb.examResult.findMany({
       where: { examId },
       include: { PaperResult: { include: { paperConfig: true } } }
@@ -44,7 +46,7 @@ async function computeSubjectExamScores(tenantId: string, examId: string) {
       
       await tDb.examResult.update({
         where: { id: res.id },
-        data: { marks: Math.round(finalScore) }
+        data: { marks: Math.round((finalScore / 100) * exam.maxMarks) }
       });
     }
   });
@@ -142,7 +144,7 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
     if (!term) throw new ComputationError("Term not found for master report computation.");
 
     // All exams in this term (matched by year + term number) and their results.
-    const exams = await tDb.exam.findMany({ where: { year: term.year, term: term.term }, select: { id: true, name: true } });
+    const exams = await tDb.exam.findMany({ where: { year: term.year, term: term.term }, select: { id: true, name: true, maxMarks: true } });
     const examIds = exams.map((e) => e.id);
     if (examIds.length === 0) return 0;
 
@@ -178,7 +180,9 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
     for (const r of results) {
       const key = `${r.studentId}::${r.subjectId}`;
       const list = byStudentSubject.get(key) ?? [];
-      list.push({ examId: r.examId, mark: r.marks });
+      const sourceExam = exams.find((exam) => exam.id === r.examId);
+      const normalizedMark = sourceExam ? (r.marks / Math.max(1, sourceExam.maxMarks)) * 100 : r.marks;
+      list.push({ examId: r.examId, mark: normalizedMark });
       byStudentSubject.set(key, list);
     }
 

@@ -126,7 +126,8 @@ export async function savePaperResults(user: SessionUser, examId: string, subjec
   }
 
   // Fetch configs to validate outOfMarks
-  const configs = await getSubjectPaperConfigs(user, subjectId, classId);
+  const configured = await getSubjectPaperConfigs(user, subjectId, classId);
+  const configs = configured.map((cfg) => cfg.id === "default" ? { ...cfg, outOfMarks: exam.maxMarks } : cfg);
   const configMap = new Map(configs.map(c => [c.id, c]));
 
   for (const r of results) {
@@ -192,7 +193,12 @@ export async function getMarksGrid(user: SessionUser, examId: string, subjectId:
     orderBy: { firstName: "asc" }
   });
 
-  const configs = await getSubjectPaperConfigs(user, subjectId, classId);
+  const [configured, exam] = await Promise.all([
+    getSubjectPaperConfigs(user, subjectId, classId),
+    tDb.exam.findUnique({ where: { id: examId }, select: { maxMarks: true } }),
+  ]);
+  if (!exam) throw new GradingError("NOT_FOUND", "Exam not found");
+  const configs = configured.map((cfg) => cfg.id === "default" ? { ...cfg, outOfMarks: exam.maxMarks } : cfg);
   const examResults = await tDb.examResult.findMany({
     where: { examId, subjectId, studentId: { in: students.map(s => s.id) } },
     include: { PaperResult: true }
