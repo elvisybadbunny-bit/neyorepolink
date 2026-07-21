@@ -241,6 +241,7 @@ model Tenant {
   // StudentDutyEligibility and never inferred from private clinic text.
   studentDutiesEnabled        Boolean @default(true)
   studentDutyExcludeLeaders   Boolean @default(false)
+  examSubjectTeacherPolicy    String  @default("AVOID_SUBJECT_TEACHER") // global invigilation default
 
   // G.34 Security Hardening: enforce 2FA for all leadership/staff roles
   enforce2Fa Boolean @default(false)
@@ -1615,6 +1616,7 @@ model Subject {
   recommendedMaxGroupSize   Int? // school-set theory/general elective planning threshold
   practicalMaxGroupSize     Int? // school-set practical/lab safety and supervision threshold
   practicalHeavy            Boolean                     @default(false)
+  examSubjectTeacherPolicy  String? // optional per-subject override of tenant default
   timetableSlots            TimetableSlot[]
   lessonPlans               LessonPlan[]
   homework                  Homework[]
@@ -6326,6 +6328,11 @@ model ExamTimetableSlot {
   targetJson              String?  @default("[]")
   invigilatorScope        String   @default("AUTO") // AUTO | ELIGIBLE_ONLY
   eligibleInvigilatorJson String?  @default("[]")
+  requiredInvigilators    Int      @default(1)
+  subjectTeacherPolicy    String? // resolved paper override: ALLOW | PREFER | AVOID | PROHIBIT
+  durationMode            String   @default("CUSTOM_TIME") // PERIOD | CUSTOM_TIME | HALF_DAY_AM | HALF_DAY_PM | FULL_DAY | MULTI_SESSION
+  preparationMins         Int      @default(0)
+  cleanupMins             Int      @default(0)
   invigilatorJson         String?  @default("[]")
   warningJson             String?  @default("[]")
   notes                   String?
@@ -7425,6 +7432,8 @@ model TermAggregationRule {
   subjectId String?
 
   isTraditional Boolean @default(false) // If true, ignore weights and use standard average
+  weightingStrategy String @default("CUSTOM_WEIGHTS") // CUSTOM_WEIGHTS | EQUAL_AVAILABLE
+  missingComponentPolicy String @default("AVAILABLE_AVERAGE") // available components only; absent assessments are omitted
 
   // JSON array mapping Assessment types to Weights
   // e.g., [{ "sourceType": "EXAM", "sourceId": "cat1_id", "weightPct": 25 }]

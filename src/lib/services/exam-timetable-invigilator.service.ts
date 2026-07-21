@@ -1,5 +1,6 @@
 import { withTenant } from "@/lib/core/tenant-context";
 import { tenantDb } from "@/lib/core/tenant-db";
+import { db } from "@/lib/db";
 import type { SessionUser } from "@/lib/core/session";
 
 export class ExamTimetableEngineError extends Error {
@@ -50,6 +51,11 @@ export async function listExamTimetableSetup(user: SessionUser) {
 export async function saveExamTimetableSlot(user: SessionUser, input: any) {
   return withTenant(user.tenantId, async () => {
     const tdb = tenantDb();
+    const [tenant, subject] = await Promise.all([
+      db.tenant.findUnique({ where: { id: user.tenantId }, select: { examSubjectTeacherPolicy: true } }),
+      tdb.subject.findUnique({ where: { id: input.subjectId }, select: { examSubjectTeacherPolicy: true } }),
+    ]);
+    const subjectTeacherPolicy = input.subjectTeacherPolicy || subject?.examSubjectTeacherPolicy || tenant?.examSubjectTeacherPolicy || "AVOID_SUBJECT_TEACHER";
     const data = {
       classId: input.classId,
       subjectId: input.subjectId,
@@ -64,6 +70,11 @@ export async function saveExamTimetableSlot(user: SessionUser, input: any) {
       targetJson: JSON.stringify(input.targetIds ?? []),
       invigilatorScope: input.invigilatorScope || 'AUTO',
       eligibleInvigilatorJson: JSON.stringify(input.eligibleInvigilatorIds ?? []),
+      requiredInvigilators: Math.max(1, Math.min(20, Number(input.requiredInvigilators || 1))),
+      subjectTeacherPolicy,
+      durationMode: input.durationMode || "CUSTOM_TIME",
+      preparationMins: Math.max(0, Math.min(240, Number(input.preparationMins || 0))),
+      cleanupMins: Math.max(0, Math.min(240, Number(input.cleanupMins || 0))),
       notes: input.notes || null,
       createdById: user.id,
       createdByName: user.fullName,
@@ -147,6 +158,7 @@ export async function generateExamInvigilators(user: SessionUser, examName: stri
       );
       const allCandidateTeachersBusy = candidateTeachers.length > 0 && candidateTeachers.every((teacher) => currentSlotTeacherIds.has(teacher.id));
 
+      const subjectTeacherPolicy = slot.subjectTeacherPolicy || "AVOID_SUBJECT_TEACHER";
       const candidateScores = candidateTeachers.map((teacher) => {
         const reasons: string[] = [];
         let hardBlocked = false;
@@ -185,7 +197,9 @@ export async function generateExamInvigilators(user: SessionUser, examName: stri
           involvedClassIds.includes(n.classId) &&
           n.subjectId === slot.subjectId
         );
-        if (ownSubjectConflict) reasons.push('Teaches this subject/class so should be avoided if possible');
+        if (ownSubjectConflict && subjectTeacherPolicy === "PROHIBIT_SUBJECT_TEACHER") { hardBlocked = true; reasons.push('School policy prohibits the subject teacher from invigilating this paper'); }
+        else if (ownSubjectConflict && subjectTeacherPolicy === "AVOID_SUBJECT_TEACHER") reasons.push('School policy prefers another invigilator for this subject');
+        else if (ownSubjectConflict && subjectTeacherPolicy === "PREFER_SUBJECT_TEACHER") reasons.push('School policy prefers the subject teacher for this paper');
 
         const classCount = new Set(classNeeds.filter((n) => n.teacherId === teacher.id).map((n) => n.classId)).size;
         const lessonLoad = classNeeds.filter((n) => n.teacherId === teacher.id).reduce((sum, n) => sum + n.lessonsPerWeek, 0);
@@ -194,7 +208,8 @@ export async function generateExamInvigilators(user: SessionUser, examName: stri
         const hasCurrentTeachingLoad = timetableSlots.some((tt) => tt.teacherId === teacher.id && tt.dayOfWeek === normalizedDay && tt.period === periodGuess);
 
         const fallbackPressure = !teachingConflict && allCandidateTeachersBusy;
-        const lane = hardBlocked ? 99 : teachingConflict || fallbackPressure ? 3 : ownSubjectConflict ? 2 : 1;
+        const policyLane = ownSubjectConflict && subjectTeacherPolicy === "PREFER_SUBJECT_TEACHER" ? 0 : ownSubjectConflict && subjectTeacherPolicy === "AVOID_SUBJECT_TEACHER" ? 2 : 1;
+        const lane = hardBlocked ? 99 : teachingConflict || fallbackPressure ? 3 : policyLane;
         const eligibilityRank = hasExamLinkedLoad ? 1 : hasCurrentTeachingLoad ? 2 : hasAnyMappedLoad ? 3 : 4;
         const tieBreaker = classCount * 10 + lessonLoad;
 
@@ -219,16 +234,13 @@ export async function generateExamInvigilators(user: SessionUser, examName: stri
         return a.teacherName.localeCompare(b.teacherName);
       });
 
-      const picked = candidateScores[0];
-      if (!picked) {
-        warnings.push('No invigilator available.');
-      } else {
-        if (picked.lane > 1) warnings.push(`Fallback used: ${picked.reasons.join(' · ')}`);
-        invigilators.push({
-          teacherId: picked.teacherId,
-          teacherName: picked.teacherName,
-          warning: picked.lane > 1 ? picked.reasons.join(' · ') : undefined,
-        });
+      const requiredCount = Math.max(1, slot.requiredInvigilators || 1);
+      const pickedTeachers = candidateScores.slice(0, requiredCount);
+      if (pickedTeachers.length === 0) warnings.push('No invigilator available.');
+      if (pickedTeachers.length < requiredCount) warnings.push(`Only ${pickedTeachers.length}/${requiredCount} required invigilators could be placed.`);
+      for (const picked of pickedTeachers) {
+        if (picked.lane > 1) warnings.push(`Fallback used for ${picked.teacherName}: ${picked.reasons.join(' · ')}`);
+        invigilators.push({ teacherId: picked.teacherId, teacherName: picked.teacherName, warning: picked.lane > 1 ? picked.reasons.join(' · ') : undefined });
         assigned.set(`${picked.teacherId}:${slot.examDate}:${slot.startTime}`, slot.id);
       }
 

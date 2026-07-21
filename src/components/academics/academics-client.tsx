@@ -5461,6 +5461,11 @@ function ExamTimetableTab({ canManage }: { canManage: boolean }) {
     targetIds: [] as string[],
     invigilatorScope: 'AUTO',
     eligibleInvigilatorIds: [] as string[],
+    requiredInvigilators: 1,
+    subjectTeacherPolicy: '',
+    durationMode: 'CUSTOM_TIME',
+    preparationMins: 0,
+    cleanupMins: 0,
     notes: '',
   });
 
@@ -5522,6 +5527,11 @@ function ExamTimetableTab({ canManage }: { canManage: boolean }) {
       targetIds: setup?.classes?.[0]?.id ? [setup.classes[0].id] : [],
       invigilatorScope: 'AUTO',
       eligibleInvigilatorIds: [],
+      requiredInvigilators: 1,
+      subjectTeacherPolicy: '',
+      durationMode: 'CUSTOM_TIME',
+      preparationMins: 0,
+      cleanupMins: 0,
       notes: '',
     });
   }
@@ -5542,6 +5552,11 @@ function ExamTimetableTab({ canManage }: { canManage: boolean }) {
       targetIds: Array.isArray((slot as any).targetIds) ? (slot as any).targetIds : Array.isArray(slot.targetJson) ? slot.targetJson : [],
       invigilatorScope: slot.invigilatorScope || 'AUTO',
       eligibleInvigilatorIds: (slot.eligibleInvigilators ?? []).map((t) => t.teacherId),
+      requiredInvigilators: (slot as any).requiredInvigilators || 1,
+      subjectTeacherPolicy: (slot as any).subjectTeacherPolicy || '',
+      durationMode: (slot as any).durationMode || 'CUSTOM_TIME',
+      preparationMins: (slot as any).preparationMins || 0,
+      cleanupMins: (slot as any).cleanupMins || 0,
       notes: slot.notes || '',
     });
   }
@@ -5588,6 +5603,11 @@ function ExamTimetableTab({ canManage }: { canManage: boolean }) {
           targetIds: form.targetIds?.length ? form.targetIds : [form.classId],
           invigilatorScope: form.invigilatorScope,
           eligibleInvigilatorIds: form.eligibleInvigilatorIds,
+          requiredInvigilators: Number(form.requiredInvigilators || 1),
+          subjectTeacherPolicy: form.subjectTeacherPolicy || null,
+          durationMode: form.durationMode,
+          preparationMins: Number(form.preparationMins || 0),
+          cleanupMins: Number(form.cleanupMins || 0),
           notes: form.notes || null,
         }),
       });
@@ -5830,6 +5850,13 @@ function ExamTimetableTab({ canManage }: { canManage: boolean }) {
                   </div>
                 );
               })()}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><Label>Duration mode</Label><select value={form.durationMode} onChange={(e)=>{const mode=e.target.value;setForm((p:any)=>({...p,durationMode:mode,...(mode==='FULL_DAY'?{startTime:'08:00',endTime:'16:00'}:mode==='HALF_DAY_AM'?{startTime:'08:00',endTime:'12:30'}:mode==='HALF_DAY_PM'?{startTime:'13:00',endTime:'17:00'}:{})}))}} className={selectClass}><option value="PERIOD">One timetable period</option><option value="CUSTOM_TIME">Custom start/end</option><option value="HALF_DAY_AM">Half day AM</option><option value="HALF_DAY_PM">Half day PM</option><option value="FULL_DAY">Full day practical</option><option value="MULTI_SESSION">Multiple sessions</option></select></div>
+              <div><Label>Required invigilators</Label><Input type="number" min={1} max={20} value={form.requiredInvigilators} onChange={(e)=>setForm((p:any)=>({...p,requiredInvigilators:Number(e.target.value)}))}/></div>
+              <div><Label>Subject-teacher policy</Label><select value={form.subjectTeacherPolicy} onChange={(e)=>setForm((p:any)=>({...p,subjectTeacherPolicy:e.target.value}))} className={selectClass}><option value="">Use school/subject default</option><option value="ALLOW_SUBJECT_TEACHER">Allow</option><option value="PREFER_SUBJECT_TEACHER">Prefer (useful for practicals)</option><option value="AVOID_SUBJECT_TEACHER">Avoid if alternatives exist</option><option value="PROHIBIT_SUBJECT_TEACHER">Prohibit</option></select></div>
+              <div className="grid grid-cols-2 gap-2"><div><Label>Preparation mins</Label><Input type="number" min={0} value={form.preparationMins} onChange={(e)=>setForm((p:any)=>({...p,preparationMins:Number(e.target.value)}))}/></div><div><Label>Cleanup mins</Label><Input type="number" min={0} value={form.cleanupMins} onChange={(e)=>setForm((p:any)=>({...p,cleanupMins:Number(e.target.value)}))}/></div></div>
             </div>
 
             <div>

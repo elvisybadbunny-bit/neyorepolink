@@ -1,0 +1,9 @@
+ALTER TABLE "TermAggregationRule" ADD COLUMN "weightingStrategy" TEXT NOT NULL DEFAULT 'CUSTOM_WEIGHTS';
+ALTER TABLE "TermAggregationRule" ADD COLUMN "missingComponentPolicy" TEXT NOT NULL DEFAULT 'AVAILABLE_AVERAGE';
+ALTER TABLE "Tenant" ADD COLUMN "examSubjectTeacherPolicy" TEXT NOT NULL DEFAULT 'AVOID_SUBJECT_TEACHER';
+ALTER TABLE "Subject" ADD COLUMN "examSubjectTeacherPolicy" TEXT;
+ALTER TABLE "ExamTimetableSlot" ADD COLUMN "requiredInvigilators" INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE "ExamTimetableSlot" ADD COLUMN "subjectTeacherPolicy" TEXT;
+ALTER TABLE "ExamTimetableSlot" ADD COLUMN "durationMode" TEXT NOT NULL DEFAULT 'CUSTOM_TIME';
+ALTER TABLE "ExamTimetableSlot" ADD COLUMN "preparationMins" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "ExamTimetableSlot" ADD COLUMN "cleanupMins" INTEGER NOT NULL DEFAULT 0;

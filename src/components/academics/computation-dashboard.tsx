@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { Progress } from "@/components/ui/progress";
 import { SubjectPaperGradingCard } from "@/components/academics/subject-paper-grading-card";
+import { TermAssessmentWeightCard } from "@/components/academics/term-assessment-weight-card";
 
 export function ComputationDashboardClient({ canManage, schoolLevelActivation }: { canManage: boolean; schoolLevelActivation?: { isSeniorSchool: boolean; isJuniorSchool: boolean; educationLevelsOffered: string[] } }) {
   const [portals, setPortals] = React.useState<any[]>([]);
@@ -130,6 +131,7 @@ export function ComputationDashboardClient({ canManage, schoolLevelActivation }:
       </div>
 
       <SubjectPaperGradingCard canManage={canManage} />
+      <TermAssessmentWeightCard terms={terms} canManage={canManage} />
 
       {canManage && gradeBoundaries.length > 0 && <Card><CardHeader><CardTitle className="text-base">School grading scale</CardTitle></CardHeader><CardContent><p className="mb-3 text-xs text-navy-500">Set the minimum percentage for each grade. The saved scale is used during the next computation.</p><div className="flex flex-wrap gap-2">{gradeBoundaries.map((boundary, index) => <div key={`${boundary.grade}-${index}`} className="flex items-center gap-1 rounded-xl border border-navy-200 p-2 dark:border-navy-700"><input aria-label="Grade" value={boundary.grade} onChange={(e) => setGradeBoundaries((rows) => rows.map((row, i) => i === index ? { ...row, grade: e.target.value } : row))} className="w-12 bg-transparent text-sm font-bold outline-none"/><span className="text-xs">from</span><input aria-label={`Minimum mark for ${boundary.grade}`} type="number" min="0" max="100" value={boundary.min} onChange={(e) => setGradeBoundaries((rows) => rows.map((row, i) => i === index ? { ...row, min: Number(e.target.value) } : row))} className="w-14 rounded border px-1 py-0.5 text-sm dark:bg-navy-900"/><span className="text-xs">%</span></div>)}</div><Button className="mt-3" variant="secondary" onClick={saveGradingScale}>Save Grading Scale</Button></CardContent></Card>}
 

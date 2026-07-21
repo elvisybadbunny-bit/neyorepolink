@@ -40,10 +40,13 @@ async function computeSubjectExamScores(tenantId: string, examId: string) {
         finalScore += normalized;
       }
 
-      // If papers were entered but the total weight doesn't hit 100 (e.g. absent for one),
-      // we scale the final score based on the school's policy. 
-      // Assuming strict literal scale here: if you miss a 20% paper, max is 80.
-      
+      // Founder-confirmed AVAILABLE_AVERAGE policy: a paper the school did not
+      // conduct does not become a zero. Re-normalise only papers with a saved
+      // mark back to 100%; the absent paper is omitted from the breakdown.
+      if (configuredTotalWeight > 0 && configuredTotalWeight !== 100) {
+        finalScore = finalScore * (100 / configuredTotalWeight);
+      }
+
       await tDb.examResult.update({
         where: { id: res.id },
         data: { marks: Math.round((finalScore / 100) * exam.maxMarks) }
@@ -146,16 +149,14 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
     // All exams in this term (matched by year + term number) and their results.
     const exams = await tDb.exam.findMany({ where: { year: term.year, term: term.term }, select: { id: true, name: true, maxMarks: true } });
     const examIds = exams.map((e) => e.id);
-    if (examIds.length === 0) return 0;
-
-    const results = await tDb.examResult.findMany({
-      where: { examId: { in: examIds } },
-      select: { examId: true, studentId: true, subjectId: true, marks: true },
-    });
-    if (results.length === 0) return 0;
+    const [results, assessmentPlans] = await Promise.all([
+      tDb.examResult.findMany({ where: { examId: { in: examIds } }, select: { examId: true, studentId: true, subjectId: true, marks: true } }),
+      tDb.assessmentPlan.findMany({ where: { year: term.year, term: term.term, subjectId: { not: null }, status: { in: ["ACTIVE", "MODERATION", "RELEASED"] } }, include: { records: { where: { status: { in: ["SCORED", "SUBMITTED", "MODERATED", "RELEASED"] } } } } }),
+    ]);
+    if (results.length === 0 && assessmentPlans.every((plan) => plan.records.length === 0)) return 0;
 
     // Map student -> class (only students currently placed in a class are ranked).
-    const studentIds = Array.from(new Set(results.map((r) => r.studentId)));
+    const studentIds = Array.from(new Set([...results.map((r) => r.studentId), ...assessmentPlans.flatMap((plan) => plan.records.map((record) => record.studentId))]));
     const students = await tDb.student.findMany({
       where: { id: { in: studentIds } },
       select: { id: true, classId: true },
@@ -174,16 +175,30 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
       );
     }
 
-    // Index exam results by student+subject.
+    // Index every conducted exam/assessment by student+subject. User-defined
+    // AssessmentPlan.title becomes the report column name (CAT, Assignment,
+    // Group Work, Project, or any school-authored name).
     type RKey = string;
-    const byStudentSubject = new Map<RKey, { examId: string; mark: number }[]>();
+    type SourceMark = { sourceType: "EXAM" | "ASSESSMENT"; sourceId: string; label: string; mark: number };
+    const byStudentSubject = new Map<RKey, SourceMark[]>();
     for (const r of results) {
       const key = `${r.studentId}::${r.subjectId}`;
       const list = byStudentSubject.get(key) ?? [];
       const sourceExam = exams.find((exam) => exam.id === r.examId);
       const normalizedMark = sourceExam ? (r.marks / Math.max(1, sourceExam.maxMarks)) * 100 : r.marks;
-      list.push({ examId: r.examId, mark: normalizedMark });
+      list.push({ sourceType: "EXAM", sourceId: r.examId, label: sourceExam?.name ?? "Exam", mark: normalizedMark });
       byStudentSubject.set(key, list);
+    }
+    for (const plan of assessmentPlans) {
+      if (!plan.subjectId) continue;
+      for (const record of plan.records) {
+        const mark = record.scorePct ?? (record.scoreMarks != null && plan.maxMarks ? Math.round((record.scoreMarks / Math.max(1, plan.maxMarks)) * 100) : null);
+        if (mark == null) continue;
+        const key = `${record.studentId}::${plan.subjectId}`;
+        const list = byStudentSubject.get(key) ?? [];
+        list.push({ sourceType: "ASSESSMENT", sourceId: plan.id, label: plan.title, mark });
+        byStudentSubject.set(key, list);
+      }
     }
 
     const curriculumOn = await isCurriculumEngineEnabled();
@@ -208,41 +223,26 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
       let isTraditional = true;
       const components: AggComponent[] = [];
 
-      const examMarkById = new Map(list.map((x) => [x.examId, x.mark]));
-
-      if (rule && !rule.isTraditional) {
-        let weightings: { sourceType: string; sourceId: string; weightPct: number }[] = [];
+      const markBySource = new Map(list.map((x) => [`${x.sourceType}:${x.sourceId}`, x]));
+      let usable: { sourceType: "EXAM" | "ASSESSMENT"; sourceId: string; label: string; mark: number; weightPct: number }[] = [];
+      if (rule && !rule.isTraditional && rule.weightingStrategy === "CUSTOM_WEIGHTS") {
+        let weightings: { sourceType: "EXAM" | "ASSESSMENT"; sourceId: string; label?: string; weightPct: number }[] = [];
         try { weightings = JSON.parse(rule.weightingsJson); } catch { weightings = []; }
-        // Only EXAM weightings can be resolved from exam results here.
-        const usable = weightings
-          .filter((w) => w.sourceType === "EXAM" && examMarkById.has(w.sourceId))
-          .map((w) => ({ ...w, mark: examMarkById.get(w.sourceId)! }));
-        const totalWeight = usable.reduce((a, w) => a + w.weightPct, 0);
-        if (usable.length > 0 && totalWeight > 0) {
-          isTraditional = false;
-          let acc = 0;
-          for (const w of usable) {
-            const effective = (w.weightPct / totalWeight) * 100;
-            acc += w.mark * (w.weightPct / totalWeight);
-            const exam = exams.find((e) => e.id === w.sourceId);
-            components.push({ sourceType: "EXAM", sourceId: w.sourceId, label: exam?.name ?? "Exam", mark: w.mark, weightPct: Math.round(effective) });
-          }
-          finalMark = acc;
-        } else {
-          // Rule present but unusable for these exams -> fall back to average.
-          finalMark = list.reduce((a, x) => a + x.mark, 0) / list.length;
-          for (const x of list) {
-            const exam = exams.find((e) => e.id === x.examId);
-            components.push({ sourceType: "EXAM", sourceId: x.examId, label: exam?.name ?? "Exam", mark: x.mark, weightPct: Math.round(100 / list.length) });
-          }
-        }
+        usable = weightings.flatMap((weight) => {
+          const source = markBySource.get(`${weight.sourceType}:${weight.sourceId}`);
+          return source ? [{ ...source, label: weight.label || source.label, weightPct: weight.weightPct }] : [];
+        });
       } else {
-        // Simple average of the term's exam results for this subject.
-        finalMark = list.reduce((a, x) => a + x.mark, 0) / list.length;
-        for (const x of list) {
-          const exam = exams.find((e) => e.id === x.examId);
-          components.push({ sourceType: "EXAM", sourceId: x.examId, label: exam?.name ?? "Exam", mark: x.mark, weightPct: Math.round(100 / list.length) });
-        }
+        // School chose equal sharing, or has no custom rule. Only work that
+        // was actually conducted appears; absent assessments are not zeroes.
+        usable = list.map((source) => ({ ...source, weightPct: 1 }));
+      }
+      if (usable.length === 0) usable = list.map((source) => ({ ...source, weightPct: 1 }));
+      const totalWeight = usable.reduce((sum, source) => sum + source.weightPct, 0);
+      finalMark = usable.reduce((sum, source) => sum + source.mark * (source.weightPct / Math.max(1, totalWeight)), 0);
+      isTraditional = !rule || rule.isTraditional;
+      for (const source of usable) {
+        components.push({ sourceType: source.sourceType, sourceId: source.sourceId, label: source.label, mark: Math.round(source.mark * 100) / 100, weightPct: Math.round((source.weightPct / Math.max(1, totalWeight)) * 100) });
       }
 
       subjectRows.push({ studentId, classId, subjectId, finalMark: Math.round(finalMark * 100) / 100, isTraditional, components });

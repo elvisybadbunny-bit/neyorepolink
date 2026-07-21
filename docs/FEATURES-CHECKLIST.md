@@ -5105,3 +5105,12 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Subscription billing cadence is stored and customer-selectable as MONTHLY/TERMLY/YEARLY; central M-Pesa amount and period dates follow the choice.
 - [x] SMS remains a separate top-up and storage/usage remains governed by Pricing Engine rather than hidden cadence charges.
 - [x] Social account creation/posting is classified EXTERNAL/MANUAL; NEYO stores approved public URLs/content governance but not social passwords.
+
+### NEYO Consolidated Learner Report Phase 1 — 2026-07-21
+- [x] School chooses custom assessment contributions or equal average of available work.
+- [x] Exams and school-named Assessment Plans (CAT, Assignment, Group Work, Project, etc.) contribute dynamically by their saved titles.
+- [x] Missing assessments/papers are omitted and available components are renormalized; no unconducted component becomes zero.
+- [x] Computation law is configurable school-wide with optional class and subject overrides.
+- [x] Invigilation has a school-wide subject-teacher policy plus optional subject and paper override.
+- [x] Exam papers support required invigilator count, PERIOD/CUSTOM/HALF_DAY/FULL_DAY/MULTI_SESSION modes and preparation/cleanup buffers.
+- [ ] Consolidated report screen, governed remarks, fee/date settings, one-page PDF and charts continue in the next phases.
