@@ -24,7 +24,7 @@ A page must be visited/saved while online before its shell or data can be availa
 | Gate-pass proposal/issuance | Queued where supported | Server replay ledger |
 | Visitor sign-in | Queued | Idempotency key |
 | Plain cash/manual reception payment | Queued where biometric live verification is not required | Duplicate-payment protection |
-| Read-only learners, balances, calendar and timetable | Available in opt-in Bundle Saver snapshot | Local IndexedDB; bounded/versioned |
+| Read-only learners, balances, calendar, timetable and CBE delivery sessions | Available in Bundle Saver only when the signed-in user's merged roles permit each section | Local IndexedDB; bounded/versioned |
 | Previously opened page shell | Exact URL network-first cache, then saved response | No API mutation caching |
 | Static icons/assets | Cache-first | Versioned service-worker cache |
 

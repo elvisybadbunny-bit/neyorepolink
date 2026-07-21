@@ -6,7 +6,8 @@ async function main() {
   console.log("I.84 Offline Saved-Data / Bundle Saver test");
   const route = readFileSync("src/app/api/offline/bundle/route.ts", "utf8");
   assert(route.includes("requireUser") && route.includes("tenantId"), "offline bundle API is signed-in and tenant-scoped");
-  assert(route.includes("student.findMany") && route.includes("invoice.findMany") && route.includes("calendarEvent.findMany") && route.includes("timetableSlot.findMany"), "offline bundle includes learners, balances, calendar and timetable data");
+  assert(route.includes("student.findMany") && route.includes("invoice.findMany") && route.includes("calendarEvent.findMany") && route.includes("timetableSlot.findMany") && route.includes("cbeDeliverySession.findMany"), "offline bundle includes permitted learners, balances, calendar, timetable and CBE delivery data");
+  assert(route.includes("effectivePermissionsForUser") && route.includes("capabilities"), "offline snapshot applies merged role permissions before querying and labels available sections");
   assert(route.includes("take: 500") && route.includes("version: 1"), "offline bundle is bounded and versioned");
 
   const cache = readFileSync("src/lib/offline/bundle-cache.ts", "utf8");

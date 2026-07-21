@@ -26,7 +26,7 @@ export function PwaDataSaverCard() {
   const [enabled, setEnabled] = React.useState(true); // real server default is true (auto-on)
   const [savedMb, setSavedMb] = React.useState(0);
   const [syncTime, setSyncTime] = React.useState<string | null>(null);
-  const [summary, setSummary] = React.useState({ students: 0, invoices: 0, events: 0, timetable: 0 });
+  const [summary, setSummary] = React.useState({ students: 0, invoices: 0, events: 0, timetable: 0, cbeDelivery: 0 });
   const [syncing, setSyncing] = React.useState(false);
   const [ready, setReady] = React.useState(false);
 
@@ -39,6 +39,7 @@ export function PwaDataSaverCard() {
         invoices: cached.data?.invoices?.length ?? 0,
         events: cached.data?.calendarEvents?.length ?? 0,
         timetable: cached.data?.timetableSlots?.length ?? 0,
+        cbeDelivery: cached.data?.cbeDeliverySessions?.length ?? 0,
       });
       setSavedMb(await estimateBundleSizeMb(CACHE_KEY));
       return true;
@@ -95,12 +96,13 @@ export function PwaDataSaverCard() {
         invoices: json.data.invoices?.length ?? 0,
         events: json.data.calendarEvents?.length ?? 0,
         timetable: json.data.timetableSlots?.length ?? 0,
+        cbeDelivery: json.data.cbeDeliverySessions?.length ?? 0,
       });
       setSavedMb(await estimateBundleSizeMb(CACHE_KEY));
       if (!silent) {
         toast({
           title: "Bundle Saver synced",
-          description: "Students, balances, calendar items and timetable are saved on this device for the NEYO app only.",
+          description: "Only records allowed by your role—including available CBE delivery sessions—are saved on this device.",
           tone: "success",
         });
       }
@@ -135,7 +137,7 @@ export function PwaDataSaverCard() {
     await clearBundle(CACHE_KEY);
     setSavedMb(0);
     setSyncTime(null);
-    setSummary({ students: 0, invoices: 0, events: 0, timetable: 0 });
+    setSummary({ students: 0, invoices: 0, events: 0, timetable: 0, cbeDelivery: 0 });
     toast({ title: "Saved offline bundle cleared", tone: "info" });
   }
 
@@ -180,11 +182,12 @@ export function PwaDataSaverCard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-bold text-navy-500">
+        <div className="grid grid-cols-2 gap-2 text-center text-[10px] font-bold text-navy-500 sm:grid-cols-5">
           <span className="rounded-xl bg-navy-50 p-2 dark:bg-navy-900">{summary.students} learners</span>
           <span className="rounded-xl bg-navy-50 p-2 dark:bg-navy-900">{summary.invoices} balances</span>
           <span className="rounded-xl bg-navy-50 p-2 dark:bg-navy-900">{summary.events} events</span>
           <span className="rounded-xl bg-navy-50 p-2 dark:bg-navy-900">{summary.timetable} slots</span>
+          <span className="rounded-xl bg-navy-50 p-2 dark:bg-navy-900">{summary.cbeDelivery} CBE sessions</span>
         </div>
 
         <div className="flex gap-2">

@@ -15,18 +15,20 @@
  * explicit choice, so nobody ever mistakes stale data for live data.
  */
 import * as React from "react";
-import { WifiOff, Users, Wallet, Calendar, Clock3, RefreshCw } from "lucide-react";
+import { WifiOff, Users, Wallet, Calendar, Clock3, RefreshCw, BookOpenCheck } from "lucide-react";
 import { readBundle } from "@/lib/offline/bundle-cache";
 
 const CACHE_KEY = "school-core";
 
 interface BundleData {
   tenant: { name: string; slug: string; county: string | null } | null;
+  capabilities?: { students: boolean; finance: boolean; calendar: boolean; timetable: boolean; cbeDelivery: boolean };
   students: { id: string; name: string; admissionNo: string; className: string; status: string }[];
   invoices: { id: string; invoiceNo: string; studentId: string; balanceKes: number; status: string; dueDate: string }[];
   calendarEvents: { id: string; title: string; date: string; type: string }[];
   timetableSlots: { id: string; classId: string; className: string; dayOfWeek: number; period: number; subjectName: string | null }[];
   notifications: { id: string; title: string; body: string; read: boolean; createdAt: string }[];
+  cbeDeliverySessions?: { id: string; className: string; teacherName: string; deliveredOn: string; status: string; deliveryNotes: string | null; nextSteps: string | null; strandName: string; substrandName: string }[];
 }
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -35,7 +37,7 @@ export function OfflineSnapshotViewer() {
   const [bundle, setBundle] = React.useState<BundleData | null>(null);
   const [savedAt, setSavedAt] = React.useState<string | null>(null);
   const [loaded, setLoaded] = React.useState(false);
-  const [tab, setTab] = React.useState<"students" | "finance" | "calendar" | "timetable">("students");
+  const [tab, setTab] = React.useState<"students" | "finance" | "calendar" | "timetable" | "cbe">("students");
 
   React.useEffect(() => {
     readBundle<BundleData>(CACHE_KEY)
@@ -69,6 +71,15 @@ export function OfflineSnapshotViewer() {
   const savedLabel = savedAt
     ? new Date(savedAt).toLocaleString("en-KE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
     : "unknown time";
+  const capabilities = bundle.capabilities ?? { students: true, finance: true, calendar: true, timetable: true, cbeDelivery: false };
+  const availableTabs = [
+    capabilities.students ? { key: "students" as const, label: `Students (${bundle.students.length})`, icon: Users } : null,
+    capabilities.finance ? { key: "finance" as const, label: `Balances (${bundle.invoices.length})`, icon: Wallet } : null,
+    capabilities.calendar ? { key: "calendar" as const, label: `Calendar (${bundle.calendarEvents.length})`, icon: Calendar } : null,
+    capabilities.timetable ? { key: "timetable" as const, label: `Timetable (${bundle.timetableSlots.length})`, icon: Clock3 } : null,
+    capabilities.cbeDelivery ? { key: "cbe" as const, label: `CBE Delivery (${bundle.cbeDeliverySessions?.length ?? 0})`, icon: BookOpenCheck } : null,
+  ].filter(Boolean) as { key: "students" | "finance" | "calendar" | "timetable" | "cbe"; label: string; icon: typeof Users }[];
+  const activeTab = availableTabs.some((item) => item.key === tab) ? tab : availableTabs[0]?.key;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
@@ -83,17 +94,12 @@ export function OfflineSnapshotViewer() {
       </div>
 
       <div className="mb-4 flex gap-2 overflow-x-auto">
-        {([
-          { key: "students", label: `Students (${bundle.students.length})`, icon: Users },
-          { key: "finance", label: `Balances (${bundle.invoices.length})`, icon: Wallet },
-          { key: "calendar", label: `Calendar (${bundle.calendarEvents.length})`, icon: Calendar },
-          { key: "timetable", label: `Timetable (${bundle.timetableSlots.length})`, icon: Clock3 },
-        ] as const).map((t) => (
+        {availableTabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition ${
-              tab === t.key
+              activeTab === t.key
                 ? "bg-navy-900 text-white dark:bg-white dark:text-navy-950"
                 : "border border-navy-200 bg-white text-navy-600 dark:border-navy-800 dark:bg-navy-900 dark:text-navy-300"
             }`}
@@ -105,7 +111,7 @@ export function OfflineSnapshotViewer() {
       </div>
 
       <div className="rounded-2xl border border-navy-100 bg-white dark:border-navy-800 dark:bg-navy-950">
-        {tab === "students" && (
+        {activeTab === "students" && (
           <div className="divide-y divide-navy-100 dark:divide-navy-800">
             {bundle.students.length === 0 ? (
               <p className="p-6 text-center text-sm text-navy-400">No saved students.</p>
@@ -122,7 +128,7 @@ export function OfflineSnapshotViewer() {
             )}
           </div>
         )}
-        {tab === "finance" && (
+        {activeTab === "finance" && (
           <div className="divide-y divide-navy-100 dark:divide-navy-800">
             {bundle.invoices.length === 0 ? (
               <p className="p-6 text-center text-sm text-navy-400">No saved balances.</p>
@@ -141,7 +147,7 @@ export function OfflineSnapshotViewer() {
             )}
           </div>
         )}
-        {tab === "calendar" && (
+        {activeTab === "calendar" && (
           <div className="divide-y divide-navy-100 dark:divide-navy-800">
             {bundle.calendarEvents.length === 0 ? (
               <p className="p-6 text-center text-sm text-navy-400">No saved calendar events.</p>
@@ -157,7 +163,7 @@ export function OfflineSnapshotViewer() {
             )}
           </div>
         )}
-        {tab === "timetable" && (
+        {activeTab === "timetable" && (
           <div className="divide-y divide-navy-100 dark:divide-navy-800">
             {bundle.timetableSlots.length === 0 ? (
               <p className="p-6 text-center text-sm text-navy-400">No saved timetable.</p>
@@ -169,6 +175,22 @@ export function OfflineSnapshotViewer() {
                     <p className="text-xs text-navy-400">{t.className} · Period {t.period}</p>
                   </div>
                   <span className="text-xs text-navy-400">{DAY_NAMES[t.dayOfWeek] ?? t.dayOfWeek}</span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+        {activeTab === "cbe" && (
+          <div className="divide-y divide-navy-100 dark:divide-navy-800">
+            {(bundle.cbeDeliverySessions?.length ?? 0) === 0 ? (
+              <p className="p-6 text-center text-sm text-navy-400">No saved CBE delivery sessions.</p>
+            ) : (
+              bundle.cbeDeliverySessions!.map((session) => (
+                <div key={session.id} className="px-4 py-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold text-navy-900 dark:text-navy-50">{session.strandName} · {session.substrandName}</p><span className="text-xs font-bold text-green-700 dark:text-green-300">{session.status}</span></div>
+                  <p className="mt-1 text-xs text-navy-400">{session.className} · {session.teacherName} · {new Date(session.deliveredOn).toLocaleDateString("en-KE")}</p>
+                  {session.deliveryNotes ? <p className="mt-2 text-xs leading-5 text-navy-600 dark:text-navy-300">{session.deliveryNotes}</p> : null}
+                  {session.nextSteps ? <p className="mt-1 text-xs text-blue-700 dark:text-blue-300"><strong>Next:</strong> {session.nextSteps}</p> : null}
                 </div>
               ))
             )}
