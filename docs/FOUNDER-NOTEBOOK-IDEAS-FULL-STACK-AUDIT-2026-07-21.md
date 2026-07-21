@@ -100,7 +100,7 @@ Repairs:
 | Student photo/document upload requires school approval | FULL STACK / REACHABLE | Student approval request models/workflows | Role/browser verification pending. |
 | Principal signature and digital school stamp | FULL STACK / REACHABLE | Document service/stamp/signature settings | External legal acceptance varies by recipient. |
 | Transfer blocked by library arrears/unreturned books | FULL STACK / REACHABLE | Library clearance in transfer service | Replacement-book/payment workflow should be browser tested. |
-| Parent/teacher uploads exam application documents | PARTIAL | Exam materials/KNEC Candidate Studio and storage exist | Parent-originated application upload to an exact package is not fully evidenced. |
+| Parent/teacher uploads exam application documents | FULL STACK / REACHABLE | Parent Portal → Exam application documents; Exams → application review/package manifest | Direct KNEC submission remains deliberately manual/external. |
 | Automatically send documents to KNEC | EXTERNAL / MANUAL | Export/manual workflow only; phantom KNEC gateway removed | Do not claim live KNEC submission without approval/integration evidence. |
 | Newsletter layout removes blank spaces/cut lines | NOT VERIFIED | Document/print systems exist | Requires exact newsletter template and print reproduction. |
 | Bulk student IDs with names, photos, school logo and cut layout | FULL STACK / REACHABLE | Student ID bulk print/templates | Physical cut accuracy depends on printer/settings. |
@@ -118,11 +118,10 @@ Repairs:
 
 ## Priority gaps found
 
-1. Parent-originated exam-application package upload.
-2. Printed ID QR attendance with one session token and duplicate-scan protection.
-3. Newsletter pagination/blank-space reproduction.
-4. Messaging 360px scroll/overlay reproduction.
-5. Parent-facing split-payment verification.
-6. Deployed browser evidence for many already-built workflows.
+1. Printed ID QR attendance with one session token and duplicate-scan protection.
+2. Newsletter pagination/blank-space reproduction.
+3. Messaging 360px scroll/overlay reproduction.
+4. Parent-facing split-payment verification.
+5. Deployed browser evidence for many already-built workflows.
 
 No row marked PARTIAL/NOT BUILT should be presented as completed in marketing or the NEYO Bible.

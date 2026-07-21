@@ -5078,3 +5078,10 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Practice-teacher placements store trainee, mentor, supervised subjects/classes, dates, notes and explicit solo-teaching approval.
 - [x] Auto teacher allocation excludes active supervised trainees unless leadership approves solo responsibility.
 - [x] Manual sole assignment of a supervised trainee is blocked with guidance to assign the mentor or approve solo teaching.
+
+### Founder notebook gap batch 3 — parent exam application documents — 2026-07-21
+- [x] Parents upload encrypted image/PDF exam-application documents only for their scope-verified linked children.
+- [x] Every submission starts PENDING and never writes directly into an approved package.
+- [x] Academic leadership reviews inside Exams and can APPROVE, RETURN with correction note, or INCLUDE in package.
+- [x] Approved/included documents produce a controlled package manifest with student, admission number, type and secure file URL.
+- [x] Submission and review are audit logged; NEYO explicitly does not claim direct KNEC transmission.

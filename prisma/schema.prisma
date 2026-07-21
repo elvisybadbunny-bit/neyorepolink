@@ -6323,6 +6323,33 @@ model ExamTimetableSlot {
 }
 
 // I.21 — records for exam applications and assembled exam materials.
+model ExamApplicationSubmission {
+  id             String   @id @default(cuid())
+  tenantId       String
+  studentId      String
+  studentName    String
+  admissionNo    String
+  examName       String
+  documentType   String
+  fileUrl        String
+  fileName       String
+  status         String   @default("PENDING") // PENDING | APPROVED | RETURNED | INCLUDED
+  submittedById  String
+  submittedByName String
+  submittedByRole String
+  reviewNote     String?
+  reviewedById   String?
+  reviewedByName String?
+  reviewedAt     DateTime?
+  packageLabel   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, studentId])
+  @@index([tenantId, examName])
+}
+
 model ExamMaterialRecord {
   id               String   @id @default(cuid())
   tenantId         String

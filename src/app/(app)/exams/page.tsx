@@ -7,6 +7,7 @@ import { ExamPrintClient } from "@/components/exams/exam-print-client";
 import { AdvancedAnalyticsClient } from "@/components/exams/advanced-analytics-client";
 import { getSchoolLevelActivationSummary } from "@/lib/services/school-profile.service";
 import { ExamWidgetBoundary } from "@/components/exams/exam-widget-boundary";
+import { ExamApplicationReviewCard } from "@/components/exams/exam-application-review-card";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,7 @@ export default async function ExamsPage() {
           canApproveRelease={canApproveRelease}
         />
       </ExamWidgetBoundary>
+      {has("academics.manage") ? <ExamWidgetBoundary name="Exam application documents"><ExamApplicationReviewCard /></ExamWidgetBoundary> : null}
       <ExamWidgetBoundary name="Performance analytics"><ExamAnalyticsClient /></ExamWidgetBoundary>
       <ExamWidgetBoundary name="Advanced analytics"><AdvancedAnalyticsClient /></ExamWidgetBoundary>
       <ExamWidgetBoundary name="Bulk result printing"><ExamPrintClient /></ExamWidgetBoundary>

@@ -267,6 +267,7 @@ export const TENANT_OWNED_MODELS = [
   "examTimetableGeneratorRun",
   "examTimetableSlot",
   "examMaterialRecord",
+  "examApplicationSubmission",
   "promiseToPay",
   "reportCardDayCheckIn",
   "publicSiteSettings",

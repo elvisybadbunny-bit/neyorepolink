@@ -24,6 +24,7 @@ import { LibraryCard, ClassChatButton } from "@/components/portal/library-card";
 import { UniformCard } from "@/components/portal/uniform-card";
 import { MessageButton } from "@/components/messaging/message-button";
 import { FileUpload, type UploadedFile } from "@/components/ui/file-upload";
+import { ExamApplicationDocumentsCard } from "@/components/portal/exam-application-documents-card";
 import { StudentCompetencySummaryCard } from "@/components/competencies/competency-framework-components";
 import { SkillsPassportCard } from "@/components/skills-passport/skills-passport-card";
 import { LearnerJourneyCard } from "@/components/learner-journey/learner-journey-card";
@@ -80,6 +81,7 @@ export function ParentPortalClient({ isCurriculumEngineEnabled = false }: { isCu
   ) : (
     <div className="space-y-4">
       <FamilySplitPaymentCard familyChildren={children} />
+      <ExamApplicationDocumentsCard />
       <div className="grid gap-4 sm:grid-cols-2">
       {children.map((c) => (
         <button key={c.id} onClick={() => setOpenChild(c.id)} className="text-left">
