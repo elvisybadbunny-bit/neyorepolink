@@ -202,7 +202,12 @@ async function activateSubscriptionFromPayment(paymentId: string, mpesaRef: stri
   }
 
   const now = new Date();
-  const periodEnd = payment.periodEnd > now ? payment.periodEnd : addDays(now, TERM_DAYS);
+  // Preserve the subscription's chosen monthly, termly or yearly cadence when
+  // reconnecting a delayed callback. TERM_DAYS was an obsolete term-only
+  // constant and also left monthly/yearly schools with the wrong expiry.
+  const periodEnd = payment.periodEnd > now
+    ? payment.periodEnd
+    : addDays(now, cycleDays(payment.subscription.billingCycle));
   await db.$transaction([
     db.subscriptionPayment.update({ where: { id: payment.id }, data: { status: "PAID", paidAt: now, mpesaRef, resultCode, resultDesc, rawCallback: JSON.stringify(raw), periodStart: now, periodEnd } }),
     db.subscription.update({ where: { id: payment.subscriptionId }, data: { status: "ACTIVE", currentPeriodStart: now, currentPeriodEnd: periodEnd, graceEndsAt: null } }),
