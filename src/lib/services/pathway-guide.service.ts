@@ -155,8 +155,9 @@ function scoreAnswers(answers: { questionId: string; optionId: string }[]) {
   for (const ans of answers) {
     const match = optionForAnswer(ans.questionId, ans.optionId);
     if (!match) continue;
-    for (const g of match.option.signalsGroups) groupTally[g] += 1;
-    for (const c of match.option.signalsCareerAreas) careerTally.set(c, (careerTally.get(c) || 0) + 1);
+    const pillarWeight = match.question.pillar === "skills" || match.question.pillar === "aspirations" ? 3 : match.question.pillar === "interests" ? 2 : 1;
+    for (const g of match.option.signalsGroups) groupTally[g] += pillarWeight;
+    for (const c of match.option.signalsCareerAreas) careerTally.set(c, (careerTally.get(c) || 0) + pillarWeight);
   }
 
   const topGroup = (Object.entries(groupTally) as [PathwayGroup, number][]).sort((a, b) => b[1] - a[1])[0];
@@ -165,11 +166,45 @@ function scoreAnswers(answers: { questionId: string; optionId: string }[]) {
   return { groupTally, topGroup: topGroup?.[0] ?? "STEM", rankedCareers };
 }
 
-function pickTrackForGroup(group: PathwayGroup) {
-  const official = KICD_SENIOR_SCHOOL_PATHWAYS.find((p) => p.group === group);
+const CAREER_TRACK_PREFERENCES: Record<string, string[]> = {
+  "Medicine & Healthcare": ["Pure Sciences", "Applied Sciences"],
+  "Engineering & Technology": ["Technology & Engineering", "Pure Sciences"],
+  "ICT & Computer Science": ["Technology & Engineering", "Pure Sciences"],
+  "Agriculture & Environmental": ["Applied Sciences", "Pure Sciences"],
+  "Business & Economics": ["Humanities & Business Studies", "Languages & Literature"],
+  "Law & Public Service": ["Humanities & Business Studies", "Languages & Literature"],
+  "Education & Training": ["Languages & Literature", "Humanities & Business Studies"],
+  "Creative Arts & Design": ["Visual Arts", "Performing Arts"],
+  "Sports & Athletics": ["Sports", "Performing Arts"],
+};
+const CAREER_SUBJECT_PREFERENCES: Record<string, string[]> = {
+  "Medicine & Healthcare": ["BIO", "CHE", "GSC", "PHY"],
+  "Engineering & Technology": ["PHY", "ELC", "BLD", "MTW", "AVT", "CHE", "CMP"],
+  "ICT & Computer Science": ["CMP", "ELC", "PHY", "GSC"],
+  "Agriculture & Environmental": ["AGR", "BIO", "GSC", "GEO", "CHE"],
+  "Business & Economics": ["BST", "GEO", "HIS", "LEG"],
+  "Law & Public Service": ["LEG", "HIS", "LIT", "GEO", "CRE", "IRE", "HRE"],
+  "Education & Training": ["LIT", "FAS", "HIS", "GEO", "FRE", "GER"],
+  "Creative Arts & Design": ["FIN", "THF", "MUS"],
+  "Sports & Athletics": ["SPR", "BIO"],
+};
+
+function pickTrackForGroup(group: PathwayGroup, rankedCareers: string[]) {
+  const official = KICD_SENIOR_SCHOOL_PATHWAYS.find((pathway) => pathway.group === group);
   if (!official || official.tracks.length === 0) return { trackName: null as string | null, subjects: [] as { name: string; code: string }[] };
-  const track = official.tracks[0];
-  return { trackName: track.trackName, subjects: track.electives };
+  const preferredTracks = rankedCareers.flatMap((career) => CAREER_TRACK_PREFERENCES[career] ?? []);
+  const track = [...official.tracks].sort((a, b) => {
+    const ai = preferredTracks.indexOf(a.trackName); const bi = preferredTracks.indexOf(b.trackName);
+    return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi) || a.trackName.localeCompare(b.trackName);
+  })[0];
+  const subjectPreferences = rankedCareers.flatMap((career) => CAREER_SUBJECT_PREFERENCES[career] ?? []);
+  const allSubjects = Array.from(new Map(official.tracks.flatMap((item) => item.electives).map((subject) => [subject.code, subject])).values());
+  const subjects = [...allSubjects].sort((a, b) => {
+    const ai = subjectPreferences.indexOf(a.code); const bi = subjectPreferences.indexOf(b.code);
+    const trackA = track.electives.some((item) => item.code === a.code) ? 0 : 1; const trackB = track.electives.some((item) => item.code === b.code) ? 0 : 1;
+    return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi) || trackA - trackB || a.name.localeCompare(b.name);
+  }).slice(0, 3);
+  return { trackName: track.trackName, subjects };
 }
 
 export async function startGuideSession(input: { tenantId?: string | null; studentId?: string | null; isPublic: boolean; fullName?: string | null; phone?: string | null }) {
@@ -198,7 +233,7 @@ async function getSessionOrThrow(sessionId: string) {
 export async function submitGuideAnswers(input: { sessionId: string; answers: { questionId: string; optionId: string }[] }) {
   const session = await getSessionOrThrow(input.sessionId);
   const { topGroup, rankedCareers } = scoreAnswers(input.answers);
-  const { trackName, subjects } = pickTrackForGroup(topGroup as PathwayGroup);
+  const { trackName, subjects } = pickTrackForGroup(topGroup as PathwayGroup, rankedCareers);
 
   const interests = input.answers.filter((a) => a.questionId.startsWith("int_"));
   const skills = input.answers.filter((a) => a.questionId.startsWith("skl_"));
@@ -230,6 +265,7 @@ export interface MatchedCourseResult {
   fullyMatches: boolean;
   minMeanGradeToAimFor: string;
   typicalCutoff: number | null;
+  careerRelevance: number;
 }
 
 function matchClusterToSubjects(subjectCodes: string[], rules: { slot: number; anyOf: string[] }[]) {
@@ -240,15 +276,22 @@ function matchClusterToSubjects(subjectCodes: string[], rules: { slot: number; a
   return { matchedSlots, totalSlots: rules.length, fullyMatches: matchedSlots === rules.length };
 }
 
-export async function matchKuccpsCoursesForSubjects(subjectCodes: string[]): Promise<MatchedCourseResult[]> {
-  const fullCodes = Array.from(new Set([...subjectCodes, "ENG", "KIS", "MAT"]));
+export async function matchKuccpsCoursesForSubjects(subjectCodes: string[], rankedCareers: string[] = []): Promise<MatchedCourseResult[]> {
+  // Do not inject Mathematics for every learner: Core and Essential
+  // Mathematics differ by pathway. The old assumption flooded Social/Arts
+  // recommendations with unrelated mathematics/science clusters.
+  const fullCodes = Array.from(new Set([...subjectCodes, "ENG", "KIS"]));
   const clusters = await db.kuccpsCluster.findMany({ where: { archived: false }, include: { courses: { where: { archived: false } } }, orderBy: { number: "asc" } });
   const results: MatchedCourseResult[] = [];
   for (const cluster of clusters) {
     const rules: { slot: number; anyOf: string[] }[] = JSON.parse(cluster.subjectRulesJson);
     const { matchedSlots, totalSlots, fullyMatches } = matchClusterToSubjects(fullCodes, rules);
-    if (matchedSlots === 0) continue;
+    // One broad compulsory-language match is not useful guidance. Require at
+    // least two requirement slots before loading a course into the result.
+    if (matchedSlots < Math.min(2, totalSlots)) continue;
     for (const course of cluster.courses) {
+      const courseCareers: string[] = JSON.parse(course.careerAreas || "[]");
+      const careerRelevance = rankedCareers.reduce((score, career, index) => score + (courseCareers.includes(career) ? Math.max(1, 4 - index) : 0), 0);
       results.push({
         clusterNumber: cluster.number,
         clusterName: cluster.name,
@@ -258,13 +301,16 @@ export async function matchKuccpsCoursesForSubjects(subjectCodes: string[]): Pro
         fullyMatches,
         minMeanGradeToAimFor: course.minMeanGrade,
         typicalCutoff: course.typicalCutoff,
+        careerRelevance,
       });
     }
   }
   return results.sort((a, b) => {
     if (a.fullyMatches !== b.fullyMatches) return a.fullyMatches ? -1 : 1;
-    return b.matchedSlots - a.matchedSlots;
-  });
+    if (a.careerRelevance !== b.careerRelevance) return b.careerRelevance - a.careerRelevance;
+    if (a.matchedSlots !== b.matchedSlots) return b.matchedSlots - a.matchedSlots;
+    return a.courseName.localeCompare(b.courseName);
+  }).slice(0, 30);
 }
 
 export async function getKuccpsGlimpse(sessionId: string) {
@@ -272,7 +318,7 @@ export async function getKuccpsGlimpse(sessionId: string) {
   const subjects: { name: string; code: string }[] = session.recommendedSubjectsJson ? JSON.parse(session.recommendedSubjectsJson) : [];
   if (subjects.length === 0) return [];
   const subjectCodes = subjects.map((s) => s.code);
-  const fullCodes = Array.from(new Set([...subjectCodes, "ENG", "KIS", "MAT"]));
+  const fullCodes = Array.from(new Set([...subjectCodes, "ENG", "KIS"]));
   const clusters = await db.kuccpsCluster.findMany({ where: { archived: false }, orderBy: { number: "asc" } });
   const matched = clusters
     .map((c) => {
@@ -280,7 +326,7 @@ export async function getKuccpsGlimpse(sessionId: string) {
       const { matchedSlots } = matchClusterToSubjects(fullCodes, rules);
       return { number: c.number, name: c.name, description: c.description, matchedSlots };
     })
-    .filter((c) => c.matchedSlots > 0)
+    .filter((c) => c.matchedSlots >= 2)
     .sort((a, b) => b.matchedSlots - a.matchedSlots)
     .slice(0, 3);
   return matched;
@@ -292,7 +338,8 @@ export async function getFullMatchedCourses(sessionId: string): Promise<MatchedC
     throw new PathwayGuideError("PAYMENT_REQUIRED", "Unlock your full course match report first with the small one-time fee.");
   }
   const subjects: { name: string; code: string }[] = session.recommendedSubjectsJson ? JSON.parse(session.recommendedSubjectsJson) : [];
-  return matchKuccpsCoursesForSubjects(subjects.map((s) => s.code));
+  const careers: string[] = session.careerAreasJson ? JSON.parse(session.careerAreasJson) : [];
+  return matchKuccpsCoursesForSubjects(subjects.map((s) => s.code), careers);
 }
 
 export async function getGuideSessionFull(sessionId: string) {
@@ -300,7 +347,8 @@ export async function getGuideSessionFull(sessionId: string) {
   let matchedCourses: MatchedCourseResult[] = [];
   if (session.recommendedSubjectsJson && session.unlocked) {
     const subjects: { name: string; code: string }[] = JSON.parse(session.recommendedSubjectsJson);
-    matchedCourses = await matchKuccpsCoursesForSubjects(subjects.map((s) => s.code));
+    const careers: string[] = session.careerAreasJson ? JSON.parse(session.careerAreasJson) : [];
+    matchedCourses = await matchKuccpsCoursesForSubjects(subjects.map((s) => s.code), careers);
   }
   return { session, matchedCourses };
 }

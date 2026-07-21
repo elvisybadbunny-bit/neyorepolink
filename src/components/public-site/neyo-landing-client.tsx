@@ -9,6 +9,7 @@ import {
   Check,
   ChevronDown,
   ClipboardCheck,
+  Compass,
   CreditCard,
   Download,
   HeartPulse,
@@ -838,6 +839,13 @@ export function NeyoLandingClient({
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section className="bg-indigo-50 px-4 py-16 sm:px-6 sm:py-20">
+          <div className="mx-auto grid max-w-[1100px] gap-6 rounded-[2rem] border border-indigo-100 bg-white p-6 shadow-sm sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div className="flex gap-4"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700"><Compass className="h-6 w-6" /></span><div><p className="text-xs font-black uppercase tracking-[0.18em] text-indigo-700">Free Grade 10 guidance preview</p><h2 className="mt-2 text-2xl font-black text-slate-950 sm:text-3xl">Explore a pathway, refine subject interests and check official selections.</h2><p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-600">Answer practical questions about your interests, strengths, preferred work and aspirations. NEYO gives guidance—not placement—and links you back to the official Ministry selection record.</p></div></div>
+            <div className="flex flex-col gap-2 sm:flex-row lg:flex-col"><a href="/career-guide"><Button className="w-full bg-indigo-700 text-white hover:bg-indigo-800">Try the Pathway Guide <ArrowRight className="h-4 w-4" /></Button></a><a href="https://selection.education.go.ke/my-selections" target="_blank" rel="noreferrer"><Button variant="secondary" className="w-full">Check official selections ↗</Button></a></div>
           </div>
         </section>
 

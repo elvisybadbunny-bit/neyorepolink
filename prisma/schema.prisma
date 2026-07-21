@@ -502,6 +502,7 @@ model Tenant {
   CalendarFeedToken            CalendarFeedToken[]
   QrScanEvent                  QrScanEvent[]
   StudentNationalAssessment    StudentNationalAssessment[]
+  seniorSelectionReconciliations StudentSeniorSelectionReconciliation[]
   lessonObservations           LessonObservation[]
   scannedExamPapers            ScannedExamPaper[]
   questionBankEntries          QuestionBankEntry[]
@@ -4956,6 +4957,7 @@ model Student {
   StudentPathwayPreference     StudentPathwayPreference[]
   TalentRecord                 TalentRecord[]
   StudentGoal                  StudentGoal[]
+  seniorSelectionReconciliations StudentSeniorSelectionReconciliation[]
   passportRequests             TransferPassportRequest[]
   CommunityServiceActivity     CommunityServiceActivity[]
   CareerDiscoveryRecord        CareerDiscoveryRecord[]
@@ -7087,6 +7089,73 @@ model LearnerJourneyPin {
 
 // PART J.10 — Senior School Pathway Management
 // =============================================================================
+
+// Versioned, human-reviewed snapshot of the public national Grade 10
+// selection catalogue. Candidate imports never affect schools until reviewed
+// and activated; superseded versions remain immutable for historical cohorts.
+model NationalSelectionCatalogVersion {
+  id             String   @id @default(cuid())
+  label          String
+  effectiveYear  Int
+  status         String   @default("CANDIDATE") // CANDIDATE | REVIEWED | ACTIVE | SUPERSEDED
+  sourceUrl      String
+  sourceChecksum String
+  retrievedAt    DateTime
+  reviewedById   String?
+  reviewedByName String?
+  reviewedAt     DateTime?
+  activatedAt    DateTime?
+  changeSummary  String?
+  createdAt      DateTime @default(now())
+  combinations   NationalSubjectCombination[]
+
+  @@unique([effectiveYear, sourceChecksum])
+  @@index([status, effectiveYear])
+}
+
+model NationalSubjectCombination {
+  id               String   @id @default(cuid())
+  catalogVersionId String
+  catalogVersion   NationalSelectionCatalogVersion @relation(fields: [catalogVersionId], references: [id], onDelete: Cascade)
+  officialCode     String
+  pathwayGroup     String
+  trackName        String
+  subjectNamesJson String
+  sourceReference  String?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  @@unique([catalogVersionId, officialCode])
+  @@index([pathwayGroup, trackName])
+}
+
+// Manual/imported evidence of a learner's official selection. This does not
+// claim direct Ministry submission and never rewrites NEYO subject choices.
+model StudentSeniorSelectionReconciliation {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId             String
+  student               Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  cohortYear             Int
+  status                 String   @default("DRAFT") // DRAFT | READY_FOR_OFFICIAL_ENTRY | OFFICIALLY_SUBMITTED_MANUAL | CONFIRMATION_IMPORTED | PLACEMENT_RECEIVED | RECONCILED | EXCEPTION_REVIEW
+  pathwayGroup          String?
+  officialCombinationCode String?
+  officialSubjectsJson  String   @default("[]")
+  schoolChoicesJson     String   @default("[]") // order, KNEC code, cluster, sex, accommodation, county/sub-county
+  confirmationFileUrl   String?
+  confirmationReference String?
+  placementJson         String?
+  discrepancyJson       String   @default("[]")
+  recordedById          String
+  recordedByName        String
+  confirmedAt           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([tenantId, studentId, cohortYear])
+  @@index([tenantId, cohortYear, status])
+}
 
 model Pathway {
   id          String   @id @default(cuid())

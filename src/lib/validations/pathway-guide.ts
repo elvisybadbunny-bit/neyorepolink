@@ -386,6 +386,29 @@ export const PATHWAY_GUIDE_QUESTIONS: GuideQuestion[] = [
       { id: "farmer", label: "Running a modern farm or agribusiness", signalsGroups: ["STEM"], signalsCareerAreas: ["Agriculture & Environmental"] },
       { id: "teacher", label: "Becoming a teacher, lecturer or trainer", signalsGroups: ["SOCIAL_SCIENCES"], signalsCareerAreas: ["Education & Training"] },
     ] },
+  { id: "int_3", pillar: "interests", prompt: "Which real project would you be happiest completing for several weeks?", helpText: "Choose the work itself, not the job title that sounds most impressive.", options: [
+    { id: "health_project", label: "Investigate a health problem and explain evidence-based prevention", signalsGroups: ["STEM"], signalsCareerAreas: ["Medicine & Healthcare"] },
+    { id: "tech_project", label: "Design, code, wire or improve a useful device or system", signalsGroups: ["STEM"], signalsCareerAreas: ["Engineering & Technology", "ICT & Computer Science"] },
+    { id: "environment_project", label: "Improve a farm, water, food or environmental problem", signalsGroups: ["STEM"], signalsCareerAreas: ["Agriculture & Environmental"] },
+    { id: "community_project", label: "Research a community issue and propose a fair policy or business solution", signalsGroups: ["SOCIAL_SCIENCES"], signalsCareerAreas: ["Law & Public Service", "Business & Economics"] },
+    { id: "creative_project", label: "Produce a film, performance, design portfolio or exhibition", signalsGroups: ["ARTS_SPORTS"], signalsCareerAreas: ["Creative Arts & Design"] },
+    { id: "sports_project", label: "Plan and evaluate a training, coaching or sports programme", signalsGroups: ["ARTS_SPORTS"], signalsCareerAreas: ["Sports & Athletics"] },
+  ] },
+  { id: "skl_3", pillar: "skills", prompt: "When work becomes difficult, which challenge can you stay with longest?", options: [
+    { id: "calculations", label: "Calculations, experiments and finding why a technical solution failed", signalsGroups: ["STEM"], signalsCareerAreas: ["Engineering & Technology", "Medicine & Healthcare"] },
+    { id: "research_words", label: "Reading deeply, comparing arguments and writing a clear position", signalsGroups: ["SOCIAL_SCIENCES"], signalsCareerAreas: ["Law & Public Service", "Education & Training"] },
+    { id: "customers", label: "Planning, budgeting, negotiating and improving an idea for customers", signalsGroups: ["SOCIAL_SCIENCES"], signalsCareerAreas: ["Business & Economics"] },
+    { id: "rehearsal", label: "Repeated rehearsal, critique and improving creative work", signalsGroups: ["ARTS_SPORTS"], signalsCareerAreas: ["Creative Arts & Design"] },
+    { id: "training", label: "Repeated physical training, coaching feedback and performance review", signalsGroups: ["ARTS_SPORTS"], signalsCareerAreas: ["Sports & Athletics"] },
+  ] },
+  { id: "val_2", pillar: "values", prompt: "Which working environment would suit you best most days?", options: [
+    { id: "lab_clinic", label: "A laboratory, clinic or field investigation with careful procedures", signalsGroups: ["STEM"], signalsCareerAreas: ["Medicine & Healthcare", "Agriculture & Environmental"] },
+    { id: "workshop_tech", label: "A workshop or technology team building and testing solutions", signalsGroups: ["STEM"], signalsCareerAreas: ["Engineering & Technology", "ICT & Computer Science"] },
+    { id: "office_people", label: "An organisation working with people, decisions, records or enterprise", signalsGroups: ["SOCIAL_SCIENCES"], signalsCareerAreas: ["Business & Economics", "Law & Public Service"] },
+    { id: "classroom", label: "A learning environment explaining ideas and supporting growth", signalsGroups: ["SOCIAL_SCIENCES"], signalsCareerAreas: ["Education & Training"] },
+    { id: "studio_stage", label: "A studio, stage, set or design team creating public work", signalsGroups: ["ARTS_SPORTS"], signalsCareerAreas: ["Creative Arts & Design"] },
+    { id: "field_sport", label: "A field, court, gym or sports organisation focused on performance", signalsGroups: ["ARTS_SPORTS"], signalsCareerAreas: ["Sports & Athletics"] },
+  ] },
 ];
 
 // -----------------------------------------------------------------------------

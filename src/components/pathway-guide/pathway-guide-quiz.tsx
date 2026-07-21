@@ -38,6 +38,7 @@ interface MatchedCourse {
   fullyMatches: boolean;
   minMeanGradeToAimFor: string;
   typicalCutoff: number | null;
+  careerRelevance: number;
 }
 
 const GROUP_LABELS: Record<string, string> = {
@@ -70,6 +71,7 @@ export function PathwayGuideQuiz({
   const [glimpse, setGlimpse] = React.useState<GlimpseCluster[] | null>(null);
   const [matched, setMatched] = React.useState<MatchedCourse[] | null>(null);
   const [paying, setPaying] = React.useState(false);
+  const [courseLimit, setCourseLimit] = React.useState(8);
   const [error, setError] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
@@ -279,6 +281,8 @@ export function PathwayGuideQuiz({
             <div>
               <p className="mb-1 text-xs uppercase tracking-widest text-navy-400">Recommended subject combination</p>
               <div className="flex flex-wrap gap-2">{subjects.map((s) => <Badge key={s.code} tone="blue">{s.name}</Badge>)}</div>
+              <p className="mt-2 text-xs text-navy-500 dark:text-navy-400">This is guidance based on your answers, not an official placement or submission. Confirm the exact current combination and schools on the Ministry selection platform with a parent/guardian and your school.</p>
+              <a href="https://selection.education.go.ke/my-selections" target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-bold text-indigo-700 underline dark:text-indigo-300">Check official Grade 10 selections ↗</a>
             </div>
             <div>
               <p className="mb-1 text-xs uppercase tracking-widest text-navy-400">Career areas this points toward</p>
@@ -325,16 +329,16 @@ export function PathwayGuideQuiz({
               ) : matched.length === 0 ? (
                 <EmptyState icon={Compass} title="No matched courses yet" description="Platform Operations may still be loading the KUCCPS reference data — please check back soon." />
               ) : (
-                matched.map((m, idx) => (
+                <><p className="pb-1 text-xs text-navy-500">Showing the strongest subject and career-area matches first. These are guidance references, not admission guarantees.</p>{matched.slice(0, courseLimit).map((m, idx) => (
                   <div key={`${m.clusterNumber}-${m.courseName}-${idx}`} className="rounded-2xl border border-navy-100 p-3 text-sm dark:border-navy-800">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <p className="font-semibold text-navy-900 dark:text-white">{m.courseName}</p>
-                      <Badge tone={m.fullyMatches ? "green" : "amber"}>{m.matchedSlots}/{m.totalSlots} subjects match</Badge>
+                      <Badge tone={m.fullyMatches ? "green" : "amber"}>{m.matchedSlots}/{m.totalSlots} requirements</Badge>
                     </div>
                     <p className="text-xs text-navy-500 dark:text-navy-400">Cluster {m.clusterNumber} — {m.clusterName}</p>
-                    <p className="mt-1 text-xs text-navy-400 dark:text-navy-500">Grade to aim for: {m.minMeanGradeToAimFor}{m.typicalCutoff ? ` · Typical cluster points: ${m.typicalCutoff}` : ""}</p>
+                    <p className="mt-1 text-xs text-navy-400 dark:text-navy-500">Grade to aim for: {m.minMeanGradeToAimFor}{m.typicalCutoff ? ` · Historical reference points: ${m.typicalCutoff}` : ""}</p>
                   </div>
-                ))
+                ))}{courseLimit < matched.length ? <Button className="mt-2" variant="secondary" onClick={() => setCourseLimit((limit) => Math.min(matched.length, limit + 8))}>Show 8 more relevant courses</Button> : null}</>
               )}
             </CardContent>
           </Card>

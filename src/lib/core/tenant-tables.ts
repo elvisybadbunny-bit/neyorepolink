@@ -309,6 +309,7 @@ export const TENANT_OWNED_MODELS = [
   "leavingCertificate",
   "entranceExamPaper",
   "studentNationalAssessment",
+  "studentSeniorSelectionReconciliation",
   "talentArea",
   "talentRecord",
   "studentGoal",
