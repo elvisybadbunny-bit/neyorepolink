@@ -13,6 +13,7 @@
     "migrate:deploy": "node scripts/auto-resolve-failed-migrations.js && ./node_modules/.bin/prisma migrate deploy",
     "db:heal": "node scripts/auto-resolve-failed-migrations.js",
     "db:seed": "tsx prisma/seed.ts",
+    "seed:40-stream-demo": "tsx scripts/z4-dual-lunch-shift-stress-test-seed.ts",
     "typecheck": "NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit",
     "worker": "tsx scripts/worker.ts",
     "test": "npm run test:roles",

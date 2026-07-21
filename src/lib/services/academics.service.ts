@@ -487,6 +487,19 @@ export async function timetablePrintBundle(user: SessionUser, mode: "classes" | 
 export async function setSlot(user: SessionUser, input: { classId: string; subjectId: string; teacherId?: string; venue?: string; dayOfWeek: number; period: number }) {
   return withTenant(user.tenantId, async () => {
     await assertHodSubjectAccess(user, input.subjectId);
+    // Manual adjacent entries for the same subject are treated as a double
+    // unless a school-locked break/lunch sits between them. Both halves must
+    // keep the same teacher so manual scheduling cannot create a split-owner
+    // double that looks valid but causes classroom responsibility problems.
+    const config = await tenantDb().timetableConfig.findFirst({ where: { classId: input.classId } });
+    const lockedAfter = new Set([config?.shortBreakStart, config?.shortBreak2Start, config?.longBreakStart, config?.lunchAfterPeriod ?? config?.lunchStart].filter((value): value is number => typeof value === "number"));
+    const adjacent = await tenantDb().timetableSlot.findMany({ where: { classId: input.classId, dayOfWeek: input.dayOfWeek, period: { in: [input.period - 1, input.period + 1] }, subjectId: input.subjectId } });
+    const conflictingHalf = adjacent.find((slot) => {
+      const boundaryAfter = Math.min(slot.period, input.period);
+      return !lockedAfter.has(boundaryAfter) && (slot.teacherId ?? null) !== (input.teacherId || null);
+    });
+    if (conflictingHalf) throw new AcademicsError("CONFLICT", "Both halves of an adjacent double lesson must use the same subject teacher. A configured break or lunch may separate independent lessons.");
+
     // Teacher double-booking check: same teacher, same day+period, ANY class.
     if (input.teacherId) {
       const clash = await tenantDb().timetableSlot.findFirst({

@@ -32,7 +32,8 @@ import { RecordOfWorkClientTab } from "@/components/academics/record-of-work-cli
 interface ClassCard { id: string; label: string; curriculum: string; isClassTeacher: boolean; students: number; subjects: string[]; openHomework: number }
 interface TodayLesson { period: number; subjectName: string; subjectCode: string; className: string; classId: string }
 interface Home { classes: ClassCard[]; todayLessons: TodayLesson[] }
-interface TtSlot { id: string; dayOfWeek: number; period: number; subjectName: string; subjectCode: string; className: string }
+interface TtSlot { id: string; dayOfWeek: number; period: number; subjectName: string; subjectCode: string; className: string; classId: string }
+interface TeacherTtConfig { classId: string; schoolDayStartTime?: string | null; lessonDurationMins?: number | null; assemblyBeforeLessonsMins?: number | null; shortBreakStart?: number | null; shortBreakMins?: number | null; shortBreak2Start?: number | null; shortBreak2Mins?: number | null; longBreakStart?: number | null; longBreakMins?: number | null; lunchAfterPeriod?: number | null; lunchStart?: number | null; lunchMins?: number | null }
 interface CoverageRow { id: string; period: number; classId: string; className: string; subjectName: string | null; originalTeacherName: string }
 interface HwRow { id: string; classId: string; className: string; subjectName: string; subjectCode: string; teacherName: string; title: string; instructions: string | null; dueDate: string; fileUrl: string | null; fileName: string | null; mine: boolean }
 interface NoteRow { id: string; classId: string; className: string; subjectName: string; subjectCode: string; teacherName: string; title: string; description: string | null; fileUrl: string; fileName: string; mine: boolean }
@@ -124,13 +125,46 @@ export function TeacherPortalClient({ canAssign }: { canAssign: boolean }) {
 // Overview: class cards + today's lessons + weekly timetable
 // ---------------------------------------------------------------------------
 
+function currentNairobiLesson(configs: TeacherTtConfig[]) {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
+  const weekday = parts.find((part) => part.type === "weekday")?.value ?? "";
+  const day = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday);
+  const now = Number(parts.find((part) => part.type === "hour")?.value ?? 0) * 60 + Number(parts.find((part) => part.type === "minute")?.value ?? 0);
+  const config = configs[0];
+  if (!config || day < 1) return { day, period: null as number | null };
+  const [hour, minute] = (config.schoolDayStartTime || "08:00").split(":").map(Number);
+  let cursor = hour * 60 + minute + Number(config.assemblyBeforeLessonsMins || 0);
+  const duration = Number(config.lessonDurationMins || 40);
+  for (let period = 1; period <= 12; period++) {
+    if (now >= cursor && now < cursor + duration) return { day, period };
+    cursor += duration;
+    if (period === config.shortBreakStart) cursor += Number(config.shortBreakMins || 0);
+    if (period === config.shortBreak2Start) cursor += Number(config.shortBreak2Mins || 0);
+    if (period === config.longBreakStart) cursor += Number(config.longBreakMins || 0);
+    if (period === (config.lunchAfterPeriod ?? config.lunchStart)) cursor += Number(config.lunchMins || 0);
+  }
+  return { day, period: null as number | null };
+}
+
 function Overview({ home }: { home: Home }) {
   const [slots, setSlots] = React.useState<TtSlot[] | null>(null);
+  const [configs, setConfigs] = React.useState<TeacherTtConfig[]>([]);
   const [coverage, setCoverage] = React.useState<CoverageRow[] | null>(null);
+  const timetableRef = React.useRef<HTMLDivElement>(null);
+  const currentCellRef = React.useRef<HTMLTableCellElement>(null);
   React.useEffect(() => {
-    fetch("/api/teacher/timetable").then((r) => r.json()).then((j) => j.ok && setSlots(j.data.slots)).catch(() => setSlots([]));
+    fetch("/api/teacher/timetable").then((r) => r.json()).then((j) => { if (j.ok) { setSlots(j.data.slots); setConfigs(j.data.configs ?? []); } }).catch(() => setSlots([]));
     fetch("/api/hr?view=my-coverage").then((r) => r.json()).then((j) => j.ok && setCoverage(j.data.coverage)).catch(() => setCoverage([]));
   }, []);
+  const current = currentNairobiLesson(configs);
+  React.useEffect(() => {
+    if (!slots?.length || window.innerWidth > 640) return;
+    const timer = window.setTimeout(() => {
+      timetableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      currentCellRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [slots, current.day, current.period]);
 
   return (
     <div className="space-y-4">
@@ -216,7 +250,7 @@ function Overview({ home }: { home: Home }) {
 
       {/* weekly timetable */}
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-navy-400" /> My weekly timetable</CardTitle></CardHeader>
+        <div ref={timetableRef} className="scroll-mt-20"><CardHeader><CardTitle className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-navy-400" /> My weekly timetable</CardTitle></CardHeader></div>
         <CardContent>
           {slots === null ? (
             <Skeleton className="h-36 rounded-2xl" />
@@ -238,7 +272,7 @@ function Overview({ home }: { home: Home }) {
                       {[1, 2, 3, 4, 5].map((d) => {
                         const slot = slots.find((s) => s.dayOfWeek === d && s.period === p);
                         return (
-                          <td key={d} className="p-1.5">
+                          <td key={d} ref={d === current.day && p === current.period ? currentCellRef : undefined} className={`p-1.5 ${d === current.day && p === current.period ? "bg-blue-100 ring-2 ring-inset ring-blue-500 dark:bg-blue-950/40" : ""}`}>
                             {slot ? (
                               <div className="rounded-md bg-green-50 px-1.5 py-1 dark:bg-green-900/20">
                                 <p className="font-semibold text-navy-800 dark:text-navy-100">{slot.subjectCode}</p>
