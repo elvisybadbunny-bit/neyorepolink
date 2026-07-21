@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const scanned = String(body.scanned ?? "");
     const status = body.status === "L" ? "L" : "P";
-    const result = await scanForAttendance(user, scanned, status);
+    const sessionId = body.sessionId ? String(body.sessionId) : undefined;
+    const result = await scanForAttendance(user, scanned, status, sessionId);
     return ok({ result });
   } catch (err) {
     return handleError(err);

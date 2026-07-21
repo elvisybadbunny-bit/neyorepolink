@@ -104,7 +104,7 @@ Repairs:
 | Automatically send documents to KNEC | EXTERNAL / MANUAL | Export/manual workflow only; phantom KNEC gateway removed | Do not claim live KNEC submission without approval/integration evidence. |
 | Newsletter layout removes blank spaces/cut lines | NOT VERIFIED | Document/print systems exist | Requires exact newsletter template and print reproduction. |
 | Bulk student IDs with names, photos, school logo and cut layout | FULL STACK / REACHABLE | Student ID bulk print/templates | Physical cut accuracy depends on printer/settings. |
-| QR on ID for attendance and fees | PARTIAL | QR identity/payment lookup and QR scan infrastructure exist | `docs/FEATURES-CHECKLIST.md` still marks printed-card QR attendance deferred; one-QR-per-session attendance is not complete. |
+| QR on ID for attendance and fees | FULL STACK / REACHABLE | Security Gate QR Station supports student-ID attendance and payment lookup; unique expiring attendance sessions enforce one response per learner/session | Deployed camera/printed-card verification pending. |
 | Custom names, stamp, student number on IDs | FULL STACK / REACHABLE/PARTIAL | ID templates include identity fields/logo/photo | Exact optional stamp switch requires template verification. |
 
 ## Other business and academic ideas
@@ -118,10 +118,9 @@ Repairs:
 
 ## Priority gaps found
 
-1. Printed ID QR attendance with one session token and duplicate-scan protection.
-2. Newsletter pagination/blank-space reproduction.
-3. Messaging 360px scroll/overlay reproduction.
-4. Parent-facing split-payment verification.
-5. Deployed browser evidence for many already-built workflows.
+1. Newsletter pagination/blank-space reproduction.
+2. Messaging 360px scroll/overlay reproduction.
+3. Parent-facing split-payment verification.
+4. Deployed browser evidence for many already-built workflows.
 
 No row marked PARTIAL/NOT BUILT should be presented as completed in marketing or the NEYO Bible.

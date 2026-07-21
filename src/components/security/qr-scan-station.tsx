@@ -20,6 +20,7 @@ import {
   History, ShieldAlert, ShieldCheck, Clock, ArrowRight, CornerDownLeft, Sparkles, X,
 } from "lucide-react";
 import jsQR from "jsqr";
+import QRCode from "qrcode";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,6 +84,12 @@ export function QrScanStation({
   const [cameraStatus, setCameraStatus] = React.useState("Camera idle");
   const [recent, setRecent] = React.useState<ScanEvent[] | null>(null);
   const [recentError, setRecentError] = React.useState(false);
+  const [attendanceSessions, setAttendanceSessions] = React.useState<any[]>([]);
+  const [attendanceSessionId, setAttendanceSessionId] = React.useState("");
+  const [sessionTitle, setSessionTitle] = React.useState("Class attendance");
+  const [sessionClassId, setSessionClassId] = React.useState("");
+  const [sessionClasses, setSessionClasses] = React.useState<any[]>([]);
+  const [sessionQr, setSessionQr] = React.useState("");
 
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -101,6 +108,10 @@ export function QrScanStation({
     }
   }, []);
   React.useEffect(() => { void loadRecent(); }, [loadRecent]);
+  const loadAttendanceSessions = React.useCallback(async () => { try { const json=await fetch("/api/qr-attendance-sessions").then(r=>r.json()); if(json.ok){setAttendanceSessions(json.data.sessions??[]);const open=(json.data.sessions??[]).find((s:any)=>s.status==="OPEN");if(open&&!attendanceSessionId)setAttendanceSessionId(open.id);}} catch {} },[attendanceSessionId]);
+  React.useEffect(()=>{if(canMarkAttendance){void loadAttendanceSessions();fetch("/api/classes").then(r=>r.json()).then(j=>{if(j.ok)setSessionClasses(j.data.classes??[])}).catch(()=>{});}},[canMarkAttendance,loadAttendanceSessions]);
+  React.useEffect(()=>{const row=attendanceSessions.find((s:any)=>s.id===attendanceSessionId);if(!row){setSessionQr("");return}QRCode.toDataURL(row.qrValue,{width:220,margin:1}).then(setSessionQr).catch(()=>setSessionQr(""));},[attendanceSessionId,attendanceSessions]);
+  async function createAttendanceSession(){const json=await fetch("/api/qr-attendance-sessions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create",title:sessionTitle,classId:sessionClassId||undefined,minutes:60})}).then(r=>r.json());if(json.ok){setAttendanceSessionId(json.data.session.id);toast({title:"Unique attendance session opened",tone:"success"});await loadAttendanceSessions()}else toast({title:json.error?.message||"Could not open session",tone:"error"});}
 
   function stopCamera() {
     scanningRef.current = false;
@@ -141,7 +152,7 @@ export function QrScanStation({
         const res = await fetch("/api/qr-scan/attendance", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scanned, status: "P" }),
+          body: JSON.stringify({ scanned, status: "P", sessionId: attendanceSessionId || undefined }),
         });
         const json = await res.json();
         if (json.ok) {
@@ -311,6 +322,8 @@ export function QrScanStation({
           </button>
         )}
       </div>
+
+      {mode === "attendance" ? <Card className="border-blue-200 dark:border-blue-900"><CardContent className="grid gap-4 p-4 md:grid-cols-[1fr_auto]"><div className="space-y-3"><div><p className="font-bold text-navy-950 dark:text-white">Unique attendance session</p><p className="text-xs text-navy-500">Create a fresh QR session for this register. A learner can be accepted only once in that session; the same student ID card remains reusable in a different session.</p></div><div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"><Input value={sessionTitle} onChange={e=>setSessionTitle(e.target.value)} placeholder="e.g. Monday morning register"/><select value={sessionClassId} onChange={e=>setSessionClassId(e.target.value)} className="h-11 rounded-xl border border-navy-200 bg-white px-3 text-sm dark:border-navy-700 dark:bg-navy-900"><option value="">Whole school</option>{sessionClasses.map((c:any)=><option key={c.id} value={c.id}>{c.level} {c.stream||""}</option>)}</select><Button onClick={createAttendanceSession} disabled={sessionTitle.length<2}>Open 60-minute session</Button></div><select value={attendanceSessionId} onChange={e=>setAttendanceSessionId(e.target.value)} className="h-11 w-full rounded-xl border border-navy-200 bg-white px-3 text-sm dark:border-navy-700 dark:bg-navy-900"><option value="">Legacy daily scan (no session)</option>{attendanceSessions.map((s:any)=><option key={s.id} value={s.id}>{s.title} · {s.status} · {s.responseCount} responses</option>)}</select></div>{sessionQr?<div className="text-center"><img src={sessionQr} alt="Unique QR attendance session" className="mx-auto h-32 w-32 rounded-xl bg-white p-1"/><p className="mt-1 text-[10px] text-navy-400">Session QR · not a student identity QR</p></div>:null}</CardContent></Card>:null}
 
       <Card className="rounded-2xl border border-navy-100 bg-white/90 shadow-sm backdrop-blur-md dark:border-navy-800 dark:bg-navy-900/90">
         <CardHeader>

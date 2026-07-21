@@ -5085,3 +5085,10 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Academic leadership reviews inside Exams and can APPROVE, RETURN with correction note, or INCLUDE in package.
 - [x] Approved/included documents produce a controlled package manifest with student, admission number, type and secure file URL.
 - [x] Submission and review are audit logged; NEYO explicitly does not claim direct KNEC transmission.
+
+### Founder notebook gap batch 4 — session-bound QR attendance — 2026-07-21
+- [x] Attendance leadership can open a unique cryptographically random, expiring QR session.
+- [x] A session may apply school-wide or to one class; a learner outside the selected class is rejected.
+- [x] `QrAttendanceResponse` has a database unique key on session + learner, enforcing one accepted response per learner/session.
+- [x] The same printed student ID remains reusable in later sessions; duplicate protection is session-specific.
+- [x] QR checkpoint renders the active session QR, response count and selected-session scan workflow while retaining payment lookup.

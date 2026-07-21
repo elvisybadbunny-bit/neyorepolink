@@ -43,7 +43,9 @@ export const TENANT_OWNED_MODELS = [
   "intercomCall",
   "storedFile",
   "documentVerification",
-  "qrScanEvent", // N.2 — QR hardware scan audit trail + duplicate-scan guard
+  "qrScanEvent",
+  "qrAttendanceSession",
+  "qrAttendanceResponse", // N.2 — QR hardware scan audit trail + duplicate-scan guard
   "idempotentRequest", // Z.1 — real offline-safe replay ledger for non-naturally-idempotent create actions (Gate Pass, Visitor sign-in)
   "venue", // Z.3 — real Venue/Lab pool for timetable venue assignment + conflict checking
   // BB.4 — a real, SERIOUS, PRE-EXISTING security gap found and fixed while

@@ -126,7 +126,7 @@ export async function resolveScannedStudent(user: SessionUser, scanned: string) 
  * as the manual register); leadership/reception roles with attendance.record
  * may mark any class (front-desk / gate covering the whole school).
  */
-export async function scanForAttendance(user: SessionUser, scanned: string, status: "P" | "L" = "P") {
+export async function scanForAttendance(user: SessionUser, scanned: string, status: "P" | "L" = "P", sessionId?: string) {
   return withTenant(user.tenantId, async () => {
     const code = extractVerifyCode(scanned);
     const record = await tenantDb().documentVerification.findFirst({ where: { code, docType: "student_id" } });
@@ -135,6 +135,16 @@ export async function scanForAttendance(user: SessionUser, scanned: string, stat
     }
     const student = await tenantDb().student.findFirst({ where: { id: record.studentId, status: "ACTIVE" } });
     if (!student) throw new QrScanError("NOT_FOUND", "Student not found or no longer active.");
+
+    let attendanceSession: { id: string; classId: string | null } | null = null;
+    if (sessionId) {
+      const session = await tenantDb().qrAttendanceSession.findFirst({ where: { id: sessionId, status: "OPEN", expiresAt: { gt: new Date() } }, select: { id: true, classId: true } });
+      if (!session) throw new QrScanError("INVALID", "This QR attendance session is closed, expired or belongs to another school.");
+      if (session.classId && session.classId !== student.classId) throw new QrScanError("FORBIDDEN", "This learner is not in the class selected for this attendance session.");
+      const prior = await tenantDb().qrAttendanceResponse.findUnique({ where: { sessionId_studentId: { sessionId: session.id, studentId: student.id } } });
+      if (prior) throw new QrScanError("DUPLICATE", "This learner has already responded to this attendance session.");
+      attendanceSession = session;
+    }
 
     // Row-scope: TEACHER/CLASS_TEACHER can only 1-tap their own class.
     const teacherLike = ["TEACHER", "CLASS_TEACHER"].includes(user.role) || user.secondaryRole === "TEACHER" || user.secondaryRole === "CLASS_TEACHER";
@@ -158,7 +168,14 @@ export async function scanForAttendance(user: SessionUser, scanned: string, stat
       update: { status, markedById: user.id, markedByName: user.fullName, note: "Marked via QR ID-card scan" },
     });
 
-    await logScan(user, student.id, "ATTENDANCE", "OK", `Marked ${status === "P" ? "present" : "late"} for ${date}`);
+    if (attendanceSession) {
+      try {
+        await tenantDb().qrAttendanceResponse.create({ data: { tenantId: user.tenantId, sessionId: attendanceSession.id, studentId: student.id, status, scannedById: user.id, scannedByName: user.fullName } });
+      } catch {
+        throw new QrScanError("DUPLICATE", "This learner has already responded to this attendance session.");
+      }
+    }
+    await logScan(user, student.id, "ATTENDANCE", "OK", `Marked ${status === "P" ? "present" : "late"} for ${date}${attendanceSession ? ` · session ${attendanceSession.id}` : ""}`);
 
     return {
       studentId: student.id,

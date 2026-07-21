@@ -3371,6 +3371,38 @@ model AttendanceRecord {
 // A scan is rejected as a duplicate if the SAME student was scanned for the
 // SAME action within the cooldown window (protects against a camera reading
 // the same code twice in one pass, or a student tapping the QR repeatedly).
+model QrAttendanceSession {
+  id           String   @id @default(cuid())
+  tenantId     String
+  code         String   @unique
+  title        String
+  classId      String?
+  date         String
+  expiresAt    DateTime
+  status       String   @default("OPEN") // OPEN | CLOSED | EXPIRED
+  createdById  String
+  createdByName String
+  createdAt    DateTime @default(now())
+  closedAt     DateTime?
+
+  @@index([tenantId, status, date])
+  @@index([tenantId, classId])
+}
+
+model QrAttendanceResponse {
+  id          String   @id @default(cuid())
+  tenantId    String
+  sessionId   String
+  studentId   String
+  status      String
+  scannedById String
+  scannedByName String
+  createdAt   DateTime @default(now())
+
+  @@unique([sessionId, studentId])
+  @@index([tenantId, sessionId])
+}
+
 model QrScanEvent {
   id            String   @id @default(cuid())
   tenantId      String
