@@ -4071,6 +4071,41 @@ model OnboardingFeeQuote {
   @@index([status, updatedAt])
 }
 
+model OnboardingPayment {
+  id                String   @id @default(cuid())
+  quoteId           String
+  amountKes         Int
+  phone             String
+  status            String   @default("PENDING") // PENDING | PAID | FAILED
+  accountRef        String
+  checkoutRequestId String?  @unique
+  mpesaRef          String?  @unique
+  resultCode        String?
+  resultDesc        String?
+  rawCallback       String?
+  paidAt            DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([quoteId, status])
+  @@index([status, createdAt])
+}
+
+model OnboardingRun {
+  id             String   @id @default(cuid())
+  quoteId        String   @unique
+  tenantId       String?
+  schoolName     String
+  status         String   @default("ACTIVE") // ACTIVE | COMPLETED | CANCELLED
+  checklistJson  String
+  activatedAt    DateTime @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId, status])
+}
+
 model SubscriptionPayment {
   id                    String       @id @default(cuid())
   subscriptionId        String

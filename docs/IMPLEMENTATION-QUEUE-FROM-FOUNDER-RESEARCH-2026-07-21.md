@@ -47,10 +47,10 @@ Founder decisions recorded 21 July 2026:
 
 - [x] Founder-controlled formula factors/rates, minimum/maximum and operational toggles live in Pricing Engine.
 - [x] Draft quote calculation uses real linked-school counts or reviewed submission inputs, with Founder review/override and audited FREE waiver.
-- [~] Separate onboarding quote purpose/history is implemented; invoice and payment records remain pending.
-- [ ] School approval before M-Pesa initiation.
-- [ ] Verified onboarding-payment callback and onboarding-checklist activation.
-- [ ] Campaign waiver support without stacking or hidden charges.
+- [x] Separate onboarding quote/payment purpose and history; it never masquerades as a subscription payment.
+- [x] School approval is required before M-Pesa initiation.
+- [x] Verified onboarding callback activates the role-owned onboarding checklist; PAID and FREE paths converge safely.
+- [x] Founder FREE waiver is supported and onboarding never auto-stacks subscription campaigns/referrals/influencer discounts.
 
 ### D. Public asset and content operations
 

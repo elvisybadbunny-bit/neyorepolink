@@ -32,7 +32,7 @@ async function secretOrEnv(key: string, envName: string) {
  * (if a token is configured) or, worse, silently accepted by an
  * unauthenticated route (the exact real gap found and fixed in this audit).
  */
-function centralCallbackUrl(): string {
+export function centralCallbackUrl(): string {
   const token = process.env.DARAJA_WEBHOOK_TOKEN;
   const base = `${appBaseUrl()}/api/billing/central-callback`;
   return token ? `${base}?t=${encodeURIComponent(token)}` : base;
@@ -55,7 +55,7 @@ async function centralCreds(): Promise<ProviderCredentials | null> {
   };
 }
 
-async function centralGateway(): Promise<{ provider: PaymentProvider; creds: ProviderCredentials; live: boolean; source: "neyo_ops_vault" | "env" | "dev_mock" }> {
+export async function centralGateway(): Promise<{ provider: PaymentProvider; creds: ProviderCredentials; live: boolean; source: "neyo_ops_vault" | "env" | "dev_mock" }> {
   const creds = await centralCreds();
   if (creds) {
     const vaultConfigured = Boolean(await secretStatus("central_daraja_consumer_key"));
