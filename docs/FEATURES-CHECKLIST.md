@@ -3564,7 +3564,7 @@ advanced-analytics.service.ts. See docs/J11-AUDIT-2026-06-29.md. -->
     + (staffCount      × WEIGHT_STAFF)
     + (parentCount     × WEIGHT_PARENT)     // ALL parents, live or dormant, per the founder's own answer
     + (estimatedStorageGb × WEIGHT_STORAGE_GB)   // the ESTIMATE, never the real measured bytes, for pricing
-  
+
   MonthlyPriceKes = BASE_FLOOR_KES + (RawScore × KES_PER_SCORE_POINT)
   ```
   Every one of `WEIGHT_STUDENT`, `WEIGHT_STAFF`, `WEIGHT_PARENT`, `WEIGHT_STORAGE_GB`, `BASE_FLOOR_KES`, and `KES_PER_SCORE_POINT` is a real, live-editable NEYO Ops number (a new `pricing_engine_v2` `PlatformSetting`-JSON key, following the exact established real pattern) — NOT hardcoded, so NEYO Ops can genuinely tune the whole pricing model over time as real cost data comes in (directly reusable in the future with U.1's real cost-tracking project, once built, to sanity-check these weights against NEYO's actual real infrastructure spend — but the pricing FORMULA itself does not need to wait for U.1 to exist; it can launch with founder-estimated starting weights and be refined later, exactly matching the founder's own "as you gather real data, you can improve these estimates" framing from the earlier ideas conversation).
@@ -5035,3 +5035,21 @@ Discovered during BB.4's own build: a Python audit cross-referencing every Prism
 - [x] Founder Operations legal editors now save non-live drafting notes only.
 - [x] Public pages show effective date/version and requirement for qualified Kenyan legal/privacy review.
 - [ ] External legal review, ODPC assessment/registration evidence, DPO/privacy contact decision and customer/DPA documents remain founder/legal actions.
+
+### School-first website, CBE Delivery, Learning Videos and offline resilience — 2026-07-21
+- [x] Rebuilt the public homepage around School OS, real product evidence, governed demo intake, Founder story, pilot pricing, security, FAQ and role/audience outcomes.
+- [x] Isolated the public light editorial site from signed-in Liquid Glass/dark recolouring; first-time NEYO defaults light while an explicit saved user choice remains possible.
+- [x] CBE Delivery Hub tenant context repaired for every route read/write.
+- [x] Curated strand-linked YouTube Learning Library moved from CBC popup to the normal Learning Videos screen.
+- [x] Offline IndexedDB unified at version 3 (`outbox`, `bundleCache`, `failedOutbox`).
+- [x] Offline-safe queues with tenant-scoped at-most-once replay cover CBE observations, records of work and bounded CBE Delivery creates in addition to existing attendance/exams/gate/reception paths.
+- [x] Permanently rejected sync actions remain in a visible Review inbox instead of disappearing.
+- [x] Bundle Saver snapshots are filtered server-side by effective merged permissions and include bounded CBE Delivery sessions for academic roles.
+- [x] `/settings/offline` documents queued, read-only and online-required workflows; offline snapshots show age and warn red after 24 hours.
+- [x] NEYO Bible Level 21 records the source-grounded launch-readiness addendum and active pending decisions.
+- [~] Offline code contracts pass 12/12; deployed browser → reconnect → exactly-once database evidence remains required.
+- [ ] Contextual governed YouTube Help + Dynamic Island + PIP/transcript remains pending implementation.
+- [ ] Founder-controlled school-size onboarding formula/invoice/payment workflow remains pending implementation.
+- [ ] Safe Founder public-logo upload and friendly social/FAQ/media editors remain pending implementation.
+- [ ] CBC leadership completeness/report-governance/appraisal/report-sharing audit remains pending.
+- [ ] WWDC26-inspired refinement is approved only for reversible navigation/contextual controls and selected surfaces; whole-app module audit remains pending and solid forms/tables must remain readable.

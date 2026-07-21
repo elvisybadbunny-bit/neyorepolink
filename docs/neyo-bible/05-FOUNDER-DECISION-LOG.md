@@ -23,7 +23,7 @@ still exist without presenting it as current policy.
 
 ## FD-001 — The Master Features Checklist controls product scope
 
-**Date:** 2026-06 onward (standing rule)  
+**Date:** 2026-06 onward (standing rule)
 **Status:** Active
 
 **Decision:** `docs/FEATURES-CHECKLIST.md` is the only feature source of truth. Do not invent or
@@ -44,7 +44,7 @@ than accepted.
 
 ## FD-002 — Full-stack means real data, never a decorative mock
 
-**Date:** 2026-06 onward (standing rule)  
+**Date:** 2026-06 onward (standing rule)
 **Status:** Active
 
 **Decision:** No placeholder backend, fake authentication, hard-coded demo response, or UI-only
@@ -63,7 +63,7 @@ remaining layers and real create/read or state-transition behavior.
 
 ## FD-003 — Liquid Glass is the platform default, controlled only by NEYO
 
-**Date:** 2026-06-13  
+**Date:** 2026-06-13
 **Status:** Active
 
 **Decision:** Liquid Glass is the default visual system in both light and dark appearances. The
@@ -83,7 +83,7 @@ Visual Styling; `src/app/globals.css`; `src/lib/services/platform-appearance.ser
 
 ## FD-004 — The Bundi Rule governs intelligent product copy
 
-**Date:** 2026-06-13  
+**Date:** 2026-06-13
 **Status:** Active
 
 **Decision:** School-facing product copy calls the helper **Bundi**, never “AI,” and never exposes
@@ -103,7 +103,7 @@ for uncertain results. Copy changes must be checked for forbidden terminology be
 
 ## FD-005 — Kenya-first behavior is not optional localization
 
-**Date:** Project foundation  
+**Date:** Project foundation
 **Status:** Active
 
 **Decision:** NEYO is designed around Kenyan schools: KES, +254 telephone numbers, M-Pesa Daraja,
@@ -121,7 +121,7 @@ error behavior are mandatory; school workflows must reflect actual Kenyan educat
 
 ## FD-006 — School pricing uses two live models, not named packages
 
-**Date:** 2026-07-17 to 2026-07-18  
+**Date:** 2026-07-17 to 2026-07-18
 **Status:** Active; supersedes the former Free Karibu/Msingi/Pro/Elite school-facing plan model
 
 **Decision:** The school-facing choice is between **Capacity Complete** (`SIZE_BASED_V2`) and
@@ -143,7 +143,7 @@ uses active users and enabled modules, including the midpoint proration rule. Ne
 
 ## FD-007 — Schools choose; timetable engines advise rather than hard-code policy
 
-**Date:** 2026-07-12 to 2026-07-14  
+**Date:** 2026-07-12 to 2026-07-14
 **Status:** Active
 
 **Decision:** Timetable, teacher-allocation, electives, venue, lunch, and exam-sitting behavior must
@@ -164,7 +164,7 @@ and auditable, not hidden client-side preferences.
 
 ## FD-008 — Chargeable student services feed the student invoice
 
-**Date:** 2026-06-12  
+**Date:** 2026-06-12
 **Status:** Active
 
 **Decision:** Chargeable school services do not maintain disconnected payment balances. Boarding,
@@ -183,7 +183,7 @@ portal visibility.
 
 ## FD-009 — Parents and students share the family portal
 
-**Date:** 2026-06-12  
+**Date:** 2026-06-12
 **Status:** Active
 
 **Decision:** Parents and students use the shared `/portal` experience instead of requiring a
@@ -200,7 +200,7 @@ results, fees, notes, timetable, health, and other child data remain server-side
 
 ## FD-010 — NEYO company roles are separate from school roles
 
-**Date:** 2026-07-09  
+**Date:** 2026-07-09
 **Status:** Active
 
 **Decision:** Company operations use `FOUNDER`, `NEYO_OPS`, and `NEYO_SUPPORT` with distinct reach;
@@ -220,7 +220,7 @@ needs it rather than defaulting to unrestricted access.
 
 ## FD-011 — Tenant isolation is a release-blocking security control
 
-**Date:** Project foundation; reinforced 2026-07-12 and 2026-07-18  
+**Date:** Project foundation; reinforced 2026-07-12 and 2026-07-18
 **Status:** Active
 
 **Decision:** Every tenant-owned model is registered in `TENANT_OWNED_MODELS`, every tenant workflow
@@ -240,7 +240,7 @@ identifiers are derived from the authenticated session rather than trusted from 
 
 ## FD-012 — A scan or automatic decision always has an honest review path
 
-**Date:** 2026-07-16 onward  
+**Date:** 2026-07-16 onward
 **Status:** Active
 
 **Decision:** OCR and automated matching may accelerate work, but uncertain marks, questions,
@@ -259,7 +259,7 @@ shows a score and requires allocation confirmation. Confirmed writes are transac
 
 ## FD-013 — Printed timetable details remain readable, with separate reference prints
 
-**Date:** 2026-07-12 to 2026-07-17  
+**Date:** 2026-07-12 to 2026-07-17
 **Status:** Active
 
 **Decision:** The main timetable print must not be overcrowded with every options-block teacher,
@@ -280,7 +280,7 @@ output remains high contrast.
 
 ## FD-014 — The NEYO Bible must be evidence, not volume
 
-**Date:** 2026-07-18  
+**Date:** 2026-07-18
 **Status:** Active
 
 **Decision:** Institutional documentation is built one grounded level at a time. Repeated filler,
@@ -299,7 +299,7 @@ actually exist; planned levels are not represented as completed.
 
 ## FD-015 — Stable work is committed and pushed immediately
 
-**Date:** Reinforced 2026-07-18  
+**Date:** Reinforced 2026-07-18
 **Status:** Active operating policy
 
 **Decision:** Once one coherent unit is verified, commit and push it before beginning another unit.
@@ -316,7 +316,7 @@ test is not considered durable preservation.
 
 ## FD-016 — Audit the implementation, not the completion claim
 
-**Date:** 2026-07-01; reinforced 2026-07-18  
+**Date:** 2026-07-01; reinforced 2026-07-18
 **Status:** Active operating policy
 
 **Decision:** A green checkbox, zero-error cached typecheck, old screenshot, or confident commit
@@ -332,6 +332,74 @@ permissions and tenant isolation; distinguish a product defect from a stale test
 
 **Evidence:** `FEATURES-CHECKLIST.md` opening 2026-07-01 audit warning;
 `docs/I60B-TYPECHECK-CACHE-AUDIT-2026-07-01.md`; `CONTEXT-ANCHOR.md` parts 24–26.
+
+---
+
+## FD-016 — Offline support is progressive, local-first and evidence-labelled
+
+**Date:** 2026-07-21
+**Status:** Active
+
+**Decision:** Use device IndexedDB and the existing bounded API paths instead of buying a separate
+offline provider. Queue only mutations with an at-most-once server contract; retain permanent
+rejections for user review; filter saved snapshots by merged role permissions. Treat the currently
+listed workflows as code-complete while deployed browser/database exactly-once evidence remains
+pending.
+
+**Reason/context:** Kenyan schools may use small phones and unreliable connectivity, but stale
+permissions, duplicate money and conflicting publication actions are more harmful than an honest
+online-required label.
+
+**Implementation consequence:** `neyo-offline` schema version 3 contains `outbox`, `bundleCache`
+and `failedOutbox`; Settings exposes the capability matrix; old snapshots are visibly labelled;
+M-Pesa, identity, publication and sensitive settings remain online-only.
+
+**Evidence:** `src/lib/offline/queue.ts`, `src/lib/offline/bundle-cache.ts`,
+`src/app/(app)/settings/offline/page.tsx`, `docs/OFFLINE-SUPPORT-MATRIX-2026-07-21.md`.
+
+---
+
+## FD-017 — Guided help uses approved videos through Help and Dynamic Island
+
+**Date:** 2026-07-21
+**Status:** Active; implementation pending
+
+**Decision:** A published contextual guide may be opened from a permanent Help action and offered
+once per guide version through a dismissible Dynamic Island suggestion. It must remain optional,
+role/route/version aware, captioned, dismissible and backed by a transcript/slow-network path.
+
+**Implementation consequence:** Build governed video mapping and Founder review before PIP UI.
+Candidate YouTube discovery never equals publication; videos never become required to finish work.
+
+---
+
+## FD-018 — Onboarding fee is a Founder-governed Pricing Engine result
+
+**Date:** 2026-07-21
+**Status:** Active; formula implementation pending
+
+**Decision:** NEYO Ops controls which school-size, migration, configuration and support inputs are
+operational. The Pricing Engine calculates from real school records or reviewed submissions, then
+the Founder may review/override/waive it. A zero quote displays `FREE`. A demo request creates no
+charge.
+
+**Implementation consequence:** Keep onboarding purpose separate from subscription payments;
+show scope and KES amount before school approval/M-Pesa initiation; audit formula version,
+overrides and waivers.
+
+---
+
+## FD-019 — WWDC26-inspired refinement is reversible and readability-first
+
+**Date:** 2026-07-21
+**Status:** Active
+
+**Decision:** Apply refined material primarily to navigation/contextual controls and selected
+hero/dashboard surfaces. Control activation and intensity from NEYO Ops. Preserve the existing
+NEYO design; solid forms, tables, print and contrast fallbacks remain authoritative.
+
+**Reason/context:** Apple’s own refinement prioritised separation/readability. “Glass everywhere”
+would repeat the public landing contrast failure and damage dense school work.
 
 ---
 

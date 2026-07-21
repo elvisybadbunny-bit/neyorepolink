@@ -90,6 +90,10 @@ was: **"Delete it, rebuild for real."** This is that rebuild.
   sales/demo/pilot/onboarding/partnership templates, brand/marketing/customer documentation,
   financial/HR/legal artifact frameworks, internal AI governance library, and founder knowledge
   continuation—with explicit status boundaries where approved artifacts do not yet exist.
+- **[21 — July 2026 Launch-Readiness Addendum](./21-JULY-2026-LAUNCH-READINESS-ADDENDUM.md)** —
+  school-first website, Senior School deterministic timetable phases, CBE Delivery, inline Learning
+  Videos, offline architecture, legal/auth/demo repairs, Founder Operations changes and the explicit
+  pending queue for guided help, onboarding pricing, public assets and CBC leadership governance.
 
 ## Companion: Founder Manual V2 (button-by-button product operations)
 
@@ -128,9 +132,10 @@ making this index unreadable:
 - **[Module 28 — Public School Website & Marketing](../founder-manual-v2/28-PUBLIC-SCHOOL-WEBSITE-NEWS-GALLERY-SEO-AND-BRAND.md)**
 - **[Module 29 — Developer APIs, Webhooks, Storage & Integrations](../founder-manual-v2/29-DEVELOPER-API-KEYS-WEBHOOKS-STORAGE-AND-INTEGRATIONS.md)**
 - **[Module 30 — Master Operating Checklists](../founder-manual-v2/30-MASTER-DAILY-WEEKLY-TERM-AND-YEAR-END-CHECKLISTS.md)**
+- **[Module 31 — CBE Delivery Hub](../founder-manual-v2/31-CBE-DELIVERY-HUB-CURRICULUM-TO-EVIDENCE-AND-SUPPORT.md)**
 
 ## Levels planned
 
-- Levels 01–20 now cover the identified institutional areas. Deepen existing levels when the real
-  implementation changes. Add another Bible level only for a genuinely distinct responsibility;
+- Levels 01–21 now cover the identified institutional areas and the July 2026 launch-readiness
+  addendum. Deepen existing levels when the real implementation changes. Add another Bible level only for a genuinely distinct responsibility;
   continue screen-by-screen product instructions in Founder Manual V2.

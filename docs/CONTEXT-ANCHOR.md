@@ -3011,7 +3011,7 @@ Founder: **"Option 1 — Fix Part K fully"** + **"make sure it is full stack."**
 
 ## 🔁 PART J BATCH 45 — J.7 STUDENT PORTFOLIO SYSTEM CHUNK 8 KENYAN SEED DATA COMPLETED (2026-06-28)
 - Completed J.7 Chunk 8 — Kenyan Seed Data. Updated `prisma/seed.ts` to create real, idempotent portfolio items for seeded learners without duplicating rows on repeat seed runs.
-- Seed logic now creates three realistic portfolio records inside Karibu High School: 
+- Seed logic now creates three realistic portfolio records inside Karibu High School:
   1. `Nairobi River clean-up reflection` for Achieng — category `COMMUNITY`, linked to a real competency + subject, approved and visible to families.
   2. `Scratch coding fractions animation` for Achieng — category `CODING`, created through the STUDENT role flow so it stays `SUBMITTED` and hidden from parents until approval; includes file-size metadata for storage-warning UX.
   3. `County music festival certificate` for Atieno — category `CERTIFICATE`, approved/family-visible, with competency/subject links plus club/award identifiers.
@@ -5526,3 +5526,6 @@ npm run dev            # http://localhost:3000
 
 FOUNDER LATER (unchanged): Daraja, OAuth, SMS/Email/WhatsApp/VAPID, R2, Redis/Upstash, Sentry/BetterStack/PostHog/Logtail, custom domain DNS, thermal printer.
 PENDING IN-CODE: A.3 lines 8/9 row-scoping (build in/after B.1).
+## 2026-07-21 launch-readiness continuation
+
+The canonical current-state addendum is `docs/neyo-bible/21-JULY-2026-LAUNCH-READINESS-ADDENDUM.md`. It covers the school-first website, deterministic Senior timetable phases, CBE Delivery, inline Learning Videos, offline v3 architecture, legal/auth/demo repairs and Founder Operations. The authoritative unfinished queue is `docs/IMPLEMENTATION-QUEUE-FROM-FOUNDER-RESEARCH-2026-07-21.md`. Do not claim contextual guided help, onboarding fee, public logo upload, remaining CBC leadership audit, deployed offline exactly-once verification or the all-module WWDC26 refinement complete until their unchecked evidence exists.

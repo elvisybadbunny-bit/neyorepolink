@@ -2,9 +2,10 @@
 
 Founder decisions recorded 21 July 2026:
 
-- Onboarding fee: calculate from school size/data preparation effort, then show the reviewed KES amount before payment.
-- Offline: build the remaining safe workflows progressively and keep an explicit matrix; never pretend every action is safe offline.
+- Onboarding fee: NEYO Ops controls every formula input and active component. The Pricing Engine calculates from real school data/submissions, Founder reviews/overrides it, and a fully waived quote must display `FREE` rather than inventing a charge.
+- Offline: build the remaining safe workflows progressively and keep an explicit matrix; never pretend every action is safe offline. Current implementation is code-complete for the listed workflows; deployed browser/database exactly-once verification remains explicit follow-up evidence.
 - Contextual video guidance: provide both a permanent Help action and one dismissible Dynamic Island suggestion per published guide version.
+- WWDC26 refinement: apply to navigation/contextual controls and selected dashboard/hero surfaces, controlled from NEYO Ops. Preserve the existing design and solid readable forms/tables; the control changes activation/intensity rather than deleting the current system.
 
 ## Completed
 
@@ -30,7 +31,7 @@ Founder decisions recorded 21 July 2026:
 - [x] Add a visible failed-sync review inbox for queued records rejected because their source changed.
 - [x] Expand read-only snapshots with merged role-permission filtering and CBE Delivery sessions.
 - [~] Stale-data timestamp and 24-hour old-data warning completed on the offline viewer; module-level labels remain to be audited progressively.
-- [ ] Browser test each action offline → reconnect → exactly-once server result.
+- [~] Offline code contracts are complete for listed workflows; deployed browser → reconnect → exactly-once database evidence remains pending and must not be claimed.
 
 ### B. Contextual guided help
 
