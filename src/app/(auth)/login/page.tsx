@@ -149,7 +149,7 @@ export default function LoginPage() {
       const json = await res.json();
       if (json.ok) {
         toast({ title: "Demo request received", description: "The NEYO team will review it and send access details to the contact you supplied after approval.", tone: "success" });
-        setDemoLeadOpen(false);
+        setDemoModalOpen(false);
         setDemoLoading(false);
       } else {
         toast({ title: json.error?.message || "Could not start the demo. Try again.", tone: "error" });
