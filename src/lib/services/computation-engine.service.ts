@@ -2,6 +2,11 @@ import { db } from "@/lib/db";
 import { tenantDb } from "@/lib/core/tenant-db";
 import { withTenant } from "@/lib/core/tenant-context";
 import { isCurriculumEngineEnabled } from "@/lib/services/launch-control.service";
+import {
+  canonicalReportHash,
+  getReportPresentationSetting,
+  REPORT_FORMULA_VERSION,
+} from "@/lib/services/report-presentation.service";
 
 export class ComputationError extends Error {
   constructor(message: string) {
@@ -17,13 +22,17 @@ export class ComputationError extends Error {
 async function computeSubjectExamScores(tenantId: string, examId: string) {
   return withTenant(tenantId, async () => {
     const tDb = tenantDb();
-    
+
     // Fetch all paper results and preserve the exam's declared final maximum.
-    const exam = await tDb.exam.findUnique({ where: { id: examId }, select: { maxMarks: true } });
-    if (!exam) throw new ComputationError("Exam not found for paper computation.");
+    const exam = await tDb.exam.findUnique({
+      where: { id: examId },
+      select: { maxMarks: true },
+    });
+    if (!exam)
+      throw new ComputationError("Exam not found for paper computation.");
     const results = await tDb.examResult.findMany({
       where: { examId },
-      include: { PaperResult: { include: { paperConfig: true } } }
+      include: { PaperResult: { include: { paperConfig: true } } },
     });
 
     for (const res of results) {
@@ -49,7 +58,7 @@ async function computeSubjectExamScores(tenantId: string, examId: string) {
 
       await tDb.examResult.update({
         where: { id: res.id },
-        data: { marks: Math.round((finalScore / 100) * exam.maxMarks) }
+        data: { marks: Math.round((finalScore / 100) * exam.maxMarks) },
       });
     }
   });
@@ -64,7 +73,11 @@ async function computeSubjectExamScores(tenantId: string, examId: string) {
  * K.5 — Read the Master Term Report for a class in a term (subject grid + overall),
  * ordered by overall position. Used by the Academics computation dashboard.
  */
-export async function getMasterReportCards(tenantId: string, termId: string, classId: string) {
+export async function getMasterReportCards(
+  tenantId: string,
+  termId: string,
+  classId: string,
+) {
   return withTenant(tenantId, async () => {
     const tDb = tenantDb();
     const rows = await tDb.masterReportCard.findMany({
@@ -73,29 +86,125 @@ export async function getMasterReportCards(tenantId: string, termId: string, cla
     });
     const studentIds = Array.from(new Set(rows.map((r) => r.studentId)));
     const students = studentIds.length
-      ? await tDb.student.findMany({ where: { id: { in: studentIds } }, select: { id: true, firstName: true, middleName: true, lastName: true, admissionNo: true } })
+      ? await tDb.student.findMany({
+          where: { id: { in: studentIds } },
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            admissionNo: true,
+          },
+        })
       : [];
-    const subjectIds = Array.from(new Set(rows.map((r) => r.subjectId).filter(Boolean))) as string[];
+    const subjectIds = Array.from(
+      new Set(rows.map((r) => r.subjectId).filter(Boolean)),
+    ) as string[];
     const subjects = subjectIds.length
-      ? await tDb.subject.findMany({ where: { id: { in: subjectIds } }, select: { id: true, name: true, code: true } })
+      ? await tDb.subject.findMany({
+          where: { id: { in: subjectIds } },
+          select: { id: true, name: true, code: true },
+        })
       : [];
-    const nameById = new Map(students.map((s) => [s.id, [s.firstName, s.middleName, s.lastName].filter(Boolean).join(" ")]));
+    const nameById = new Map(
+      students.map((s) => [
+        s.id,
+        [s.firstName, s.middleName, s.lastName].filter(Boolean).join(" "),
+      ]),
+    );
     const admById = new Map(students.map((s) => [s.id, s.admissionNo]));
     const subjById = new Map(subjects.map((s) => [s.id, s]));
 
-    const byStudent = new Map<string, { name: string; admissionNo: string; overall: any | null; subjects: any[] }>();
+    const presentation = await getReportPresentationSetting(tenantId);
+    const subjectMeans = new Map<string, number>();
+    for (const subjectId of subjectIds) {
+      const marks = rows
+        .filter((row) => row.subjectId === subjectId)
+        .map((row) => row.finalMark);
+      subjectMeans.set(
+        subjectId,
+        marks.length
+          ? marks.reduce((sum, mark) => sum + mark, 0) / marks.length
+          : 0,
+      );
+    }
+
+    const byStudent = new Map<
+      string,
+      {
+        studentId: string;
+        name: string;
+        admissionNo: string;
+        overall: any | null;
+        subjects: any[];
+      }
+    >();
     for (const r of rows) {
-      const entry = byStudent.get(r.studentId) ?? { name: nameById.get(r.studentId) ?? "", admissionNo: admById.get(r.studentId) ?? "", overall: null, subjects: [] };
+      const entry = byStudent.get(r.studentId) ?? {
+        studentId: r.studentId,
+        name: nameById.get(r.studentId) ?? "",
+        admissionNo: admById.get(r.studentId) ?? "",
+        overall: null,
+        subjects: [],
+      };
+      const showExactRank = presentation.rankingPolicy === "SHOW_RANKINGS";
       if (r.subjectId === null) {
-        entry.overall = { finalMark: r.finalMark, cbcLevel: r.cbcLevel, letterGrade: r.letterGrade, rank: r.rank, outOf: r.outOf };
+        entry.overall = {
+          finalMark: r.finalMark,
+          cbcLevel: r.cbcLevel,
+          letterGrade: r.letterGrade,
+          rank: showExactRank ? r.rank : null,
+          outOf: showExactRank ? r.outOf : null,
+          rankingPolicy: presentation.rankingPolicy,
+        };
       } else {
         const sub = subjById.get(r.subjectId);
-        entry.subjects.push({ subjectId: r.subjectId, subjectName: sub?.name ?? "", subjectCode: sub?.code ?? "", finalMark: r.finalMark, cbcLevel: r.cbcLevel, letterGrade: r.letterGrade, rank: r.rank, outOf: r.outOf, isTraditional: r.isTraditional });
+        const classMean = subjectMeans.get(r.subjectId) ?? 0;
+        let components: AggComponent[] = [];
+        try {
+          components = JSON.parse(r.componentsJson);
+        } catch {
+          components = [];
+        }
+        entry.subjects.push({
+          subjectId: r.subjectId,
+          subjectName: sub?.name ?? "",
+          subjectCode: sub?.code ?? "",
+          finalMark: r.finalMark,
+          classMean: Math.round(classMean * 100) / 100,
+          deviation: Math.round((r.finalMark - classMean) * 100) / 100,
+          cbcLevel: r.cbcLevel,
+          letterGrade: r.letterGrade,
+          rank: showExactRank ? r.rank : null,
+          outOf: showExactRank ? r.outOf : null,
+          rankingPolicy: presentation.rankingPolicy,
+          isTraditional: r.isTraditional,
+          components,
+          computedAt: r.computedAt,
+        });
       }
       byStudent.set(r.studentId, entry);
     }
-    const list = Array.from(byStudent.values()).sort((a, b) => (a.overall?.rank ?? 9999) - (b.overall?.rank ?? 9999));
-    return { students: list, subjects: subjects.map((s) => ({ id: s.id, name: s.name, code: s.code })) };
+    const list = Array.from(byStudent.values()).sort(
+      (a, b) =>
+        (a.overall?.rank ?? 9999) - (b.overall?.rank ?? 9999) ||
+        a.name.localeCompare(b.name),
+    );
+    return {
+      students: list,
+      subjects: subjects.map((s) => ({
+        id: s.id,
+        name: s.name,
+        code: s.code,
+        classMean: Math.round((subjectMeans.get(s.id) ?? 0) * 100) / 100,
+      })),
+      presentation: {
+        rankingPolicy: presentation.rankingPolicy,
+        showFeesOnReport: presentation.showFeesOnReport,
+        printMode: presentation.printMode,
+        formulaVersion: presentation.formulaVersion,
+      },
+    };
   });
 }
 
@@ -115,9 +224,31 @@ function cbcLevelFromMark(mark: number): number {
   return 1;
 }
 
-const DEFAULT_GRADE_BOUNDARIES = [{ grade: "A", min: 80 }, { grade: "A-", min: 75 }, { grade: "B+", min: 70 }, { grade: "B", min: 65 }, { grade: "B-", min: 60 }, { grade: "C+", min: 55 }, { grade: "C", min: 50 }, { grade: "C-", min: 45 }, { grade: "D+", min: 40 }, { grade: "D", min: 35 }, { grade: "D-", min: 30 }, { grade: "E", min: 0 }];
-function letterGradeFromMark(mark: number, boundaries = DEFAULT_GRADE_BOUNDARIES): string {
-  return [...boundaries].sort((a, b) => b.min - a.min).find((boundary) => mark >= boundary.min)?.grade ?? boundaries[boundaries.length - 1]?.grade ?? "—";
+const DEFAULT_GRADE_BOUNDARIES = [
+  { grade: "A", min: 80 },
+  { grade: "A-", min: 75 },
+  { grade: "B+", min: 70 },
+  { grade: "B", min: 65 },
+  { grade: "B-", min: 60 },
+  { grade: "C+", min: 55 },
+  { grade: "C", min: 50 },
+  { grade: "C-", min: 45 },
+  { grade: "D+", min: 40 },
+  { grade: "D", min: 35 },
+  { grade: "D-", min: 30 },
+  { grade: "E", min: 0 },
+];
+function letterGradeFromMark(
+  mark: number,
+  boundaries = DEFAULT_GRADE_BOUNDARIES,
+): string {
+  return (
+    [...boundaries]
+      .sort((a, b) => b.min - a.min)
+      .find((boundary) => mark >= boundary.min)?.grade ??
+    boundaries[boundaries.length - 1]?.grade ??
+    "—"
+  );
 }
 
 /**
@@ -139,24 +270,61 @@ function letterGradeFromMark(mark: number, boundaries = DEFAULT_GRADE_BOUNDARIES
  * Deterministic, no AI. Idempotent via the MasterReportCard unique key.
  * Returns the number of subject rows written.
  */
-export async function computeMasterReportCards(tenantId: string, termId: string): Promise<number> {
+export async function computeMasterReportCards(
+  tenantId: string,
+  termId: string,
+): Promise<number> {
   return withTenant(tenantId, async () => {
     const tDb = tenantDb();
 
     const term = await tDb.academicTerm.findUnique({ where: { id: termId } });
-    if (!term) throw new ComputationError("Term not found for master report computation.");
+    if (!term)
+      throw new ComputationError(
+        "Term not found for master report computation.",
+      );
 
     // All exams in this term (matched by year + term number) and their results.
-    const exams = await tDb.exam.findMany({ where: { year: term.year, term: term.term }, select: { id: true, name: true, maxMarks: true } });
+    const exams = await tDb.exam.findMany({
+      where: { year: term.year, term: term.term },
+      select: { id: true, name: true, maxMarks: true },
+    });
     const examIds = exams.map((e) => e.id);
     const [results, assessmentPlans] = await Promise.all([
-      tDb.examResult.findMany({ where: { examId: { in: examIds } }, select: { examId: true, studentId: true, subjectId: true, marks: true } }),
-      tDb.assessmentPlan.findMany({ where: { year: term.year, term: term.term, subjectId: { not: null }, status: { in: ["ACTIVE", "MODERATION", "RELEASED"] } }, include: { records: { where: { status: { in: ["SCORED", "SUBMITTED", "MODERATED", "RELEASED"] } } } } }),
+      tDb.examResult.findMany({
+        where: { examId: { in: examIds } },
+        select: { examId: true, studentId: true, subjectId: true, marks: true },
+      }),
+      tDb.assessmentPlan.findMany({
+        where: {
+          year: term.year,
+          term: term.term,
+          subjectId: { not: null },
+          status: { in: ["ACTIVE", "MODERATION", "RELEASED"] },
+        },
+        include: {
+          records: {
+            where: {
+              status: { in: ["SCORED", "SUBMITTED", "MODERATED", "RELEASED"] },
+            },
+          },
+        },
+      }),
     ]);
-    if (results.length === 0 && assessmentPlans.every((plan) => plan.records.length === 0)) return 0;
+    if (
+      results.length === 0 &&
+      assessmentPlans.every((plan) => plan.records.length === 0)
+    )
+      return 0;
 
     // Map student -> class (only students currently placed in a class are ranked).
-    const studentIds = Array.from(new Set([...results.map((r) => r.studentId), ...assessmentPlans.flatMap((plan) => plan.records.map((record) => record.studentId))]));
+    const studentIds = Array.from(
+      new Set([
+        ...results.map((r) => r.studentId),
+        ...assessmentPlans.flatMap((plan) =>
+          plan.records.map((record) => record.studentId),
+        ),
+      ]),
+    );
     const students = await tDb.student.findMany({
       where: { id: { in: studentIds } },
       select: { id: true, classId: true },
@@ -179,24 +347,45 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
     // AssessmentPlan.title becomes the report column name (CAT, Assignment,
     // Group Work, Project, or any school-authored name).
     type RKey = string;
-    type SourceMark = { sourceType: "EXAM" | "ASSESSMENT"; sourceId: string; label: string; mark: number };
+    type SourceMark = {
+      sourceType: "EXAM" | "ASSESSMENT";
+      sourceId: string;
+      label: string;
+      mark: number;
+    };
     const byStudentSubject = new Map<RKey, SourceMark[]>();
     for (const r of results) {
       const key = `${r.studentId}::${r.subjectId}`;
       const list = byStudentSubject.get(key) ?? [];
       const sourceExam = exams.find((exam) => exam.id === r.examId);
-      const normalizedMark = sourceExam ? (r.marks / Math.max(1, sourceExam.maxMarks)) * 100 : r.marks;
-      list.push({ sourceType: "EXAM", sourceId: r.examId, label: sourceExam?.name ?? "Exam", mark: normalizedMark });
+      const normalizedMark = sourceExam
+        ? (r.marks / Math.max(1, sourceExam.maxMarks)) * 100
+        : r.marks;
+      list.push({
+        sourceType: "EXAM",
+        sourceId: r.examId,
+        label: sourceExam?.name ?? "Exam",
+        mark: normalizedMark,
+      });
       byStudentSubject.set(key, list);
     }
     for (const plan of assessmentPlans) {
       if (!plan.subjectId) continue;
       for (const record of plan.records) {
-        const mark = record.scorePct ?? (record.scoreMarks != null && plan.maxMarks ? Math.round((record.scoreMarks / Math.max(1, plan.maxMarks)) * 100) : null);
+        const mark =
+          record.scorePct ??
+          (record.scoreMarks != null && plan.maxMarks
+            ? Math.round((record.scoreMarks / Math.max(1, plan.maxMarks)) * 100)
+            : null);
         if (mark == null) continue;
         const key = `${record.studentId}::${plan.subjectId}`;
         const list = byStudentSubject.get(key) ?? [];
-        list.push({ sourceType: "ASSESSMENT", sourceId: plan.id, label: plan.title, mark });
+        list.push({
+          sourceType: "ASSESSMENT",
+          sourceId: plan.id,
+          label: plan.title,
+          mark,
+        });
         byStudentSubject.set(key, list);
       }
     }
@@ -223,29 +412,83 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
       let isTraditional = true;
       const components: AggComponent[] = [];
 
-      const markBySource = new Map(list.map((x) => [`${x.sourceType}:${x.sourceId}`, x]));
-      let usable: { sourceType: "EXAM" | "ASSESSMENT"; sourceId: string; label: string; mark: number; weightPct: number }[] = [];
-      if (rule && !rule.isTraditional && rule.weightingStrategy === "CUSTOM_WEIGHTS") {
-        let weightings: { sourceType: "EXAM" | "ASSESSMENT"; sourceId: string; label?: string; weightPct: number }[] = [];
-        try { weightings = JSON.parse(rule.weightingsJson); } catch { weightings = []; }
+      const markBySource = new Map(
+        list.map((x) => [`${x.sourceType}:${x.sourceId}`, x]),
+      );
+      let usable: {
+        sourceType: "EXAM" | "ASSESSMENT";
+        sourceId: string;
+        label: string;
+        mark: number;
+        weightPct: number;
+      }[] = [];
+      if (
+        rule &&
+        !rule.isTraditional &&
+        rule.weightingStrategy === "CUSTOM_WEIGHTS"
+      ) {
+        let weightings: {
+          sourceType: "EXAM" | "ASSESSMENT";
+          sourceId: string;
+          label?: string;
+          weightPct: number;
+        }[] = [];
+        try {
+          weightings = JSON.parse(rule.weightingsJson);
+        } catch {
+          weightings = [];
+        }
         usable = weightings.flatMap((weight) => {
-          const source = markBySource.get(`${weight.sourceType}:${weight.sourceId}`);
-          return source ? [{ ...source, label: weight.label || source.label, weightPct: weight.weightPct }] : [];
+          const source = markBySource.get(
+            `${weight.sourceType}:${weight.sourceId}`,
+          );
+          return source
+            ? [
+                {
+                  ...source,
+                  label: weight.label || source.label,
+                  weightPct: weight.weightPct,
+                },
+              ]
+            : [];
         });
       } else {
         // School chose equal sharing, or has no custom rule. Only work that
         // was actually conducted appears; absent assessments are not zeroes.
         usable = list.map((source) => ({ ...source, weightPct: 1 }));
       }
-      if (usable.length === 0) usable = list.map((source) => ({ ...source, weightPct: 1 }));
-      const totalWeight = usable.reduce((sum, source) => sum + source.weightPct, 0);
-      finalMark = usable.reduce((sum, source) => sum + source.mark * (source.weightPct / Math.max(1, totalWeight)), 0);
+      if (usable.length === 0)
+        usable = list.map((source) => ({ ...source, weightPct: 1 }));
+      const totalWeight = usable.reduce(
+        (sum, source) => sum + source.weightPct,
+        0,
+      );
+      finalMark = usable.reduce(
+        (sum, source) =>
+          sum + source.mark * (source.weightPct / Math.max(1, totalWeight)),
+        0,
+      );
       isTraditional = !rule || rule.isTraditional;
       for (const source of usable) {
-        components.push({ sourceType: source.sourceType, sourceId: source.sourceId, label: source.label, mark: Math.round(source.mark * 100) / 100, weightPct: Math.round((source.weightPct / Math.max(1, totalWeight)) * 100) });
+        components.push({
+          sourceType: source.sourceType,
+          sourceId: source.sourceId,
+          label: source.label,
+          mark: Math.round(source.mark * 100) / 100,
+          weightPct: Math.round(
+            (source.weightPct / Math.max(1, totalWeight)) * 100,
+          ),
+        });
       }
 
-      subjectRows.push({ studentId, classId, subjectId, finalMark: Math.round(finalMark * 100) / 100, isTraditional, components });
+      subjectRows.push({
+        studentId,
+        classId,
+        subjectId,
+        finalMark: Math.round(finalMark * 100) / 100,
+        isTraditional,
+        components,
+      });
     }
 
     // Rank per (class, subject).
@@ -259,22 +502,33 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
     const subjRank = new Map<SubjectRow, { rank: number; outOf: number }>();
     for (const [, list] of subjRankGroups) {
       const sorted = [...list].sort((a, b) => b.finalMark - a.finalMark);
-      sorted.forEach((row, i) => subjRank.set(row, { rank: i + 1, outOf: sorted.length }));
+      sorted.forEach((row, i) =>
+        subjRank.set(row, { rank: i + 1, outOf: sorted.length }),
+      );
     }
 
     // Overall mean per student (across their subjects), then class rank.
-    const overallByStudent = new Map<string, { classId: string | null; mean: number; count: number }>();
+    const overallByStudent = new Map<
+      string,
+      { classId: string | null; mean: number; count: number }
+    >();
     for (const row of subjectRows) {
-      const cur = overallByStudent.get(row.studentId) ?? { classId: row.classId, mean: 0, count: 0 };
+      const cur = overallByStudent.get(row.studentId) ?? {
+        classId: row.classId,
+        mean: 0,
+        count: 0,
+      };
       cur.mean += row.finalMark;
       cur.count += 1;
       overallByStudent.set(row.studentId, cur);
     }
-    const overallRows = Array.from(overallByStudent.entries()).map(([studentId, v]) => ({
-      studentId,
-      classId: v.classId,
-      mean: v.count ? Math.round((v.mean / v.count) * 100) / 100 : 0,
-    }));
+    const overallRows = Array.from(overallByStudent.entries()).map(
+      ([studentId, v]) => ({
+        studentId,
+        classId: v.classId,
+        mean: v.count ? Math.round((v.mean / v.count) * 100) / 100 : 0,
+      }),
+    );
     const overallRankGroups = new Map<string, typeof overallRows>();
     for (const row of overallRows) {
       const g = row.classId ?? "none";
@@ -285,35 +539,55 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
     const overallRank = new Map<string, { rank: number; outOf: number }>();
     for (const [, list] of overallRankGroups) {
       const sorted = [...list].sort((a, b) => b.mean - a.mean);
-      sorted.forEach((row, i) => overallRank.set(row.studentId, { rank: i + 1, outOf: sorted.length }));
+      sorted.forEach((row, i) =>
+        overallRank.set(row.studentId, { rank: i + 1, outOf: sorted.length }),
+      );
     }
 
     // Use this school's saved grading boundaries; preserve the Kenyan default
     // when the school has not configured its own scale.
     const scaleRow = await tDb.gradingScale.findUnique({ where: { tenantId } });
     let gradeBoundaries = DEFAULT_GRADE_BOUNDARIES;
-    try { if (scaleRow) gradeBoundaries = JSON.parse(scaleRow.boundariesJson); } catch { gradeBoundaries = DEFAULT_GRADE_BOUNDARIES; }
+    try {
+      if (scaleRow) gradeBoundaries = JSON.parse(scaleRow.boundariesJson);
+    } catch {
+      gradeBoundaries = DEFAULT_GRADE_BOUNDARIES;
+    }
 
     // Persist (idempotent upsert) subject rows + overall summary rows.
     let written = 0;
     for (const row of subjectRows) {
       const rk = subjRank.get(row) ?? { rank: 0, outOf: 0 };
       await tDb.masterReportCard.upsert({
-        where: { tenantId_termId_studentId_subjectId: { tenantId, termId, studentId: row.studentId, subjectId: row.subjectId } },
+        where: {
+          tenantId_termId_studentId_subjectId: {
+            tenantId,
+            termId,
+            studentId: row.studentId,
+            subjectId: row.subjectId,
+          },
+        },
         create: {
-          tenantId, termId, classId: row.classId ?? "", studentId: row.studentId, subjectId: row.subjectId,
+          tenantId,
+          termId,
+          classId: row.classId ?? "",
+          studentId: row.studentId,
+          subjectId: row.subjectId,
           finalMark: row.finalMark,
           cbcLevel: curriculumOn ? cbcLevelFromMark(row.finalMark) : null,
           letterGrade: letterGradeFromMark(row.finalMark, gradeBoundaries),
-          rank: rk.rank || null, outOf: rk.outOf || null,
+          rank: rk.rank || null,
+          outOf: rk.outOf || null,
           isTraditional: row.isTraditional,
           componentsJson: JSON.stringify(row.components),
         },
         update: {
-          classId: row.classId ?? "", finalMark: row.finalMark,
+          classId: row.classId ?? "",
+          finalMark: row.finalMark,
           cbcLevel: curriculumOn ? cbcLevelFromMark(row.finalMark) : null,
           letterGrade: letterGradeFromMark(row.finalMark, gradeBoundaries),
-          rank: rk.rank || null, outOf: rk.outOf || null,
+          rank: rk.rank || null,
+          outOf: rk.outOf || null,
           isTraditional: row.isTraditional,
           componentsJson: JSON.stringify(row.components),
           computedAt: new Date(),
@@ -341,10 +615,19 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
         computedAt: new Date(),
       };
       if (existing) {
-        await tDb.masterReportCard.update({ where: { id: existing.id }, data: summaryData });
+        await tDb.masterReportCard.update({
+          where: { id: existing.id },
+          data: summaryData,
+        });
       } else {
         await tDb.masterReportCard.create({
-          data: { tenantId, termId, studentId: row.studentId, subjectId: null, ...summaryData },
+          data: {
+            tenantId,
+            termId,
+            studentId: row.studentId,
+            subjectId: null,
+            ...summaryData,
+          },
         });
       }
     }
@@ -369,7 +652,11 @@ export async function computeMasterReportCards(tenantId: string, termId: string)
  *
  * Returns the number of evidence rows written/updated.
  */
-export async function syncResultsToCompetencyEvidence(tenantId: string, term: number, year: number): Promise<number> {
+export async function syncResultsToCompetencyEvidence(
+  tenantId: string,
+  term: number,
+  year: number,
+): Promise<number> {
   if (!(await isCurriculumEngineEnabled())) return 0;
 
   return withTenant(tenantId, async () => {
@@ -377,7 +664,13 @@ export async function syncResultsToCompetencyEvidence(tenantId: string, term: nu
 
     const results = await tDb.examResult.findMany({
       where: { exam: { term, year } },
-      select: { id: true, studentId: true, subjectId: true, marks: true, updatedAt: true },
+      select: {
+        id: true,
+        studentId: true,
+        subjectId: true,
+        marks: true,
+        updatedAt: true,
+      },
     });
     if (results.length === 0) return 0;
 
@@ -387,10 +680,14 @@ export async function syncResultsToCompetencyEvidence(tenantId: string, term: nu
       where: { id: { in: subjectIds } },
       select: { id: true, learningAreaId: true },
     });
-    const areaBySubject = new Map(subjects.map((s) => [s.id, s.learningAreaId]));
+    const areaBySubject = new Map(
+      subjects.map((s) => [s.id, s.learningAreaId]),
+    );
 
     // learningAreaId -> active competencies in that area
-    const areaIds = Array.from(new Set(subjects.map((s) => s.learningAreaId).filter(Boolean))) as string[];
+    const areaIds = Array.from(
+      new Set(subjects.map((s) => s.learningAreaId).filter(Boolean)),
+    ) as string[];
     if (areaIds.length === 0) return 0;
     const competencies = await tDb.competency.findMany({
       where: { learningAreaId: { in: areaIds }, active: true },
@@ -417,7 +714,9 @@ export async function syncResultsToCompetencyEvidence(tenantId: string, term: nu
       if (!areaId) continue;
       const comps = compsByArea.get(areaId) ?? [];
       const level = levelFor(r.marks);
-      const evidenceDate = (r.updatedAt ?? new Date()).toISOString().slice(0, 10);
+      const evidenceDate = (r.updatedAt ?? new Date())
+        .toISOString()
+        .slice(0, 10);
 
       for (const competencyId of comps) {
         const existing = await tDb.competencyEvidence.findFirst({
@@ -431,7 +730,10 @@ export async function syncResultsToCompetencyEvidence(tenantId: string, term: nu
           evidenceDate,
         };
         if (existing) {
-          await tDb.competencyEvidence.update({ where: { id: existing.id }, data });
+          await tDb.competencyEvidence.update({
+            where: { id: existing.id },
+            data,
+          });
         } else {
           await tDb.competencyEvidence.create({
             data: {
@@ -455,33 +757,57 @@ export async function syncResultsToCompetencyEvidence(tenantId: string, term: nu
   });
 }
 
-export async function triggerTermComputation(tenantId: string, portalId: string) {
-  const portal = await withTenant(tenantId, () => tenantDb().marksPortal.findUnique({ where: { id: portalId } }));
-  if (!portal || portal.status !== "CLOSED") throw new ComputationError("Close marks entry and review the raw marks before computation.");
+export async function triggerTermComputation(
+  tenantId: string,
+  portalId: string,
+) {
+  const portal = await withTenant(tenantId, () =>
+    tenantDb().marksPortal.findUnique({ where: { id: portalId } }),
+  );
+  if (!portal || portal.status !== "CLOSED")
+    throw new ComputationError(
+      "Close marks entry and review the raw marks before computation.",
+    );
   // We don't await this inside the API route. We fire and forget.
   _runBackgroundComputation(tenantId, portalId).catch(console.error);
-  return { status: "COMPUTING", message: "Computation started in the background." };
+  return {
+    status: "COMPUTING",
+    message: "Computation started in the background.",
+  };
 }
 
 async function _runBackgroundComputation(tenantId: string, portalId: string) {
   return withTenant(tenantId, async () => {
     const tDb = tenantDb();
-    
+
     await tDb.marksPortal.update({
       where: { id: portalId },
-      data: { status: "COMPUTING", computationStartedAt: new Date(), computationProgress: 5 }
+      data: {
+        status: "COMPUTING",
+        computationStartedAt: new Date(),
+        computationProgress: 5,
+      },
     });
 
-    const portal = await tDb.marksPortal.findUnique({ where: { id: portalId }, include: { term: true } });
-    if (!portal || !portal.termId) throw new ComputationError("Invalid portal configuration");
+    const portal = await tDb.marksPortal.findUnique({
+      where: { id: portalId },
+      include: { term: true },
+    });
+    if (!portal || !portal.termId)
+      throw new ComputationError("Invalid portal configuration");
 
     // Get all exams belonging to this term to compute their micro-weights first
-    const exams = await tDb.exam.findMany({ where: { term: portal.term!.term, year: portal.term!.year } });
+    const exams = await tDb.exam.findMany({
+      where: { term: portal.term!.term, year: portal.term!.year },
+    });
     for (const ex of exams) {
       await computeSubjectExamScores(tenantId, ex.id);
     }
-    
-    await tDb.marksPortal.update({ where: { id: portalId }, data: { computationProgress: 30 } });
+
+    await tDb.marksPortal.update({
+      where: { id: portalId },
+      data: { computationProgress: 30 },
+    });
 
     // K.5 — Term-level macro aggregation. The per-subject weighted computation
     // already ran above (computeSubjectExamScores). Now build the MasterReportCard:
@@ -491,83 +817,172 @@ async function _runBackgroundComputation(tenantId: string, portalId: string) {
     // artificial delay.
     let masterRowsWritten = 0;
     try {
-      masterRowsWritten = await computeMasterReportCards(tenantId, portal.termId!);
+      masterRowsWritten = await computeMasterReportCards(
+        tenantId,
+        portal.termId!,
+      );
     } catch (err) {
       console.error("K.5 master report aggregation failed (non-fatal):", err);
     }
-    await tDb.marksPortal.update({ where: { id: portalId }, data: { computationProgress: 80 } });
-    
+    await tDb.marksPortal.update({
+      where: { id: portalId },
+      data: { computationProgress: 80 },
+    });
+
     // K.6 — Auto-sync computed final results into CBC (J.4 CompetencyEvidence),
     // which also surfaces them in the J.8 Learner Journey (the journey timeline
     // reads CompetencyEvidence). This is a BEST-EFFORT enrichment: it only runs
     // when the curriculum engine (Part-J) is ON, and any failure here must NEVER
     // break the core computation/release. Normal results work with J OFF.
-    const results = await tDb.examResult.findMany({ where: { exam: { term: portal.term!.term, year: portal.term!.year } } });
+    const results = await tDb.examResult.findMany({
+      where: { exam: { term: portal.term!.term, year: portal.term!.year } },
+    });
     try {
-      await syncResultsToCompetencyEvidence(tenantId, portal.term!.term, portal.term!.year);
+      await syncResultsToCompetencyEvidence(
+        tenantId,
+        portal.term!.term,
+        portal.term!.year,
+      );
     } catch (err) {
       console.error("K.6 CBC sync skipped (non-fatal):", err);
     }
 
     await tDb.marksPortal.update({
       where: { id: portalId },
-      data: { 
-        status: "PENDING_RELEASE", 
-        computationEndedAt: new Date(), 
+      data: {
+        status: "PENDING_RELEASE",
+        computationEndedAt: new Date(),
         computationProgress: 100,
-        computationTotalRows: results.length + masterRowsWritten
-      }
+        computationTotalRows: results.length + masterRowsWritten,
+      },
     });
 
     // Notify Principals that results are ready for release
     const { createInApp } = await import("./notification.service");
     const leadership = await tDb.user.findMany({
-      where: { role: { in: ["PRINCIPAL", "DEPUTY_PRINCIPAL", "SCHOOL_OWNER"] }, isActive: true }
+      where: {
+        role: { in: ["PRINCIPAL", "DEPUTY_PRINCIPAL", "SCHOOL_OWNER"] },
+        isActive: true,
+      },
     });
-    
+
     for (const leader of leadership) {
       await createInApp({
         tenantId,
         recipientId: leader.id,
         title: "Term Computation Complete",
-        body: "The computation for " + portal.name + " has finished. Results are pending your approval to release.",
+        body:
+          "The computation for " +
+          portal.name +
+          " has finished. Results are pending your approval to release.",
         category: "system",
-        href: "/academics" // We will build a Release UI
+        href: "/academics", // We will build a Release UI
       });
     }
   });
 }
 
 // 3. K.7 & K.8 Joint Release Workflow
-export async function releaseTermResults(tenantId: string, portalId: string, releaserId: string, notifyParentsBySms = false) {
+export async function releaseTermResults(
+  tenantId: string,
+  portalId: string,
+  releaserId: string,
+  notifyParentsBySms = false,
+) {
   return withTenant(tenantId, async () => {
     const tDb = tenantDb();
-    
-    const portal = await tDb.marksPortal.findUnique({ where: { id: portalId }, include: { term: true } });
-    if (!portal || portal.status !== "PENDING_RELEASE") throw new ComputationError("Portal not ready for release");
+
+    const portal = await tDb.marksPortal.findUnique({
+      where: { id: portalId },
+      include: { term: true },
+    });
+    if (!portal || portal.status !== "PENDING_RELEASE")
+      throw new ComputationError("Portal not ready for release");
 
     await tDb.marksPortal.update({
       where: { id: portalId },
-      data: { status: "RELEASED" }
+      data: { status: "RELEASED" },
     });
 
     // Make all underlying exams visible to parents
     await tDb.exam.updateMany({
       where: { term: portal.term!.term, year: portal.term!.year },
-      data: { published: true }
+      data: { published: true },
     });
+
+    // Freeze an immutable, hash-verifiable publication snapshot per learner.
+    // Re-releasing after an authorised correction creates the next version;
+    // previous evidence is retained rather than overwritten.
+    const presentation = await getReportPresentationSetting(tenantId);
+    const reportRows = await tDb.masterReportCard.findMany({
+      where: { termId: portal.termId! },
+      orderBy: [{ studentId: "asc" }, { subjectId: "asc" }],
+    });
+    const studentIdsForSnapshots = Array.from(
+      new Set(reportRows.map((row) => row.studentId)),
+    );
+    for (const studentId of studentIdsForSnapshots) {
+      const learnerRows = reportRows.filter(
+        (row) => row.studentId === studentId,
+      );
+      const classId = learnerRows[0]?.classId ?? "";
+      const latest = await tDb.reportPublicationSnapshot.findFirst({
+        where: { termId: portal.termId!, studentId },
+        orderBy: { version: "desc" },
+        select: { version: true },
+      });
+      const version = (latest?.version ?? 0) + 1;
+      const payload = {
+        termId: portal.termId,
+        studentId,
+        classId,
+        version,
+        formulaVersion: presentation.formulaVersion || REPORT_FORMULA_VERSION,
+        presentation: {
+          rankingPolicy: presentation.rankingPolicy,
+          showFeesOnReport: presentation.showFeesOnReport,
+          printMode: presentation.printMode,
+        },
+        rows: learnerRows.map((row) => ({
+          subjectId: row.subjectId,
+          finalMark: row.finalMark,
+          cbcLevel: row.cbcLevel,
+          letterGrade: row.letterGrade,
+          rank: row.rank,
+          outOf: row.outOf,
+          componentsJson: row.componentsJson,
+          computedAt: row.computedAt.toISOString(),
+        })),
+      };
+      await tDb.reportPublicationSnapshot.create({
+        data: {
+          tenantId,
+          termId: portal.termId!,
+          studentId,
+          classId,
+          version,
+          formulaVersion: payload.formulaVersion,
+          calculationHash: canonicalReportHash(payload),
+          payloadJson: JSON.stringify(payload),
+          publishedById: releaserId,
+        },
+      });
+    }
 
     // Notify all Teachers
     const { createInApp } = await import("./notification.service");
-    const teachers = await tDb.user.findMany({ where: { role: { in: ["TEACHER", "CLASS_TEACHER"] } } });
+    const teachers = await tDb.user.findMany({
+      where: { role: { in: ["TEACHER", "CLASS_TEACHER"] } },
+    });
     for (const t of teachers) {
       await createInApp({
         tenantId,
         recipientId: t.id,
         title: "Results Released",
-        body: "The Principal has officially released results for " + portal.name,
+        body:
+          "The Principal has officially released results for " + portal.name,
         category: "system",
-        href: "/academics"
+        href: "/academics",
       });
     }
 
@@ -576,39 +991,42 @@ export async function releaseTermResults(tenantId: string, portalId: string, rel
     // guardians of students who actually have a result in this term, deduped by
     // phone, using the shared sender (which records the SMS margin ledger, M.2).
     let smsSent = 0;
-    if (notifyParentsBySms) try {
-      const termResults = await tDb.examResult.findMany({
-        where: { exam: { term: portal.term!.term, year: portal.term!.year } },
-        select: { studentId: true },
-      });
-      const studentIds = Array.from(new Set(termResults.map((r) => r.studentId)));
-      const links = studentIds.length
-        ? await tDb.studentGuardian.findMany({
-            where: { studentId: { in: studentIds } },
-            include: { guardian: { select: { phone: true } } },
-            orderBy: { isPrimary: "desc" },
-          })
-        : [];
-      const phones = new Set<string>();
-      for (const l of links) {
-        if (l.guardian.phone) phones.add(l.guardian.phone);
-      }
-      const { sendSms } = await import("@/lib/notifications/sms");
-      for (const phone of phones) {
-        try {
-          await sendSms(
-            phone,
-            `Results for ${portal.name} have been released. Log into the Parent Portal to view.`,
-            { tenantId }
-          );
-          smsSent++;
-        } catch (e) {
-          console.error("K.8 parent SMS failed (non-fatal):", e);
+    if (notifyParentsBySms)
+      try {
+        const termResults = await tDb.examResult.findMany({
+          where: { exam: { term: portal.term!.term, year: portal.term!.year } },
+          select: { studentId: true },
+        });
+        const studentIds = Array.from(
+          new Set(termResults.map((r) => r.studentId)),
+        );
+        const links = studentIds.length
+          ? await tDb.studentGuardian.findMany({
+              where: { studentId: { in: studentIds } },
+              include: { guardian: { select: { phone: true } } },
+              orderBy: { isPrimary: "desc" },
+            })
+          : [];
+        const phones = new Set<string>();
+        for (const l of links) {
+          if (l.guardian.phone) phones.add(l.guardian.phone);
         }
+        const { sendSms } = await import("@/lib/notifications/sms");
+        for (const phone of phones) {
+          try {
+            await sendSms(
+              phone,
+              `Results for ${portal.name} have been released. Log into the Parent Portal to view.`,
+              { tenantId },
+            );
+            smsSent++;
+          } catch (e) {
+            console.error("K.8 parent SMS failed (non-fatal):", e);
+          }
+        }
+      } catch (e) {
+        console.error("K.8 parent SMS step skipped (non-fatal):", e);
       }
-    } catch (e) {
-      console.error("K.8 parent SMS step skipped (non-fatal):", e);
-    }
 
     return { success: true, smsSent };
   });

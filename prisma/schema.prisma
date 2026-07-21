@@ -482,6 +482,8 @@ model Tenant {
   TeacherAllocationImport      TeacherAllocationImport[]
   SchoolActivity               SchoolActivity[]
   MasterReportCard             MasterReportCard[]
+  reportPresentationSetting    ReportPresentationSetting?
+  reportPublicationSnapshots   ReportPublicationSnapshot[]
   CombinationGroup             CombinationGroup[]
   ElectiveBlock                ElectiveBlock[]
   TimetableConstraint          TimetableConstraint[]
@@ -7476,6 +7478,43 @@ model MasterReportCard {
 }
 
 // Configures PP1, PP2, Practicals for a specific subject
+// School-owned presentation law for consolidated learner reports. Computation
+// remains independent: hiding ranks or fees never changes a learner's marks.
+model ReportPresentationSetting {
+  id                 String   @id @default(cuid())
+  tenantId           String   @unique
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rankingPolicy      String   @default("SHOW_RANKINGS") // SHOW_RANKINGS | HIDE_RANKINGS | BANDS_ONLY
+  showFeesOnReport   Boolean  @default(false)
+  comparisonBaseline String   @default("CLASS_MEAN") // CLASS_MEAN
+  printMode          String   @default("COLOUR") // COLOUR | BLACK_AND_WHITE
+  formulaVersion     String   @default("AVAILABLE_WORK_V1")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// Immutable evidence of exactly what was released. payloadJson contains the
+// calculated learner report at publication time; calculationHash detects any
+// later accidental or unauthorised alteration.
+model ReportPublicationSnapshot {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  termId          String
+  classId         String
+  studentId       String
+  version         Int      @default(1)
+  formulaVersion  String
+  calculationHash String
+  payloadJson     String
+  publishedById   String
+  publishedAt     DateTime @default(now())
+
+  @@unique([tenantId, termId, studentId, version])
+  @@index([tenantId, termId, classId])
+  @@index([tenantId, studentId])
+}
+
 model SubjectPaperConfig {
   id        String  @id @default(cuid())
   tenantId  String
