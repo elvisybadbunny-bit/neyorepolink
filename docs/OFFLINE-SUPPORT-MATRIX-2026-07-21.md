@@ -20,6 +20,7 @@ A page must be visited/saved while online before its shell or data can be availa
 | Exam marks autosave | Queued and replayed | Idempotency key |
 | CBE rubric observation round | Queued in IndexedDB and synced on reconnect | Tenant-scoped at-most-once replay ledger |
 | Teacher record of work/coverage | Queued in IndexedDB and synced on reconnect | Tenant-scoped at-most-once replay ledger |
+| CBE Delivery session, learner evidence and support creation | Queued, source records revalidated during sync | Tenant-scoped at-most-once replay ledger |
 | Gate-pass proposal/issuance | Queued where supported | Server replay ledger |
 | Visitor sign-in | Queued | Idempotency key |
 | Plain cash/manual reception payment | Queued where biometric live verification is not required | Duplicate-payment protection |
@@ -39,7 +40,7 @@ Offline video playback is not promised: YouTube and unsaved media still require 
 - sign-in, OTP, password recovery and passkey verification;
 - biometric/action-ticket protected money actions;
 - timetable generation, approval and publication;
-- CBE Delivery shared record mutations until an idempotent offline contract is designed;
+- CBE curriculum-design publication and intervention review (stale edits must not overwrite reviewed shared records);
 - uploads, YouTube playback/search and external integrations;
 - permission changes and sensitive settings;
 - any operation needing current conflict/capacity validation.

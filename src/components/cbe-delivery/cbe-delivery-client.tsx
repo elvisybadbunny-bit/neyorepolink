@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
+import { queuedPost } from "@/lib/offline/queue";
 
 const split = (v: string) => v.split("\n").map((x) => x.trim()).filter(Boolean);
 const crossLinks = (v: string) => split(v).map((line) => { const [learningArea, ...rest] = line.split("|"); return { learningArea: learningArea.trim(), connection: rest.join("|").trim() }; }).filter((x) => x.learningArea && x.connection);
@@ -25,7 +26,30 @@ export function CbeDeliveryClient() {
   const [support, setSupport] = React.useState<any>({ deliverySessionId:"", studentId:"", substrandId:"", reason:"", actionType:"RETEACH", actionDetails:"", targetLevel:"3", reviewDate:"", parentSummary:"" });
   const load = React.useCallback(async()=>{ const j=await fetch("/api/cbe-delivery").then(r=>r.json()); if(j.ok)setBoard(j.data.board); else toast({title:j.error?.message||"Could not load CBE Delivery",tone:"error"}); },[toast]);
   React.useEffect(()=>{void load();},[load]);
-  async function post(action:string,payload:any){ setBusy(true); try { const j=await fetch("/api/cbe-delivery",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,...payload})}).then(r=>r.json()); if(!j.ok)throw new Error(j.error?.message||"Action failed"); toast({title:"Saved to the CBE evidence chain",tone:"success"}); await load(); } catch(e){toast({title:e instanceof Error?e.message:"Action failed",tone:"error"});} finally{setBusy(false);} }
+  async function post(action:string,payload:any){
+    setBusy(true);
+    try {
+      const body={action,...payload};
+      const offlineSafe=["create_session","record_evidence","create_intervention"].includes(action);
+      if(offlineSafe){
+        const result=await queuedPost("/api/cbe-delivery",body,`CBE Delivery — ${action.replaceAll("_"," ")}`);
+        if(!result.ok)throw new Error("This CBE Delivery record was rejected. Refresh the source records and try again.");
+        if(result.queued){
+          toast({title:"Saved offline",description:"NEYO will validate and sync this CBE Delivery record when the connection returns.",tone:"success"});
+          if(action==="record_evidence")setEvidence({...evidence,studentId:"",level:"",observation:"",evidenceUrl:""});
+          if(action==="create_intervention")setSupport({...support,reason:"",actionDetails:"",parentSummary:""});
+          if(action==="create_session")setSession({...session,deliveryNotes:"",resources:"",nextSteps:""});
+          return;
+        }
+      }else{
+        const j=await fetch("/api/cbe-delivery",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json());
+        if(!j.ok)throw new Error(j.error?.message||"Action failed");
+      }
+      toast({title:"Saved to the CBE evidence chain",tone:"success"});
+      await load();
+    }catch(e){toast({title:e instanceof Error?e.message:"Action failed",tone:"error"});}
+    finally{setBusy(false);}
+  }
   if(!board)return <div className="space-y-3"><Skeleton className="h-28 rounded-2xl"/><Skeleton className="h-80 rounded-2xl"/></div>;
   const sessionForEvidence=board.sessions.find((s:any)=>s.id===evidence.deliverySessionId);
   const evidenceStudents=board.students.filter((s:any)=>!sessionForEvidence||s.classId===sessionForEvidence.classId);
