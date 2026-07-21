@@ -3,6 +3,17 @@
 > Every line below is ONE feature. Tick `[x]` only when fully built full-stack (DB → service → API → UI → 4 UX states → seed) and testable.
 > Legend: `[ ]` not started · `[~]` in progress · `[x]` done & testable.
 
+## 22 July 2026 — Stripe, Paystack, Pesapal and school-payment research
+
+- [x] Separated NEYO company revenue from school fee collections; NEYO must not pool school funds.
+- [x] Confirmed Stripe currently labels Kenya as an extended-network market linked to Paystack, not ordinary direct Stripe registration.
+- [x] Reviewed Pesapal API 3.0 hosted orders, mandatory IPN registration, transaction query and recurring-card documentation.
+- [x] Recorded provider-neutral checkout, credential, webhook, refund/dispute and settlement architecture in `docs/MULTI-RAIL-PAYMENTS-STRIPE-PAYSTACK-PESAPAL-RESEARCH-2026-07-22.md`.
+- [ ] Obtain current written merchant onboarding, pricing, settlement and school-connector permission from Paystack Kenya and Pesapal.
+- [ ] Choose one first hosted-card provider after sandbox/commercial review; do not activate both blindly.
+- [ ] Generalise the Daraja-shaped provider contract before implementing redirect/card providers.
+- [ ] Run sandbox then live callback, duplicate-event, amount/currency mismatch, refund, dispute and settlement tests without fabricating evidence.
+
 ## 22 July 2026 — August organic campaign and Term 3 pilot waitlist
 
 - [x] Campaign playbook defines truthful claims, production rhythm, platform packaging, lead funnel, two-person responsibilities, metrics and stop rules.
