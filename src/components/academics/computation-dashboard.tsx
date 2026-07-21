@@ -550,6 +550,7 @@ function MasterReportModal({
     comments: [],
     remarks: [],
   });
+  const [reportContext, setReportContext] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(false);
   const selectedStudent =
     data?.students?.find(
@@ -589,11 +590,17 @@ function MasterReportModal({
 
   const loadNarratives = React.useCallback(async () => {
     if (!selectedStudent?.studentId || !classId) return;
-    const response = await fetch(
-      `/api/academics/grading/report-narratives?termId=${portal.termId}&classId=${classId}&studentId=${selectedStudent.studentId}`,
-    );
-    const json = await response.json();
-    if (json.ok) setNarratives(json.data);
+    const query = `termId=${portal.termId}&classId=${classId}&studentId=${selectedStudent.studentId}`;
+    const [narrativeResponse, contextResponse] = await Promise.all([
+      fetch(`/api/academics/grading/report-narratives?${query}`),
+      fetch(`/api/academics/grading/report-context?${query}`),
+    ]);
+    const [narrativeJson, contextJson] = await Promise.all([
+      narrativeResponse.json(),
+      contextResponse.json(),
+    ]);
+    if (narrativeJson.ok) setNarratives(narrativeJson.data);
+    if (contextJson.ok) setReportContext(contextJson.data);
   }, [classId, portal.termId, selectedStudent?.studentId]);
   React.useEffect(() => {
     void loadNarratives();
@@ -714,11 +721,134 @@ function MasterReportModal({
                       {selectedStudent.overall?.letterGrade ?? "—"}
                     </p>
                   </div>
-                  <Badge tone="neutral">
-                    Formula{" "}
-                    {data.presentation?.formulaVersion ?? "AVAILABLE_WORK_V1"}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge tone="neutral">
+                      Formula{" "}
+                      {data.presentation?.formulaVersion ?? "AVAILABLE_WORK_V1"}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        window.open(
+                          `/api/academics/grading/consolidated-report?termId=${portal.termId}&classId=${classId}&studentId=${selectedStudent.studentId}`,
+                          "_blank",
+                        )
+                      }
+                    >
+                      Download A4 PDF
+                    </Button>
+                  </div>
                 </div>
+                {reportContext && (
+                  <>
+                    <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <div className="rounded-xl bg-white p-3 dark:bg-navy-950">
+                        <p className="text-[10px] text-navy-500">
+                          SCHOOL CLOSED
+                        </p>
+                        <strong className="text-xs">
+                          {reportContext.academicDates.schoolClosedDate}
+                        </strong>
+                      </div>
+                      <div className="rounded-xl bg-white p-3 dark:bg-navy-950">
+                        <p className="text-[10px] text-navy-500">
+                          NEXT TERM BEGINS
+                        </p>
+                        <strong className="text-xs">
+                          {reportContext.academicDates.nextTermBeginsDate ??
+                            "Not configured"}
+                        </strong>
+                      </div>
+                      {reportContext.fees && (
+                        <>
+                          <div className="rounded-xl bg-white p-3 dark:bg-navy-950">
+                            <p className="text-[10px] text-navy-500">
+                              FEE BALANCE
+                            </p>
+                            <strong className="text-xs">
+                              KES{" "}
+                              {reportContext.fees.balanceKes.toLocaleString()}
+                            </strong>
+                          </div>
+                          <div className="rounded-xl bg-white p-3 dark:bg-navy-950">
+                            <p className="text-[10px] text-navy-500">
+                              NEXT TERM FEES
+                            </p>
+                            <strong className="text-xs">
+                              {reportContext.fees.nextTermFeeKes == null
+                                ? "Not configured"
+                                : `KES ${reportContext.fees.nextTermFeeKes.toLocaleString()}`}
+                            </strong>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-xl border bg-white p-3 dark:border-navy-700 dark:bg-navy-950">
+                        <p className="mb-2 text-xs font-bold">
+                          Learner compared with class
+                        </p>
+                        {selectedStudent.subjects.map((subject: any) => (
+                          <div key={subject.subjectId} className="mb-2">
+                            <div className="flex justify-between text-[10px]">
+                              <span>{subject.subjectCode}</span>
+                              <span>
+                                {subject.finalMark.toFixed(0)} / class{" "}
+                                {subject.classMean.toFixed(0)}
+                              </span>
+                            </div>
+                            <div className="relative h-2 rounded bg-navy-100">
+                              <div
+                                className="absolute h-2 rounded bg-blue-600"
+                                style={{
+                                  width: `${Math.min(100, subject.finalMark)}%`,
+                                }}
+                              />
+                              <div
+                                className="absolute h-3 w-0.5 -translate-y-0.5 bg-navy-900"
+                                style={{
+                                  left: `${Math.min(100, subject.classMean)}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="rounded-xl border bg-white p-3 dark:border-navy-700 dark:bg-navy-950">
+                        <p className="mb-2 text-xs font-bold">
+                          Performance over time
+                        </p>
+                        {reportContext.trend.length ? (
+                          <div className="flex h-28 items-end gap-2">
+                            {reportContext.trend.map((point: any) => (
+                              <div
+                                key={point.termId}
+                                className="flex flex-1 flex-col items-center"
+                              >
+                                <span className="text-[9px] font-bold">
+                                  {point.mean.toFixed(0)}
+                                </span>
+                                <div
+                                  className="w-full rounded-t bg-green-500"
+                                  style={{
+                                    height: `${Math.max(4, point.mean)}%`,
+                                  }}
+                                />
+                                <span className="mt-1 text-[8px]">
+                                  {point.label}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-navy-400">
+                            Trend appears after more than one computed term.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
                 <div className="space-y-2">
                   {selectedStudent.subjects.map((subject: any) => (
                     <details

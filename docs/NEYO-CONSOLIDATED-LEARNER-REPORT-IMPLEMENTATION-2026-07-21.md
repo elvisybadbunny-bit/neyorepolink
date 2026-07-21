@@ -38,9 +38,15 @@ Founder decisions:
 - Class Teacher and Principal remarks are always human-authored. Class Teacher ownership is checked against the assigned class, while Principal remarks are restricted to authorised leadership.
 - The learner drill-down exposes save/lock controls and blocks edits after locking. Corrections must use the governed result-correction workflow.
 
+## Phase 4 implemented
+
+- Report dates resolve from the configured academic term: school closing date and the next configured term's opening date. Missing next-term setup is shown honestly as not configured.
+- Fee balance and next-term fee are omitted unless the school enables fee visibility. When enabled, the learner ledger balance and exact-class, level, or all-level next-term structure are resolved in that priority order.
+- The learner screen now includes a subject-by-subject learner/class comparison and a bounded six-term performance trend.
+- A compact rounded one-page A4 consolidated PDF includes dynamic available assessments, effective weights, deviation, grade/CBE level, policy-controlled rank, resolved teacher, comments, human remarks, dates, optional fees and trend.
+- The same renderer supports school-controlled colour and black-and-white output. A published report carries the latest calculation-hash evidence; an unreleased preview is labelled as a live computed preview.
+
 ## Remaining build phases
 
-1. Academic dates and safe fee-data resolution when fee visibility is enabled.
-2. One-page rounded NEYO A4 report, comparison and trend charts.
-3. Exam practical resource feasibility and multi-session generation.
-4. Browser, PDF and database-backed computation tests.
+1. Exam practical resource feasibility and multi-session generation.
+2. Browser, PDF and database-backed computation tests, including migrated preview verification and 360px/A4 inspection.
