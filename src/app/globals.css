@@ -734,3 +734,31 @@ html.glass.dark[data-popup-style="solid"] .fixed .rounded-2xl.bg-navy-900::befor
 html.glass.dark[data-popup-style="solid"] .fixed .rounded-3xl.bg-navy-900::before {
   display: none !important;
 }
+
+/* WWDC26 refinement controls — Founder/Ops reversible scope switches.
+   Navigation glass and selected content surfaces can be disabled independently
+   without deleting either the existing flat design or the Liquid Glass rules. */
+html.glass[data-lg-navigation="0"] header,
+html.glass[data-lg-navigation="0"] aside,
+html.glass[data-lg-navigation="0"] [data-lg-bar] {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background-image: none !important;
+  background-color: var(--lg-shell) !important;
+  box-shadow: none !important;
+}
+html.glass[data-lg-surfaces="0"] .bg-white,
+html.glass[data-lg-surfaces="0"] .dashboard-metric-card {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background-image: none !important;
+  background-color: #ffffff !important;
+}
+html.glass.dark[data-lg-surfaces="0"] .bg-white,
+html.glass.dark[data-lg-surfaces="0"] .dashboard-metric-card {
+  background-color: #111c32 !important;
+}
+html.glass[data-lg-surfaces="0"] .rounded-2xl.bg-white::before,
+html.glass[data-lg-surfaces="0"] .rounded-3xl.bg-white::before {
+  display: none !important;
+}

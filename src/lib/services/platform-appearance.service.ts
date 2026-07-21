@@ -25,6 +25,8 @@ const LIQUID_LEVELS = ["1", "2", "3"] as const;
 export type LiquidLevel = (typeof LIQUID_LEVELS)[number];
 
 const LIQUID_COLOR_KEY = "liquid_color_level";
+const LIQUID_NAVIGATION_KEY = "liquid_navigation_enabled";
+const LIQUID_SELECTED_SURFACES_KEY = "liquid_selected_surfaces_enabled";
 const LIQUID_COLOR_LEVELS = ["1", "2", "3"] as const;
 export type LiquidColorLevel = (typeof LIQUID_COLOR_LEVELS)[number];
 
@@ -32,6 +34,8 @@ export interface AppearanceSettings {
   liquidLevel: LiquidLevel;
   liquidEnabled: boolean;
   liquidColorLevel: LiquidColorLevel;
+  liquidNavigationEnabled: boolean;
+  liquidSelectedSurfacesEnabled: boolean;
 }
 
 export class AppearanceError extends Error {
@@ -59,18 +63,22 @@ export async function getLiquidColorLevel(): Promise<LiquidColorLevel> {
     : "1";
 }
 
+async function getBooleanSetting(key: string, fallback = true) {
+  const row = await db.platformSetting.findUnique({ where: { key } });
+  return row ? row.value !== "false" : fallback;
+}
+
 export async function getAppearanceSettings(): Promise<AppearanceSettings> {
-  const [liquidLevel, liquidEnabled, liquidColorLevel] = await Promise.all([
-    getLiquidLevel(),
-    getLiquidEnabled(),
-    getLiquidColorLevel(),
+  const [liquidLevel, liquidEnabled, liquidColorLevel, liquidNavigationEnabled, liquidSelectedSurfacesEnabled] = await Promise.all([
+    getLiquidLevel(), getLiquidEnabled(), getLiquidColorLevel(),
+    getBooleanSetting(LIQUID_NAVIGATION_KEY), getBooleanSetting(LIQUID_SELECTED_SURFACES_KEY),
   ]);
-  return { liquidLevel, liquidEnabled, liquidColorLevel };
+  return { liquidLevel, liquidEnabled, liquidColorLevel, liquidNavigationEnabled, liquidSelectedSurfacesEnabled };
 }
 
 export async function setAppearanceSettings(
   user: SessionUser,
-  input: { liquidLevel?: string; liquidEnabled?: boolean; liquidColorLevel?: string }
+  input: { liquidLevel?: string; liquidEnabled?: boolean; liquidColorLevel?: string; liquidNavigationEnabled?: boolean; liquidSelectedSurfacesEnabled?: boolean }
 ): Promise<AppearanceSettings> {
   if (input.liquidLevel !== undefined && !(LIQUID_LEVELS as readonly string[]).includes(input.liquidLevel)) {
     throw new AppearanceError("INVALID", "Liquidity level must be 1 (subtle), 2 (standard) or 3 (deep).");
@@ -100,6 +108,9 @@ export async function setAppearanceSettings(
       update: { value: input.liquidColorLevel, updatedBy: user.fullName },
       create: { key: LIQUID_COLOR_KEY, value: input.liquidColorLevel, updatedBy: user.fullName },
     }));
+  }
+  for (const [key, value] of [[LIQUID_NAVIGATION_KEY, input.liquidNavigationEnabled], [LIQUID_SELECTED_SURFACES_KEY, input.liquidSelectedSurfacesEnabled]] as const) {
+    if (value !== undefined) writes.push(db.platformSetting.upsert({ where: { key }, update: { value: String(value), updatedBy: user.fullName }, create: { key, value: String(value), updatedBy: user.fullName } }));
   }
   await Promise.all(writes);
 

@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { getSessionContext } from "@/lib/core/session";
 import { Hammer, Mail, HelpCircle } from "lucide-react";
 import { ExpiredCheckoutClient } from "@/components/public-site/expired-checkout-client";
-import { getLiquidColorLevel } from "@/lib/services/platform-appearance.service";
+import { getAppearanceSettings } from "@/lib/services/platform-appearance.service";
 import { isFounderTier } from "@/lib/core/roles";
 
 const inter = {
@@ -62,13 +62,13 @@ export default async function RootLayout({
   // (src/lib/core/session.ts), so this call and the one the (app) layout
   // makes moments later for the SAME request share one real DB round-trip
   // instead of two.
-  const [liquidSetting, maintenanceSetting, maintenanceMessageSetting, maintenanceEtaSetting, sessionCtx, companyLgContrast] = await Promise.all([
+  const [liquidSetting, maintenanceSetting, maintenanceMessageSetting, maintenanceEtaSetting, sessionCtx, companyAppearance] = await Promise.all([
     db.platformSetting.findUnique({ where: { key: "neyo_liquid_system_active" } }).catch(() => null),
     db.platformSetting.findUnique({ where: { key: "maintenance_mode" } }).catch(() => null),
     db.platformSetting.findUnique({ where: { key: "maintenance_message" } }).catch(() => null),
     db.platformSetting.findUnique({ where: { key: "maintenance_eta" } }).catch(() => null),
     getSessionContext().catch(() => null),
-    getLiquidColorLevel(),
+    getAppearanceSettings(),
   ]);
   const isLiquidActive = liquidSetting ? liquidSetting.value === "true" : true; // Default true!
   const isMaintenanceActive = maintenanceSetting?.value === "true";
@@ -119,7 +119,7 @@ export default async function RootLayout({
   // consistency with the existing data-liquid="2".
   const userLgContrast = sessionCtx?.user?.lgContrast;
   const hasPersonalLgContrast = Boolean(userLgContrast && userLgContrast !== "company");
-  const effectiveLgContrast = hasPersonalLgContrast ? userLgContrast : companyLgContrast;
+  const effectiveLgContrast = hasPersonalLgContrast ? userLgContrast : companyAppearance.liquidColorLevel;
 
   return (
     <html
@@ -127,6 +127,8 @@ export default async function RootLayout({
       className={isLiquidActive ? "glass" : "flat"}
       data-liquid="2"
       data-lg-contrast={effectiveLgContrast}
+      data-lg-navigation={companyAppearance.liquidNavigationEnabled ? "1" : "0"}
+      data-lg-surfaces={companyAppearance.liquidSelectedSurfacesEnabled ? "1" : "0"}
       data-lg-contrast-user-override={hasPersonalLgContrast ? "true" : undefined}
       {...(popupStyle ? { "data-popup-style": popupStyle } : {})}
       suppressHydrationWarning

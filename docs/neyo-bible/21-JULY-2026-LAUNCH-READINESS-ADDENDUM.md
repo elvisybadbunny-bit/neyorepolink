@@ -67,6 +67,6 @@ Credentials & Secrets Vault is the canonical encrypted company integration store
 2. Founder-controlled onboarding pricing is implemented: operational factor toggles, real school/submission calculation, reviewed override/FREE waiver, separate school-approved onboarding payment, protected callback and checklist activation. Deployment/payment-provider verification remains required.
 3. Public asset operations are implemented: Founder-only sanitised/versioned logo and media upload, preview, activation/rollback, audit, friendly social/FAQ/media editors and public rendering. Deployment verification remains required.
 4. CBE Leadership is implemented: a manager-only completion/readiness board, existing report request/return/approve/publish governance, non-scoring teacher evidence linked to human appraisal, and authenticated row-scoped learner-report access auditing. Deployed data verification remains required.
-5. WWDC26 refinement: use existing reversible appearance controls for navigation/contextual controls and selected surfaces; do not blanket-convert dense content to glass.
+5. WWDC26 refinement is implemented as reversible Founder/Ops scopes for navigation/contextual controls and selected dashboard/hero surfaces. Existing design rules remain intact; disabling a scope restores solid fallbacks, while forms/tables/print retain readability protections. Deployed cross-module visual review remains pending.
 
 The authoritative work queue is `docs/IMPLEMENTATION-QUEUE-FROM-FOUNDER-RESEARCH-2026-07-21.md`.

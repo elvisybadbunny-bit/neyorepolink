@@ -2318,7 +2318,8 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
   const [starting, setStarting] = React.useState(false);
   // AA.9 — real "start of term" teacher-rotation action state.
   const [rotatingTeachers, setRotatingTeachers] = React.useState(false);
-  const [payload, setPayload] = React.useState<any>(null);
+  const [payload, setPayload] = React.useState<any>({ constraints: [], combinations: [] });
+  const [loadError, setLoadError] = React.useState<string | null>(null);
   const [job, setJob] = React.useState<any>(null);
   const [classes, setClasses] = React.useState<any[]>([]);
   const [subjects, setSubjects] = React.useState<any[]>([]);
@@ -2389,6 +2390,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
 
   const load = React.useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [engineRes, generatorRes, jobRes, teacherRes, venueRes, blockRes, allocationImportRes, blockedSlotRes] = await Promise.all([
         fetch("/api/academics/timetable/engine"),
@@ -2403,8 +2405,9 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       const [engineJson, generatorJson, jobJson, teacherJson, venueJson, blockJson, allocationImportJson, blockedSlotJson] = await Promise.all([
         engineRes.json(), generatorRes.json(), jobRes.json(), teacherRes.json(), venueRes.json(), blockRes.json(), allocationImportRes.json(), blockedSlotRes.json(),
       ]);
-      if (!engineJson.ok || !generatorJson.ok) throw new Error("Failed to load timetable engine data.");
-      setPayload(engineJson.data);
+      if (!generatorJson.ok) throw new Error(generatorJson.error?.message || "Could not load classes and timetable inputs.");
+      if (!engineJson.ok) setLoadError(engineJson.error?.message || "Constraints and combinations are temporarily unavailable.");
+      setPayload(engineJson.ok ? engineJson.data : { constraints: [], combinations: [] });
       setJob(jobJson.ok ? jobJson.data.job : null);
       setClasses(generatorJson.data.classes ?? []);
       setSubjects((generatorJson.data.subjects ?? []).filter((s: any) => !s.archived));
@@ -2429,8 +2432,11 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
       setElectiveBlocks(blockJson.ok ? blockJson.data.blocks ?? [] : []);
       setAllocationImportHistory(allocationImportJson.ok ? allocationImportJson.data.imports ?? [] : []);
       setBlockedSlots(blockedSlotJson.ok ? blockedSlotJson.data.blockedSlots ?? [] : []);
-    } catch {
-      toast({ title: "Could not load smart timetable settings.", tone: "error" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not load smart timetable settings.";
+      setLoadError(message);
+      setPayload((current: any) => current || { constraints: [], combinations: [] });
+      toast({ title: message, tone: "error" });
     } finally {
       setLoading(false);
     }
@@ -3080,6 +3086,7 @@ function TimetableEngineTab({ canManage, schoolLevelActivation }: { canManage: b
 
   return (
     <div className="space-y-6 text-left">
+      {loadError ? <Card className="border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20"><CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-bold text-red-800 dark:text-red-300">Smart Timetable could not load all setup data</p><p className="mt-1 text-xs text-red-700 dark:text-red-400">{loadError} Existing sections remain visible where their data loaded successfully.</p></div><Button size="sm" variant="secondary" onClick={load} disabled={loading}>{loading?<Loader2 className="h-4 w-4 animate-spin"/>:<RefreshCw className="h-4 w-4"/>}Retry</Button></CardContent></Card> : null}
       <Card className="border border-amber-100 bg-amber-50/70 dark:border-amber-900/40 dark:bg-amber-950/10">
         <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
           <div>

@@ -566,6 +566,13 @@ export async function saveClassSubjectNeedForLevel(
 export async function getTimetableInputs(user: SessionUser) {
   return withTenant(user.tenantId, async () => {
     const tdb = tenantDb();
+    // Backward-compatible read while a deployment is waiting for the additive
+    // Venue.learnerCapacity migration. The Smart Timetable setup must remain
+    // visible; capacity is honestly unknown until the migration lands.
+    const venuesPromise = tdb.venue.findMany({ where: { active: true }, orderBy: { name: "asc" } }).catch(async (error: any) => {
+      if (error?.code !== "P2022") throw error;
+      return tdb.venue.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, tenantId: true, name: true, shortCode: true, supportsSubjectIds: true, capacityPerPeriod: true, active: true, createdAt: true, updatedAt: true } }).then((rows) => rows.map((row) => ({ ...row, learnerCapacity: null })));
+    });
     const [classes, subjects, teachers, needs, configs, teacherAssoc, venues] = await Promise.all([
       tdb.schoolClass.findMany({ where: { archived: false }, orderBy: [{ level: "asc" }, { stream: "asc" }] }),
       tdb.subject.findMany({ where: { archived: false }, orderBy: { code: "asc" } }),
@@ -573,7 +580,7 @@ export async function getTimetableInputs(user: SessionUser) {
       tdb.classSubjectNeed.findMany(),
       tdb.timetableConfig.findMany(),
       tdb.teacherSubject.findMany(),
-      tdb.venue.findMany({ where: { active: true }, orderBy: { name: "asc" } }), // Z.3
+      venuesPromise, // Z.3; learner capacity falls back to unknown during migration rollout
     ]);
 
     return { classes, subjects, teachers, needs, configs, teacherAssoc, venues };

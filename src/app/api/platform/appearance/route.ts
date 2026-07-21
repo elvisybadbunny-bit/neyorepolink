@@ -7,7 +7,7 @@
  */
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { requireUser, requireRole } from "@/lib/core/session";
+import { requireUser, requirePermission } from "@/lib/core/session";
 import { ok, handleError } from "@/lib/api/respond";
 import { getAppearanceSettings, setAppearanceSettings } from "@/lib/services/platform-appearance.service";
 
@@ -24,16 +24,18 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireRole("SUPER_ADMIN");
+    const user = await requirePermission("platform.founder_ops");
     const input = z
       .object({
         liquidLevel: z.enum(["1", "2", "3"]).optional(),
         liquidEnabled: z.boolean().optional(),
         liquidColorLevel: z.enum(["1", "2", "3"]).optional(),
+        liquidNavigationEnabled: z.boolean().optional(),
+        liquidSelectedSurfacesEnabled: z.boolean().optional(),
       })
       .refine(
-        (v) => v.liquidLevel !== undefined || v.liquidEnabled !== undefined || v.liquidColorLevel !== undefined,
-        "Provide liquidLevel, liquidEnabled or liquidColorLevel."
+        (v) => v.liquidLevel !== undefined || v.liquidEnabled !== undefined || v.liquidColorLevel !== undefined || v.liquidNavigationEnabled !== undefined || v.liquidSelectedSurfacesEnabled !== undefined,
+        "Provide at least one appearance setting."
       )
       .parse(await req.json().catch(() => ({})));
     return ok(await setAppearanceSettings(user, input));

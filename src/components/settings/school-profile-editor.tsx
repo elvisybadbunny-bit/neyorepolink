@@ -51,6 +51,9 @@ function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-1"><Label>{label}</Label>{children}</div>;
 }
+function ScopeToggle({label,description,checked,disabled,onChange}:{label:string;description:string;checked:boolean;disabled:boolean;onChange:(value:boolean)=>void}){
+  return <label className={`flex items-start justify-between gap-3 rounded-2xl border border-navy-100 p-3 dark:border-navy-800 ${disabled?"opacity-60":"cursor-pointer"}`}><span><span className="block text-xs font-black text-navy-900 dark:text-white">{label}</span><span className="mt-1 block text-[11px] leading-4 text-navy-500 dark:text-navy-400">{description}</span></span><input type="checkbox" checked={checked} disabled={disabled} onChange={(event)=>onChange(event.target.checked)} className="mt-1 h-4 w-4"/></label>;
+}
 
 export function SchoolProfileEditor() {
   const { toast } = useToast();
@@ -60,6 +63,8 @@ export function SchoolProfileEditor() {
 
   const [liquidLevel, setLiquidLevel] = React.useState("2");
   const [liquidEnabled, setLiquidEnabled] = React.useState(true);
+  const [liquidNavigationEnabled, setLiquidNavigationEnabled] = React.useState(true);
+  const [liquidSelectedSurfacesEnabled, setLiquidSelectedSurfacesEnabled] = React.useState(true);
   const [liquidIntensity, setLiquidIntensity] = React.useState(50);
   const [isSuperAdmin, setIsSuperAdmin] = React.useState(false);
   const [appearanceSaving, setAppearanceSaving] = React.useState(false);
@@ -109,6 +114,8 @@ export function SchoolProfileEditor() {
       if (j.ok) {
         setLiquidLevel(j.data.liquidLevel);
         setLiquidEnabled(j.data.liquidEnabled !== false);
+        setLiquidNavigationEnabled(j.data.liquidNavigationEnabled !== false);
+        setLiquidSelectedSurfacesEnabled(j.data.liquidSelectedSurfacesEnabled !== false);
         if (j.data.liquidColorLevel === "1" || j.data.liquidColorLevel === "2" || j.data.liquidColorLevel === "3") {
           setLiquidColorLevel(j.data.liquidColorLevel);
         }
@@ -165,7 +172,7 @@ export function SchoolProfileEditor() {
     applyLiquidIntensity(liquidIntensity);
   }
 
-  async function savePlatformAppearance(input: { liquidLevel?: string; liquidEnabled?: boolean; liquidColorLevel?: string }) {
+  async function savePlatformAppearance(input: { liquidLevel?: string; liquidEnabled?: boolean; liquidColorLevel?: string; liquidNavigationEnabled?: boolean; liquidSelectedSurfacesEnabled?: boolean }) {
     if (!isSuperAdmin) {
       toast({ title: "Only NEYO company Super Admin can change platform Liquid Glass.", tone: "error" });
       return;
@@ -181,6 +188,12 @@ export function SchoolProfileEditor() {
       if (!json.ok) throw new Error(json.error?.message || "Could not save platform appearance.");
       setLiquidLevel(json.data.liquidLevel);
       setLiquidEnabled(json.data.liquidEnabled);
+      setLiquidNavigationEnabled(json.data.liquidNavigationEnabled !== false);
+      setLiquidSelectedSurfacesEnabled(json.data.liquidSelectedSurfacesEnabled !== false);
+      if (typeof document !== "undefined") {
+        document.documentElement.setAttribute("data-lg-navigation", json.data.liquidNavigationEnabled !== false ? "1" : "0");
+        document.documentElement.setAttribute("data-lg-surfaces", json.data.liquidSelectedSurfacesEnabled !== false ? "1" : "0");
+      }
       applyLiquid(json.data.liquidEnabled, json.data.liquidLevel);
       if (json.data.liquidColorLevel === "1" || json.data.liquidColorLevel === "2" || json.data.liquidColorLevel === "3") {
         setLiquidColorLevel(json.data.liquidColorLevel);
@@ -496,6 +509,11 @@ export function SchoolProfileEditor() {
               />
               <div className="peer h-6 w-11 rounded-full bg-navy-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-all peer-checked:bg-green-600 peer-checked:after:translate-x-5 dark:bg-navy-700" />
             </label>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ScopeToggle label="Navigation & contextual controls" description="Top bars, sidebars, module bar, islands and contextual control layers." checked={liquidNavigationEnabled} disabled={!isSuperAdmin || appearanceSaving} onChange={(checked) => savePlatformAppearance({ liquidNavigationEnabled: checked })} />
+            <ScopeToggle label="Selected dashboard & hero surfaces" description="Restrained material on selected visual surfaces; dense forms and print retain solid fallbacks." checked={liquidSelectedSurfacesEnabled} disabled={!isSuperAdmin || appearanceSaving} onChange={(checked) => savePlatformAppearance({ liquidSelectedSurfacesEnabled: checked })} />
           </div>
 
           {!isSuperAdmin && (

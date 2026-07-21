@@ -67,3 +67,13 @@ Founder decisions recorded 21 July 2026:
 - [x] CBE parent reports remain authenticated and row-scoped to the guardian's child; every JSON/PDF access now creates an audit record.
 
 Every unchecked item requires code, permissions, failure handling, mobile/browser testing and documentation. It must not be called complete merely because a card or button exists.
+
+### F. WWDC26-inspired reversible refinement
+
+- [x] Founder/Ops master Liquid Glass control preserved.
+- [x] Independent navigation/contextual-control scope toggle.
+- [x] Independent selected dashboard/hero-surface scope toggle.
+- [x] Server-rendered scope attributes avoid deleting or rewriting the existing design.
+- [x] Solid forms/cards fallback, contrast controls and plain print remain available.
+- [x] Smart Timetable progressive loading prevents optional endpoint failure from blanking the entire screen.
+- [~] Deployed visual review at 360px and representative modules remains evidence pending after Vercel rate-limit reset.
