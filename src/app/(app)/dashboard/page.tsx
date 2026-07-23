@@ -19,6 +19,7 @@ import { withTenant } from "@/lib/core/tenant-context";
 import { DashboardIntercomClient } from "@/components/dashboard/dashboard-intercom-client";
 import { PwaDataSaverCard } from "@/components/dashboard/pwa-data-saver";
 import { PrincipalDelegationCard } from "@/components/dashboard/principal-delegation-card";
+import { DeferredDashboardSection } from "@/components/dashboard/deferred-dashboard-section";
 import { createInApp } from "@/lib/services/notification.service";
 import { scopeWhere } from "@/lib/services/student.service";
 
@@ -333,28 +334,28 @@ export default async function DashboardPage() {
 
         {/* 🧬 WebRTC Peer-to-Peer Intercom Voice Calling Module */}
         <div className="lg:col-span-1">
-          <DashboardIntercomClient />
+          <DeferredDashboardSection label="Intercom" minHeight={320}><DashboardIntercomClient /></DeferredDashboardSection>
         </div>
       </div>
 
-      <PrincipalDelegationCard />
+      <DeferredDashboardSection label="Delegation controls" minHeight={120}><PrincipalDelegationCard /></DeferredDashboardSection>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* 🧬 PWA Internet Bundle & Data Saver Card */}
         <div className="lg:col-span-1">
-          <PwaDataSaverCard />
+          <DeferredDashboardSection label="Offline and data saver" minHeight={260}><PwaDataSaverCard /></DeferredDashboardSection>
         </div>
 
         {/* Recent Activity Log - Compact Styling */}
         <div className="lg:col-span-2">
-          <Card className="h-full overflow-hidden rounded-[2rem] border-navy-100 bg-white shadow-sm dark:border-navy-800 dark:bg-navy-900">
+          <DeferredDashboardSection label="Latest school activity" minHeight={260}><Card className="h-full overflow-hidden rounded-[2rem] border-navy-100 bg-white shadow-sm dark:border-navy-800 dark:bg-navy-900">
             <CardHeader className="border-b border-navy-50 pb-3 dark:border-navy-800">
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-navy-400">Latest</p><CardTitle className="mt-1 text-lg font-black text-navy-950 dark:text-white">Recent school activity</CardTitle>
             </CardHeader>
             <CardContent className="max-h-[320px] flex-1 overflow-y-auto p-4">
               <ActivityFeed title="" />
             </CardContent>
-          </Card>
+          </Card></DeferredDashboardSection>
         </div>
       </div>
     </div>
