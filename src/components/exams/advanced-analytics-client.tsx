@@ -34,13 +34,20 @@ export function AdvancedAnalyticsClient() {
   if (loading) return <div className="flex justify-center p-6"><Loader2 className="h-5 w-5 animate-spin text-navy-400" /></div>;
   if (!data) return null; // Silently hide if leadership analytics are locked or unauthorized
 
+  const list = (value: unknown) => Array.isArray(value) ? value : [];
   const gapGroups = [
-    { title: "Weak competencies overall", rows: data.competencyGaps.overall },
-    { title: "By class", rows: data.competencyGaps.byClass },
-    { title: "By grade", rows: data.competencyGaps.byGrade },
-    { title: "By subject", rows: data.competencyGaps.bySubject },
-    { title: "By teacher", rows: data.competencyGaps.byTeacher },
+    { title: "Weak competencies overall", rows: list(data.competencyGaps?.overall) },
+    { title: "By class", rows: list(data.competencyGaps?.byClass) },
+    { title: "By grade", rows: list(data.competencyGaps?.byGrade) },
+    { title: "By subject", rows: list(data.competencyGaps?.bySubject) },
+    { title: "By teacher", rows: list(data.competencyGaps?.byTeacher) },
   ];
+  const interventions = list(data.interventions);
+  const attendanceTrend = list(data.attendanceTrend);
+  const assessmentBalance = list(data.assessmentBalance);
+  const talentParticipation = list(data.talentParticipation);
+  const pathwayReadiness = list(data.pathwayReadiness);
+  const wellbeing = data.wellbeingIndicators ?? { participationPct: 0, medicalProfiles: 0, counselingNotes: 0, clinicVisits: 0 };
 
   return (
     <div className="space-y-6 animate-in fade-in">
@@ -49,10 +56,10 @@ export function AdvancedAnalyticsClient() {
         <p className="text-sm font-medium text-navy-500">Cross-module correlation, pathway readiness, wellbeing signals and intervention alerts.</p>
       </div>
 
-      {data.interventions.length > 0 ? (
+      {interventions.length > 0 ? (
         <div className="space-y-3">
           <h3 className="text-sm font-bold uppercase tracking-widest text-red-600 dark:text-red-400 flex items-center"><AlertTriangle className="mr-2 h-4 w-4" /> Principal intervention required</h3>
-          {data.interventions.map((inv: any, idx: number) => (
+          {interventions.map((inv: any, idx: number) => (
             <div key={idx} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 p-4 rounded-2xl flex gap-4 items-start">
               <div className="h-10 w-10 shrink-0 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center text-red-600 dark:text-red-400"><ShieldAlert className="h-5 w-5" /></div>
               <div>
@@ -70,7 +77,7 @@ export function AdvancedAnalyticsClient() {
           <CardContent className="pt-4">
             <p className="text-xs text-navy-500 mb-4">Correlation between absence brackets and average exam score.</p>
             <div className="space-y-4">
-              {data.attendanceTrend.map((t: any, idx: number) => (
+              {attendanceTrend.map((t: any, idx: number) => (
                 <div key={idx}>
                   <div className="flex justify-between text-xs font-bold text-navy-950 dark:text-white mb-1"><span>{t.bracket} <span className="font-medium text-navy-400">({t.count} learners)</span></span><span>{t.avgScore}% avg</span></div>
                   <div className="h-2 w-full bg-navy-50 dark:bg-navy-900 rounded-full overflow-hidden"><div className={`${idx === 0 ? "bg-green-500" : idx === 1 ? "bg-amber-500" : "bg-red-500"} h-full rounded-full`} style={{ width: `${t.avgScore}%` }} /></div>
@@ -83,7 +90,7 @@ export function AdvancedAnalyticsClient() {
         <Card>
           <CardHeader className="pb-3 border-b border-navy-50 dark:border-navy-800"><CardTitle className="flex items-center text-navy-950 dark:text-white text-base"><Activity className="mr-2 h-5 w-5 text-purple-500" /> Assessment balance</CardTitle></CardHeader>
           <CardContent className="pt-4 space-y-3">
-            {data.assessmentBalance.map((a: any, idx: number) => (
+            {assessmentBalance.map((a: any, idx: number) => (
               <div key={idx} className="flex items-center justify-between p-3 rounded-xl border border-navy-100 bg-navy-50/50 dark:border-navy-800 dark:bg-navy-900/30">
                 <span className="font-bold text-sm text-navy-950 dark:text-white">{a.label}</span>
                 <Badge tone={a.color === "amber" ? "amber" : a.color === "blue" ? "blue" : "neutral"}>{a.value}</Badge>
@@ -96,15 +103,15 @@ export function AdvancedAnalyticsClient() {
           <CardHeader className="pb-3 border-b border-navy-50 dark:border-navy-800"><CardTitle className="flex items-center text-navy-950 dark:text-white text-base"><HeartPulse className="mr-2 h-5 w-5 text-green-500" /> Talent and wellbeing indicators</CardTitle></CardHeader>
           <CardContent className="pt-4 space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <Stat label="Talent participation" value={`${data.wellbeingIndicators.participationPct}%`} />
-              <Stat label="Medical profiles" value={String(data.wellbeingIndicators.medicalProfiles)} />
-              <Stat label="Counseling notes" value={String(data.wellbeingIndicators.counselingNotes)} />
-              <Stat label="Clinic visits" value={String(data.wellbeingIndicators.clinicVisits)} />
+              <Stat label="Talent participation" value={`${wellbeing.participationPct}%`} />
+              <Stat label="Medical profiles" value={String(wellbeing.medicalProfiles)} />
+              <Stat label="Counseling notes" value={String(wellbeing.counselingNotes)} />
+              <Stat label="Clinic visits" value={String(wellbeing.clinicVisits)} />
             </div>
             <div>
               <p className="text-xs text-navy-500 mb-3">Top participation areas</p>
               <div className="space-y-2">
-                {data.talentParticipation.length === 0 ? <p className="text-sm italic text-navy-400">No talent records yet.</p> : data.talentParticipation.map((t: any, idx: number) => (
+                {talentParticipation.length === 0 ? <p className="text-sm italic text-navy-400">No talent records yet.</p> : talentParticipation.map((t: any, idx: number) => (
                   <div key={idx} className="flex justify-between items-center p-2 rounded hover:bg-navy-50 dark:hover:bg-navy-900/50"><div><h4 className="text-sm font-bold text-navy-950 dark:text-white">{t.name}</h4><span className="text-[10px] text-navy-400 uppercase tracking-widest">{t.category}</span></div><Badge tone="green">{t.count} records</Badge></div>
                 ))}
               </div>
@@ -115,7 +122,7 @@ export function AdvancedAnalyticsClient() {
         <Card>
           <CardHeader className="pb-3 border-b border-navy-50 dark:border-navy-800"><CardTitle className="flex items-center text-navy-950 dark:text-white text-base"><Route className="mr-2 h-5 w-5 text-indigo-500" /> Pathway readiness snapshot</CardTitle></CardHeader>
           <CardContent className="pt-4 space-y-3">
-            {data.pathwayReadiness.length === 0 ? <p className="text-sm italic text-navy-400">No pathway allocations yet.</p> : data.pathwayReadiness.slice(0, 6).map((p: any, idx: number) => (
+            {pathwayReadiness.length === 0 ? <p className="text-sm italic text-navy-400">No pathway allocations yet.</p> : pathwayReadiness.slice(0, 6).map((p: any, idx: number) => (
               <div key={idx} className="flex items-center justify-between p-3 rounded-xl border border-navy-100 bg-white dark:border-navy-800 dark:bg-navy-950/40">
                 <div>
                   <p className="font-bold text-sm text-navy-950 dark:text-white">{p.pathwayName} ({p.pathwayCode})</p>

@@ -78,8 +78,7 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
   const [dismissLevelBanner, setDismissLevelBanner] = React.useState(() => typeof window !== "undefined" && localStorage.getItem("neyo_dismiss_academics_level") === "true");
 
   const tabs = [
-    { key: "subjects" as const, label: "Subjects", icon: BookOpen },
-    { key: "departments" as const, label: "Departments", icon: Building2 },
+    { key: "subjects" as const, label: "Subjects & Departments", icon: BookOpen },
     { key: "cocurricular" as const, label: "Co-curricular", icon: Trophy },
     { key: "terms" as const, label: "Terms", icon: CalendarRange },
     { key: "timetable" as const, label: "Timetable", icon: Grid3X3 },
@@ -156,8 +155,7 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
           </button>
         ))}
       </div>
-      {tab === "subjects" && <SubjectsTab canManage={canManage} />}
-      {tab === "departments" && <DepartmentsTab canManage={canManage} canAppointHod={canAppointHod} isScopedHod={isScopedHod} />}
+      {tab === "subjects" && <div className="space-y-8"><SubjectsTab canManage={canManage} /><div className="border-t border-navy-100 pt-8 dark:border-navy-800"><DepartmentsTab canManage={canManage} canAppointHod={canAppointHod} isScopedHod={isScopedHod} /></div></div>}
       {tab === "cocurricular" && <CoCurricularTab canManage={canManage} onOpenTimetable={() => setTab("timetable")} />}
       {tab === "terms" && <TermsTab canManage={canManage} />}
       {tab === "timetable" && <TimetableTab canManage={canManage} />}
