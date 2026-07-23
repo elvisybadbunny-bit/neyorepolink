@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Cast, Clock3, ExternalLink, Loader2, Play, Plus, Search, ShieldCheck, Tv, X, Youtube } from "lucide-react";
+import { Cast, Clock3, ExternalLink, Loader2, Maximize2, Minimize2, Play, Plus, Search, ShieldCheck, Tv, X, Youtube } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,11 +17,13 @@ function embed(id: string) { return `https://www.youtube-nocookie.com/embed/${id
 
 export function LearningVideosClient() {
   const { toast } = useToast();
-  const [q, setQ] = React.useState("algebra basics");
+  const [q, setQ] = React.useState("");
   const [saved, setSaved] = React.useState<Video[]>([]);
   const [external, setExternal] = React.useState<Video[]>([]);
   const [shown, setShown] = React.useState<Session[]>([]);
   const [watching, setWatching] = React.useState<Video | Session | null>(null);
+  const [playerMode, setPlayerMode] = React.useState<"INLINE" | "MINI">("INLINE");
+  const playerRef = React.useRef<HTMLDivElement>(null);
   const [shownOpen, setShownOpen] = React.useState(false);
   const [note, setNote] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -48,10 +50,18 @@ export function LearningVideosClient() {
   }, [q]);
   React.useEffect(() => { load(); }, []); // initial only
 
+  function watch(video: Video | Session) {
+    // One shared player means selecting another result replaces the current
+    // iframe instead of starting a second video's audio.
+    setWatching(video);
+    setPlayerMode("INLINE");
+    window.setTimeout(() => playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
+
   async function save(video: Video) {
     const res = await fetch("/api/learning-videos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "save", youtubeUrlOrId: video.youtubeId, title: video.title, description: video.description, channelTitle: video.channelTitle, thumbnailUrl: video.thumbnailUrl }) });
     const json = await res.json();
-    if (json.ok) { toast({ title: "Learning video saved", tone: "success" }); await load(); setWatching(json.data); }
+    if (json.ok) { toast({ title: "Learning video saved", tone: "success" }); await load(); watch(json.data); }
     else toast({ title: json.error?.message || "Could not save video", tone: "error" });
   }
 
@@ -92,16 +102,18 @@ export function LearningVideosClient() {
       </CardContent>
     </Card>
 
-    {currentEmbed && <Card><CardHeader><CardTitle className="flex items-center gap-2"><Play className="h-5 w-5 text-green-600" /> Watch inside NEYO</CardTitle></CardHeader><CardContent className="space-y-3"><div className="aspect-video overflow-hidden rounded-3xl border border-navy-100 bg-navy-950 shadow-card dark:border-navy-800"><iframe src={currentEmbed} title={(watching as any).title} className="h-full w-full" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-bold text-navy-900 dark:text-navy-50">{(watching as any).title}</p><p className="text-[11px] text-navy-500">If the owner later blocks embedding, open the same video on YouTube.</p></div><div className="flex flex-wrap gap-2"><a href={`https://www.youtube.com/watch?v=${(watching as any).youtubeId}`} target="_blank" rel="noreferrer"><Button variant="secondary"><ExternalLink className="h-4 w-4" /> Open on YouTube</Button></a><Button onClick={() => watching && cast(watching)}><Cast className="h-4 w-4" /> Cast to class screen</Button></div></div></CardContent></Card>}
+    {currentEmbed && playerMode === "INLINE" && <Card><div ref={playerRef} className="scroll-mt-20"><CardHeader><CardTitle className="flex items-center gap-2"><Play className="h-5 w-5 text-green-600" /> Watch inside NEYO</CardTitle></CardHeader></div><CardContent className="space-y-3"><div className="aspect-video overflow-hidden rounded-3xl border border-navy-100 bg-navy-950 shadow-card dark:border-navy-800"><iframe src={currentEmbed} title={(watching as any).title} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-bold text-navy-900 dark:text-navy-50">{(watching as any).title}</p><p className="text-[11px] text-navy-500">One shared player. Choosing another video stops and replaces this one.</p></div><div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setPlayerMode("MINI")}><Minimize2 className="h-4 w-4" /> Mini-player</Button><a href={`https://www.youtube.com/watch?v=${(watching as any).youtubeId}`} target="_blank" rel="noreferrer"><Button variant="secondary"><ExternalLink className="h-4 w-4" /> Open on YouTube</Button></a><Button onClick={() => watching && cast(watching)}><Cast className="h-4 w-4" /> Cast to class screen</Button></div></div></CardContent></Card>}
+
+    {currentEmbed && playerMode === "MINI" && <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-3 z-[65] w-[min(92vw,390px)] overflow-hidden rounded-2xl border border-white/20 bg-navy-950 shadow-2xl"><div className="flex items-center justify-between gap-2 px-3 py-2 text-white"><p className="truncate text-xs font-bold">{(watching as any).title}</p><div className="flex gap-1"><button onClick={() => { setPlayerMode("INLINE"); window.setTimeout(() => playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }} className="rounded-full p-1.5 hover:bg-white/10" aria-label="Return to full player"><Maximize2 className="h-4 w-4" /></button><button onClick={() => setWatching(null)} className="rounded-full p-1.5 hover:bg-white/10" aria-label="Close video"><X className="h-4 w-4" /></button></div></div><div className="aspect-video"><iframe src={currentEmbed} title={(watching as any).title} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div></div>}
 
     <div className="flex justify-end"><Button variant="secondary" onClick={() => setShownOpen(true)}><Clock3 className="h-4 w-4" /> Videos shown in class ({shown.length})</Button></div>
 
     <Card>
       <CardHeader><CardTitle className="flex items-center gap-2"><Youtube className="h-5 w-5 text-red-600" /> Search results & saved videos</CardTitle></CardHeader>
-      <CardContent>{results.length === 0 ? <div className="space-y-4"><EmptyState icon={Youtube} title="Choose a learning search idea" description="Start with one of the recommended topics above, or paste a YouTube learning link. This screen never leaves NEYO." /><div className="grid gap-2 sm:grid-cols-3">{IDEAS.slice(0, 6).map((idea) => <button key={idea} onClick={() => applyIdea(idea)} className="rounded-2xl border border-navy-100 bg-white/70 p-3 text-left text-sm font-bold text-navy-800 hover:bg-green-50 dark:border-navy-800 dark:bg-navy-950/40 dark:text-navy-200">{idea}</button>)}</div></div> : <div className="grid gap-3 xl:grid-cols-2">{results.map((v) => <VideoRow key={v.youtubeId} video={v} onWatch={() => setWatching(v)} onSave={() => save(v)} onCast={() => cast(v)} />)}</div>}</CardContent>
+      <CardContent>{results.length === 0 ? <div className="space-y-4"><EmptyState icon={Youtube} title="Choose a learning search idea" description="Start with one of the recommended topics above, or paste a YouTube learning link. This screen never leaves NEYO." /><div className="grid gap-2 sm:grid-cols-3">{IDEAS.slice(0, 6).map((idea) => <button key={idea} onClick={() => applyIdea(idea)} className="rounded-2xl border border-navy-100 bg-white/70 p-3 text-left text-sm font-bold text-navy-800 hover:bg-green-50 dark:border-navy-800 dark:bg-navy-950/40 dark:text-navy-200">{idea}</button>)}</div></div> : <div className="grid gap-3 xl:grid-cols-2">{results.map((v) => <VideoRow key={v.youtubeId} video={v} onWatch={() => watch(v)} onSave={() => save(v)} onCast={() => cast(v)} />)}</div>}</CardContent>
     </Card>
 
-    {shownOpen && <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setShownOpen(false)}><div className="max-h-[88dvh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-white/60 bg-white p-5 shadow-pop backdrop-blur-xl dark:border-white/10 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}><div className="mb-4 flex items-center justify-between"><div><h3 className="text-lg font-black text-navy-950 dark:text-white">Videos shown in class</h3><p className="text-xs text-navy-500 dark:text-navy-400">Students can re-open what was shown by the teacher.</p></div><button onClick={() => setShownOpen(false)} className="rounded-full p-2 text-navy-400 hover:bg-navy-100 dark:hover:bg-white/10"><X className="h-4 w-4" /></button></div>{shown.length === 0 ? <EmptyState icon={Tv} title="No class videos yet" description="When a teacher casts a video, it appears here." /> : <div className="space-y-2">{shown.map((s) => <button key={s.id} onClick={() => { setWatching(s); setShownOpen(false); }} className="w-full rounded-2xl border border-navy-100 bg-white/70 p-3 text-left text-sm dark:border-navy-800 dark:bg-navy-950/40"><span className="font-bold text-navy-900 dark:text-white">{s.title}</span><span className="block text-xs text-navy-400">Shown by {s.startedByName}{s.classLabel ? ` · ${s.classLabel}` : ""}</span></button>)}</div>}</div></div>}
+    {shownOpen && <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-navy-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setShownOpen(false)}><div className="max-h-[88dvh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-white/60 bg-white p-5 shadow-pop backdrop-blur-xl dark:border-white/10 dark:bg-navy-900" onClick={(e) => e.stopPropagation()}><div className="mb-4 flex items-center justify-between"><div><h3 className="text-lg font-black text-navy-950 dark:text-white">Videos shown in class</h3><p className="text-xs text-navy-500 dark:text-navy-400">Students can re-open what was shown by the teacher.</p></div><button onClick={() => setShownOpen(false)} className="rounded-full p-2 text-navy-400 hover:bg-navy-100 dark:hover:bg-white/10"><X className="h-4 w-4" /></button></div>{shown.length === 0 ? <EmptyState icon={Tv} title="No class videos yet" description="When a teacher casts a video, it appears here." /> : <div className="space-y-2">{shown.map((s) => <button key={s.id} onClick={() => { setShownOpen(false); watch(s); }} className="w-full rounded-2xl border border-navy-100 bg-white/70 p-3 text-left text-sm dark:border-navy-800 dark:bg-navy-950/40"><span className="font-bold text-navy-900 dark:text-white">{s.title}</span><span className="block text-xs text-navy-400">Shown by {s.startedByName}{s.classLabel ? ` · ${s.classLabel}` : ""}</span></button>)}</div>}</div></div>}
   </div>;
 }
 

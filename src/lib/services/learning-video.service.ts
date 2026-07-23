@@ -37,11 +37,15 @@ async function audit(user: SessionUser, action: string, entityType: string, enti
 export async function listSavedLearningVideos(user: SessionUser, q?: string) {
   return withTenant(user.tenantId, async () => {
     const s = q?.trim();
-    const rows = await tenantDb().learningVideo.findMany({
-      where: s ? { OR: [{ title: { contains: s, mode: "insensitive" } }, { description: { contains: s, mode: "insensitive" } }, { channelTitle: { contains: s, mode: "insensitive" } }] } : {},
-      orderBy: { updatedAt: "desc" },
-      take: 80,
-    });
+    const searchWhere = s ? { OR: [{ title: { contains: s, mode: "insensitive" as const } }, { description: { contains: s, mode: "insensitive" as const } }, { channelTitle: { contains: s, mode: "insensitive" as const } }] } : {};
+    const [schoolRows, nationalRows] = await Promise.all([
+      tenantDb().learningVideo.findMany({ where: searchWhere, orderBy: { updatedAt: "desc" }, take: 80 }),
+      // The national NEYO bank is company-reviewed content. It is readable
+      // across schools only after APPROVED; pending/rejected candidates never
+      // leak merely because the founder reviewed another batch.
+      db.learningVideo.findMany({ where: { ...searchWhere, scope: "NATIONAL", approvalStatus: "APPROVED", tenantId: { not: user.tenantId } }, orderBy: { approvedAt: "desc" }, take: 500 }),
+    ]);
+    const rows = [...schoolRows, ...nationalRows.filter((video) => !schoolRows.some((own) => own.youtubeId === video.youtubeId))];
     return rows.map((v) => ({ ...v, embedUrl: youtubeEmbedUrl(v.youtubeId), saved: true }));
   });
 }
