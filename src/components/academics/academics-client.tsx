@@ -78,7 +78,6 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
     { key: "terms" as const, label: "Terms", icon: CalendarRange },
     { key: "timetable" as const, label: "Timetable", icon: Grid3X3 },
     { key: "moe-returns" as const, label: "MOE Statutory Returns", icon: FileText },
-    { key: "lessons" as const, label: "Lesson plans", icon: NotebookPen },
     ...(isCurriculumEngineEnabled ? [
       { key: "reports" as const, label: "Report Builder", icon: FileText },
       { key: "curriculum-versions" as const, label: "Curriculum Versions", icon: Sliders },
@@ -148,7 +147,6 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
       {tab === "terms" && <TermsTab canManage={canManage} />}
       {tab === "timetable" && <TimetableTab canManage={canManage} />}
       {tab === "moe-returns" && <MoeReturnsClientTab canManage={canManage} />}
-      {tab === "lessons" && <LessonsTab />}
       {tab === "reports" && <ReportBuilderClient canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
       {tab === "curriculum-versions" && <CurriculumVersionManagerClient canManage={canManage} />}
       {tab === "pathways" && <PathwayManagerClient subjects={subjects} />}
@@ -1544,7 +1542,7 @@ interface StrandOpt { id: string; name: string }
 const selectClass = "mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800";
 const areaClass = "mt-1 w-full rounded-xl border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800";
 
-function LessonsTab() {
+export function LessonsTab() {
   const { toast } = useToast();
   const [plans, setPlans] = React.useState<PlanRow[] | null>(null);
   const [error, setError] = React.useState(false);
