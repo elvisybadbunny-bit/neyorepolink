@@ -1,13 +1,9 @@
 import {
   Wallet,
-  Coins,
   TrendingUp,
   UserCheck,
-  ArrowRight,
   Users,
   CalendarDays,
-  Bell,
-  CreditCard,
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +17,6 @@ import { currentTerm } from "@/lib/services/academics.service";
 import { withTenant } from "@/lib/core/tenant-context";
 import { DashboardIntercomClient } from "@/components/dashboard/dashboard-intercom-client";
 import { PwaDataSaverCard } from "@/components/dashboard/pwa-data-saver";
-import { BundiAudioButton } from "@/components/dashboard/bundi-audio-button";
 import { PrincipalDelegationCard } from "@/components/dashboard/principal-delegation-card";
 import { createInApp } from "@/lib/services/notification.service";
 import { scopeWhere } from "@/lib/services/student.service";
@@ -103,7 +98,6 @@ export default async function DashboardPage() {
   const canSeeAttendanceCard = has("attendance.view") || has("attendance.record");
   const canSeeStudentsCard = has("student.view");
   const canSeeStaffCard = has("staff.view") || has("staff.manage");
-  const canSeeBillingCard = has("owner.dashboard");
   const isMasterAttendanceUser = ["PRINCIPAL", "SCHOOL_OWNER", "SUPER_ADMIN"].includes(currentUser.role) ||
     (!!currentUser.secondaryRole && ["PRINCIPAL", "SCHOOL_OWNER", "SUPER_ADMIN"].includes(currentUser.secondaryRole));
 
@@ -279,14 +273,6 @@ export default async function DashboardPage() {
     : currentUser.role === "PARENT"
       ? "Linked active learners"
       : "Active learners";
-  const pricingModeLabel = stats.pricingMode === "SIZE_BASED_V2"
-    ? "Capacity Complete"
-    : stats.pricingMode === "MODULAR_USERS_V1"
-      ? "Modular User & Module"
-      : stats.pricingMode
-        ? stats.pricingMode.replaceAll("_", " ").toLowerCase()
-        : null;
-
   return (
     <div className="space-y-6 text-left">
       {holiday && (
@@ -299,138 +285,35 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Page header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-navy-900 dark:text-navy-50">
-            {greeting}, {firstName}
-          </h1>
-          <p className="mt-1 text-sm text-navy-500 dark:text-navy-400">
-            {stats.termDisplay} · {new Date().toLocaleDateString("en-KE", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              timeZone: "Africa/Nairobi",
-            })}
-          </p>
+      {/* Dashboard cockpit — mobile-first, calm and action-led. */}
+      <section className="overflow-hidden rounded-[2rem] border border-navy-100 bg-white shadow-[0_18px_60px_-36px_rgba(15,23,42,0.45)] dark:border-navy-800 dark:bg-navy-900">
+        <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[1.35fr_0.65fr] lg:items-end">
+          <div>
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-navy-200 bg-navy-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-navy-600 dark:border-navy-700 dark:bg-navy-950 dark:text-navy-300">{currentUser.role.replaceAll("_", " ")}</span>
+              <span className="rounded-full bg-green-50 px-3 py-1 text-[11px] font-bold text-green-700 dark:bg-green-950/40 dark:text-green-300">{stats.termDisplay}</span>
+            </div>
+            <p className="text-sm font-semibold text-navy-500 dark:text-navy-400">{greeting}, {firstName}</p>
+            <h1 className="mt-1 max-w-2xl text-3xl font-black tracking-[-0.035em] text-navy-950 dark:text-white sm:text-4xl">Your school, clearly in view.</h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-navy-500 dark:text-navy-300">See what is complete, what needs attention and where to continue—without rebuilding today&apos;s picture in a spreadsheet.</p>
+          </div>
+          <div className="rounded-3xl bg-navy-950 p-5 text-white shadow-lg dark:bg-white dark:text-navy-950">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/55 dark:text-navy-500">Today · Nairobi</p>
+            <p className="mt-2 text-lg font-black">{new Date().toLocaleDateString("en-KE", { weekday: "long", day: "numeric", month: "long", timeZone: "Africa/Nairobi" })}</p>
+            <p className="mt-1 text-xs text-white/65 dark:text-navy-500">{stats.remindersCount} unread reminder{stats.remindersCount === 1 ? "" : "s"} · {stats.upcomingEventsCount} upcoming event{stats.upcomingEventsCount === 1 ? "" : "s"}</p>
+            <div className="mt-4 flex gap-2">{canSeeAttendanceCard && <Link href="/attendance" className="flex-1"><Button className="w-full bg-white text-navy-950 hover:bg-white/90 dark:bg-navy-950 dark:text-white">{has("attendance.record") && (!isMasterAttendanceUser || stats.ownClassCount > 0) ? "Mark attendance" : "View attendance"}</Button></Link>}<Link href="/calendar"><Button variant="secondary" className="h-10 w-10 rounded-full p-0" aria-label="Open calendar"><CalendarDays className="h-4 w-4" /></Button></Link></div>
+          </div>
         </div>
-        {canSeeAttendanceCard && <Link href="/attendance">
-          <Button>
-            {has("attendance.record") && (!isMasterAttendanceUser || stats.ownClassCount > 0) ? "Mark today&apos;s attendance" : "View attendance"}
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </Link>}
-      </div>
+      </section>
 
-      {/* 💳 Primary Financial Metric Cards (Directly Links to Modules!) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {canSeeFinanceCards && <Link href="/finance">
-          <div className="dashboard-metric-card group rounded-3xl border border-navy-100 bg-white/75 p-5 shadow-card transition-all duration-300 ease-apple hover:-translate-y-0.5 hover:border-red-200 hover:shadow-card-hover cursor-pointer text-left dark:border-navy-800 dark:bg-navy-900/70">
-            <div className="flex justify-between items-center">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-navy-400">Outstanding Fees</span>
-              <div className="flex items-center gap-1.5">
-                <BundiAudioButton text={`Bundi says: Outstanding term balance is ${stats.outstandingTerm.toLocaleString('en-KE')} shillings.`} />
-                <Coins className="h-5 w-5 text-red-500 group-hover:scale-110 transition" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-black text-navy-950 dark:text-white">{formatKES(stats.outstandingTerm)}</p>
-            <p className="mt-1 text-[10px] text-navy-500">uncollected term dues</p>
-          </div>
-        </Link>}
+      <section aria-label="School pulse" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {canSeeAttendanceCard && <Link href="/attendance" className="group rounded-3xl border border-navy-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-navy-800 dark:bg-navy-900"><div className="flex items-start justify-between"><span className="text-[10px] font-black uppercase tracking-[0.14em] text-navy-400">Attendance</span><span className="grid h-8 w-8 place-items-center rounded-2xl bg-green-50 text-green-700 dark:bg-green-950/40"><UserCheck className="h-4 w-4" /></span></div><p className="mt-4 text-2xl font-black text-navy-950 dark:text-white">{stats.attendancePct === null ? "—" : `${stats.attendancePct}%`}</p><p className="mt-1 text-[11px] text-navy-500">{stats.markedCount ? `${stats.presentCount} present · ${stats.markedCount} marked` : "Register not marked yet"}</p></Link>}
+        {canSeeStudentsCard && <Link href="/students" className="group rounded-3xl border border-navy-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-navy-800 dark:bg-navy-900"><div className="flex items-start justify-between"><span className="text-[10px] font-black uppercase tracking-[0.14em] text-navy-400">{studentCountLabel}</span><span className="grid h-8 w-8 place-items-center rounded-2xl bg-blue-50 text-blue-700 dark:bg-blue-950/40"><Users className="h-4 w-4" /></span></div><p className="mt-4 text-2xl font-black text-navy-950 dark:text-white">{stats.activeStudentsCount}</p><p className="mt-1 text-[11px] text-navy-500">{studentCountDescription}</p></Link>}
+        {canSeeFinanceCards && <Link href="/finance" className="group rounded-3xl border border-navy-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-navy-800 dark:bg-navy-900"><div className="flex items-start justify-between"><span className="text-[10px] font-black uppercase tracking-[0.14em] text-navy-400">Collected today</span><span className="grid h-8 w-8 place-items-center rounded-2xl bg-green-50 text-green-700 dark:bg-green-950/40"><Wallet className="h-4 w-4" /></span></div><p className="mt-4 text-xl font-black text-navy-950 dark:text-white sm:text-2xl">{formatKES(stats.revenueToday)}</p><p className="mt-1 text-[11px] text-navy-500">Verified payment ledger</p></Link>}
+        {canSeeFinanceCards ? <Link href="/finance" className="group rounded-3xl border border-navy-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-navy-800 dark:bg-navy-900"><div className="flex items-start justify-between"><span className="text-[10px] font-black uppercase tracking-[0.14em] text-navy-400">Collection rate</span><span className="grid h-8 w-8 place-items-center rounded-2xl bg-amber-50 text-amber-700 dark:bg-amber-950/40"><TrendingUp className="h-4 w-4" /></span></div><p className="mt-4 text-2xl font-black text-navy-950 dark:text-white">{stats.collectionPct}%</p><p className="mt-1 text-[11px] text-navy-500">Target {stats.targetPct}% · {formatKES(stats.outstandingTerm)} due</p></Link> : canSeeStaffCard ? <Link href="/staff" className="group rounded-3xl border border-navy-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-navy-800 dark:bg-navy-900"><div className="flex items-start justify-between"><span className="text-[10px] font-black uppercase tracking-[0.14em] text-navy-400">Active staff</span><span className="grid h-8 w-8 place-items-center rounded-2xl bg-amber-50 text-amber-700 dark:bg-amber-950/40"><Users className="h-4 w-4" /></span></div><p className="mt-4 text-2xl font-black text-navy-950 dark:text-white">{stats.totalStaffCount}</p><p className="mt-1 text-[11px] text-navy-500">School team</p></Link> : <Link href="/calendar" className="group rounded-3xl border border-navy-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-navy-800 dark:bg-navy-900"><div className="flex items-start justify-between"><span className="text-[10px] font-black uppercase tracking-[0.14em] text-navy-400">Upcoming</span><CalendarDays className="h-4 w-4 text-amber-600" /></div><p className="mt-4 text-2xl font-black text-navy-950 dark:text-white">{stats.upcomingEventsCount}</p><p className="mt-1 text-[11px] text-navy-500">Calendar events</p></Link>}
+      </section>
 
-        {canSeeFinanceCards && <Link href="/finance">
-          <div className="dashboard-metric-card group rounded-3xl border border-navy-100 bg-white/75 p-5 shadow-card transition-all duration-300 ease-apple hover:-translate-y-0.5 hover:border-green-200 hover:shadow-card-hover cursor-pointer text-left dark:border-navy-800 dark:bg-navy-900/70">
-            <div className="flex justify-between items-center">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-navy-400">Fees Collected Today</span>
-              <div className="flex items-center gap-1.5">
-                <BundiAudioButton text={`Bundi says: Fees collected today is ${stats.revenueToday.toLocaleString('en-KE')} shillings. M-Pesa automatic ledger sync is active.`} />
-                <Wallet className="h-5 w-5 text-green-600 group-hover:scale-110 transition" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-black text-navy-950 dark:text-white">{formatKES(stats.revenueToday)}</p>
-            <p className="mt-1 text-[10px] text-green-600 font-semibold">M-Pesa sync active</p>
-          </div>
-        </Link>}
-
-        {canSeeFinanceCards && <Link href="/finance">
-          <div className="dashboard-metric-card group rounded-3xl border border-navy-100 bg-white/75 p-5 shadow-card transition-all duration-300 ease-apple hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-card-hover cursor-pointer text-left dark:border-navy-800 dark:bg-navy-900/70">
-            <div className="flex justify-between items-center">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-navy-400">Collection Rate</span>
-              <TrendingUp className="h-5 w-5 text-blue-500 group-hover:scale-110 transition" />
-            </div>
-            <p className="mt-2 text-2xl font-black text-navy-950 dark:text-white">{stats.collectionPct}%</p>
-            <p className="mt-1 text-[10px] text-navy-500">Target is {stats.targetPct}%</p>
-          </div>
-        </Link>}
-
-        {canSeeAttendanceCard && <Link href="/attendance">
-          <div className="dashboard-metric-card group rounded-3xl border border-navy-100 bg-white/75 p-5 shadow-card transition-all duration-300 ease-apple hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-card-hover cursor-pointer text-left dark:border-navy-800 dark:bg-navy-900/70">
-            <div className="flex justify-between items-center">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-navy-400">Students Present</span>
-              <UserCheck className="h-5 w-5 text-amber-500 group-hover:scale-110 transition" />
-            </div>
-            <p className="mt-2 text-2xl font-black text-navy-950 dark:text-white">
-              {stats.markedCount > 0 ? `${stats.presentCount} present` : "—"}
-            </p>
-            <p className="mt-1 text-[10px] text-navy-500">
-              {stats.markedCount > 0 ? `${stats.markedCount} marked today` : `${stats.activeStudentsCount} enrolled`}
-            </p>
-          </div>
-        </Link>}
-      </div>
-
-      {/* 🏫 New Count Metric Cards (Directly Links to Modules!) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {canSeeStudentsCard && <Link href="/students">
-          <div className="rounded-3xl border border-navy-100 bg-white/70 p-5 shadow-sm hover:shadow-md transition cursor-pointer text-left dark:border-navy-800 dark:bg-navy-900/60 flex items-center justify-between">
-            <div className="space-y-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-navy-400">{studentCountLabel}</span>
-              <p className="text-2xl font-black text-navy-950 dark:text-white">{stats.activeStudentsCount}</p>
-              <p className="text-[9px] text-navy-400">{studentCountDescription}</p>
-            </div>
-            <div className="p-3 bg-green-500/10 text-green-600 rounded-2xl"><Users className="h-5 w-5" /></div>
-          </div>
-        </Link>}
-
-        {canSeeStaffCard && <Link href="/staff">
-          <div className="rounded-3xl border border-navy-100 bg-white/70 p-5 shadow-sm hover:shadow-md transition cursor-pointer text-left dark:border-navy-800 dark:bg-navy-900/60 flex items-center justify-between">
-            <div className="space-y-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-navy-400">Total Staff</span>
-              <p className="text-2xl font-black text-navy-950 dark:text-white">{stats.totalStaffCount}</p>
-              <p className="text-[9px] text-navy-400">Active school staff</p>
-            </div>
-            <div className="p-3 bg-blue-500/10 text-blue-600 rounded-2xl"><Users className="h-5 w-5" /></div>
-          </div>
-        </Link>}
-
-        <Link href="/calendar">
-          <div className="rounded-3xl border border-navy-100 bg-white/70 p-5 shadow-sm hover:shadow-md transition cursor-pointer text-left dark:border-navy-800 dark:bg-navy-900/60 flex items-center justify-between">
-            <div className="space-y-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-navy-400">Events & Reminders</span>
-              <p className="text-2xl font-black text-navy-950 dark:text-white">{stats.upcomingEventsCount + stats.remindersCount}</p>
-              <p className="text-[9px] text-navy-400">{stats.upcomingEventsCount} calendar · {stats.remindersCount} reminders</p>
-            </div>
-            <div className="p-3 bg-amber-500/10 text-amber-500 rounded-2xl">{stats.remindersCount > 0 ? <Bell className="h-5 w-5" /> : <CalendarDays className="h-5 w-5" />}</div>
-          </div>
-        </Link>
-
-        {canSeeBillingCard && <Link href="/settings/billing">
-          <div className="rounded-3xl border border-navy-100 bg-white/70 p-5 shadow-sm hover:shadow-md transition cursor-pointer text-left dark:border-navy-800 dark:bg-navy-900/60 flex items-center justify-between">
-            <div className="space-y-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-navy-400">Subscription</span>
-              <p className={`text-lg font-black ${pricingModeLabel ? "text-green-700 dark:text-green-400" : "text-amber-700 dark:text-amber-300"}`}>
-                {pricingModeLabel ?? "Not configured"}
-              </p>
-              <p className="text-[9px] text-navy-400">
-                {stats.planStatus ? <>Status: <strong className="text-green-600">{stats.planStatus}</strong></> : "Open Billing to finish setup"}
-              </p>
-            </div>
-            <div className={`rounded-2xl p-3 ${pricingModeLabel ? "bg-green-500/10 text-green-600" : "bg-amber-500/10 text-amber-600"}`}><CreditCard className="h-5 w-5" /></div>
-          </div>
-        </Link>}
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className={`grid grid-cols-1 gap-6 ${canSeeFinanceCards ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}>
         {/* Animated Custom Line Graph (Expected vs Paid Tuition Fees) */}
         {canSeeFinanceCards && <div className="lg:col-span-2">
           <Card className="h-full flex flex-col justify-between">
