@@ -588,6 +588,7 @@ function StrandDialog({ subjects, onClose, onDone }: { subjects: Subject[]; onCl
 function AssessTab({ classes: _classes, subjects: _subjects }: { classes: ClassOpt[]; subjects: Subject[] }) {
   const { toast } = useToast();
   const [classes, setClasses] = React.useState<ClassOpt[]>([]);
+  const [subjects, setSubjects] = React.useState<Subject[]>([]);
   const [strands, setStrands] = React.useState<Strand[]>([]);
   const [teachingLinks, setTeachingLinks] = React.useState<{ classId: string; subjectId: string }[]>([]);
   const [strandId, setStrandId] = React.useState("");
@@ -612,6 +613,7 @@ function AssessTab({ classes: _classes, subjects: _subjects }: { classes: ClassO
     fetch("/api/cbc/assess?setup=1").then((r) => r.json()).then((j) => {
       if (!j.ok) return;
       setClasses(j.data.classes ?? []);
+      setSubjects(j.data.subjects ?? []);
       setStrands(j.data.strands ?? []);
       setTeachingLinks(j.data.teachingLinks ?? []);
       if ((j.data.classes ?? []).length === 1) setClassId(j.data.classes[0].id);

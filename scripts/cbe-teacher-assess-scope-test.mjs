@@ -5,4 +5,5 @@ import fs from"node:fs";const r=p=>fs.readFileSync(p,"utf8");const service=r("sr
 [service.includes("assertTeacherOwnsCbcSubject")&&service.includes("Choose a class and subject assigned to you"),"server blocks cross-subject CBE evidence"],
 [ui.includes("availableStrands")&&ui.includes("teachingLinks.some"),"Assess only lists strands linked to the selected taught class"],
 [ui.includes("availableStrands.length === 1")&&ui.includes("classes[0].id"),"single class/strand choices auto-fill to reduce teacher searching"],
+[ui.includes("const [subjects, setSubjects]")&&ui.includes("setSubjects(j.data.subjects"),"paper-quiz tools receive the scoped subjects returned by setup"],
 ];let n=0;for(const[ok,m]of checks){if(!ok)throw Error(`FAIL: ${m}`);console.log(`PASS ${++n}: ${m}`)}console.log(`CBE TEACHER ASSESS SCOPE: ${n}/${checks.length}`);
