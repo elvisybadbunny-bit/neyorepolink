@@ -23,7 +23,7 @@ export function SyllabusClient() {
   const [subjectId, setSubjectId] = React.useState("");
   const [status, setStatus] = React.useState("");
   const [open, setOpen] = React.useState(false);
-  const [busy, setBusy] = React.useState(false);
+  const [updatingId, setUpdatingId] = React.useState<string | null>(null);
   const [viewMode, setViewMode] = React.useState<"topics" | "academics-report">("topics");
   const [reportData, setReportData] = React.useState<any | null>(null);
   const [reportBusy, setReportBusy] = React.useState(false);
@@ -54,14 +54,30 @@ export function SyllabusClient() {
   }, [classId, subjectId]);
   React.useEffect(() => { if (viewMode === "academics-report") void loadReport(); }, [viewMode, loadReport]);
 
+  function applyStatus(id: string, nextStatus: string) {
+    setBoard((current) => {
+      if (!current) return current;
+      const topics = current.topics.map((topic) => topic.id === id ? { ...topic, status: nextStatus } : topic);
+      const covered = topics.filter((topic) => topic.status === "COVERED").length;
+      const late = topics.filter((topic) => topic.status === "LATE").length;
+      const inProgress = topics.filter((topic) => topic.status === "IN_PROGRESS").length;
+      return { ...current, topics, summary: { ...current.summary, covered, late, inProgress, coveragePct: topics.length ? Math.round((covered / topics.length) * 100) : 0 } };
+    });
+  }
+
   async function update(id: string, nextStatus: string) {
-    setBusy(true);
+    const previous = board?.topics.find((topic) => topic.id === id)?.status ?? "PLANNED";
+    applyStatus(id, nextStatus);
+    setUpdatingId(id);
     try {
       const res = await fetch("/api/syllabus", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update", id, status: nextStatus }) });
       const json = await res.json();
-      if (json.ok) { toast({ title: "Coverage updated", tone: "success" }); load(); }
-      else toast({ title: json.error?.message || "Could not update", tone: "error" });
-    } finally { setBusy(false); }
+      if (json.ok) toast({ title: "Coverage updated", tone: "success" });
+      else { applyStatus(id, previous); toast({ title: json.error?.message || "Could not update", tone: "error" }); }
+    } catch {
+      applyStatus(id, previous);
+      toast({ title: "Network error — the previous syllabus status was restored.", tone: "error" });
+    } finally { setUpdatingId(null); }
   }
 
   if (!board) return <div className="space-y-3"><Skeleton className="h-28 rounded-2xl" /><Skeleton className="h-72 rounded-2xl" /></div>;
@@ -168,8 +184,8 @@ export function SyllabusClient() {
                 </div>
                 <p className="text-xs text-navy-500">Deadline: <strong>{t.deadline}</strong>{t.teacherName ? ` · ${t.teacherName}` : ""}</p>
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="secondary" disabled={busy} onClick={() => update(t.id, "IN_PROGRESS")}>In progress</Button>
-                  <Button size="sm" disabled={busy} onClick={() => update(t.id, "COVERED")}>Covered</Button>
+                  <Button size="sm" variant="secondary" disabled={updatingId === t.id} onClick={() => update(t.id, "IN_PROGRESS")}>In progress</Button>
+                  <Button size="sm" disabled={updatingId === t.id} onClick={() => update(t.id, "COVERED")}>Covered</Button>
                 </div>
               </CardContent>
             </Card>
