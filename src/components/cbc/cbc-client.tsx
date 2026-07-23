@@ -684,12 +684,22 @@ function AssessTab({ classes: _classes, subjects: _subjects }: { classes: ClassO
     setComments((p) => new Map(p).set(studentId, { text, fromBank: false }));
   }
 
+  function applySavedRound(date: string) {
+    setStudents((rows) => rows?.map((student) => {
+      const level = levels.get(student.id);
+      return level ? { ...student, latest: { level, date, substrandId: substrandId || null } } : student;
+    }) ?? null);
+    setLevels(new Map());
+    setComments(new Map());
+  }
+
   async function save() {
     if (!students) return;
     setSaving(true);
     try {
+      const observationDate = new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
       const body = {
-        strandId, classId, date: new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10),
+        strandId, classId, date: observationDate,
         entries: students.map((s) => ({
           studentId: s.id,
           level: levels.get(s.id) ?? null,
@@ -705,11 +715,10 @@ function AssessTab({ classes: _classes, subjects: _subjects }: { classes: ClassO
       );
       if (result.queued) {
         toast({ title: `${marked} observation${marked === 1 ? "" : "s"} saved offline`, description: "NEYO will sync this assessment round once the connection returns.", tone: "success" });
-        setLevels(new Map());
-        setComments(new Map());
+        applySavedRound(observationDate);
       } else if (result.ok) {
         toast({ title: `${marked} observation${marked === 1 ? "" : "s"} recorded`, tone: "success" });
-        loadSheet();
+        applySavedRound(observationDate);
       } else {
         toast({ title: "The assessment round was rejected. Check the class, strand and your permission.", tone: "error" });
       }

@@ -61,6 +61,7 @@ export function AttendanceClient({ canRecord: initialCanRecord, currentUserId }:
   const [classes, setClasses] = React.useState<OverviewClass[] | null>(null);
   const [error, setError] = React.useState(false);
   const [openClass, setOpenClass] = React.useState<{ id: string; canRecord: boolean } | null>(null);
+  const [registerCache, setRegisterCache] = React.useState<Record<string, RegisterData>>({});
 
   const load = React.useCallback(async () => {
     setError(false);
@@ -81,7 +82,9 @@ export function AttendanceClient({ canRecord: initialCanRecord, currentUserId }:
         date={date}
         canRecord={openClass.canRecord}
         masterOverride={isMaster && masterOverride && openClass.canRecord}
-        onBack={() => { setOpenClass(null); load(); }}
+        initialData={registerCache[`${openClass.id}:${date}`] ?? null}
+        onCache={(value) => setRegisterCache((cache) => ({ ...cache, [`${openClass.id}:${date}`]: value }))}
+        onBack={() => { setOpenClass(null); void load(); }}
       />
     );
   }
@@ -169,14 +172,14 @@ export function AttendanceClient({ canRecord: initialCanRecord, currentUserId }:
 }
 
 // ---- the one-tap register ---------------------------------------------------
-function Register({ classId, date, canRecord, masterOverride, onBack }: {
-  classId: string; date: string; canRecord: boolean; masterOverride?: boolean; onBack: () => void;
+function Register({ classId, date, canRecord, masterOverride, initialData, onCache, onBack }: {
+  classId: string; date: string; canRecord: boolean; masterOverride?: boolean; initialData: RegisterData | null; onCache: (data: RegisterData) => void; onBack: () => void;
 }) {
   const { toast } = useToast();
   const online = useOnline();
-  const [data, setData] = React.useState<RegisterData | null>(null);
+  const [data, setData] = React.useState<RegisterData | null>(initialData);
   const [error, setError] = React.useState(false);
-  const [marks, setMarks] = React.useState<Map<string, Status>>(new Map());
+  const [marks, setMarks] = React.useState<Map<string, Status>>(() => new Map((initialData?.students ?? []).map((student) => [student.id, student.status ?? "P"])));
   const [dirty, setDirty] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [notifyAbsent, setNotifyAbsent] = React.useState(true);
@@ -189,6 +192,7 @@ function Register({ classId, date, canRecord, masterOverride, onBack }: {
       if (!json.ok) { setError(true); return; }
       const d: RegisterData = json.data;
       setData(d);
+      onCache(d);
       // One-tap default: everyone Present unless already marked otherwise.
       const m = new Map<string, Status>();
       for (const s of d.students) m.set(s.id, s.status ?? "P");
@@ -209,6 +213,14 @@ function Register({ classId, date, canRecord, masterOverride, onBack }: {
     setDirty(true);
   }
 
+  function applySavedRegister() {
+    if (!data) return;
+    const updated: RegisterData = { ...data, markedCount: data.students.length, students: data.students.map((student) => ({ ...student, status: marks.get(student.id) ?? "P" })) };
+    setData(updated);
+    onCache(updated);
+    setDirty(false);
+  }
+
   async function save() {
     if (!data) return;
     setSaving(true);
@@ -223,11 +235,10 @@ function Register({ classId, date, canRecord, masterOverride, onBack }: {
       const result = await queuedPost("/api/attendance", payload, `Attendance · ${data.class.label} · ${date}`);
       if (result.queued) {
         toast({ title: "Saved offline — will sync when you're back online", tone: "success" });
-        setDirty(false);
+        applySavedRegister();
       } else if (result.ok) {
         toast({ title: "Register saved", tone: "success" });
-        setDirty(false);
-        load();
+        applySavedRegister();
       } else {
         toast({ title: "Could not save the register", tone: "error" });
       }
