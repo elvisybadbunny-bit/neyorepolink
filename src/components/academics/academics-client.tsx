@@ -137,7 +137,7 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
       <div className="print:hidden hidden max-w-full overflow-x-auto rounded-full border border-navy-200 p-0.5 dark:border-navy-700 sm:inline-flex">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors duration-200 ease-apple ${tab === t.key ? t.key === "discipline" ? "border-red-700 bg-red-700 text-white" : t.key === "library-recovery" ? "border-amber-700 bg-amber-700 text-white" : "border-navy-900 bg-navy-900 text-white dark:border-navy-50 dark:bg-navy-50 dark:text-navy-900" : "border-transparent text-navy-700 hover:border-navy-200 hover:bg-navy-100 dark:text-navy-200 dark:hover:border-navy-700 dark:hover:bg-navy-800"}`}>
+            className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors duration-200 ease-apple ${tab === t.key ? "border-navy-900 bg-navy-900 text-white dark:border-navy-50 dark:bg-navy-50 dark:text-navy-900" : "border-transparent text-navy-700 hover:border-navy-200 hover:bg-navy-100 dark:text-navy-200 dark:hover:border-navy-700 dark:hover:bg-navy-800"}`}>
             {t.label}
           </button>
         ))}
