@@ -78,6 +78,7 @@ export function MessagesClient() {
   const [sending, setSending] = React.useState(false);
   const [composing, setComposing] = React.useState(false);
   const [recipients, setRecipients] = React.useState<Recipient[]>([]);
+  const [loadingRecipients, setLoadingRecipients] = React.useState(false);
   const [activeType, setActiveType] = React.useState<string>("DIRECT");
   const [activeTitle, setActiveTitle] = React.useState<string>("Conversation");
   const [activeClassId, setActiveClassId] = React.useState<string | null>(null);
@@ -242,6 +243,12 @@ export function MessagesClient() {
 
   async function acknowledge(messageId: string) {
     if (!active) return;
+    const previous = messages.find((message) => message.id === messageId)?.acknowledgedByMe ?? false;
+    const apply = (value: boolean) => {
+      setMessages((rows) => rows.map((message) => message.id === messageId ? { ...message, acknowledgedByMe: value } : message));
+      setThreadCache((cache) => ({ ...cache, [active]: (cache[active] ?? messages).map((message) => message.id === messageId ? { ...message, acknowledgedByMe: value } : message) }));
+    };
+    apply(true);
     try {
       const res = await fetch(`/api/conversations/${active}/messages`, {
         method: "PATCH",
@@ -250,12 +257,13 @@ export function MessagesClient() {
       });
       const json = await res.json();
       if (!json.ok) {
+        apply(previous);
         toast({ title: json.error?.message || "Could not acknowledge.", tone: "error" });
         return;
       }
       toast({ title: "Marked as received", tone: "success" });
-      await openConvo(active);
     } catch {
+      apply(previous);
       toast({ title: "Network error", tone: "error" });
     }
   }
@@ -281,9 +289,13 @@ export function MessagesClient() {
 
   async function startCompose() {
     setComposing(true);
-    const res = await fetch("/api/conversations/recipients");
-    const json = await res.json();
-    if (json.ok) setRecipients(json.data.recipients);
+    if (recipients.length > 0) return;
+    setLoadingRecipients(true);
+    try {
+      const res = await fetch("/api/conversations/recipients");
+      const json = await res.json();
+      if (json.ok) setRecipients(json.data.recipients);
+    } finally { setLoadingRecipients(false); }
   }
 
   async function startConversation(recipientId: string) {
@@ -295,8 +307,8 @@ export function MessagesClient() {
     const json = await res.json();
     if (json.ok) {
       setComposing(false);
-      await loadList();
-      openConvo(json.data.id);
+      void openConvo(json.data.id);
+      void loadList();
     }
   }
 
@@ -449,6 +461,7 @@ export function MessagesClient() {
               </h3>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
+              {loadingRecipients && recipients.length === 0 ? <p className="rounded-xl px-3 py-4 text-sm text-navy-400">Opening staff and parent directory…</p> : null}
               {recipients.map((r) => (
                 <button
                   key={r.id}

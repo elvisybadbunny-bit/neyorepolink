@@ -5,4 +5,7 @@ import fs from"node:fs";const m=fs.readFileSync("src/components/messaging/messag
 [m.includes("your message was restored to the composer")&&m.includes("setDraft(body)"),"network failures restore unsent content"],
 [m.includes("threadCache")&&m.includes("setLoadingThread(!cached)"),"reopened conversations paint from cache immediately"],
 [m.includes("setThreadCache((cache)")&&m.includes("new EventSource"),"live canonical updates refresh the thread cache"],
+[!m.slice(m.indexOf("async function acknowledge"),m.indexOf("async function openDeliveryReport")).includes("openConvo(active)")&&m.includes("apply(previous)"),"acknowledgements update optimistically and roll back on failure"],
+[m.includes("if (recipients.length > 0) return")&&m.includes("loadingRecipients"),"recipient directory is cached after first compose"],
+[!m.slice(m.indexOf("async function startConversation"),m.indexOf("const TypeIcon")).includes("await loadList()"),"new conversations open without waiting for list refresh"],
 ];let n=0;for(const[ok,x]of checks){if(!ok)throw Error(`FAIL: ${x}`);console.log(`PASS ${++n}: ${x}`)}console.log(`INSTANT MESSAGING: ${n}/${checks.length}`);
