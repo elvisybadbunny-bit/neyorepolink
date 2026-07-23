@@ -10,6 +10,7 @@ import { tenantDb } from "@/lib/core/tenant-db";
 import { can } from "@/lib/core/permissions";
 import type { Role } from "@/lib/core/roles";
 import { scopeWhere } from "@/lib/services/student.service";
+import { teacherClassIds } from "@/lib/services/teacher-portal.service";
 import { LEVEL_LABELS } from "@/lib/validations/cbc";
 import type { SessionUser } from "@/lib/core/session";
 
@@ -361,10 +362,48 @@ export async function seedDefaultCommentBank(user: SessionUser, subjectId: strin
 // ---------------------------------------------------------------------------
 
 /** Class sheet for one strand: students + their LATEST level on it. */
+export async function getCbcAssessSetup(user: SessionUser) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const allowedClassIds = await teacherClassIds(user);
+    const teachingWhere = allowedClassIds === null ? {} : { teacherId: user.id };
+    const [needs, slots] = await Promise.all([
+      tdb.classSubjectNeed.findMany({ where: teachingWhere, select: { classId: true, subjectId: true } }),
+      tdb.timetableSlot.findMany({ where: { ...teachingWhere, subjectId: { not: null } }, select: { classId: true, subjectId: true } }),
+    ]);
+    const links = Array.from(new Map([...needs, ...slots].filter((row) => row.subjectId).map((row) => [`${row.classId}:${row.subjectId}`, { classId: row.classId, subjectId: row.subjectId! }])).values());
+    const classIds = allowedClassIds === null ? Array.from(new Set(links.map((row) => row.classId))) : allowedClassIds.filter((id) => id !== "__none__");
+    const subjectIds = Array.from(new Set(links.map((row) => row.subjectId)));
+    const [classes, subjects, strands] = await Promise.all([
+      tdb.schoolClass.findMany({ where: { id: { in: classIds }, archived: false }, select: { id: true, level: true, stream: true }, orderBy: [{ level: "asc" }, { stream: "asc" }] }),
+      tdb.subject.findMany({ where: { id: { in: subjectIds }, archived: false }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }),
+      tdb.cbcStrand.findMany({ where: { subjectId: { in: subjectIds } }, orderBy: [{ subjectId: "asc" }, { name: "asc" }] }),
+    ]);
+    return {
+      classes: classes.map((row) => ({ id: row.id, name: [row.level, row.stream].filter(Boolean).join(" ") })),
+      subjects,
+      strands,
+      teachingLinks: links,
+    };
+  });
+}
+
+async function assertTeacherOwnsCbcSubject(user: SessionUser, classId: string, subjectId: string) {
+  const restricted = await teacherClassIds(user);
+  if (restricted === null) return;
+  const tdb = tenantDb();
+  const [need, slot] = await Promise.all([
+    tdb.classSubjectNeed.findFirst({ where: { classId, subjectId, teacherId: user.id }, select: { id: true } }),
+    tdb.timetableSlot.findFirst({ where: { classId, subjectId, teacherId: user.id }, select: { id: true } }),
+  ]);
+  if (!need && !slot) throw new CbcError("FORBIDDEN", "Choose a class and subject assigned to you before recording CBE evidence.");
+}
+
 export async function getAssessSheet(user: SessionUser, strandId: string, classId: string) {
   return withTenant(user.tenantId, async () => {
     const strand = await tenantDb().cbcStrand.findUnique({ where: { id: strandId } });
     if (!strand) throw new CbcError("NOT_FOUND", "Strand not found.");
+    await assertTeacherOwnsCbcSubject(user, classId, strand.subjectId);
     // EE.1 — real sub-strands under this strand, offered alongside the
     // strand-level sheet so a teacher can optionally score at the finer
     // sub-strand grain without it ever being required.
@@ -404,6 +443,7 @@ export async function saveAssessments(
   return withTenant(user.tenantId, async () => {
     const strand = await tenantDb().cbcStrand.findUnique({ where: { id: input.strandId } });
     if (!strand) throw new CbcError("NOT_FOUND", "Strand not found.");
+    await assertTeacherOwnsCbcSubject(user, classId, strand.subjectId);
     const scope = await scopeWhere(user);
     const allowed = new Set(
       (await tenantDb().student.findMany({ where: { AND: [scope, { classId, status: "ACTIVE" }] }, select: { id: true } })).map((s) => s.id)

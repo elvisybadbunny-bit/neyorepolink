@@ -572,9 +572,11 @@ function StrandDialog({ subjects, onClose, onDone }: { subjects: Subject[]; onCl
 }
 
 // ---- Assess ---------------------------------------------------------------------
-function AssessTab({ classes, subjects }: { classes: ClassOpt[]; subjects: Subject[] }) {
+function AssessTab({ classes: _classes, subjects: _subjects }: { classes: ClassOpt[]; subjects: Subject[] }) {
   const { toast } = useToast();
+  const [classes, setClasses] = React.useState<ClassOpt[]>([]);
   const [strands, setStrands] = React.useState<Strand[]>([]);
+  const [teachingLinks, setTeachingLinks] = React.useState<{ classId: string; subjectId: string }[]>([]);
   const [strandId, setStrandId] = React.useState("");
   const [classId, setClassId] = React.useState("");
   const [students, setStudents] = React.useState<SheetStudent[] | null>(null);
@@ -594,8 +596,20 @@ function AssessTab({ classes, subjects }: { classes: ClassOpt[]; subjects: Subje
   const [comments, setComments] = React.useState<Map<string, { text: string; fromBank: boolean }>>(new Map());
 
   React.useEffect(() => {
-    fetch("/api/cbc/strands").then((r) => r.json()).then((j) => j.ok && setStrands(j.data.strands));
+    fetch("/api/cbc/assess?setup=1").then((r) => r.json()).then((j) => {
+      if (!j.ok) return;
+      setClasses(j.data.classes ?? []);
+      setStrands(j.data.strands ?? []);
+      setTeachingLinks(j.data.teachingLinks ?? []);
+      if ((j.data.classes ?? []).length === 1) setClassId(j.data.classes[0].id);
+    });
   }, []);
+
+  const availableStrands = React.useMemo(() => strands.filter((strand) => !classId || teachingLinks.some((link) => link.classId === classId && link.subjectId === strand.subjectId)), [strands, teachingLinks, classId]);
+  React.useEffect(() => {
+    if (strandId && !availableStrands.some((strand) => strand.id === strandId)) setStrandId("");
+    if (!strandId && availableStrands.length === 1) setStrandId(availableStrands[0].id);
+  }, [classId, strandId, availableStrands]);
 
   React.useEffect(() => {
     setSubstrandId("");
@@ -615,7 +629,7 @@ function AssessTab({ classes, subjects }: { classes: ClassOpt[]; subjects: Subje
   }, [strandId, classId]);
   React.useEffect(() => { loadSheet(); }, [loadSheet]);
 
-  const strand = strands.find((s) => s.id === strandId);
+  const strand = availableStrands.find((s) => s.id === strandId);
 
   async function setLevel(studentId: string, level: number) {
     const current = levels.get(studentId);
@@ -698,7 +712,7 @@ function AssessTab({ classes, subjects }: { classes: ClassOpt[]; subjects: Subje
         </select>
         <select value={strandId} onChange={(e) => setStrandId(e.target.value)} className="max-w-xs rounded-full border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900">
           <option value="">Strand…</option>
-          {strands.map((s) => <option key={s.id} value={s.id}>{s.subjectCode}: {s.name}</option>)}
+          {availableStrands.map((s) => <option key={s.id} value={s.id}>{s.subjectCode}: {s.name}</option>)}
         </select>
         {strandId && substrands.length > 0 && (
           <select value={substrandId} onChange={(e) => setSubstrandId(e.target.value)} className="max-w-xs rounded-full border border-navy-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900">

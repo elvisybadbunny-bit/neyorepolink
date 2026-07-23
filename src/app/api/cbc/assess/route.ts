@@ -7,7 +7,7 @@ import { z } from "zod";
 import { requirePermission } from "@/lib/core/session";
 import { ok, handleError, fail } from "@/lib/api/respond";
 import { assessSchema } from "@/lib/validations/cbc";
-import { getAssessSheet, saveAssessments, deleteCbcAssessment } from "@/lib/services/cbc.service";
+import { getAssessSheet, getCbcAssessSetup, saveAssessments, deleteCbcAssessment } from "@/lib/services/cbc.service";
 import { withIdempotency } from "@/lib/services/idempotency.service";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   try {
     const user = await requirePermission("exam.enter_marks");
+    if (req.nextUrl.searchParams.get("setup") === "1") return ok(await getCbcAssessSetup(user));
     const strandId = req.nextUrl.searchParams.get("strandId");
     const classId = req.nextUrl.searchParams.get("classId");
     if (!strandId || !classId) return fail("MISSING", "strandId and classId required.", 400);
