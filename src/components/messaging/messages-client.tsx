@@ -50,6 +50,7 @@ interface Msg {
   ackBy?: ReceiptPerson[];
   createdAt: string;
   mine: boolean;
+  deliveryState?: "sending" | "failed";
 }
 interface Recipient {
   id: string;
@@ -69,6 +70,7 @@ export function MessagesClient() {
   const [convos, setConvos] = React.useState<Convo[]>([]);
   const [active, setActive] = React.useState<string | null>(null);
   const [messages, setMessages] = React.useState<Msg[]>([]);
+  const [threadCache, setThreadCache] = React.useState<Record<string, Msg[]>>({});
   const [draft, setDraft] = React.useState("");
   const [attachment, setAttachment] = React.useState<UploadedFile | null>(null);
   const [loadingList, setLoadingList] = React.useState(true);
@@ -99,18 +101,21 @@ export function MessagesClient() {
 
   const openConvo = React.useCallback(async (id: string) => {
     setActive(id);
-    setLoadingThread(true);
+    const cached = threadCache[id];
+    if (cached) setMessages(cached);
+    setLoadingThread(!cached);
     const res = await fetch(`/api/conversations/${id}/messages`);
     const json = await res.json();
     if (json.ok) {
       setMessages(json.data.messages);
+      setThreadCache((cache) => ({ ...cache, [id]: json.data.messages }));
       setActiveType(json.data.conversation.type);
       setActiveTitle(json.data.conversation.title || "Conversation");
       setActiveClassId(json.data.conversation.classId || null);
     }
     setLoadingThread(false);
     loadList(); // refresh unread badges
-  }, [loadList]);
+  }, [loadList, threadCache]);
 
   // G.19/I.12 deep-links:
   // /messages?open=<conversationId> opens a known thread.
@@ -157,7 +162,7 @@ export function MessagesClient() {
           lastCount = d.count;
           fetch(`/api/conversations/${active}/messages`)
             .then((r) => r.json())
-            .then((j) => j.ok && setMessages(j.data.messages));
+            .then((j) => { if (j.ok) { setMessages(j.data.messages); setThreadCache((cache) => ({ ...cache, [active]: j.data.messages })); } });
         }
       } catch { /* ignore */ }
     });
@@ -178,6 +183,25 @@ export function MessagesClient() {
     setSending(true);
     const body = draft || (attachment ? attachment.fileName : "");
     const att = attachment;
+    const tempId = `sending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const optimistic: Msg = {
+      id: tempId,
+      senderName: "You",
+      body,
+      attachmentUrl: att?.url ?? null,
+      attachmentName: att?.fileName ?? null,
+      requiresAck,
+      urgentFallbackAt: urgentAfterHours ? new Date(Date.now() + Number(urgentAfterHours) * 3600_000).toISOString() : null,
+      fallbackSmsSentAt: null,
+      createdAt: new Date().toISOString(),
+      mine: true,
+      readBy: [],
+      ackBy: [],
+      deliveryState: "sending",
+    };
+    // Sending ordinary text should feel immediate. The canonical server row
+    // replaces this local bubble after the request succeeds.
+    setMessages((rows) => [...rows, optimistic]);
     setDraft("");
     setAttachment(null);
     try {
@@ -195,13 +219,22 @@ export function MessagesClient() {
       const json = await res.json();
       if (!json.ok) {
         toast({ title: json.error?.message || "Could not send.", tone: "error" });
+        setMessages((rows) => rows.filter((message) => message.id !== tempId));
         setDraft(body);
         setAttachment(att);
         return;
       }
+      setMessages((rows) => rows.map((message) => message.id === tempId ? { ...message, id: json.data.id, deliveryState: undefined } : message));
       setRequiresAck(false);
       setUrgentAfterHours("");
-      await openConvo(active);
+      // Refresh conversation ordering/unread metadata in the background. Do
+      // not reload and blank the whole open thread after every send.
+      void loadList();
+    } catch {
+      setMessages((rows) => rows.filter((message) => message.id !== tempId));
+      setDraft(body);
+      setAttachment(att);
+      toast({ title: "Network error — your message was restored to the composer.", tone: "error" });
     } finally {
       setSending(false);
     }
@@ -542,7 +575,9 @@ export function MessagesClient() {
                         </p>
                         {m.mine && (
                           <div className="mt-0.5 space-y-0.5 text-right text-[9px] text-green-100/90">
-                            {m.readBy && m.readBy.length > 0 ? (
+                            {m.deliveryState === "sending" ? (
+                              <p className="font-semibold italic">Sending…</p>
+                            ) : m.readBy && m.readBy.length > 0 ? (
                               <p className="font-semibold italic">
                                 Seen by {m.readBy.slice(0, 3).map((r) => `${r.name} ${r.readAt ? `(${time(r.readAt)})` : ""}`).join(", ")}{m.readBy.length > 3 ? ` +${m.readBy.length - 3}` : ""}
                               </p>
