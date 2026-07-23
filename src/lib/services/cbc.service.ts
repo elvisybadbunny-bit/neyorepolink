@@ -12,6 +12,10 @@ import type { Role } from "@/lib/core/roles";
 import { scopeWhere } from "@/lib/services/student.service";
 import { teacherClassIds } from "@/lib/services/teacher-portal.service";
 import { LEVEL_LABELS } from "@/lib/validations/cbc";
+import { PRIMARY_SCHOOL_CURRICULUM, PRIMARY_SCHOOL_GRADES } from "@/lib/data/kicd-primary-curriculum";
+import { JUNIOR_SCHOOL_CURRICULUM, JUNIOR_SCHOOL_GRADES } from "@/lib/data/kicd-junior-school-curriculum";
+import { JUNIOR_SCHOOL_CURRICULUM_PART2 } from "@/lib/data/kicd-junior-school-curriculum-part2";
+import { SENIOR_SCHOOL_CURRICULUM, SENIOR_SCHOOL_GRADES } from "@/lib/data/kicd-senior-school-curriculum";
 import type { SessionUser } from "@/lib/core/session";
 
 export class CbcError extends Error {
@@ -362,6 +366,37 @@ export async function seedDefaultCommentBank(user: SessionUser, subjectId: strin
 // ---------------------------------------------------------------------------
 
 /** Class sheet for one strand: students + their LATEST level on it. */
+export async function setupConfiguredSchoolCurriculum(user: SessionUser) {
+  return withTenant(user.tenantId, async () => {
+    const tdb = tenantDb();
+    const [classes, needs, subjects] = await Promise.all([
+      tdb.schoolClass.findMany({ where: { archived: false }, select: { id: true, level: true } }),
+      tdb.classSubjectNeed.findMany({ select: { classId: true, subjectId: true } }),
+      tdb.subject.findMany({ where: { archived: false }, select: { id: true, code: true, name: true } }),
+    ]);
+    const classById = new Map(classes.map((row) => [row.id, row]));
+    const subjectById = new Map(subjects.map((row) => [row.id, row]));
+    const configured = new Map<string, { subjectId: string; subjectCode: string; grade: string; strands: any[] }>();
+    for (const need of needs) {
+      const cls = classById.get(need.classId); const subject = subjectById.get(need.subjectId);
+      if (!cls || !subject) continue;
+      const grade = cls.level.trim();
+      let strands: any[] | undefined;
+      if ((PRIMARY_SCHOOL_GRADES as readonly string[]).includes(grade)) strands = (PRIMARY_SCHOOL_CURRICULUM as any)[grade]?.[subject.code];
+      else if ((JUNIOR_SCHOOL_GRADES as readonly string[]).includes(grade)) strands = (JUNIOR_SCHOOL_CURRICULUM as any)[grade]?.[subject.code] ?? (JUNIOR_SCHOOL_CURRICULUM_PART2 as any)[grade]?.[subject.code];
+      else if ((SENIOR_SCHOOL_GRADES as readonly string[]).includes(grade)) strands = (SENIOR_SCHOOL_CURRICULUM as any)[grade]?.[subject.code];
+      if (strands?.length) configured.set(`${grade}:${subject.id}`, { subjectId: subject.id, subjectCode: subject.code, grade, strands });
+    }
+    let added = 0, skipped = 0; const applied: { grade: string; subjectCode: string }[] = [];
+    for (const row of configured.values()) {
+      const result = await applyJuniorSchoolCurriculumPreset(user, { subjectId: row.subjectId, grade: row.grade, strands: row.strands });
+      added += result.strandsAdded + result.substrandsAdded; skipped += result.strandsSkipped + result.substrandsSkipped; applied.push({ grade: row.grade, subjectCode: row.subjectCode });
+    }
+    await audit(user, "cbc.configured_curriculum_setup", user.tenantId, { configuredPairs: configured.size, added, skipped });
+    return { configuredPairs: configured.size, added, skipped, applied, unmatchedPairs: needs.length - configured.size };
+  });
+}
+
 export async function getCbcAssessSetup(user: SessionUser) {
   return withTenant(user.tenantId, async () => {
     const tdb = tenantDb();

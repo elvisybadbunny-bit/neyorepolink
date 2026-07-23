@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requirePermission } from "@/lib/core/session";
 import { ok, handleError } from "@/lib/api/respond";
 import { strandSchema, KICD_STRAND_PRESETS } from "@/lib/validations/cbc";
-import { listStrands, createStrand, addStrandPreset } from "@/lib/services/cbc.service";
+import { listStrands, createStrand, addStrandPreset, setupConfiguredSchoolCurriculum } from "@/lib/services/cbc.service";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requirePermission("academics.manage");
     const body = await req.json();
+    if (body?.action === "setup-configured-school") return ok(await setupConfiguredSchoolCurriculum(user));
     if (body?.preset) {
       const { subjectId, presetCode } = z.object({ subjectId: z.string().min(1), presetCode: z.string().min(2), preset: z.literal(true) }).parse(body);
       const preset = KICD_STRAND_PRESETS[presetCode];

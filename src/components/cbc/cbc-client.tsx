@@ -71,6 +71,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
   const [strands, setStrands] = React.useState<Strand[] | null>(null);
   const [error, setError] = React.useState(false);
   const [dialog, setDialog] = React.useState(false);
+  const [schoolSetupBusy, setSchoolSetupBusy] = React.useState(false);
   // EE.1 — real sub-strands under each strand, keyed by strandId. Loaded
   // lazily only for a strand the school actually expands, so a school with
   // many strands never pays for every sub-strand list up front.
@@ -284,6 +285,16 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
     } finally { setSubstrandBusy(false); }
   }
 
+  async function setupConfiguredSchool() {
+    setSchoolSetupBusy(true);
+    try {
+      const response = await fetch("/api/cbc/strands", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "setup-configured-school" }) });
+      const json = await response.json();
+      if (json.ok) { toast({ title: `${json.data.added} strands/sub-strands prepared from ${json.data.configuredPairs} configured grade-subject pairs`, tone: "success" }); await load(); }
+      else toast({ title: json.error?.message || "Could not prepare the configured curriculum", tone: "error" });
+    } finally { setSchoolSetupBusy(false); }
+  }
+
   if (error) return <LoadError onRetry={load} />;
   if (strands === null) return <Skeletons />;
 
@@ -293,11 +304,13 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
     grouped.set(k, [...(grouped.get(k) ?? []), st]);
   }
 
+  const showManualPresetBrowsers = false;
   return (
     <div className="space-y-4">
       {canManage && (
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={() => setDialog(true)}><Plus className="h-4 w-4" /> New strand</Button>
+          <Button onClick={setupConfiguredSchool} disabled={schoolSetupBusy}>{schoolSetupBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Prepare all configured grades & subjects</Button>
+          <Button variant="secondary" onClick={() => setDialog(true)}><Plus className="h-4 w-4" /> Add custom strand</Button>
           <Button
             variant="secondary"
             size="sm"
@@ -324,7 +337,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
           </Button>
         </div>
       )}
-      {canManage && primaryAvailable && (
+      {canManage && showManualPresetBrowsers && primaryAvailable && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Primary & Pre-Primary curriculum library (PP1–Grade 6)</CardTitle>
@@ -365,7 +378,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
           </CardContent>
         </Card>
       )}
-      {canManage && juniorAvailable && (
+      {canManage && showManualPresetBrowsers && juniorAvailable && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Junior School curriculum library (Grade 7-9)</CardTitle>
@@ -406,7 +419,7 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
           </CardContent>
         </Card>
       )}
-      {canManage && seniorAvailable && (
+      {canManage && showManualPresetBrowsers && seniorAvailable && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Senior School curriculum library (Grade 10–12)</CardTitle>
