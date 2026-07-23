@@ -133,18 +133,22 @@ export function PathwayGuideQuiz({
 
   async function loadGlimpse(id: string) {
     try {
-      const res = await fetch(`${apiBase}/glimpse`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: id }) });
+      // Public has a dedicated no-login route; signed-in guidance exposes the
+      // same operation as an action on its protected base route.
+      const url = isPublic ? `${apiBase}/glimpse` : apiBase;
+      const body = isPublic ? { sessionId: id } : { action: "glimpse", sessionId: id };
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const json = await res.json();
-      if (json.ok) setGlimpse(json.data);
-    } catch { /* glimpse is best-effort */ }
+      setGlimpse(json.ok ? json.data : []);
+    } catch { setGlimpse([]); }
   }
 
   async function loadFullMatch(id: string) {
     try {
       const res = await fetch(apiBase, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "match", sessionId: id }) });
       const json = await res.json();
-      if (json.ok) setMatched(json.data);
-    } catch { /* handled by unlock gating */ }
+      setMatched(json.ok ? json.data : []);
+    } catch { setMatched([]); }
   }
 
   async function payToUnlock() {

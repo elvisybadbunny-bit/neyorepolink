@@ -71,7 +71,6 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
   const [strands, setStrands] = React.useState<Strand[] | null>(null);
   const [error, setError] = React.useState(false);
   const [dialog, setDialog] = React.useState(false);
-  const [busy, setBusy] = React.useState(false);
   // EE.1 — real sub-strands under each strand, keyed by strandId. Loaded
   // lazily only for a strand the school actually expands, so a school with
   // many strands never pays for every sub-strand list up front.
@@ -252,16 +251,6 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
   }, []);
   React.useEffect(() => { load(); }, [load]);
 
-  async function addPreset(subjectId: string, code: string) {
-    setBusy(true);
-    try {
-      const res = await fetch("/api/cbc/strands", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ preset: true, subjectId, presetCode: code }) });
-      const json = await res.json();
-      if (json.ok) { toast({ title: `${json.data.added} KICD strands added`, tone: "success" }); load(); }
-      else toast({ title: json.error?.message || "Failed", tone: "error" });
-    } finally { setBusy(false); }
-  }
-
   async function loadSubstrands(strandId: string) {
     try {
       const res = await fetch(`/api/cbc/substrands?strandId=${strandId}`);
@@ -303,7 +292,6 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
   if (error) return <LoadError onRetry={load} />;
   if (strands === null) return <Skeletons />;
 
-  const presetable = subjects.filter((s) => ["ENG", "KIS", "MAT", "ISC", "SST"].includes(s.code));
   const grouped = new Map<string, Strand[]>();
   for (const st of strands) {
     const k = `${st.subjectName} (${st.subjectCode})`;
@@ -315,11 +303,6 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
       {canManage && (
         <div className="flex flex-wrap items-center gap-2">
           <Button onClick={() => setDialog(true)}><Plus className="h-4 w-4" /> New strand</Button>
-          {presetable.map((s) => (
-            <Button key={s.id} variant="secondary" size="sm" disabled={busy} onClick={() => addPreset(s.id, s.code)}>
-              <Sparkles className="h-3.5 w-3.5" /> KICD {s.code}
-            </Button>
-          ))}
           <Button
             variant="secondary"
             size="sm"

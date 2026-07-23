@@ -19,7 +19,11 @@ export async function POST(req: NextRequest) {
     const user = await requireUser();
     await assertEeFeatureReleased("EE.8");
 
-    const input = submitQuestionBankAttemptSchema.parse(await req.json());
+    // Read the request body exactly once. Request streams cannot be consumed a
+    // second time; the old teacher-demo path attempted req.json() twice and
+    // produced the generic “something went wrong” response on Check Answer.
+    const body = await req.json();
+    const input = submitQuestionBankAttemptSchema.parse(body);
 
     // Resolve studentId: either the logged in student or student child associated with parent/teacher
     let studentId = "";
@@ -30,7 +34,6 @@ export async function POST(req: NextRequest) {
       studentId = student.id;
     } else {
       // For practice by teacher demo or explicit student parameter
-      const body = await req.json().catch(() => ({}));
       studentId = body.studentId || "";
       if (!studentId) {
         const tdb = tenantDb();

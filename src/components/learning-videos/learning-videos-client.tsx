@@ -65,9 +65,15 @@ export function LearningVideosClient() {
     else toast({ title: json.error?.message || "Could not save video", tone: "error" });
   }
 
-  async function saveManual() {
+  async function saveManual(destination: "SCHOOL" | "NATIONAL") {
     if (!manualUrl.trim()) return;
-    await save({ youtubeId: manualUrl, title: "Saved YouTube learning video" });
+    if (destination === "NATIONAL") {
+      const res = await fetch("/api/learning-videos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "submit-national", youtubeUrlOrId: manualUrl, title: "Submitted YouTube learning video" }) });
+      const json = await res.json();
+      toast({ title: json.ok ? "Submitted to NEYO for national review" : json.error?.message || "Could not submit video", tone: json.ok ? "success" : "error" });
+    } else {
+      await save({ youtubeId: manualUrl, title: "Saved YouTube learning video" });
+    }
     setManualUrl("");
   }
 
@@ -96,7 +102,7 @@ export function LearningVideosClient() {
         </div>
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="rounded-2xl border border-green-200 bg-green-50/60 p-3 text-xs text-green-900 dark:border-green-900/50 dark:bg-green-950/20 dark:text-green-100"><ShieldCheck className="mr-1 inline h-3.5 w-3.5" /> Distraction guard: videos play inside NEYO using privacy-enhanced embeds; comments/recommendations stay outside the NEYO screen. YouTube may still enforce its own adverts. For zero-ad classes, use school-owned videos in NEYO storage when available.</div>
-          <div className="flex gap-2"><Input value={manualUrl} onChange={(e) => setManualUrl(e.target.value)} placeholder="Paste YouTube link/ID if search key is not connected" /><Button variant="secondary" onClick={saveManual}><Plus className="h-4 w-4" /> Save link</Button></div>
+          <div className="space-y-2"><Input value={manualUrl} onChange={(e) => setManualUrl(e.target.value)} placeholder="Paste one YouTube learning link or video ID" /><div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => saveManual("SCHOOL")}><Plus className="h-4 w-4" /> Save to school</Button><Button variant="secondary" onClick={() => saveManual("NATIONAL")}><ShieldCheck className="h-4 w-4" /> Submit to NEYO bank</Button></div></div>
         </div>
         {note && <p className="text-xs text-amber-700 dark:text-amber-300">{note}</p>}
       </CardContent>
