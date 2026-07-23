@@ -106,13 +106,12 @@ export default async function DashboardPage() {
     const tdb = tenantDb();
     const today = nairobiToday();
     const now = nairobiNow();
-    const term = await currentTerm(currentUser.tenantId);
+    const [term, tenant, studentScope] = await Promise.all([
+      currentTerm(currentUser.tenantId),
+      db.tenant.findUnique({ where: { id: currentUser.tenantId }, include: { subscription: true } }),
+      scopeWhere(currentUser),
+    ]);
     const year = term?.year ?? now.getUTCFullYear();
-
-    const tenant = await db.tenant.findUnique({
-      where: { id: currentUser.tenantId },
-      include: { subscription: true },
-    });
     const targetPct = tenant?.collectionTargetPct ?? 85;
     const planEndsAt = tenant?.subscription?.currentPeriodEnd ?? null;
     const daysToPlanEnd = planEndsAt ? Math.ceil((planEndsAt.getTime() - now.getTime()) / (24 * 3600_000)) : null;
@@ -129,85 +128,48 @@ export default async function DashboardPage() {
         },
         select: { id: true },
       });
-      for (const admin of admins) {
-        const existing = await db.notification.findFirst({ where: { tenantId: currentUser.tenantId, recipientId: admin.id, category: "billing", body: { contains: todayKey } } });
-        if (!existing) {
-          await createInApp({
-            tenantId: currentUser.tenantId,
-            recipientId: admin.id,
-            title: "Subscription plan needs attention",
-            body: `Your NEYO plan ends in ${daysToPlanEnd} day${daysToPlanEnd === 1 ? "" : "s"}. Open billing to review. ${todayKey}`,
-            category: "billing",
-            href: "/settings/billing",
-          });
-        }
-      }
+      const existing = admins.length ? await db.notification.findMany({ where: { tenantId: currentUser.tenantId, recipientId: { in: admins.map((admin) => admin.id) }, category: "billing", body: { contains: todayKey } }, select: { recipientId: true } }) : [];
+      const alreadyNotified = new Set(existing.map((row) => row.recipientId));
+      await Promise.all(admins.filter((admin) => !alreadyNotified.has(admin.id)).map((admin) => createInApp({
+        tenantId: currentUser.tenantId,
+        recipientId: admin.id,
+        title: "Subscription plan needs attention",
+        body: `Your NEYO plan ends in ${daysToPlanEnd} day${daysToPlanEnd === 1 ? "" : "s"}. Open billing to review. ${todayKey}`,
+        category: "billing",
+        href: "/settings/billing",
+      })));
     }
 
-    // ---- 1) Enrolled students & counts ----
-    // Keep the headline inside the same student row-scope as the destination
-    // module: teachers see learners in classes they genuinely teach, parents
-    // see linked children, and leadership/office roles see the school total.
-    const studentScope = await scopeWhere(currentUser);
-    const activeStudentsCount = await tdb.student.count({
-      where: { AND: [{ status: "ACTIVE" }, studentScope] },
-    });
-    const ownClassCount = await tdb.schoolClass.count({ where: { archived: false, classTeacherId: currentUser.id } });
-    const totalStaffCount = await tdb.user.count({
-      where: { isActive: true, role: { notIn: ["PARENT", "STUDENT", "SUPER_ADMIN"] } },
-    });
-
-    // ---- 2) Revenue today ----
+    // Dashboard reads are independent. Run them together so an ordinary page
+    // open pays for the slowest DB round-trip, not the sum of nine round-trips.
     const todayStartUtc = new Date(`${today}T00:00:00.000Z`);
     const dayStart = new Date(todayStartUtc.getTime() - 3 * 3600_000);
-    const paidToday = await tdb.payment.aggregate({
-      _sum: { amount: true },
-      where: { status: "PAID", paidAt: { gte: dayStart } },
-    });
-    const revenueToday = paidToday._sum.amount ?? 0;
-
-    // ---- 3) Attendance today ----
-    const attendanceRecords = await tdb.attendanceRecord.findMany({
-      where: { date: today },
-      select: { status: true },
-    });
-    const markedCount = attendanceRecords.length;
-    const presentCount = attendanceRecords.filter((r) => r.status === "P" || r.status === "L").length;
-    let attendancePct: number | null = null;
-    if (markedCount > 0) {
-      attendancePct = Math.round((presentCount / markedCount) * 100);
-    }
-
-    // ---- 4) Fees outstanding & collection rate ----
-    const termInvoices = term
-      ? await tdb.invoice.findMany({ where: { year: term.year, term: term.term } })
-      : await tdb.invoice.findMany({ where: { year } });
-    
-    const billedTerm = termInvoices.reduce((s, i) => s + i.totalKes - i.discountKes, 0);
-    const collectedTerm = termInvoices.reduce((s, i) => s + Math.min(i.paidKes, i.totalKes - i.discountKes), 0);
-    const outstandingTerm = termInvoices.reduce((s, i) => s + (i.totalKes - i.discountKes - i.paidKes), 0);
-    
-    const collectionPct = billedTerm > 0 ? Math.round((collectedTerm / billedTerm) * 100) : 0;
-
-    // ---- 5) Calendar events + reminders ----
     const in30Days = new Date(now.getTime() + 30 * 24 * 3600_000).toISOString().slice(0, 10);
-    const upcomingEventsCount = await tdb.calendarEvent.count({
-      where: { date: { gte: today, lte: in30Days } },
-    });
-    const remindersCount = await tdb.notification.count({
-      where: { recipientId: currentUser.id, readAt: null },
-    });
-
-    // ---- 6) Real payments-vs-expected graph ----
     const termStart = term?.startDate ? new Date(`${term.startDate}T00:00:00.000Z`) : new Date(now.getTime() - 90 * 24 * 3600_000);
     const termEnd = term?.endDate ? new Date(`${term.endDate}T00:00:00.000Z`) : now;
+
+    const [activeStudentsCount, ownClassCount, totalStaffCount, paidToday, attendanceRecords, termInvoices, upcomingEventsCount, remindersCount, paidPayments] = await Promise.all([
+      tdb.student.count({ where: { AND: [{ status: "ACTIVE" }, studentScope] } }),
+      tdb.schoolClass.count({ where: { archived: false, classTeacherId: currentUser.id } }),
+      tdb.user.count({ where: { isActive: true, role: { notIn: ["PARENT", "STUDENT", "SUPER_ADMIN"] } } }),
+      tdb.payment.aggregate({ _sum: { amount: true }, where: { status: "PAID", paidAt: { gte: dayStart } } }),
+      tdb.attendanceRecord.findMany({ where: { date: today }, select: { status: true } }),
+      term ? tdb.invoice.findMany({ where: { year: term.year, term: term.term } }) : tdb.invoice.findMany({ where: { year } }),
+      tdb.calendarEvent.count({ where: { date: { gte: today, lte: in30Days } } }),
+      tdb.notification.count({ where: { recipientId: currentUser.id, readAt: null } }),
+      tdb.payment.findMany({ where: { status: "PAID", paidAt: { gte: termStart, lte: now } }, select: { amount: true, paidAt: true }, orderBy: { paidAt: "asc" } }),
+    ]);
+
+    const revenueToday = paidToday._sum.amount ?? 0;
+    const markedCount = attendanceRecords.length;
+    const presentCount = attendanceRecords.filter((record) => record.status === "P" || record.status === "L").length;
+    const attendancePct = markedCount > 0 ? Math.round((presentCount / markedCount) * 100) : null;
+    const billedTerm = termInvoices.reduce((sum, invoice) => sum + invoice.totalKes - invoice.discountKes, 0);
+    const collectedTerm = termInvoices.reduce((sum, invoice) => sum + Math.min(invoice.paidKes, invoice.totalKes - invoice.discountKes), 0);
+    const outstandingTerm = termInvoices.reduce((sum, invoice) => sum + (invoice.totalKes - invoice.discountKes - invoice.paidKes), 0);
+    const collectionPct = billedTerm > 0 ? Math.round((collectedTerm / billedTerm) * 100) : 0;
     const totalDays = Math.max(1, Math.ceil((termEnd.getTime() - termStart.getTime()) / (24 * 3600_000)));
     const graphPoints: MoneyPoint[] = [];
-    const paidPayments = await tdb.payment.findMany({
-      where: { status: "PAID", paidAt: { gte: termStart, lte: now } },
-      select: { amount: true, paidAt: true },
-      orderBy: { paidAt: "asc" },
-    });
     for (let i = 0; i < 4; i++) {
       const ratio = i / 3;
       const pointDate = new Date(termStart.getTime() + totalDays * ratio * 24 * 3600_000);

@@ -1,34 +1,15 @@
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent } from "@/components/ui/card";
-
-/** Skeleton for app pages during navigation (Loading state — no spinners). */
+/**
+ * Lightweight route transition. Ordinary navigation must not impersonate a
+ * heavy background job with a page full of skeleton cards. The existing shell
+ * remains stable while this small, accessible progress surface covers only the
+ * content transition.
+ */
 export default function AppLoading() {
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="flex items-end justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-7 w-56" />
-          <Skeleton className="h-4 w-40" />
-        </div>
-        <Skeleton className="h-10 w-44 rounded-full" />
-      </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i} className="p-6">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="mt-3 h-8 w-20" />
-            <Skeleton className="mt-2 h-3 w-28" />
-          </Card>
-        ))}
-      </div>
-      <Card>
-        <CardContent className="space-y-3 p-6">
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-        </CardContent>
-      </Card>
+    <div className="relative min-h-24 overflow-hidden rounded-3xl border border-navy-100 bg-white/70 p-5 dark:border-navy-800 dark:bg-navy-900/60" role="status" aria-live="polite">
+      <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-navy-100 dark:bg-navy-800"><span className="block h-full w-1/3 animate-[pulse_0.9s_ease-in-out_infinite] rounded-full bg-green-500" /></div>
+      <p className="text-sm font-bold text-navy-900 dark:text-white">Opening workspace…</p>
+      <p className="mt-1 text-xs text-navy-400">Keeping your navigation and current context in place.</p>
     </div>
   );
 }
