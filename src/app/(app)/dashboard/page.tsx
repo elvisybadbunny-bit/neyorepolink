@@ -4,6 +4,7 @@ import {
   UserCheck,
   Users,
   CalendarDays,
+  Bell,
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -313,18 +314,24 @@ export default async function DashboardPage() {
         {canSeeFinanceCards ? <Link href="/finance" className="group rounded-3xl border border-navy-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-navy-800 dark:bg-navy-900"><div className="flex items-start justify-between"><span className="text-[10px] font-black uppercase tracking-[0.14em] text-navy-400">Collection rate</span><span className="grid h-8 w-8 place-items-center rounded-2xl bg-amber-50 text-amber-700 dark:bg-amber-950/40"><TrendingUp className="h-4 w-4" /></span></div><p className="mt-4 text-2xl font-black text-navy-950 dark:text-white">{stats.collectionPct}%</p><p className="mt-1 text-[11px] text-navy-500">Target {stats.targetPct}% · {formatKES(stats.outstandingTerm)} due</p></Link> : canSeeStaffCard ? <Link href="/staff" className="group rounded-3xl border border-navy-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-navy-800 dark:bg-navy-900"><div className="flex items-start justify-between"><span className="text-[10px] font-black uppercase tracking-[0.14em] text-navy-400">Active staff</span><span className="grid h-8 w-8 place-items-center rounded-2xl bg-amber-50 text-amber-700 dark:bg-amber-950/40"><Users className="h-4 w-4" /></span></div><p className="mt-4 text-2xl font-black text-navy-950 dark:text-white">{stats.totalStaffCount}</p><p className="mt-1 text-[11px] text-navy-500">School team</p></Link> : <Link href="/calendar" className="group rounded-3xl border border-navy-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-navy-800 dark:bg-navy-900"><div className="flex items-start justify-between"><span className="text-[10px] font-black uppercase tracking-[0.14em] text-navy-400">Upcoming</span><CalendarDays className="h-4 w-4 text-amber-600" /></div><p className="mt-4 text-2xl font-black text-navy-950 dark:text-white">{stats.upcomingEventsCount}</p><p className="mt-1 text-[11px] text-navy-500">Calendar events</p></Link>}
       </section>
 
+      <section className="rounded-[2rem] border border-navy-100 bg-white p-4 shadow-sm dark:border-navy-800 dark:bg-navy-900 sm:p-5">
+        <div className="mb-4 flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-navy-400">Continue working</p><h2 className="mt-1 text-lg font-black text-navy-950 dark:text-white">Open the next school task</h2></div><span className="hidden text-xs text-navy-400 sm:block">Only actions allowed for your role appear.</span></div>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {canSeeAttendanceCard && <Link href="/attendance" className="flex items-center gap-3 rounded-2xl border border-navy-100 p-3 transition hover:border-green-200 hover:bg-green-50/50 dark:border-navy-800 dark:hover:border-green-900 dark:hover:bg-green-950/20"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-green-50 text-green-700 dark:bg-green-950/40"><UserCheck className="h-4 w-4" /></span><span className="min-w-0"><span className="block text-sm font-black text-navy-900 dark:text-white">Attendance</span><span className="block truncate text-[11px] text-navy-400">Register and completion</span></span></Link>}
+          {has("exam.view") && <Link href="/exams" className="flex items-center gap-3 rounded-2xl border border-navy-100 p-3 transition hover:border-blue-200 hover:bg-blue-50/50 dark:border-navy-800 dark:hover:border-blue-900 dark:hover:bg-blue-950/20"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-blue-50 text-blue-700 dark:bg-blue-950/40"><TrendingUp className="h-4 w-4" /></span><span className="min-w-0"><span className="block text-sm font-black text-navy-900 dark:text-white">Exams & reports</span><span className="block truncate text-[11px] text-navy-400">Marks, grading and release</span></span></Link>}
+          {has("academics.view") && <Link href="/syllabus" className="flex items-center gap-3 rounded-2xl border border-navy-100 p-3 transition hover:border-amber-200 hover:bg-amber-50/50 dark:border-navy-800 dark:hover:border-amber-900 dark:hover:bg-amber-950/20"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-50 text-amber-700 dark:bg-amber-950/40"><CalendarDays className="h-4 w-4" /></span><span className="min-w-0"><span className="block text-sm font-black text-navy-900 dark:text-white">Syllabus</span><span className="block truncate text-[11px] text-navy-400">Plans, scope and record of work</span></span></Link>}
+          <Link href="/messages" className="flex items-center gap-3 rounded-2xl border border-navy-100 p-3 transition hover:border-purple-200 hover:bg-purple-50/50 dark:border-navy-800 dark:hover:border-purple-900 dark:hover:bg-purple-950/20"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-purple-50 text-purple-700 dark:bg-purple-950/40"><Bell className="h-4 w-4" /></span><span className="min-w-0"><span className="block text-sm font-black text-navy-900 dark:text-white">Messages</span><span className="block truncate text-[11px] text-navy-400">Colleagues and families</span></span></Link>
+        </div>
+      </section>
+
       <div className={`grid grid-cols-1 gap-6 ${canSeeFinanceCards ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}>
         {/* Animated Custom Line Graph (Expected vs Paid Tuition Fees) */}
         {canSeeFinanceCards && <div className="lg:col-span-2">
-          <Card className="h-full flex flex-col justify-between">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-                Tuition Collections vs Expected Target (Term Trend)
-              </CardTitle>
-              <p className="text-xs text-navy-400">
-                Real payment ledger against expected term billing. Green is actual paid; dashed navy is expected by this point in the term.
-              </p>
+          <Card className="h-full overflow-hidden rounded-[2rem] border-navy-100 bg-white shadow-sm dark:border-navy-800 dark:bg-navy-900">
+            <CardHeader className="pb-2">
+              <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-navy-400">Finance pulse</p><CardTitle className="mt-1 text-lg font-black text-navy-950 dark:text-white">Collections this term</CardTitle></div><span className="rounded-full bg-green-50 px-3 py-1 text-xs font-black text-green-700 dark:bg-green-950/40 dark:text-green-300">{stats.collectionPct}% collected</span></div>
+              <div className="mt-4 flex items-end gap-3"><p className="text-3xl font-black tracking-tight text-navy-950 dark:text-white">{formatKES(Math.round((stats.collectionPct / 100) * stats.billedTerm))}</p><p className="pb-1 text-xs text-navy-400">of {formatKES(stats.billedTerm)} billed</p></div>
+              <p className="text-xs text-navy-400">Actual paid is green; the dashed line is expected term billing.</p>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-between p-6">
               {/* Responsive SVG Line Graph (0kb external library overhead, instant page loads!) */}
@@ -378,11 +385,11 @@ export default async function DashboardPage() {
 
         {/* Recent Activity Log - Compact Styling */}
         <div className="lg:col-span-2">
-          <Card className="h-full flex flex-col justify-between p-1">
-            <CardHeader className="pb-1">
-              <CardTitle className="text-sm uppercase tracking-wider text-navy-400">Recent activity logs</CardTitle>
+          <Card className="h-full overflow-hidden rounded-[2rem] border-navy-100 bg-white shadow-sm dark:border-navy-800 dark:bg-navy-900">
+            <CardHeader className="border-b border-navy-50 pb-3 dark:border-navy-800">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-navy-400">Latest</p><CardTitle className="mt-1 text-lg font-black text-navy-950 dark:text-white">Recent school activity</CardTitle>
             </CardHeader>
-            <CardContent className="p-3 flex-1 overflow-y-auto max-h-[300px]">
+            <CardContent className="max-h-[320px] flex-1 overflow-y-auto p-4">
               <ActivityFeed title="" />
             </CardContent>
           </Card>

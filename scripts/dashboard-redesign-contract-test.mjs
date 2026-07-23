@@ -6,4 +6,7 @@ import fs from"node:fs";const d=fs.readFileSync("src/app/(app)/dashboard/page.ts
 [d.includes("rounded-[2rem]")&&d.includes("shadow-[0_18px_60px"),"hero uses a crafted rounded solid surface rather than blanket glass"],
 [!d.includes("BundiAudioButton")&&!d.includes("pricingModeLabel"),"dashboard removes secondary clutter from the primary scan path"],
 [d.includes('canSeeFinanceCards ? "lg:grid-cols-3" : "lg:grid-cols-1"'),"role-hidden finance does not leave an empty dashboard grid"],
+[d.includes("Continue working")&&d.includes("Only actions allowed for your role appear"),"dashboard provides a permission-aware continuation lane"],
+[d.includes("Collections this term")&&d.includes("Finance pulse"),"finance chart has a compact hierarchy and headline value"],
+[d.includes("Recent school activity")&&d.includes(">Latest<"),"activity is presented as a clear latest-events card"],
 ];let n=0;for(const[ok,m]of checks){if(!ok)throw Error(`FAIL: ${m}`);console.log(`PASS ${++n}: ${m}`)}console.log(`DASHBOARD REDESIGN: ${n}/${checks.length}`);
