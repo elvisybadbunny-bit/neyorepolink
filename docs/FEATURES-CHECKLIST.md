@@ -3,6 +3,17 @@
 > Every line below is ONE feature. Tick `[x]` only when fully built full-stack (DB → service → API → UI → 4 UX states → seed) and testable.
 > Legend: `[ ]` not started · `[~]` in progress · `[x]` done & testable.
 
+## 22 July 2026 — Communication credentials, email/OTP tests and SMS redundancy
+
+- [x] Documented Africa's Talking, Resend, APP_BASE_URL and YouTube credential locations and safe handling.
+- [x] Defined complete SMS OTP, password recovery, magic-link and email deliverability test matrices.
+- [x] Researched Twilio Kenya sender-ID registration as a documented secondary adapter and a local-provider commercial comparison path.
+- [x] Defined provider-neutral SMS routing, delivery states, idempotency, delayed failover and consent boundaries in `docs/COMMUNICATION-CREDENTIALS-AND-LIVE-TEST-PLAN-2026-07-22.md`.
+- [ ] Verify Resend sending domain DNS and send to controlled Gmail/Outlook inboxes.
+- [ ] Run Africa's Talking sandbox, then one consented live +254 delivery with approved sender ID.
+- [ ] Obtain current Twilio and local-provider written quotes, sender registration, DPA and API/delivery-report details before selecting a secondary.
+- [ ] Implement provider-neutral adapter and delivery callbacks; do not mark provider acceptance as handset delivery.
+
 ## 22 July 2026 — Stripe, Paystack, Pesapal and school-payment research
 
 - [x] Separated NEYO company revenue from school fee collections; NEYO must not pool school funds.
