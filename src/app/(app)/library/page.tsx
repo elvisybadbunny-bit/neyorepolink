@@ -2,6 +2,7 @@ import { requirePagePermission } from "@/lib/core/page-guards";
 import { effectivePermissionsForUser } from "@/lib/core/session";
 import { can } from "@/lib/core/permissions";
 import { LibraryClient } from "@/components/library/library-client";
+import { TextbookFineSuite } from "@/components/extensions-v2/textbook-fine-suite";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function LibraryPage() {
         </p>
       </div>
       <LibraryClient canManage={hasEffective("library.manage")} />
+      <section className="border-t border-navy-100 pt-6 dark:border-navy-800"><TextbookFineSuite /></section>
     </div>
   );
 }

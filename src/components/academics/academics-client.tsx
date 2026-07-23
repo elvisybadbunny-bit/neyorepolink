@@ -34,13 +34,10 @@ import { cn, curriculumLabel } from "@/lib/utils";
 import { BundiIntelligentWizard } from "@/components/bundi/bundi-intelligent-wizard";
 import { KnecCandidateStudio } from "@/components/academics/knec-candidate-studio";
 import { MoeReturnsClientTab } from "@/components/academics/moe-returns-client-tab";
-import { RecordOfWorkClientTab } from "@/components/academics/record-of-work-client-tab";
 import { SeniorReadinessCard } from "@/components/academics/senior-readiness-card";
 import { SeniorLearnerProofCard } from "@/components/academics/senior-learner-proof-card";
 import { TimetableGovernanceCard } from "@/components/academics/timetable-governance-card";
 import { TeacherElectiveStaffingCard } from "@/components/academics/teacher-elective-staffing-card";
-import { DisciplineSuite } from "@/components/extensions-v2/discipline-suite";
-import { TextbookFineSuite } from "@/components/extensions-v2/textbook-fine-suite";
 import { V2HeroCard } from "@/components/ui/v2/v2-hero-card";
 import { V2ActionPill } from "@/components/ui/v2/v2-action-pill";
 import { V2MobileCardRow } from "@/components/ui/v2/v2-mobile-card-row";
@@ -83,12 +80,9 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
     { key: "terms" as const, label: "Terms", icon: CalendarRange },
     { key: "timetable" as const, label: "Timetable", icon: Grid3X3 },
     { key: "exam-timetable" as const, label: "Exam Timetable", icon: ClipboardList },
-    { key: "discipline" as const, label: "Discipline & Summons", icon: Sparkles },
-    { key: "library-recovery" as const, label: "Textbook Fines", icon: BookOpen },
     { key: "exam-auto-generator" as const, label: "Exam Auto-Generator", icon: Sparkles },
     { key: "knec-studio" as const, label: "KNEC Candidate Studio", icon: Award },
     { key: "moe-returns" as const, label: "MOE Statutory Returns", icon: FileText },
-    { key: "record-of-work" as const, label: "Record of Work", icon: ClipboardList },
     { key: "lessons" as const, label: "Lesson plans", icon: NotebookPen },
     { key: "computation" as const, label: "Grading Engine", icon: Calculator },
     ...(isCurriculumEngineEnabled ? [
@@ -161,11 +155,8 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
       {tab === "timetable" && <TimetableTab canManage={canManage} />}
       {tab === "exam-timetable" && <ExamTimetableTab canManage={canManage} />}
       {tab === "exam-auto-generator" && <ExamAutoGeneratorTab canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
-      {tab === "discipline" && <DisciplineSuite />}
-      {tab === "library-recovery" && <TextbookFineSuite />}
       {tab === "knec-studio" && <KnecCandidateStudio canManage={canManage} />}
       {tab === "moe-returns" && <MoeReturnsClientTab canManage={canManage} />}
-      {tab === "record-of-work" && <RecordOfWorkClientTab canManage={canManage} />}
       {tab === "lessons" && <LessonsTab />}
       {tab === "computation" && <ComputationDashboardClient canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
       {tab === "reports" && <ReportBuilderClient canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}

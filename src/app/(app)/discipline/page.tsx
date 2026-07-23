@@ -1,6 +1,7 @@
 import { requirePagePermission } from "@/lib/core/page-guards";
 import { effectivePermissionsForUser } from "@/lib/core/session";
 import { DisciplineClient } from "@/components/discipline/discipline-client";
+import { DisciplineSuite } from "@/components/extensions-v2/discipline-suite";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function DisciplinePage() {
         canConfidential={canApproveDiscipline}
         canApproveDiscipline={canApproveDiscipline}
       />
+      <section className="border-t border-navy-100 pt-6 dark:border-navy-800"><DisciplineSuite /></section>
     </div>
   );
 }
