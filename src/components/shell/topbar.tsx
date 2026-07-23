@@ -19,7 +19,6 @@ import { SchoolSwitcher } from "./school-switcher";
 export function Topbar({
   tenantName,
   tenantLogoUrl,
-  mobileWordmarkUrl,
   userName,
   userRole,
   rawRole,
@@ -28,7 +27,6 @@ export function Topbar({
 }: {
   tenantName: string;
   tenantLogoUrl?: string | null;
-  mobileWordmarkUrl?: string | null;
   userName: string;
   userRole: string;
   rawRole?: string;
@@ -39,31 +37,17 @@ export function Topbar({
 
   return (
     <header className="print:hidden sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-navy-100 bg-warm-50/90 px-3 backdrop-blur-md dark:border-navy-800 dark:bg-navy-950/90 sm:px-5">
-      {/* Mobile-only precision bar: one Liquid navigation card, an editable
-          NEYO wordmark/account card, search, and one circular notification
-          card. Desktop remains unchanged. */}
-      <div className="flex w-full items-center gap-2 sm:hidden">
-        <button onClick={onMenuClick} aria-label="Open Liquid navigation" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/80 text-navy-700 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-navy-900/80 dark:text-white"><Menu className="h-5 w-5" /></button>
-        <button type="button" onClick={() => setShowExtra((shown) => !shown)} aria-expanded={showExtra} aria-label="Open account and school switcher" className="flex h-10 min-w-0 items-center gap-1.5 rounded-2xl border border-white/70 bg-white/80 px-3 text-navy-950 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-navy-900/80 dark:text-white">
-          {mobileWordmarkUrl ? <img src={mobileWordmarkUrl} alt="NEYO" className="h-6 max-w-[88px] object-contain" /> : <NeyoLogo variant="wordmark" className="h-5 max-w-[88px]" />}
-          <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-navy-400 transition-transform ${showExtra ? "rotate-180" : ""}`} />
-        </button>
-        <span className="min-w-0 flex-1" />
-        <button onClick={() => window.dispatchEvent(new Event("neyo:open-search"))} aria-label="Search NEYO" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/80 text-navy-700 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-navy-900/80 dark:text-white"><Search className="h-5 w-5" /></button>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/70 bg-white/80 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-navy-900/80"><NotificationBell /></div>
-      </div>
-
-      {/* Legacy mobile menu is replaced above; desktop navigation remains in the sidebar. */}
+      {/* Mobile menu */}
       <button
         onClick={onMenuClick}
         aria-label="Open menu"
-        className="hidden h-9 w-9 items-center justify-center rounded-full text-navy-600 hover:bg-navy-100 dark:text-navy-300 dark:hover:bg-navy-800 sm:flex lg:hidden"
+        className="flex h-9 w-9 items-center justify-center rounded-full text-navy-600 hover:bg-navy-100 dark:text-navy-300 dark:hover:bg-navy-800 lg:hidden"
       >
         <Menu className="h-5 w-5" />
       </button>
 
       {/* Brand + module switcher */}
-      <div className="hidden items-center gap-2 sm:flex">
+      <div className="flex items-center gap-2">
         {tenantLogoUrl ? (
           <img
             src={tenantLogoUrl}
@@ -95,7 +79,22 @@ export function Topbar({
         </kbd>
       </button>
 
-      <div className="ml-auto hidden items-center gap-1 sm:flex">
+      <div className="ml-auto flex items-center gap-1">
+        {/* Mobile: the bell always opens notifications. A separate, explicit
+            arrow reveals account/layout utilities — no hidden double-tap gesture. */}
+        <div className="flex items-center gap-0.5 sm:hidden">
+          <NotificationBell />
+          <button
+            type="button"
+            onClick={() => setShowExtra((shown) => !shown)}
+            aria-expanded={showExtra}
+            aria-label={showExtra ? "Hide account and layout controls" : "Show account and layout controls"}
+            className="flex h-8 w-7 items-center justify-center rounded-full border border-navy-200 bg-white text-navy-600 shadow-sm hover:bg-navy-100 dark:border-navy-700 dark:bg-navy-900 dark:text-navy-200"
+          >
+            <ChevronDown className={`h-4 w-4 transition-transform ${showExtra ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+
         {/* Desktop utilities */}
         <div className="hidden sm:flex items-center gap-1.5">
           <BackgroundJobsBadge />
@@ -108,8 +107,7 @@ export function Topbar({
 
       {/* Mobile Dropped-Down Secondary controls */}
       {showExtra && (
-        <div className="absolute left-3 right-3 top-[3.65rem] z-40 flex items-center justify-around gap-2 rounded-2xl border border-white/70 bg-white/90 p-3 text-navy-900 shadow-pop backdrop-blur-xl animate-fade-in sm:hidden dark:border-white/10 dark:bg-navy-950/90 dark:text-white">
-          {rawRole === "PARENT" ? <SchoolSwitcher userRole={rawRole} currentTenantName={tenantName} mobileTrigger /> : null}
+        <div className="absolute left-2 right-2 top-14 z-40 flex items-center justify-around gap-2 rounded-b-2xl border border-navy-200 bg-white p-3 text-navy-900 shadow-pop animate-fade-in sm:hidden dark:border-navy-700 dark:bg-navy-950 dark:text-white">
           <BackgroundJobsBadge />
           <OfflineIndicator />
           <ThemeToggle />
