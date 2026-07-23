@@ -108,11 +108,6 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
   const [seniorBusy, setSeniorBusy] = React.useState(false);
   const [seniorAvailable, setSeniorAvailable] = React.useState(false);
 
-  // EE.8 — Question bank & self-marking practice state
-  const [questionBankModalOpen, setQuestionBankModalOpen] = React.useState(false);
-  const [activeQuestionStrandId, setActiveQuestionStrandId] = React.useState("");
-  const [activeQuestionSubjectId, setActiveQuestionSubjectId] = React.useState("");
-
   // EE.10 — Inter-School Contests modal state
   const [contestModalOpen, setContestModalOpen] = React.useState(false);
 
@@ -314,18 +309,6 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => {
-              setActiveQuestionStrandId("");
-              setActiveQuestionSubjectId("");
-              setQuestionBankModalOpen(true);
-            }}
-            className="rounded-full gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/60"
-          >
-            <FileText className="h-3.5 w-3.5" /> Question Bank & Book Scan
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
             onClick={() => setContestModalOpen(true)}
             className="rounded-full gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900/60"
           >
@@ -492,18 +475,6 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
                             >
                               <Video className="h-3 w-3 fill-current" /> Videos
                             </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveQuestionStrandId(st.id);
-                                setActiveQuestionSubjectId(st.subjectId);
-                                setQuestionBankModalOpen(true);
-                              }}
-                              className="flex items-center gap-1 rounded-full bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:bg-emerald-950/60 dark:hover:bg-emerald-900 dark:text-emerald-300 transition-colors"
-                            >
-                              <FileText className="h-3 w-3" /> Practice
-                            </button>
                             <ChevronDown className={`h-4 w-4 text-navy-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                           </div>
                         </button>
@@ -547,14 +518,10 @@ function StrandsTab({ subjects, canManage }: { subjects: Subject[]; canManage: b
         </div>
       )}
       {dialog && <StrandDialog subjects={subjects} onClose={() => setDialog(false)} onDone={() => { setDialog(false); load(); }} />}
-      <QuestionBankModal
-        open={questionBankModalOpen}
-        onOpenChange={setQuestionBankModalOpen}
-        subjects={subjects}
-        strands={strands || []}
-        defaultSubjectId={activeQuestionSubjectId}
-        defaultStrandId={activeQuestionStrandId}
-      />
+      <section className="space-y-3 border-t border-navy-100 pt-6 dark:border-navy-800">
+        <div><h2 className="text-xl font-black text-navy-950 dark:text-white">Question Bank & Book Scan</h2><p className="text-sm text-navy-500">Practice, self-marking, printable questions and book scanning now sit directly after the CBE learning strands instead of opening another popup.</p></div>
+        <QuestionBankModal open onOpenChange={() => undefined} embedded subjects={subjects} strands={strands || []} />
+      </section>
       <InterSchoolContestModal
         open={contestModalOpen}
         onOpenChange={setContestModalOpen}

@@ -42,6 +42,7 @@ import type {
 interface QuestionBankModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  embedded?: boolean;
   subjects: { id: string; name: string; code: string }[];
   strands?: { id: string; name: string; subjectId: string }[];
   defaultSubjectId?: string;
@@ -53,6 +54,7 @@ interface QuestionBankModalProps {
 export function QuestionBankModal({
   open,
   onOpenChange,
+  embedded = false,
   subjects,
   strands = [],
   defaultSubjectId = "",
@@ -351,8 +353,8 @@ export function QuestionBankModal({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl dark:bg-navy-900/95">
+    <QuestionBankRoot embedded={embedded} open={open} onOpenChange={onOpenChange}>
+      <QuestionBankSurface embedded={embedded} className={embedded ? "rounded-3xl border border-navy-100 bg-white/80 p-4 dark:border-navy-800 dark:bg-navy-900/80 sm:p-6" : "max-h-[92vh] max-w-5xl overflow-y-auto rounded-2xl bg-white/95 backdrop-blur-xl dark:bg-navy-900/95"}>
         <DialogHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -1037,7 +1039,15 @@ export function QuestionBankModal({
             )}
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </QuestionBankSurface>
+    </QuestionBankRoot>
   );
+}
+
+function QuestionBankRoot({ embedded, open, onOpenChange, children }: { embedded: boolean; open: boolean; onOpenChange: (open: boolean) => void; children: React.ReactNode }) {
+  return embedded ? <>{children}</> : <Dialog open={open} onOpenChange={onOpenChange}>{children}</Dialog>;
+}
+
+function QuestionBankSurface({ embedded, className, children }: { embedded: boolean; className: string; children: React.ReactNode }) {
+  return embedded ? <section className={className}>{children}</section> : <DialogContent className={className}>{children}</DialogContent>;
 }
