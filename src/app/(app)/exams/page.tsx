@@ -8,6 +8,9 @@ import { AdvancedAnalyticsClient } from "@/components/exams/advanced-analytics-c
 import { getSchoolLevelActivationSummary } from "@/lib/services/school-profile.service";
 import { ExamWidgetBoundary } from "@/components/exams/exam-widget-boundary";
 import { ExamApplicationReviewCard } from "@/components/exams/exam-application-review-card";
+import { ExamAutoGeneratorTab, ExamTimetableTab } from "@/components/academics/academics-client";
+import { ComputationDashboardClient } from "@/components/academics/computation-dashboard";
+import { KnecCandidateStudio } from "@/components/academics/knec-candidate-studio";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +67,10 @@ export default async function ExamsPage() {
           canApproveRelease={canApproveRelease}
         />
       </ExamWidgetBoundary>
+      <section id="grading" className="scroll-mt-20 space-y-4 border-t border-navy-100 pt-6 dark:border-navy-800"><div><h2 className="text-xl font-bold text-navy-900 dark:text-white">Grading Engine & consolidated reports</h2><p className="text-sm text-navy-500">Configure papers, contribution law, marks portals, computation, comments and result release in the Exams workspace.</p></div><ComputationDashboardClient canManage={has("academics.manage")} schoolLevelActivation={schoolLevelActivation} /></section>
+      {has("exam.manage") ? <section className="space-y-4 border-t border-navy-100 pt-6 dark:border-navy-800"><div><h2 className="text-xl font-bold text-navy-900 dark:text-white">Exam timetable setup</h2><p className="text-sm text-navy-500">Manage papers, sessions, practical resources, venues and invigilators.</p></div><ExamTimetableTab canManage /></section> : null}
+      {has("exam.manage") ? <section className="space-y-4 border-t border-navy-100 pt-6 dark:border-navy-800"><div><h2 className="text-xl font-bold text-navy-900 dark:text-white">Exam timetable auto-generator</h2><p className="text-sm text-navy-500">Preview deterministic placement before saving or approving a timetable.</p></div><ExamAutoGeneratorTab canManage schoolLevelActivation={schoolLevelActivation} /></section> : null}
+      {has("academics.manage") ? <section className="space-y-4 border-t border-navy-100 pt-6 dark:border-navy-800"><KnecCandidateStudio canManage /></section> : null}
       {has("academics.manage") ? <ExamWidgetBoundary name="Exam application documents"><ExamApplicationReviewCard /></ExamWidgetBoundary> : null}
       <ExamWidgetBoundary name="Performance analytics"><ExamAnalyticsClient /></ExamWidgetBoundary>
       <ExamWidgetBoundary name="Advanced analytics"><AdvancedAnalyticsClient /></ExamWidgetBoundary>

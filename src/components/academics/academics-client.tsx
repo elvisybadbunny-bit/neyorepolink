@@ -12,7 +12,6 @@ import { ReportBuilderClient } from "./report-builder";
 import { CurriculumVersionManagerClient } from "./curriculum-version-manager";
 import { PathwayManagerClient } from "./pathway-manager";
 import { SubjectSelectionManager } from "./subject-selection-manager";
-import { ComputationDashboardClient } from "./computation-dashboard";
 import { PracticeTeacherCard } from "./practice-teacher-card";
 import {
   BookOpen, Building2, CalendarRange, Grid3X3, NotebookPen, Plus,
@@ -32,7 +31,6 @@ import { useToast } from "@/components/ui/toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { cn, curriculumLabel } from "@/lib/utils";
 import { BundiIntelligentWizard } from "@/components/bundi/bundi-intelligent-wizard";
-import { KnecCandidateStudio } from "@/components/academics/knec-candidate-studio";
 import { MoeReturnsClientTab } from "@/components/academics/moe-returns-client-tab";
 import { SeniorReadinessCard } from "@/components/academics/senior-readiness-card";
 import { SeniorLearnerProofCard } from "@/components/academics/senior-learner-proof-card";
@@ -79,12 +77,8 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
     { key: "cocurricular" as const, label: "Co-curricular", icon: Trophy },
     { key: "terms" as const, label: "Terms", icon: CalendarRange },
     { key: "timetable" as const, label: "Timetable", icon: Grid3X3 },
-    { key: "exam-timetable" as const, label: "Exam Timetable", icon: ClipboardList },
-    { key: "exam-auto-generator" as const, label: "Exam Auto-Generator", icon: Sparkles },
-    { key: "knec-studio" as const, label: "KNEC Candidate Studio", icon: Award },
     { key: "moe-returns" as const, label: "MOE Statutory Returns", icon: FileText },
     { key: "lessons" as const, label: "Lesson plans", icon: NotebookPen },
-    { key: "computation" as const, label: "Grading Engine", icon: Calculator },
     ...(isCurriculumEngineEnabled ? [
       { key: "reports" as const, label: "Report Builder", icon: FileText },
       { key: "curriculum-versions" as const, label: "Curriculum Versions", icon: Sliders },
@@ -153,12 +147,8 @@ export function AcademicsClient({ canManage, canAppointHod, isScopedHod, isCurri
       {tab === "cocurricular" && <CoCurricularTab canManage={canManage} onOpenTimetable={() => setTab("timetable")} />}
       {tab === "terms" && <TermsTab canManage={canManage} />}
       {tab === "timetable" && <TimetableTab canManage={canManage} />}
-      {tab === "exam-timetable" && <ExamTimetableTab canManage={canManage} />}
-      {tab === "exam-auto-generator" && <ExamAutoGeneratorTab canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
-      {tab === "knec-studio" && <KnecCandidateStudio canManage={canManage} />}
       {tab === "moe-returns" && <MoeReturnsClientTab canManage={canManage} />}
       {tab === "lessons" && <LessonsTab />}
-      {tab === "computation" && <ComputationDashboardClient canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
       {tab === "reports" && <ReportBuilderClient canManage={canManage} schoolLevelActivation={schoolLevelActivation} />}
       {tab === "curriculum-versions" && <CurriculumVersionManagerClient canManage={canManage} />}
       {tab === "pathways" && <PathwayManagerClient subjects={subjects} />}
@@ -5436,7 +5426,7 @@ type ExamSlotRow = {
   notes?: string | null;
 };
 
-function ExamTimetableTab({ canManage }: { canManage: boolean }) {
+export function ExamTimetableTab({ canManage }: { canManage: boolean }) {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -6058,7 +6048,7 @@ type ExamGeneratorRunRow = {
   createdAt: string;
 };
 
-function ExamAutoGeneratorTab({ canManage, schoolLevelActivation }: { canManage: boolean; schoolLevelActivation?: { isSeniorSchool: boolean; isJuniorSchool: boolean; isMixedSchool: boolean; educationLevelsOffered: string[] } }) {
+export function ExamAutoGeneratorTab({ canManage, schoolLevelActivation }: { canManage: boolean; schoolLevelActivation?: { isSeniorSchool: boolean; isJuniorSchool: boolean; isMixedSchool: boolean; educationLevelsOffered: string[] } }) {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);

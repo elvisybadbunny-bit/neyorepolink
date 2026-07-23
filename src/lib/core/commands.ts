@@ -144,7 +144,7 @@ export const APP_COMMANDS: AppCommand[] = [
   {
     id: "go-grading-engine",
     label: "Open Grading Engine",
-    href: "/academics?tab=grading",
+    href: "/exams#grading",
     permission: "academics.view",
     keywords: ["compute results", "marks portal", "release results", "master report"],
   },
