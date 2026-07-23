@@ -19,6 +19,10 @@ const csp = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' https://fonts.gstatic.com data:",
   "connect-src 'self' https://sandbox.safaricom.co.ke https://api.safaricom.co.ke",
+  // Learning Videos use YouTube's privacy-enhanced hosted player. Without an
+  // explicit frame-src, default-src 'self' blocks every valid embed before
+  // YouTube can load it and browsers show “This content is blocked”.
+  "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

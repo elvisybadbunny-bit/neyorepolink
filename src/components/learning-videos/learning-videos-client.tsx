@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Cast, Clock3, Loader2, Play, Plus, Search, ShieldCheck, Tv, X, Youtube } from "lucide-react";
+import { Cast, Clock3, ExternalLink, Loader2, Play, Plus, Search, ShieldCheck, Tv, X, Youtube } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -92,7 +92,7 @@ export function LearningVideosClient() {
       </CardContent>
     </Card>
 
-    {currentEmbed && <Card><CardHeader><CardTitle className="flex items-center gap-2"><Play className="h-5 w-5 text-green-600" /> Watch inside NEYO</CardTitle></CardHeader><CardContent className="space-y-3"><div className="aspect-video overflow-hidden rounded-3xl border border-navy-100 bg-navy-950 shadow-card dark:border-navy-800"><iframe src={currentEmbed} title={(watching as any).title} className="h-full w-full" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-bold text-navy-900 dark:text-navy-50">{(watching as any).title}</p><Button onClick={() => watching && cast(watching)}><Cast className="h-4 w-4" /> Cast to class screen</Button></div></CardContent></Card>}
+    {currentEmbed && <Card><CardHeader><CardTitle className="flex items-center gap-2"><Play className="h-5 w-5 text-green-600" /> Watch inside NEYO</CardTitle></CardHeader><CardContent className="space-y-3"><div className="aspect-video overflow-hidden rounded-3xl border border-navy-100 bg-navy-950 shadow-card dark:border-navy-800"><iframe src={currentEmbed} title={(watching as any).title} className="h-full w-full" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-bold text-navy-900 dark:text-navy-50">{(watching as any).title}</p><p className="text-[11px] text-navy-500">If the owner later blocks embedding, open the same video on YouTube.</p></div><div className="flex flex-wrap gap-2"><a href={`https://www.youtube.com/watch?v=${(watching as any).youtubeId}`} target="_blank" rel="noreferrer"><Button variant="secondary"><ExternalLink className="h-4 w-4" /> Open on YouTube</Button></a><Button onClick={() => watching && cast(watching)}><Cast className="h-4 w-4" /> Cast to class screen</Button></div></div></CardContent></Card>}
 
     <div className="flex justify-end"><Button variant="secondary" onClick={() => setShownOpen(true)}><Clock3 className="h-4 w-4" /> Videos shown in class ({shown.length})</Button></div>
 

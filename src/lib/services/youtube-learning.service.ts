@@ -288,7 +288,7 @@ export async function searchLiveYouTubeIfQuotaAllowed(user: SessionUser, querySt
   try {
     const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=8&q=${encodeURIComponent(
       queryString + " educational lesson"
-    )}&type=video&key=${apiKey}`;
+    )}&type=video&videoEmbeddable=true&safeSearch=strict&videoCategoryId=27&regionCode=KE&relevanceLanguage=en&key=${apiKey}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) {
       throw new Error(`YouTube API returned ${res.status}`);
