@@ -19,7 +19,7 @@ interface LinkedSchool {
   role: string;
 }
 
-export function SchoolSwitcher({ userRole, currentTenantName }: { userRole: string; currentTenantName: string }) {
+export function SchoolSwitcher({ userRole, currentTenantName, mobileTrigger = false }: { userRole: string; currentTenantName: string; mobileTrigger?: boolean }) {
   const { toast } = useToast();
   const [open, setOpen] = React.useState(false);
   const [schools, setSchools] = React.useState<LinkedSchool[] | null>(null);
@@ -73,7 +73,7 @@ export function SchoolSwitcher({ userRole, currentTenantName }: { userRole: stri
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm font-semibold text-navy-800 hover:bg-navy-100 dark:text-navy-100 dark:hover:bg-navy-800 sm:flex"
+        className={`${mobileTrigger ? "flex" : "hidden sm:flex"} items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm font-semibold text-navy-800 hover:bg-navy-100 dark:text-navy-100 dark:hover:bg-navy-800`}
       >
         {currentTenantName}
         {schools && schools.length > 1 && (

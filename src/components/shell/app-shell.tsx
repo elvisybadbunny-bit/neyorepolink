@@ -22,6 +22,7 @@ export function AppShell({
   children,
   tenantName = "Karibu High School",
   tenantLogoUrl,
+  mobileWordmarkUrl,
   userName = "Wanjiru Kamau",
   userRole = "Principal",
   rawRole,
@@ -33,6 +34,7 @@ export function AppShell({
   children: React.ReactNode;
   tenantName?: string;
   tenantLogoUrl?: string | null;
+  mobileWordmarkUrl?: string | null;
   userName?: string;
   userRole?: string;
   rawRole?: string;
@@ -54,6 +56,7 @@ export function AppShell({
       <Topbar
         tenantName={tenantName}
         tenantLogoUrl={tenantLogoUrl}
+        mobileWordmarkUrl={mobileWordmarkUrl}
         userName={userName}
         userRole={userRole}
         rawRole={rawRole}
@@ -84,7 +87,7 @@ export function AppShell({
 
         {/* Content well */}
         <main className="min-w-0 flex-1">
-          <div className="print:hidden border-b border-navy-100 bg-warm-50/60 px-4 py-3 dark:border-navy-800 dark:bg-navy-950/60 sm:px-8">
+          <div className="print:hidden hidden border-b border-navy-100 bg-warm-50/60 px-4 py-3 dark:border-navy-800 dark:bg-navy-950/60 sm:block sm:px-8">
             <Breadcrumbs />
           </div>
           <SeasonalThemeBanner />

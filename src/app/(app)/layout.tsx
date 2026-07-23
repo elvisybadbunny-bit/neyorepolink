@@ -38,7 +38,7 @@ export default async function AppLayout({
   // running them with Promise.all lets their real DB round-trips overlap
   // instead of paying for each one's own latency back-to-back in sequence —
   // a real, measurable per-page-load speedup with zero behaviour change.
-  const [tenant, enabledModulesSet, hiddenNav, platformHiddenHrefsSet, permissions, demo, shellVersion] = await Promise.all([
+  const [tenant, enabledModulesSet, hiddenNav, platformHiddenHrefsSet, permissions, demo, shellVersion, mobileWordmark] = await Promise.all([
     db.tenant.findUnique({
       where: { id: user.tenantId },
       select: { name: true, slug: true, logoUrl: true, brandPrimary: true, brandAccent: true },
@@ -49,6 +49,7 @@ export default async function AppLayout({
     effectivePermissionsForUser(user),
     demoStatus(user.tenantId),
     resolveShellVersion(user),
+    db.platformSetting.findUnique({ where: { key: "neyo_wordmark_light_url" }, select: { value: true } }),
   ]);
 
   // A.2.3 enforcement: skip while impersonating (admin operates cross-tenant).
@@ -91,6 +92,7 @@ export default async function AppLayout({
           <AppShellV2
             tenantName={tenant?.name ?? "NEYO"}
             tenantLogoUrl={tenant?.logoUrl}
+            mobileWordmarkUrl={mobileWordmark?.value ?? null}
             userName={user.fullName}
             userRole={ROLE_LABELS[user.role]}
             rawRole={user.role}
@@ -107,6 +109,7 @@ export default async function AppLayout({
           <AppShell
             tenantName={tenant?.name ?? "NEYO"}
             tenantLogoUrl={tenant?.logoUrl}
+            mobileWordmarkUrl={mobileWordmark?.value ?? null}
             userName={user.fullName}
             userRole={ROLE_LABELS[user.role]}
             rawRole={user.role}
